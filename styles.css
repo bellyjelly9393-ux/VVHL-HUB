@@ -417,3 +417,12 @@ footer { border-top: 1px solid var(--line); background: #020609; }
   .media-card small { grid-column: 2; }
   .footer-inner { flex-direction: column; justify-content: center; align-items: flex-start; gap: 12px; }
 }
+
+.league-banner,.scouting-cover{margin:24px 0 0;border:1px solid rgba(25,217,242,.22);border-radius:24px;overflow:hidden;background:#04101c;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.league-banner img,.scouting-cover img{display:block;width:100%;height:auto}
+.scouting-promo{position:relative;margin:36px 0 70px;border-radius:22px;overflow:hidden;border:1px solid rgba(25,217,242,.22)}
+.scouting-promo img{display:block;width:100%;height:auto;opacity:.82}
+.scouting-promo .btn{position:absolute;left:28px;bottom:28px}
+.compact-hero{padding-top:38px}
+.vv6l-directory .team-directory-card{border-color:rgba(25,217,242,.16)}
+@media(max-width:640px){.league-banner,.scouting-cover{border-radius:14px}.scouting-promo .btn{position:static;margin:14px}.scouting-promo img{opacity:1}}
