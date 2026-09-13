@@ -686,6 +686,13 @@ $("copyProfile").onclick = async () => {
   }
 };
 counts();
+const requestedTeam = new URLSearchParams(location.search).get("team");
+if (
+  requestedTeam &&
+  [...teamFilter.options].some((option) => option.value === requestedTeam)
+) {
+  teamFilter.value = requestedTeam;
+}
 render();
 const wanted = new URLSearchParams(location.search).get("player");
 if (wanted) {
