@@ -52,6 +52,15 @@
             </button>
           </div>
         </section>
+        <section id="accountPanel" class="panel account-panel">
+          <div>
+            <div class="eyebrow">SECURE LEAGUE ACCESS</div>
+            <h3>Loading account…</h3>
+          </div>
+        </section>
+        <div id="cloudStatus" class="cloud-status">
+          Checking shared workspace…
+        </div>
         <div class="stat-strip">
           <div class="stat-box">
             <small>Salary Cap</small><strong>$30.0M</strong>
@@ -217,8 +226,11 @@
         <p>$30M Team Cap</p>
       </div>
     </footer>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+    <script src="backend.js"></script>
     <script src="player-data.js"></script>
     <script src="script.js"></script>
     <script src="gm.js"></script>
+    <script src="cloud-gm.js"></script>
   </body>
 </html>
