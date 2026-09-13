@@ -11,7 +11,12 @@ const getPlayerTeam = (row) => row[1] === "S" ? (row[11] || "") : (row[8] || "")
 const money = (value) => `$${Number(value || 0).toFixed(1)}M`;
 const salaryForRound = (round) => {
   const r = Number(round || 0);
-  return r >= 1 && r <= 7 ? 8 - r : 0;
+  return r >= 1 ? Math.max(1, 8 - r) : 0;
+};
+const roundLabel = (round) => {
+  const r = Number(round || 0);
+  if (!r) return "Draft value unset";
+  return r >= 7 ? "Round 7+" : `Round ${r}`;
 };
 const esc = (value) => String(value ?? "")
   .replaceAll("&", "&amp;")
@@ -35,6 +40,9 @@ function loadRosters() {
     const saved = JSON.parse(localStorage.getItem(ROSTER_KEY) || "null");
     if (saved && typeof saved === "object") {
       teams.forEach((team) => { if (!Array.isArray(saved[team])) saved[team] = []; });
+      Object.values(saved).flat().forEach((player) => {
+        if (Number(player.draftRound) >= 7) player.draftRound = 7;
+      });
       return saved;
     }
   } catch {}
@@ -79,13 +87,14 @@ function teamOptions(selected) {
 
 function roundOptions(selected) {
   const current = Number(selected || 0);
+  const normalized = current >= 7 ? 7 : current;
   return [
-    `<option value="0" ${current === 0 ? "selected" : ""}>Set round…</option>`,
-    ...Array.from({length:7}, (_, i) => {
+    `<option value="0" ${normalized === 0 ? "selected" : ""}>Set round…</option>`,
+    ...Array.from({length:6}, (_, i) => {
       const r = i + 1;
-      return `<option value="${r}" ${current === r ? "selected" : ""}>Round ${r} · ${money(salaryForRound(r))}</option>`;
+      return `<option value="${r}" ${normalized === r ? "selected" : ""}>Round ${r} · ${money(salaryForRound(r))}</option>`;
     }),
-    `<option value="8" ${current >= 8 ? "selected" : ""}>Round 8+ / Undrafted · $0.0M</option>`
+    `<option value="7" ${normalized === 7 ? "selected" : ""}>Round 7+ · $1.0M</option>`
   ].join("");
 }
 
@@ -211,7 +220,7 @@ function playerTradeOptions(team, selectedKey) {
   const roster = rosterByTeam(team);
   return [`<option value="">Select player…</option>`, ...roster.map((player) => {
     const salary = salaryForRound(player.draftRound);
-    const label = Number(player.draftRound) ? `${player.name} · R${player.draftRound} · ${money(salary)}` : `${player.name} · value unset`;
+    const label = Number(player.draftRound) ? `${player.name} · ${roundLabel(player.draftRound)} · ${money(salary)}` : `${player.name} · value unset`;
     return `<option value="${esc(player.key)}" ${player.key === selectedKey ? "selected" : ""}>${esc(label)}</option>`;
   })].join("");
 }
@@ -297,7 +306,7 @@ async function copyRoster() {
     `Cap used: ${money(spend)} / $30.0M`,
     `Cap space: ${money(TEAM_CAP - spend)}`,
     "",
-    ...roster.map((player, index) => `${index + 1}. ${player.name} · ${player.position || player.type} · ${Number(player.draftRound) ? `Round ${player.draftRound} · ${money(salaryForRound(player.draftRound))}` : "Draft value unset"}`)
+    ...roster.map((player, index) => `${index + 1}. ${player.name} · ${player.position || player.type} · ${Number(player.draftRound) ? `${roundLabel(player.draftRound)} · ${money(salaryForRound(player.draftRound))}` : "Draft value unset"}`)
   ];
   try {
     await navigator.clipboard.writeText(lines.join("\n"));
