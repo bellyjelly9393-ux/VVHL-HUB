@@ -17,6 +17,15 @@ if (document.body.classList.contains('wildman-site')) {
     image.loading = 'lazy';
     image.decoding = 'async';
   });
+
+  // Keep competitive intelligence behind the authenticated management wall.
+  if (!document.body.classList.contains('management-protected')) {
+    document.querySelectorAll('a[href="scouting-lab.html"]').forEach((link) => {
+      link.href = 'management.html';
+      link.setAttribute('title', 'Management sign-in required');
+      if (link.closest('.main-nav')) link.textContent = 'Management';
+    });
+  }
 }
 
 if (nav) {
