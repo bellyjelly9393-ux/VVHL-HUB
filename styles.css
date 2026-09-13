@@ -1220,7 +1220,10 @@ footer {
   font-size: 32px;
   margin: 5px 0;
 }
-.vod-header p { color: #8fa3b0; margin: 0; }
+.vod-header p {
+  color: #8fa3b0;
+  margin: 0;
+}
 .vod-confidence {
   padding: 8px 11px;
   border: 1px solid rgba(246, 183, 60, 0.4);
@@ -1231,8 +1234,13 @@ footer {
   font-weight: 900;
   white-space: nowrap;
 }
-.vod-summary { margin-bottom: 14px; }
-.vod-timeline { display: grid; gap: 10px; }
+.vod-summary {
+  margin-bottom: 14px;
+}
+.vod-timeline {
+  display: grid;
+  gap: 10px;
+}
 .vod-note {
   display: grid;
   grid-template-columns: 64px 1fr;
@@ -1248,12 +1256,174 @@ footer {
   font-weight: 900;
   color: #19d9f2;
 }
-.vod-note b { color: #dffcff; }
-.vod-note p { margin: 5px 0 0; color: #91a5b1; line-height: 1.5; }
+.vod-note b {
+  color: #dffcff;
+}
+.vod-note p {
+  margin: 5px 0 0;
+  color: #91a5b1;
+  line-height: 1.5;
+}
 @media (max-width: 620px) {
-  .vod-header { display: block; }
-  .vod-confidence { display: inline-block; margin-top: 12px; }
-  .vod-note { grid-template-columns: 52px 1fr; }
+  .vod-header {
+    display: block;
+  }
+  .vod-confidence {
+    display: inline-block;
+    margin-top: 12px;
+  }
+  .vod-note {
+    grid-template-columns: 52px 1fr;
+  }
+}
+.management-tools,
+.leaderboard-panel {
+  margin-top: 24px;
+}
+.tool-heading,
+.lineup-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+}
+.tool-heading h2 {
+  margin: 5px 0 0;
+}
+.management-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 18px;
+}
+.availability-list {
+  display: grid;
+  gap: 8px;
+  max-height: 620px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.availability-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 120px 120px;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.availability-row small {
+  display: block;
+  color: #78909f;
+  margin-top: 4px;
+}
+.availability-row label {
+  color: #78909f;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.availability-row select {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0a1721;
+  color: #dffcff;
+}
+.lineup-slots {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+.lineup-slot {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.lineup-slot > span {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #1688b8, #19d9f2);
+  color: #021016;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+}
+.field-label {
+  display: block;
+  margin: 14px 0 7px;
+  color: #8fa3b0;
+  font-size: 12px;
+  font-weight: 800;
+}
+.leaderboard-controls {
+  display: flex;
+  gap: 8px;
+}
+.leaderboard {
+  display: grid;
+  margin-top: 18px;
+}
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 8px;
+  border-top: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+}
+.leaderboard-row:hover {
+  background: rgba(25, 217, 242, 0.04);
+}
+.leaderboard-row > strong {
+  color: #19d9f2;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 24px;
+  text-align: center;
+}
+.leaderboard-row small {
+  display: block;
+  color: #78909f;
+  margin-top: 3px;
+}
+.leaderboard-row > span {
+  color: #dffcff;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 27px;
+  font-weight: 900;
+}
+@media (max-width: 850px) {
+  .management-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 620px) {
+  .tool-heading,
+  .lineup-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .availability-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .availability-row > div {
+    grid-column: 1 / -1;
+  }
+  .leaderboard-controls {
+    width: 100%;
+  }
+  .leaderboard-controls select {
+    flex: 1;
+    min-width: 0;
+  }
 }
 @media (max-width: 900px) {
   .scouting-toolbar {
