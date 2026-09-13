@@ -1,0 +1,34 @@
+{
+  "status": "pre_event",
+  "statusLabel": "Pre-Event",
+  "event": "Road to Pro Series",
+  "stage": "Group Play",
+  "gameLabel": "Next Wildman Game",
+  "wildmanScore": 0,
+  "opponent": "TBD",
+  "opponentScore": 0,
+  "period": "—",
+  "clock": "—",
+  "record": "0-0",
+  "goalDiff": 0,
+  "stream": {
+    "provider": "twitch",
+    "channel": "",
+    "youtubeId": "",
+    "title": "Wildman Hockey Live"
+  },
+  "lineup": [
+    {"slot":"C","player":"TBD"},
+    {"slot":"LW","player":"TBD"},
+    {"slot":"RW","player":"TBD"},
+    {"slot":"LD","player":"TBD"},
+    {"slot":"RD","player":"TBD"},
+    {"slot":"G","player":"TBD"}
+  ],
+  "leaders": [
+    {"player":"—","stat":"G","value":"0"},
+    {"player":"—","stat":"A","value":"0"},
+    {"player":"—","stat":"PTS","value":"0"}
+  ],
+  "updatedAt": "2026-09-13T21:00:00Z"
+}
