@@ -64,9 +64,10 @@ function renderAccountPanel() {
   const panel = document.getElementById("accountPanel");
   if (!panel) return;
   if (!backendState.user) {
-    panel.innerHTML = `<div><div class="eyebrow">SECURE LEAGUE ACCESS</div><h3>Management Sign In</h3><p>Sign in to access shared team information.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email"><input id="authPassword" class="field" type="password" placeholder="Password"><button id="signIn" class="small-btn primary" type="button">Sign In</button><button id="signUp" class="small-btn" type="button">Create Account</button><span id="authMessage"></span></div>`;
+    panel.innerHTML = `<div><div class="eyebrow">SECURE LEAGUE ACCESS</div><h3>Management Sign In</h3><p>Sign in to access shared team information.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email"><input id="authPassword" class="field" type="password" placeholder="Password"><button id="signIn" class="small-btn primary" type="button">Sign In</button><button id="signUp" class="small-btn" type="button">Create Account</button><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`;
     document.getElementById("signIn").onclick = () => authenticate("signin");
     document.getElementById("signUp").onclick = () => authenticate("signup");
+    document.getElementById("resetPassword").onclick = resetPassword;
     return;
   }
   const allowed =
@@ -108,10 +109,49 @@ async function authenticate(mode) {
   if (!result.error && result.data.session) await loadBackendState();
 }
 
+async function resetPassword() {
+  const email = document.getElementById("authEmail").value.trim();
+  const message = document.getElementById("authMessage");
+  if (!email) {
+    message.textContent = "Enter your admin email first.";
+    return;
+  }
+  message.textContent = "Sending reset link…";
+  const { error } = await vvhlDb.auth.resetPasswordForEmail(email, {
+    redirectTo: `${location.origin}${location.pathname}`,
+  });
+  message.textContent = error
+    ? error.message
+    : "Password-reset email sent. Check your inbox and spam folder.";
+}
+
+function showPasswordRecovery() {
+  const panel = document.getElementById("accountPanel");
+  if (!panel) return;
+  panel.innerHTML = `<div><div class="eyebrow">ACCOUNT RECOVERY</div><h3>Choose a New Password</h3><p>Use at least eight characters.</p></div><div class="account-form"><input id="newPassword" class="field" type="password" minlength="8" placeholder="New password"><button id="savePassword" class="small-btn primary" type="button">Save Password</button><span id="authMessage"></span></div>`;
+  document.getElementById("savePassword").onclick = async () => {
+    const password = document.getElementById("newPassword").value,
+      message = document.getElementById("authMessage");
+    if (password.length < 8) {
+      message.textContent = "Use at least eight characters.";
+      return;
+    }
+    const { error } = await vvhlDb.auth.updateUser({ password });
+    message.textContent = error
+      ? error.message
+      : "Password updated. You are now signed in.";
+    if (!error) setTimeout(loadBackendState, 600);
+  };
+}
+
 window.VVHLBackend = {
   db: vvhlDb,
   state: backendState,
   refresh: loadBackendState,
 };
-vvhlDb.auth.onAuthStateChange(() => setTimeout(loadBackendState, 0));
+vvhlDb.auth.onAuthStateChange((event) =>
+  event === "PASSWORD_RECOVERY"
+    ? setTimeout(showPasswordRecovery, 0)
+    : setTimeout(loadBackendState, 0),
+);
 loadBackendState();
