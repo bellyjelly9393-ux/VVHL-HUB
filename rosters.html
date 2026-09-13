@@ -17,7 +17,7 @@
     <a class="brand" href="index.html" aria-label="VVHL Hub home"><img class="brand-logo" src="assets/brand/vvhl-logo.png" alt=""><span class="brand-copy">VVHL TEAM<br><b>ROSTERS & CAP</b></span></a>
     <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
     <nav class="main-nav" aria-label="Primary navigation">
-      <a href="index.html">VVHL 4s</a><a href="vv6l.html">VV6L 6s</a><a href="finals.html">Finals</a><a href="media.html">Media</a><a href="scouting.html">Scouting</a><a href="gm.html">GM Hub</a><a href="admin.html">Admin</a>
+      <a href="index.html">VVHL 4s</a><a href="vv6l.html">VV6L 6s</a><a href="finals.html">Finals</a><a href="rosters.html">Rosters & Cap</a><a href="media.html">Media</a><a href="scouting.html">Scouting</a><a href="gm.html">GM Hub</a><a href="admin.html">Admin</a>
     </nav>
   </header>
 
@@ -28,7 +28,7 @@
         <h1>ROSTERS & CAP</h1>
         <p>Every club gets its own roster ledger. Draft round sets the player value, that value follows the player through trades, and every move updates team cap space automatically.</p>
         <div class="cap-rule-chips" aria-label="Draft round salary values">
-          <span>R1 <b>$7M</b></span><span>R2 <b>$6M</b></span><span>R3 <b>$5M</b></span><span>R4 <b>$4M</b></span><span>R5 <b>$3M</b></span><span>R6 <b>$2M</b></span><span>R7 <b>$1M</b></span>
+          <span>R1 <b>$7M</b></span><span>R2 <b>$6M</b></span><span>R3 <b>$5M</b></span><span>R4 <b>$4M</b></span><span>R5 <b>$3M</b></span><span>R6 <b>$2M</b></span><span>R7+ <b>$1M</b></span>
         </div>
       </section>
 
@@ -59,7 +59,7 @@
           <div class="add-player-grid">
             <label><span>Player</span><input id="rosterPlayer" class="field" list="rosterPlayerNames" placeholder="Search player name…"></label>
             <datalist id="rosterPlayerNames"></datalist>
-            <label><span>Draft Round</span><select id="draftRound" class="select-field"><option value="1">Round 1 · $7M</option><option value="2">Round 2 · $6M</option><option value="3">Round 3 · $5M</option><option value="4">Round 4 · $4M</option><option value="5">Round 5 · $3M</option><option value="6">Round 6 · $2M</option><option value="7">Round 7 · $1M</option><option value="8">Undrafted / Round 8+ · $0M</option></select></label>
+            <label><span>Draft Round</span><select id="draftRound" class="select-field"><option value="1">Round 1 · $7M</option><option value="2">Round 2 · $6M</option><option value="3">Round 3 · $5M</option><option value="4">Round 4 · $4M</option><option value="5">Round 5 · $3M</option><option value="6">Round 6 · $2M</option><option value="7">Round 7+ · $1M</option></select></label>
             <button id="addRosterPlayer" class="btn btn-primary" type="button">Add to Roster</button>
           </div>
 
@@ -77,7 +77,7 @@
             <strong>Round 1 player ($7M) ↔ Round 2 player ($6M)</strong>
             <p>The team receiving the $7M player uses <b>$1M more</b> cap. The team receiving the $6M player gains <b>$1M</b> cap space.</p>
           </div>
-          <div class="notice">Values are calculated as $7M, $6M, $5M, $4M, $3M, $2M and $1M for rounds 1 through 7. Round 8+ is treated as $0M until the league sets a different rule.</div>
+          <div class="notice">League salary scale: Round 1 $7M, Round 2 $6M, Round 3 $5M, Round 4 $4M, Round 5 $3M, Round 6 $2M, and Round 7 or later $1M.</div>
         </aside>
       </div>
 
