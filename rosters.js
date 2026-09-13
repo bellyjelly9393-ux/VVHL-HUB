@@ -211,19 +211,19 @@ function renderRoster() {
 
 async function addPlayerToSelectedTeam() {
   const name = playerInput.value.trim();
-  const row = playerData.find((item) => item[0].trim().toLowerCase() === name.toLowerCase());
-  if (!row) {
-    alert("Choose a player from the scouting database.");
-    return;
-  }
   const round = normalizeRound(draftRound.value);
   if (!round) {
     alert("Choose the player's draft round first.");
     return;
   }
   if (window.VVHLRosterCloud?.isConnected()) {
-    await window.VVHLRosterCloud.addRosterPlayer(selectedTeam, row[0], round);
+    await window.VVHLRosterCloud.addRosterPlayer(selectedTeam, name, round);
     playerInput.value = "";
+    return;
+  }
+  const row = playerData.find((item) => item[0].trim().toLowerCase() === name.toLowerCase());
+  if (!row) {
+    alert("Choose a player from the scouting database.");
     return;
   }
   const key = row[0].trim().toLowerCase();

@@ -181,14 +181,16 @@ async function prepareCloud() {
     if (!state.user) {
       connected = false;
       editableTeamNames = [];
-      ui().setOfflineMode();
+      setCloud("Loading official rosters…");
+      await loadCloudReferenceData();
+      await loadOfficialRosters();
       tradeTeamACloud.disabled = true;
       tradeTeamBCloud.disabled = true;
       applyTradeCloud.disabled = true;
       tradeInbox.innerHTML = "";
       tradeInboxEmpty.hidden = false;
       tradeInboxEmpty.textContent = "Sign in to view trades involving your team.";
-      setCloud("Sign in to load the official shared roster workspace");
+      setCloud("Official rosters loaded · sign in with management access to make changes", "success");
       return;
     }
 
