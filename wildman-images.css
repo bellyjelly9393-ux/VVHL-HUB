@@ -1,0 +1,114 @@
+/* Wildman image cleanup: preserve the supplied artwork, stop UI from covering it,
+   and keep portrait/player art framed consistently across desktop and mobile. */
+.wildman-site .wm-visual-hero{
+  width:min(1180px,calc(100% - 32px));
+  max-width:none;
+  margin:24px auto 44px;
+  border-radius:22px;
+  overflow:hidden;
+  background:#050407;
+  border:1px solid rgba(216,173,85,.24);
+  box-shadow:0 24px 70px rgba(0,0,0,.48),0 0 30px rgba(122,57,255,.07);
+}
+.wildman-site .wm-visual-hero:after{display:none}
+.wildman-site .wm-visual-hero img{
+  display:block;
+  width:100%;
+  height:auto;
+  aspect-ratio:auto;
+  object-fit:contain;
+  object-position:center;
+  background:#050407;
+  filter:saturate(.99) contrast(1.015);
+  transform:none;
+}
+.wildman-site .wm-visual-hero:hover img{
+  transform:none;
+  filter:saturate(1.01) contrast(1.02);
+}
+.wildman-site .wm-hero-kicker{
+  position:static;
+  display:flex;
+  align-items:center;
+  width:100%;
+  margin:0;
+  padding:11px 15px;
+  border:0;
+  border-bottom:1px solid rgba(216,173,85,.13);
+  border-radius:0;
+  background:linear-gradient(90deg,rgba(216,173,85,.075),rgba(122,57,255,.045),transparent);
+  color:#ead097;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+.wildman-site .wm-hero-actions{
+  position:static;
+  display:flex;
+  gap:10px;
+  padding:13px 15px 15px;
+  border-top:1px solid rgba(255,255,255,.055);
+  background:linear-gradient(180deg,rgba(15,10,20,.96),rgba(7,5,10,.98));
+}
+.wildman-site .wm-hero-actions .btn{box-shadow:none}
+
+.wildman-site .wm-player-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:16px;
+  align-items:stretch;
+}
+.wildman-site .wm-player-card{
+  min-height:0;
+  aspect-ratio:4/5;
+  border-radius:22px;
+  background:linear-gradient(180deg,#0b0910,#050407);
+  border-color:rgba(216,173,85,.2);
+  box-shadow:0 18px 48px rgba(0,0,0,.38);
+}
+.wildman-site .wm-player-card img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center 20%;
+  padding:0;
+  background:#050407;
+  filter:saturate(.98) contrast(1.02);
+}
+.wildman-site .wm-player-card img[src*="rusty"]{object-position:center top}
+.wildman-site .wm-player-card img[src*="williamson"]{
+  object-fit:contain;
+  object-position:center top;
+  background:radial-gradient(circle at 50% 26%,rgba(216,173,85,.055),transparent 42%),#050407;
+}
+.wildman-site .wm-player-card:hover{transform:translateY(-4px);border-color:rgba(216,173,85,.38)}
+.wildman-site .wm-player-card:hover img{transform:none}
+.wildman-site .wm-player-card:after{
+  background:linear-gradient(180deg,transparent 48%,rgba(3,2,5,.08) 60%,rgba(3,2,5,.96) 100%);
+}
+.wildman-site .wm-player-meta{
+  left:16px;
+  right:16px;
+  bottom:16px;
+  padding-top:28px;
+  text-shadow:0 2px 12px rgba(0,0,0,.9);
+}
+.wildman-site .wm-player-meta h3{font-size:clamp(27px,3vw,34px)}
+
+.wildman-site .wm-brand-mark{
+  background-size:cover;
+  background-position:center;
+  box-shadow:0 0 22px rgba(216,173,85,.12),inset 0 0 0 1px rgba(255,255,255,.025);
+}
+
+@media(max-width:900px){
+  .wildman-site .wm-visual-hero{width:min(100% - 22px,1180px);margin:16px auto 34px;border-radius:17px}
+  .wildman-site .wm-player-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+  .wildman-site .wm-player-card{aspect-ratio:4/5}
+  .wildman-site .wm-hero-actions{padding:12px;justify-content:flex-start}
+}
+@media(max-width:620px){
+  .wildman-site .wm-player-grid{grid-template-columns:1fr}
+  .wildman-site .wm-player-card{width:min(100%,430px);margin-inline:auto;aspect-ratio:4/5}
+  .wildman-site .wm-hero-kicker{font-size:10px;padding:10px 12px}
+  .wildman-site .wm-hero-actions{gap:8px;flex-direction:column}
+  .wildman-site .wm-hero-actions .btn{width:100%;justify-content:center;text-align:center}
+}
