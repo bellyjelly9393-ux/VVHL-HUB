@@ -1,6 +1,8 @@
-const players=Array.isArray(window.VVHL_PLAYERS)?window.VVHL_PLAYERS:[];
+const rawPlayers=Array.isArray(window.VVHL_PLAYERS)?window.VVHL_PLAYERS:[];
+const rolesByName=rawPlayers.reduce((m,r)=>{const k=r[0].trim().toLowerCase();if(!m.has(k))m.set(k,[]);m.get(k).push(r);return m},new Map());
+const players=[...rolesByName.values()].map(rows=>rows.find(r=>r[1]==='S')||rows[0]);
 const $=id=>document.getElementById(id),grid=$('playerGrid'),modal=$('playerModal');
-const search=$('searchInput'),typeFilter=$('typeFilter'),positionFilter=$('positionFilter');
+const search=$('searchInput'),typeFilter=$('typeFilter'),positionFilter=$('positionFilter'),teamFilter=$('teamFilter');
 let active=null;
 const team=r=>r[1]==='S'?(r[11]||''):(r[8]||'');
 const pos=r=>r[2]||(r[1]==='G'?'Goalie':'Unknown');
@@ -13,6 +15,10 @@ const save=v=>localStorage.setItem('vvhl-gm-board',JSON.stringify(v));
 const winRate=s=>{const [w=0,l=0,o=0]=String(s||'').split('-').map(Number);return w+l+o?w/(w+l+o):0};
 const confidence=g=>g>=24?['High confidence','high']:g>=12?['Moderate confidence','medium']:['Small sample','low'];
 const initials=n=>{const p=n.trim().split(/\s+/);return((p[0]?.[0]||'?')+(p.length>1?p.at(-1)[0]:(p[0]?.[1]||''))).toUpperCase()};
+const roles=r=>rolesByName.get(r[0].trim().toLowerCase())||[r];
+const roleLabel=r=>{const rows=roles(r);return rows.length>1?'Skater / Goalie':rows[0][1]==='G'?'Goalie':'Skater'};
+const positionLabel=r=>[...new Set(roles(r).map(pos))].join(' / ');
+const teamLogoPaths={'Angry Byrds':'assets/teams/angry-byrds.webp','Barn Cats':'assets/teams/barn-cats.png','Big Dawgs':'assets/teams/big-dawgs.png','Cherry Cartel':'assets/teams/cherry-cartel.png','Dover Demons':'assets/teams/dover-demons.png','Evil Leprechauns':'assets/teams/evil-leprechauns.png','Knights':'assets/teams/knights.png','Pine Rangers':'assets/teams/pine-rangers.png','Raptors':'assets/teams/raptors.png','Royal Ghosts':'assets/teams/royal-ghosts.png','Silver Foxes':'assets/teams/silver-foxes.png','Soul Reapers':'assets/teams/soul-reapers.png','Southbeach Snipers':'assets/teams/southbeach-snipers.png'};
 
 function skaterReport(r){
  const g=+r[3]||0,p=+r[4]||0,goals=+r[7]||0,assists=+r[8]||0,pm=+r[9]||0,fo=+r[10]||0;
@@ -48,36 +54,44 @@ function goalieReport(r){
 }
 const report=r=>r[1]==='G'?goalieReport(r):skaterReport(r);
 const detail=(a,b)=>`<div class="detail"><small>${esc(a)}</small><b>${esc(b??'—')}</b></div>`;
-const find=k=>players.find(r=>`${r[0]}|${r[1]}`===k);
+const playerKey=r=>r[0].trim().toLowerCase();
+const find=k=>players.find(r=>playerKey(r)===k);
+const playerTeam=r=>roles(r).map(team).find(Boolean)||'';
+const hasRole=(r,type)=>roles(r).some(x=>x[1]===type);
+const teamLogo=r=>teamLogoPaths[playerTeam(r)]||'';
+const statBlock=r=>r[1]==='S'?`<article class="split-stat-block"><div class="eyebrow">SKATER · ${esc(pos(r))}</div><div class="detail-grid">${detail('Games',r[3])}${detail('Overall',r[5])}${detail('Points',r[4])}${detail('Goals',r[7])}${detail('Assists',r[8])}${detail('+ / -',r[9])}${detail('Faceoff %',r[10]+'%')}${detail('Record',r[6])}</div></article>`:`<article class="split-stat-block"><div class="eyebrow">GOALTENDER</div><div class="detail-grid">${detail('Games',r[3])}${detail('Record',r[6])}${detail('Save %',r[4])}${detail('GAA',r[5])}${detail('Shutouts',r[7])}</div></article>`;
 
 function add(r){
- const b=board(),key=`${r[0]}|${r[1]}`;
- if(!b.some(x=>x.key===key)){b.push({key,name:r[0],type:r[1],position:pos(r),team:team(r),bid:0,note:''});save(b)}
+ const b=board(),key=playerKey(r),already=x=>x.key===key||String(x.name||'').trim().toLowerCase()===key;
+ if(!b.some(already)){b.push({key,name:r[0],type:roleLabel(r),position:positionLabel(r),team:playerTeam(r),bid:0,note:''});save(b)}
  counts();document.querySelectorAll('[data-add]').forEach(x=>{if(x.dataset.add===key){x.textContent='Added ✓';x.disabled=true}});
  if(active===r)$('modalAdd').textContent='Added to GM Board ✓';
 }
 function tab(name){document.querySelectorAll('.profile-tab').forEach(x=>x.classList.toggle('active',x.dataset.profileTab===name));document.querySelectorAll('.profile-panel').forEach(x=>x.classList.toggle('active',x.dataset.profilePanel===name))}
 function openPlayer(r,setUrl=true){
- active=r;const rp=report(r),cf=confidence(+r[3]||0),key=`${r[0]}|${r[1]}`;
- $('modalTitle').textContent=r[0];$('modalMeta').textContent=`${team(r)||'VVHL Season XI'} · ${r[6]||'No record'}`;
- $('modalPosition').textContent=pos(r);$('modalPosition').dataset.position=pos(r);$('modalArchetype').textContent=rp.arch;
+ active=r;const rp=report(r),games=Math.max(...roles(r).map(x=>+x[3]||0)),cf=confidence(games),key=playerKey(r),previousTeam=playerTeam(r);
+ $('modalTitle').textContent=r[0];$('modalMeta').textContent=`${previousTeam||'Team unconfirmed'} · ${roleLabel(r)}`;
+ $('modalPosition').textContent=positionLabel(r);$('modalPosition').dataset.position=pos(r);$('modalArchetype').textContent=rp.arch;
  $('modalConfidence').textContent=cf[0];$('modalConfidence').className=`confidence-chip ${cf[1]}`;$('profileMonogram').textContent=initials(r[0]);
- $('modalDetails').innerHTML=r[1]==='S'?detail('Games',r[3])+detail('Overall',r[5])+detail('Points',r[4])+detail('Goals',r[7])+detail('Assists',r[8])+detail('+ / -',r[9])+detail('Faceoff %',r[10]+'%')+detail('Record',r[6]):detail('Games',r[3])+detail('Record',r[6])+detail('Save %',r[4])+detail('GAA',r[5])+detail('Shutouts',r[7])+detail('Role','Goalie');
+ let logo=$('modalTeamLogo');if(!logo){logo=document.createElement('img');logo.id='modalTeamLogo';logo.className='profile-team-logo';$('profileMonogram').after(logo)}const logoPath=teamLogo(r);logo.hidden=!logoPath;if(logoPath){logo.src=logoPath;logo.alt=`${previousTeam} logo`}
+ $('modalDetails').innerHTML=roles(r).map(x=>x[1]==='S'?detail('Skater GP',x[3])+detail('Skater Points',x[4])+detail('Skater Record',x[6]):detail('Goalie GP',x[3])+detail('Goalie Save %',x[4])+detail('Goalie Record',x[6])).join('');
+ $('regularStats').innerHTML=`<div class="season-context"><b>Regular Season · VVHL 4s</b><span>${esc(previousTeam||'Previous team unconfirmed')}</span></div><div class="split-stat-grid">${roles(r).map(statBlock).join('')}</div>`;
  $('reportSummary').textContent=rp.summary;$('reportGrades').innerHTML=rp.grades.map(([a,v])=>`<div class="grade-row"><span>${esc(a)}</span><div class="grade-track"><i style="width:${v}%"></i></div><b>${v}</b></div>`).join('');
  $('reportStrengths').innerHTML=rp.good.map(x=>`<li>${esc(x)}</li>`).join('');$('reportConcerns').innerHTML=rp.risk.map(x=>`<li>${esc(x)}</li>`).join('');
- $('modalAdd').textContent=board().some(x=>x.key===key)?'Added to GM Board ✓':'Add to GM Board';tab('overview');modal.classList.add('open');document.body.style.overflow='hidden';
- if(setUrl){const u=new URL(location.href);u.searchParams.set('player',r[0]);u.searchParams.set('type',r[1]);history.replaceState({},'',u)}
+ $('modalAdd').textContent=board().some(x=>x.key===key||String(x.name||'').trim().toLowerCase()===key)?'Added to GM Board ✓':'Add to GM Board';document.querySelectorAll('[data-format]').forEach(x=>x.classList.toggle('active',x.dataset.format==='4s'));tab('overview');modal.classList.add('open');document.body.style.overflow='hidden';
+ if(setUrl){const u=new URL(location.href);u.searchParams.set('player',r[0]);u.searchParams.delete('type');history.replaceState({},'',u)}
 }
 function closePlayer(){modal.classList.remove('open');document.body.style.overflow='';active=null;const u=new URL(location.href);u.searchParams.delete('player');u.searchParams.delete('type');history.replaceState({},'',u)}
 function card(r){
- const g=r[1]==='G',key=`${r[0]}|${r[1]}`,rp=report(r),cf=confidence(+r[3]||0),added=board().some(x=>x.key===key);
+ const g=!hasRole(r,'S'),key=playerKey(r),rp=report(r),cf=confidence(Math.max(...roles(r).map(x=>+x[3]||0))),added=board().some(x=>x.key===key||String(x.name||'').trim().toLowerCase()===key),previousTeam=playerTeam(r),logo=teamLogo(r);
  const stats=g?[['GP',r[3]],['SV%',r[4]],['GAA',r[5]],['SO',r[7]]]:[['GP',r[3]],['PTS',r[4]],['OVR',r[5]],['+/-',r[9]]];
- return `<article class="player-card ${g?'goalie':''}" data-card="${esc(key)}" tabindex="0" role="button"><div class="player-head"><div><h3>${esc(r[0])}</h3><div class="player-meta">${esc(pos(r))} · ${esc(r[6]||'Season XI')}</div></div><span class="player-type">${g?'Goalie':'Skater'}</span></div><div class="player-team">${esc(team(r)||'VVHL Season XI')}</div><div class="card-archetype">${esc(rp.arch)} <small>${esc(cf[0])}</small></div><div class="player-stats">${stats.map(([a,b])=>`<div class="mini-stat"><small>${a}</small><b>${esc(b)}</b></div>`).join('')}</div><div class="card-actions"><button class="small-btn" data-view="${esc(key)}" type="button">Full Report</button><button class="small-btn primary" data-add="${esc(key)}" type="button" ${added?'disabled':''}>${added?'Added ✓':'Add to GM'}</button></div></article>`;
+ return `<article class="player-card ${g?'goalie':''}" data-card="${esc(key)}" tabindex="0" role="button"><div class="player-head"><div class="card-player-id">${logo?`<img class="card-team-logo" src="${esc(logo)}" alt="${esc(previousTeam)} logo">`:''}<div><h3>${esc(r[0])}</h3><div class="player-meta">${esc(positionLabel(r))}</div></div></div><span class="player-type">${esc(roleLabel(r))}</span></div><div class="player-team">${esc(previousTeam||'Team unconfirmed')}</div><div class="card-archetype">${esc(rp.arch)} <small>${esc(cf[0])}</small></div><div class="player-stats">${stats.map(([a,b])=>`<div class="mini-stat"><small>${a}</small><b>${esc(b)}</b></div>`).join('')}</div><div class="card-actions"><button class="small-btn" data-view="${esc(key)}" type="button">Full Report</button><button class="small-btn primary" data-add="${esc(key)}" type="button" ${added?'disabled':''}>${added?'Added ✓':'Add to GM'}</button></div></article>`;
 }
-function filtered(){const q=search.value.trim().toLowerCase();return players.filter(r=>{const h=`${r[0]} ${team(r)} ${pos(r)} ${report(r).arch}`.toLowerCase();return(!q||h.includes(q))&&(typeFilter.value==='all'||r[1]===typeFilter.value)&&(positionFilter.value==='all'||pos(r)===positionFilter.value)}).sort((a,b)=>a[0].localeCompare(b[0]))}
+function filtered(){const q=search.value.trim().toLowerCase();return players.filter(r=>{const h=`${r[0]} ${playerTeam(r)} ${positionLabel(r)} ${roleLabel(r)} ${report(r).arch}`.toLowerCase(),teamMatch=teamFilter.value==='all'||(teamFilter.value==='unconfirmed'?!playerTeam(r):playerTeam(r)===teamFilter.value);return(!q||h.includes(q))&&teamMatch&&(typeFilter.value==='all'||hasRole(r,typeFilter.value))&&(positionFilter.value==='all'||roles(r).some(x=>pos(x)===positionFilter.value))}).sort((a,b)=>a[0].localeCompare(b[0]))}
 function render(){const rows=filtered();grid.innerHTML=rows.map(card).join('');$('emptyState').hidden=!!rows.length;grid.querySelectorAll('[data-view]').forEach(x=>x.onclick=e=>{e.stopPropagation();openPlayer(find(x.dataset.view))});grid.querySelectorAll('[data-add]').forEach(x=>x.onclick=e=>{e.stopPropagation();add(find(x.dataset.add))});grid.querySelectorAll('[data-card]').forEach(x=>{x.onclick=()=>openPlayer(find(x.dataset.card));x.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();x.click()}}})}
-function counts(){$('totalPlayers').textContent=players.length;$('skaterCount').textContent=players.filter(x=>x[1]==='S').length;$('goalieCount').textContent=players.filter(x=>x[1]==='G').length;$('shortlistCount').textContent=board().length}
-[search,typeFilter,positionFilter].forEach(x=>x.oninput=render);document.querySelectorAll('.profile-tab').forEach(x=>x.onclick=()=>tab(x.dataset.profileTab));
+function counts(){$('totalPlayers').textContent=players.length;$('skaterCount').textContent=players.filter(x=>hasRole(x,'S')).length;$('goalieCount').textContent=players.filter(x=>hasRole(x,'G')).length;$('shortlistCount').textContent=board().length}
+[...new Set(rawPlayers.map(team).filter(Boolean))].sort().forEach(name=>teamFilter.add(new Option(name,name)));
+[search,typeFilter,positionFilter,teamFilter].forEach(x=>x.oninput=render);document.querySelectorAll('.profile-tab').forEach(x=>x.onclick=()=>tab(x.dataset.profileTab));document.querySelectorAll('[data-format]').forEach(x=>x.onclick=()=>{document.querySelectorAll('[data-format]').forEach(b=>b.classList.toggle('active',b===x));$('regularStats').innerHTML=x.dataset.format==='4s'?`<div class="season-context"><b>Regular Season · VVHL 4s</b><span>${esc(playerTeam(active)||'Previous team unconfirmed')}</span></div><div class="split-stat-grid">${roles(active).map(statBlock).join('')}</div>`:`<div class="profile-empty"><b>VV6L 6s profile ready</b><p>Sixes statistics will appear here when the VV6L season data is connected. No 4s results are mixed into this view.</p></div>`});
 $('modalClose').onclick=closePlayer;modal.onclick=e=>{if(e.target===modal)closePlayer()};document.onkeydown=e=>{if(e.key==='Escape'&&modal.classList.contains('open'))closePlayer()};
 $('modalAdd').onclick=()=>active&&add(active);$('copyProfile').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);$('copyProfile').textContent='Link Copied ✓';setTimeout(()=>$('copyProfile').textContent='Copy Profile Link',1600)}catch{$('copyProfile').textContent='Copy Failed'}};
-counts();render();const p=new URLSearchParams(location.search),wanted=p.get('player'),kind=p.get('type');if(wanted){const r=players.find(x=>x[0].toLowerCase()===wanted.toLowerCase()&&(!kind||x[1]===kind));if(r)openPlayer(r,false)}
+counts();render();const wanted=new URLSearchParams(location.search).get('player');if(wanted){const r=players.find(x=>x[0].toLowerCase()===wanted.toLowerCase());if(r)openPlayer(r,false)}
