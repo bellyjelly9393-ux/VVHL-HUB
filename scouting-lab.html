@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="hub.css" />
     <link rel="stylesheet" href="wildman.css" />
+    <link rel="stylesheet" href="management.css" />
   </head>
   <body class="wildman-site management-protected">
     <header class="site-header">
@@ -20,7 +21,7 @@
     </header>
 
     <main>
-      <section class="section-shell section-block">
+      <section class="section-shell section-block management-login-shell">
         <div class="section-heading">
           <div><div class="eyebrow">PRIVATE COMPETITIVE INTELLIGENCE</div><h2>SCOUTING LAB</h2></div>
           <div id="managementAccessStatus" class="status-pill">PRIVATE · MANAGEMENT ONLY</div>
@@ -35,7 +36,27 @@
       </section>
 
       <div data-management-content hidden>
-        <section class="wm-visual-hero"><div class="wm-hero-kicker">Wildman Media + Film Room</div><img src="assets/wildman/scouting-lab.webp" alt="Wildman Hockey Scouting Lab" /></section>
+        <section class="private-hero" aria-label="Wildman Hockey private scouting lab">
+          <div class="private-hero-content">
+            <div class="private-hero-lockup">
+              <div class="private-hero-mark">W</div>
+              <div>
+                <div class="private-hero-kicker">Wildman Hockey · Private Film Room</div>
+              </div>
+            </div>
+            <h1>SCOUTING <span>LAB</span></h1>
+            <p>Internal player evaluation, opponent tendencies, VOD review, matchup planning and lineup decisions. Built for management eyes, not free pre-game homework for everybody else.</p>
+            <div class="private-hero-tags" aria-label="Scouting lab tools">
+              <span>Player Grades</span>
+              <span>Film Review</span>
+              <span>Opponent Files</span>
+              <span>Lineup Matchups</span>
+            </div>
+          </div>
+          <div class="private-hero-badge" aria-hidden="true">
+            <div><strong>Management</strong><small>Authorized Access</small></div>
+          </div>
+        </section>
 
         <section class="section-shell section-block">
           <div class="section-heading"><div><div class="eyebrow">COMPETITIVE INTELLIGENCE</div><h2>STATS + FILM + MATCHUPS</h2></div><p class="section-note">The goal is not to crown one magical lineup forever. The goal is to find the best lineup for the opponent in front of Wildman.</p></div>
