@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="management.css" />
     <link rel="stylesheet" href="scouting-phase1.css" />
     <link rel="stylesheet" href="scouting-phase2.css" />
+    <link rel="stylesheet" href="scouting-chelstats.css" />
   </head>
   <body class="wildman-site management-protected">
     <header class="site-header">
@@ -148,7 +149,7 @@
               <div>
                 <div class="eyebrow">PHASE 2 · SHOT INTELLIGENCE</div>
                 <h2>SHOT LOCATION ANALYSIS</h2>
-                <p>Season totals come from the connected scouting stats. Location maps use only real tracked shot events captured from film or imported later, so an empty zone means “not tracked yet,” not “definitely never shoots there.”</p>
+                <p>Season totals come from the connected scouting stats. Manual film events remain available, while the Chelstats connection below can now populate its 16 ice zones and five net targets automatically.</p>
               </div>
               <div id="shotSourcePill" class="shot-source-pill">0 located events</div>
             </div>
@@ -176,9 +177,69 @@
               <div class="shot-kpi"><small id="shotKpiCoverageLabel">Location Coverage</small><strong id="shotKpiCoverage">0.0%</strong></div>
             </div>
 
+            <section id="chelstatsAutoPanel" class="chel-auto-panel">
+              <div class="chel-auto-head">
+                <div>
+                  <div class="eyebrow">AUTOMATIC SOURCE · CHELSTATS</div>
+                  <h3>LIVE SHOT MAP SYNC</h3>
+                  <p>Select a scouting player and sync their Chelstats profile. The feed maps ShotsLocationOnIce1–16 and ShotsLocationOnNet1–5 directly into the scouting report.</p>
+                </div>
+                <div id="chelstatsLivePill" class="chel-live-pill">CHELSTATS READY</div>
+              </div>
+              <div class="chel-sync-grid">
+                <label>Username<input id="chelstatsUsername" class="field" placeholder="Chelstats username" /></label>
+                <label>Team name<input id="chelstatsTeamname" class="field" placeholder="Exact Chelstats team name if required" /></label>
+                <label>Console<input id="chelstatsConsole" class="field" value="common-gen5" /></label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="chelstatsUseSelected" class="small-btn" type="button">Use Selected</button><button id="chelstatsSync" class="small-btn primary" type="button">Sync Chelstats</button></div>
+              </div>
+              <div id="chelstatsStatus" class="chel-status">Choose a player to load automatic shot-location data.</div>
+              <div id="chelstatsProfile" class="chel-profile-grid"></div>
+              <div class="chel-metric-switch">
+                <button class="chel-metric-btn active" data-chel-metric="shots" type="button">Shots</button>
+                <button class="chel-metric-btn" data-chel-metric="goals" type="button">Goals</button>
+                <button class="chel-metric-btn" data-chel-metric="efficiency" type="button">Efficiency %</button>
+                <button class="chel-metric-btn" data-chel-metric="share" type="button">Shot Share %</button>
+              </div>
+              <div class="chel-map-grid">
+                <div class="chel-rink-card">
+                  <div class="chel-map-title"><strong>ICE ZONES · 1–16</strong><small>Chelstats field mapping preserved</small></div>
+                  <div class="chel-rink" aria-label="Chelstats sixteen-zone ice shot map">
+                    <div class="chel-ice-zone" data-chel-ice="1"><strong>0</strong><small>Z1</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="2"><strong>0</strong><small>Z2</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="3"><strong>0</strong><small>Z3</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="4"><strong>0</strong><small>Z4</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="5"><strong>0</strong><small>Z5</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="6"><strong>0</strong><small>Z6</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="7"><strong>0</strong><small>Z7</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="8"><strong>0</strong><small>Z8</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="9"><strong>0</strong><small>Z9</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="10"><strong>0</strong><small>Z10</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="11"><strong>0</strong><small>Z11</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="12"><strong>0</strong><small>Z12</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="13"><strong>0</strong><small>Z13</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="14"><strong>0</strong><small>Z14</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="15"><strong>0</strong><small>Z15</small></div>
+                    <div class="chel-ice-zone" data-chel-ice="16"><strong>0</strong><small>Z16</small></div>
+                  </div>
+                </div>
+                <div class="chel-net-card">
+                  <div class="chel-map-title"><strong>NET ZONES · 1–5</strong><small>3/4 top · 1/2 bottom · 5 five-hole</small></div>
+                  <div class="chel-net" aria-label="Chelstats five-zone net target map">
+                    <div class="chel-net-zone" data-chel-net="1"><strong>0</strong><small>Net 1</small></div>
+                    <div class="chel-net-zone" data-chel-net="2"><strong>0</strong><small>Net 2</small></div>
+                    <div class="chel-net-zone" data-chel-net="3"><strong>0</strong><small>Net 3</small></div>
+                    <div class="chel-net-zone" data-chel-net="4"><strong>0</strong><small>Net 4</small></div>
+                    <div class="chel-net-zone" data-chel-net="5"><strong>0</strong><small>Net 5</small></div>
+                  </div>
+                  <div id="chelstatsInsights" class="chel-insights"></div>
+                </div>
+              </div>
+              <div class="chel-credit">Automatic values come from the Chelstats player stats endpoint through the VVHL server-side proxy. Manual film-review tracking remains separate so management can supplement or verify the automated feed.</div>
+            </section>
+
             <div class="shot-grid">
               <section class="shot-map-card">
-                <div class="shot-map-title"><h3>Ice + Net Zones</h3><small id="shotMetricLabel">Shots on Goal</small></div>
+                <div class="shot-map-title"><h3>Manual Film Map</h3><small id="shotMetricLabel">Shots on Goal</small></div>
                 <div class="shot-rink-wrap">
                   <div class="shot-rink" aria-label="Clickable offensive-zone shot map">
                     <button class="shot-zone" data-zone="left_point" type="button"><strong>0</strong><small>Left Point</small></button>
@@ -249,5 +310,6 @@
     <script src="script.js"></script>
     <script src="scouting-phase1.js"></script>
     <script src="scouting-phase2.js"></script>
+    <script src="scouting-chelstats.js"></script>
   </body>
 </html>
