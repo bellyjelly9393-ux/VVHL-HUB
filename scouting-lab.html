@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="wildman.css" />
     <link rel="stylesheet" href="management.css" />
     <link rel="stylesheet" href="scouting-phase1.css" />
+    <link rel="stylesheet" href="scouting-phase2.css" />
   </head>
   <body class="wildman-site management-protected">
     <header class="site-header">
@@ -44,12 +45,12 @@
               <div><div class="private-hero-kicker">Wildman Hockey · Private Film Room</div></div>
             </div>
             <h1>SCOUTING <span>LAB</span></h1>
-            <p>Season 11 player intelligence, management watchlists and private evaluation notes in one place. Phase 1 turns the database into an actual scouting workflow instead of a decorative pile of numbers.</p>
+            <p>Season 11 player intelligence, automatic scouting insights, private management notes and shot-location analysis in one secure workspace.</p>
             <div class="private-hero-tags" aria-label="Scouting lab tools">
-              <span>Overview</span><span>Auto Insights</span><span>Watchlist</span><span>Private Notes</span>
+              <span>Overview</span><span>Auto Insights</span><span>Watchlist</span><span>Private Notes</span><span>Shot Analysis</span>
             </div>
           </div>
-          <div class="private-hero-badge" aria-hidden="true"><div><strong>Phase 1</strong><small>Scouting Reports</small></div></div>
+          <div class="private-hero-badge" aria-hidden="true"><div><strong>Phase 2</strong><small>Shot Intelligence</small></div></div>
         </section>
 
         <section class="section-shell section-block scout-command">
@@ -85,7 +86,7 @@
 
             <section class="scout-detail-panel">
               <div id="scoutDetailEmpty" class="scout-detail-empty">
-                <div><strong>Select a player</strong><span>Choose somebody from the player pool to open the Phase 1 scouting report.</span></div>
+                <div><strong>Select a player</strong><span>Choose somebody from the player pool to open the scouting report.</span></div>
               </div>
 
               <div id="scoutDetailContent" hidden>
@@ -140,14 +141,113 @@
             </section>
           </div>
         </section>
+
+        <section id="shotAnalysis" class="section-shell section-block shot-analysis-shell">
+          <div class="shot-analysis-panel">
+            <div class="shot-analysis-head">
+              <div>
+                <div class="eyebrow">PHASE 2 · SHOT INTELLIGENCE</div>
+                <h2>SHOT LOCATION ANALYSIS</h2>
+                <p>Season totals come from the connected scouting stats. Location maps use only real tracked shot events captured from film or imported later, so an empty zone means “not tracked yet,” not “definitely never shoots there.”</p>
+              </div>
+              <div id="shotSourcePill" class="shot-source-pill">0 located events</div>
+            </div>
+
+            <div class="shot-toolbar">
+              <select id="shotPlayerFilter" class="select-field" aria-label="Filter shot analysis by player"><option value="all">All players</option></select>
+              <select id="shotTeamFilter" class="select-field" aria-label="Filter shot analysis by team"><option value="all">All teams</option></select>
+              <select id="shotPhaseFilter" class="select-field" aria-label="Filter shot analysis by phase">
+                <option value="regular">Regular Season</option><option value="playoffs">Playoffs</option><option value="preseason">Preseason</option><option value="scrimmage">Scrimmage</option><option value="all">All phases</option>
+              </select>
+              <button id="refreshShotData" class="small-btn" type="button">Refresh Shots</button>
+            </div>
+
+            <div class="shot-metric-switch" aria-label="Shot map metric">
+              <button class="shot-metric-btn active" data-shot-metric="shots" type="button">Shots</button>
+              <button class="shot-metric-btn" data-shot-metric="goals" type="button">Goals</button>
+              <button class="shot-metric-btn" data-shot-metric="attempts" type="button">Attempts</button>
+              <button class="shot-metric-btn" data-shot-metric="efficiency" type="button">Efficiency %</button>
+            </div>
+
+            <div class="shot-kpi-grid">
+              <div class="shot-kpi"><small id="shotKpiShotsLabel">Season Shots</small><strong id="shotKpiShots">0</strong></div>
+              <div class="shot-kpi"><small id="shotKpiGoalsLabel">Season Goals</small><strong id="shotKpiGoals">0</strong></div>
+              <div class="shot-kpi"><small>Shooting %</small><strong id="shotKpiEfficiency">0.0%</strong></div>
+              <div class="shot-kpi"><small id="shotKpiCoverageLabel">Location Coverage</small><strong id="shotKpiCoverage">0.0%</strong></div>
+            </div>
+
+            <div class="shot-grid">
+              <section class="shot-map-card">
+                <div class="shot-map-title"><h3>Ice + Net Zones</h3><small id="shotMetricLabel">Shots on Goal</small></div>
+                <div class="shot-rink-wrap">
+                  <div class="shot-rink" aria-label="Clickable offensive-zone shot map">
+                    <button class="shot-zone" data-zone="left_point" type="button"><strong>0</strong><small>Left Point</small></button>
+                    <button class="shot-zone" data-zone="high_slot" type="button"><strong>0</strong><small>High Slot</small></button>
+                    <button class="shot-zone" data-zone="right_point" type="button"><strong>0</strong><small>Right Point</small></button>
+                    <button class="shot-zone" data-zone="left_circle" type="button"><strong>0</strong><small>Left Circle</small></button>
+                    <button class="shot-zone" data-zone="mid_slot" type="button"><strong>0</strong><small>Mid Slot</small></button>
+                    <button class="shot-zone" data-zone="right_circle" type="button"><strong>0</strong><small>Right Circle</small></button>
+                    <button class="shot-zone" data-zone="left_low" type="button"><strong>0</strong><small>Left Low</small></button>
+                    <button class="shot-zone" data-zone="low_slot" type="button"><strong>0</strong><small>Low Slot</small></button>
+                    <button class="shot-zone" data-zone="right_low" type="button"><strong>0</strong><small>Right Low</small></button>
+                    <button class="shot-zone" data-zone="left_corner" type="button"><strong>0</strong><small>Left Corner</small></button>
+                    <button class="shot-zone" data-zone="behind_net" type="button"><strong>0</strong><small>Behind Net</small></button>
+                    <button class="shot-zone" data-zone="right_corner" type="button"><strong>0</strong><small>Right Corner</small></button>
+                  </div>
+
+                  <div class="shot-net-panel">
+                    <div class="shot-net" aria-label="Clickable net target map">
+                      <button class="shot-net-zone" data-net-zone="top_left" type="button"><span>0</span></button>
+                      <button class="shot-net-zone" data-net-zone="top_right" type="button"><span>0</span></button>
+                      <button class="shot-net-zone" data-net-zone="bottom_left" type="button"><span>0</span></button>
+                      <button class="shot-net-zone" data-net-zone="bottom_right" type="button"><span>0</span></button>
+                      <button class="shot-net-zone" data-net-zone="five_hole" type="button"><span>0</span></button>
+                    </div>
+                    <div class="shot-legend">
+                      <div class="shot-legend-row"><span>Map metric</span><b>Heat = relative frequency</b></div>
+                      <div class="shot-legend-row"><span>Shots</span><b>Goals + saves</b></div>
+                      <div class="shot-legend-row"><span>Attempts</span><b>Shots + misses + blocks</b></div>
+                    </div>
+                    <div id="shotEmptyNote" class="shot-empty-note">No location data tracked yet.</div>
+                  </div>
+                </div>
+              </section>
+
+              <aside class="shot-capture-card">
+                <h3>Film Review Capture</h3>
+                <p>Tap an ice zone and net zone on the maps, then save the event while reviewing VOD. The heat maps update immediately.</p>
+                <div class="shot-capture-form">
+                  <label>Player<select id="shotCapturePlayer" class="select-field"><option value="">Select player…</option></select></label>
+                  <label>Team / Club<select id="shotCaptureTeam" class="select-field"><option value="">No team assigned</option></select></label>
+                  <div class="pair">
+                    <label>Phase<select id="shotCapturePhase" class="select-field"><option value="regular">Regular</option><option value="playoffs">Playoffs</option><option value="preseason">Preseason</option><option value="scrimmage">Scrimmage</option></select></label>
+                    <label>Result<select id="shotCaptureResult" class="select-field"><option value="save">Save</option><option value="goal">Goal</option><option value="miss">Miss</option><option value="block">Block</option></select></label>
+                  </div>
+                  <div class="pair">
+                    <label>Ice Zone<select id="shotCaptureIceZone" class="select-field"><option value="">Select zone…</option><option value="left_point">Left Point</option><option value="high_slot">High Slot</option><option value="right_point">Right Point</option><option value="left_circle">Left Circle</option><option value="mid_slot">Mid Slot</option><option value="right_circle">Right Circle</option><option value="left_low">Left Low</option><option value="low_slot">Low Slot</option><option value="right_low">Right Low</option><option value="left_corner">Left Corner</option><option value="behind_net">Behind Net</option><option value="right_corner">Right Corner</option></select></label>
+                    <label>Net Zone<select id="shotCaptureNetZone" class="select-field"><option value="">Not tracked</option><option value="top_left">Top Left</option><option value="top_right">Top Right</option><option value="bottom_left">Bottom Left</option><option value="bottom_right">Bottom Right</option><option value="five_hole">Five Hole</option><option value="unknown">Unknown</option></select></label>
+                  </div>
+                  <label>Shot Type<select id="shotCaptureType" class="select-field"><option value="">Not tagged</option><option value="wrist">Wrist</option><option value="snap">Snap</option><option value="slap">Slap</option><option value="backhand">Backhand</option><option value="one_timer">One-Timer</option><option value="tip">Tip</option><option value="wrap">Wrap</option><option value="other">Other</option></select></label>
+                  <label>Source<input id="shotCaptureSource" class="field" value="film review" /></label>
+                  <label>Note<textarea id="shotCaptureNote" class="text-input" placeholder="Optional play context, setup, goalie read…"></textarea></label>
+                  <div id="shotCaptureSelection" class="shot-capture-selection">Ice: not selected · Net: not selected</div>
+                  <div class="shot-capture-actions"><button id="saveShotEvent" class="small-btn primary" type="button">Save Shot Event</button></div>
+                </div>
+                <div id="shotPhaseStatus" class="shot-status">Waiting for shot data…</div>
+                <div class="shot-recent"><h4>Recent Located Events</h4><div id="shotRecentEvents"></div></div>
+              </aside>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
 
-    <footer><div class="section-shell footer-inner"><div><b>WILDMAN SCOUTING LAB</b><span>Private · Overview · Insights · Watchlist · Notes</span></div><p>Management access only</p></div></footer>
+    <footer><div class="section-shell footer-inner"><div><b>WILDMAN SCOUTING LAB</b><span>Private · Reports · Insights · Shot Intelligence</span></div><p>Management access only</p></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
     <script src="backend.js"></script>
     <script src="management-guard.js"></script>
     <script src="script.js"></script>
     <script src="scouting-phase1.js"></script>
+    <script src="scouting-phase2.js"></script>
   </body>
 </html>
