@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/management", "destination": "/management.html" },
+    { "source": "/scouting-lab", "destination": "/scouting-lab.html" }
+  ]
+}
