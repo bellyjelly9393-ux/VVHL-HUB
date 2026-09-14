@@ -1,0 +1,172 @@
+:root{
+  --mgmt-purple:#7a39ff;
+  --mgmt-gold:#d8ad55;
+  --mgmt-bg:#08050c;
+}
+.management-protected .private-hero{
+  position:relative;
+  max-width:1320px;
+  min-height:clamp(330px,48vw,620px);
+  margin:30px auto 46px;
+  padding:clamp(30px,5vw,68px);
+  border-radius:28px;
+  overflow:hidden;
+  border:1px solid rgba(216,173,85,.28);
+  background:
+    radial-gradient(circle at 78% 26%,rgba(122,57,255,.34),transparent 25%),
+    radial-gradient(circle at 18% 82%,rgba(216,173,85,.17),transparent 28%),
+    linear-gradient(135deg,#050309 0%,#12091b 48%,#08050c 100%);
+  box-shadow:0 34px 100px rgba(0,0,0,.58),0 0 70px rgba(122,57,255,.09),inset 0 1px 0 rgba(255,255,255,.04);
+  isolation:isolate;
+}
+.management-protected .private-hero::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  opacity:.23;
+  background:
+    linear-gradient(90deg,transparent 49.75%,rgba(255,255,255,.15) 49.9%,rgba(255,255,255,.15) 50.1%,transparent 50.25%),
+    radial-gradient(circle at 50% 50%,transparent 0 9%,rgba(216,173,85,.32) 9.2% 9.7%,transparent 10%),
+    repeating-linear-gradient(0deg,transparent 0 52px,rgba(255,255,255,.025) 53px 54px);
+  pointer-events:none;
+}
+.management-protected .private-hero::after{
+  content:"";
+  position:absolute;
+  inset:-30% -10% auto auto;
+  width:55%;
+  aspect-ratio:1;
+  border:1px solid rgba(216,173,85,.16);
+  border-radius:50%;
+  box-shadow:0 0 0 28px rgba(216,173,85,.03),0 0 0 70px rgba(122,57,255,.025);
+  transform:rotate(-14deg);
+  pointer-events:none;
+}
+.management-protected .private-hero-content{
+  position:relative;
+  z-index:2;
+  max-width:760px;
+  min-height:inherit;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.management-protected .private-hero-lockup{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:22px;
+  flex-wrap:wrap;
+}
+.management-protected .private-hero-mark{
+  width:68px;
+  height:68px;
+  display:grid;
+  place-items:center;
+  border-radius:20px;
+  border:1px solid rgba(216,173,85,.34);
+  background:linear-gradient(145deg,rgba(216,173,85,.16),rgba(122,57,255,.18));
+  color:#f1d595;
+  font:900 32px/1 "Barlow Condensed",sans-serif;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 16px 36px rgba(0,0,0,.28);
+}
+.management-protected .private-hero-kicker{
+  color:#e6c881;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+}
+.management-protected .private-hero h1{
+  margin:0 0 18px;
+  color:#fff;
+  font:900 clamp(58px,9vw,118px)/.82 "Barlow Condensed",sans-serif;
+  letter-spacing:-.025em;
+  text-transform:uppercase;
+  text-shadow:0 10px 34px rgba(0,0,0,.42);
+}
+.management-protected .private-hero h1 span{
+  display:block;
+  color:transparent;
+  -webkit-text-stroke:1.5px rgba(231,203,143,.92);
+  text-shadow:none;
+}
+.management-protected .private-hero p{
+  max-width:680px;
+  margin:0;
+  color:#c3bacb;
+  font-size:clamp(15px,2vw,18px);
+  line-height:1.65;
+}
+.management-protected .private-hero-tags{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:28px;
+}
+.management-protected .private-hero-tags span{
+  padding:9px 12px;
+  border-radius:999px;
+  border:1px solid rgba(216,173,85,.2);
+  background:rgba(255,255,255,.035);
+  color:#f0d9a5;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+.management-protected .private-hero-badge{
+  position:absolute;
+  z-index:2;
+  right:clamp(22px,4vw,52px);
+  bottom:clamp(22px,4vw,48px);
+  width:clamp(120px,17vw,210px);
+  aspect-ratio:1;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  border:1px solid rgba(216,173,85,.3);
+  background:radial-gradient(circle,rgba(122,57,255,.2),rgba(7,4,10,.9) 70%);
+  box-shadow:inset 0 0 0 10px rgba(255,255,255,.025),0 20px 50px rgba(0,0,0,.38);
+}
+.management-protected .private-hero-badge strong{
+  display:block;
+  color:#f0d18a;
+  font:900 clamp(19px,2.4vw,30px)/.95 "Barlow Condensed",sans-serif;
+  text-transform:uppercase;
+}
+.management-protected .private-hero-badge small{
+  display:block;
+  margin-top:7px;
+  color:#a99faf;
+  font-size:10px;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+}
+.management-protected .management-login-shell{
+  max-width:980px;
+  margin:0 auto;
+}
+@media(max-width:800px){
+  .management-protected .private-hero{
+    min-height:500px;
+    margin:18px 14px 34px;
+    padding:30px 24px 150px;
+    border-radius:22px;
+  }
+  .management-protected .private-hero-content{min-height:auto}
+  .management-protected .private-hero-badge{
+    left:24px;
+    right:auto;
+    bottom:24px;
+    width:112px;
+  }
+}
+@media(max-width:520px){
+  .management-protected .private-hero h1{font-size:58px}
+  .management-protected .private-hero-mark{width:58px;height:58px;border-radius:17px;font-size:28px}
+  .management-protected .private-hero-tags span{font-size:10px;padding:8px 10px}
+}
