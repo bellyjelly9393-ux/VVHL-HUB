@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#09070c">
+  <meta name="description" content="Private Calgary Hitmen LGCHL scouting and season workspace.">
+  <title>Calgary Hitmen Workspace | Wildman Hockey</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="wildman.css">
+  <link rel="stylesheet" href="management.css">
+  <link rel="stylesheet" href="scouting-phase1.css">
+  <link rel="stylesheet" href="hitmen-workspace.css">
+</head>
+<body class="wildman-site management-protected">
+<header class="site-header">
+  <a class="brand" href="management.html"><span class="wm-brand-mark">W</span><span class="brand-copy wm-brand-copy">WILDMAN HOCKEY<br><b>PRIVATE WORKSPACES</b></span></a>
+  <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <nav class="main-nav"><a href="management.html">Management</a><a href="scouting-lab.html">Wildman Scouting</a><a href="hitmen-workspace.html">Hitmen</a><a href="operator-assistant.html">Operator Assistant</a></nav>
+</header>
+<main>
+  <section class="section-shell section-block management-login-shell">
+    <div class="section-heading"><div><div class="eyebrow">PRIVATE · LGCHL MANAGEMENT</div><h2>CALGARY HITMEN</h2></div><div id="managementAccessStatus" class="status-pill">PRIVATE · MANAGEMENT ONLY</div></div>
+    <section id="accountPanel" class="panel account-panel"><div><div class="eyebrow">SECURE ACCESS</div><h3>Loading account…</h3></div></section>
+    <div id="managementLockedMessage" class="wm-card" style="margin-top:16px"><b>Management sign-in required.</b><p>This workspace is private and separate from Wildman Hockey tournament data.</p></div>
+  </section>
+
+  <div data-management-content hidden>
+    <section class="section-shell hitmen-shell">
+      <div class="hitmen-hero">
+        <div class="eyebrow">LGCHL · PRIVATE TEAM WORKSPACE</div>
+        <h1>CALGARY <span>HITMEN</span></h1>
+        <p>Team-scoped scouting, notes, streamed scouting sessions and season tracking. Data here does not feed the public Wildman team, Academy or Kickoff Classic tournament workspace.</p>
+        <div class="hitmen-badges"><span>Season 55</span><span>6s</span><span>Private Scouting</span><span>BO3 Rehearsals</span><span>Season Tracking</span></div>
+      </div>
+
+      <div class="hitmen-kpis">
+        <div class="hitmen-kpi"><small>Watchlist</small><strong id="hitmenWatchCount">0</strong></div>
+        <div class="hitmen-kpi"><small>Private Reports</small><strong id="hitmenReportCount">0</strong></div>
+        <div class="hitmen-kpi"><small>Sessions</small><strong id="hitmenSessionCount">0</strong></div>
+        <div class="hitmen-kpi"><small>Tracked Record</small><strong id="hitmenRecord">0-0</strong></div>
+      </div>
+
+      <div id="hitmenStatus" class="hitmen-status">Loading Calgary Hitmen workspace…</div>
+
+      <div class="hitmen-grid">
+        <section class="hitmen-panel">
+          <div class="eyebrow">SCOUTING POOL</div><h3>Players</h3>
+          <div class="hitmen-toolbar">
+            <input id="hitmenSearch" class="field" type="search" placeholder="Search gamertag…">
+            <select id="hitmenPosition" class="select-field"><option value="all">All positions</option><option value="center">C</option><option value="leftwing">LW</option><option value="rightwing">RW</option><option value="defensemen">D</option><option value="goalie">G</option></select>
+          </div>
+          <div id="hitmenPlayerList" class="hitmen-player-list"></div>
+          <div class="scout-section-title"><h3>Add Player</h3><small>Current scouting pool</small></div>
+          <div class="hitmen-add-player">
+            <input id="newHitmenGamertag" class="field" placeholder="Gamertag">
+            <select id="newHitmenPosition" class="select-field"><option value="center">C</option><option value="leftwing">LW</option><option value="rightwing">RW</option><option value="defensemen">D</option><option value="goalie">G</option></select>
+            <select id="newHitmenPlatform" class="select-field"><option value="common-gen5">Gen 5</option><option value="xbox">Xbox</option><option value="playstation">PlayStation</option></select>
+            <button id="addHitmenPlayer" class="small-btn primary" type="button">Add</button>
+          </div>
+        </section>
+
+        <section class="hitmen-panel">
+          <div id="hitmenEmpty"><div class="scout-detail-empty"><div><strong>Select a player</strong><span>Open a player to manage the Calgary-specific watchlist and report.</span></div></div></div>
+          <div id="hitmenDetail" hidden>
+            <div class="hitmen-detail-head">
+              <div><div class="eyebrow">CALGARY SCOUTING REPORT</div><h2 id="hitmenPlayerName">Player</h2><p id="hitmenPlayerMeta">Season 55</p></div>
+              <button id="hitmenWatchToggle" class="small-btn" type="button">Add to Watchlist</button>
+            </div>
+            <div class="hitmen-fields">
+              <label>Board status<select id="hitmenBoardStatus" class="select-field"><option value="watching">Watching</option><option value="scouted">Scouted</option><option value="target">Target</option><option value="drafted">Drafted</option><option value="passed">Passed</option></select></label>
+              <label>Priority / grade<input id="hitmenGrade" class="field" placeholder="A, B+, top line, depth…"></label>
+              <label class="wide">Quick board note<textarea id="hitmenBoardNote" class="text-input" placeholder="Short scouting note for the board…"></textarea></label>
+              <label class="wide">Summary<textarea id="hitmenSummary" class="text-input" placeholder="Overall read on the player…"></textarea></label>
+              <label>Strengths<textarea id="hitmenStrengths" class="text-input" placeholder="What creates value?"></textarea></label>
+              <label>Concerns<textarea id="hitmenConcerns" class="text-input" placeholder="What can be exposed?"></textarea></label>
+              <label>Projected role<input id="hitmenRole" class="field" placeholder="1C, RD, starter, utility…"></label>
+              <label>Confidence<select id="hitmenConfidence" class="select-field"><option value="1">1 · Early</option><option value="2">2 · Limited</option><option value="3" selected>3 · Moderate</option><option value="4">4 · Strong</option><option value="5">5 · High</option></select></label>
+            </div>
+            <div class="hitmen-actions"><button id="saveHitmenBoard" class="small-btn" type="button">Save Board</button><button id="saveHitmenReport" class="small-btn primary" type="button">Save Private Report</button></div>
+            <div class="private-note">Calgary notes are team-scoped and do not overwrite the Wildman scouting board.</div>
+          </div>
+        </section>
+      </div>
+
+      <div class="hitmen-grid" style="margin-top:16px">
+        <section class="hitmen-panel">
+          <div class="eyebrow">TONIGHT · LIVE REHEARSAL</div><h3>Scouting Series</h3>
+          <p>Create a BO3 for the Hitmen scouting stream. Finalizing games automatically updates the series score and removes Game 3 when a team sweeps 2–0.</p>
+          <div class="session-builder">
+            <input id="sessionLabel" class="field" value="Calgary Hitmen Scouting Night" placeholder="Session label">
+            <input id="sessionOpponent" class="field" placeholder="Opponent / lobby label (optional)">
+            <select id="sessionBestOf" class="select-field"><option value="3" selected>Best of 3</option><option value="5">Best of 5</option><option value="1">Single game</option></select>
+            <input id="sessionStream" class="field wide" type="url" placeholder="Twitch / YouTube stream URL">
+          </div>
+          <div class="hitmen-actions"><button id="createSession" class="small-btn primary" type="button">Create Scouting Series</button></div>
+          <div id="activeSession"></div>
+        </section>
+
+        <section class="hitmen-panel">
+          <div class="eyebrow">SEASON TRACKER</div><h3>Session History</h3>
+          <p>Scouting nights, scrims and later regular-season/playoff sessions can live here without mixing with Wildman tournament operations.</p>
+          <div id="sessionHistory" class="session-history"></div>
+        </section>
+      </div>
+    </section>
+  </div>
+</main>
+<footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN · PRIVATE LGCHL WORKSPACE</b><span>Powered inside Wildman Hockey management</span></div><p>Private team intelligence</p></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js"></script>
+<script src="management-guard.js"></script>
+<script src="script.js"></script>
+<script src="hitmen-workspace.js"></script>
+</body>
+</html>
