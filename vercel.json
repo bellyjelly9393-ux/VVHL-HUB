@@ -3,6 +3,7 @@
     { "source": "/management", "destination": "/management.html" },
     { "source": "/scouting-lab", "destination": "/scouting-lab.html" },
     { "source": "/tournament-control", "destination": "/tournament-control.html" },
+    { "source": "/practice-night", "destination": "/practice-night.html" },
     { "source": "/postgame-desk", "destination": "/postgame-desk.html" },
     { "source": "/reports", "destination": "/reports.html" },
     { "source": "/postgame", "destination": "/postgame.html" },
