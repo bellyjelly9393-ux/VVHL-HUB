@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#09070c">
+  <meta name="description" content="Private Wildman tournament practice-night automation sandbox.">
+  <title>Practice Night | Wildman Hockey</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="wildman.css">
+  <link rel="stylesheet" href="management.css">
+  <link rel="stylesheet" href="operations.css">
+  <link rel="stylesheet" href="practice-night.css">
+</head>
+<body class="wildman-site management-protected">
+<header class="site-header">
+  <a class="brand" href="index.html"><span class="wm-brand-mark">W</span><span class="brand-copy wm-brand-copy">WILDMAN HOCKEY<br><b>PRACTICE NIGHT</b></span></a>
+  <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <nav class="main-nav">
+    <a href="index.html">Home</a>
+    <a href="tournament-control.html">Tournament Control</a>
+    <a href="postgame-desk.html">Postgame Desk</a>
+    <a href="management.html">Management</a>
+  </nav>
+</header>
+
+<main>
+  <section class="section-shell section-block management-login-shell">
+    <div class="section-heading">
+      <div><div class="eyebrow">PRIVATE · SANDBOX ONLY</div><h2>TOURNAMENT PRACTICE NIGHT</h2></div>
+      <div id="managementAccessStatus" class="status-pill">PRIVATE · MANAGEMENT ONLY</div>
+    </div>
+    <div class="practice-warning"><strong>Nothing on this page is a real tournament result.</strong><span>The sandbox is hidden from public Wildman pages and exists only to stress-test the workflow before Pro Series night.</span></div>
+    <section id="accountPanel" class="panel account-panel"><div><div class="eyebrow">SECURE ACCESS</div><h3>Loading account…</h3></div></section>
+    <div id="managementLockedMessage" class="wm-card" style="margin-top:16px"><b>Management sign-in required.</b><p>Practice-night controls are restricted to authorized Wildman management.</p></div>
+  </section>
+
+  <section class="section-shell section-block" data-management-content hidden>
+    <div class="practice-summary">
+      <div class="wm-stat"><div class="eyebrow">MODE</div><strong id="practiceMode">READY</strong><span id="practiceModeSub">Autopilot stopped</span></div>
+      <div class="wm-stat"><div class="eyebrow">EVENT</div><strong id="practiceEvent">Loading</strong><span>Historical sandbox</span></div>
+      <div class="wm-stat"><div class="eyebrow">GAME</div><strong id="practiceGame">—</strong><span id="practiceGameSub">No game selected</span></div>
+      <div class="wm-stat"><div class="eyebrow">NEXT ACTION</div><strong id="nextAction">LOAD DATA</strong><span id="nextActionSub">Preparing control room</span></div>
+    </div>
+
+    <div class="practice-grid">
+      <section class="control-card practice-command">
+        <div class="eyebrow">1 · OPERATOR COMMAND</div>
+        <h3>Autopilot</h3>
+        <p>Run a compressed tournament-night simulation. Each step writes to the same sandbox game, stat and standings tables used by Tournament Control.</p>
+        <div class="control-stack">
+          <select id="practiceGameSelect" class="select-field"></select>
+          <div class="control-row">
+            <select id="practiceSpeed" class="select-field">
+              <option value="5000">Fast · 5 sec / step</option>
+              <option value="10000" selected>Normal test · 10 sec / step</option>
+              <option value="20000">Slow · 20 sec / step</option>
+              <option value="30000">Operator pace · 30 sec / step</option>
+            </select>
+            <select id="practiceAutoNext" class="select-field">
+              <option value="yes" selected>Auto-start next game</option>
+              <option value="no">Stop after each final</option>
+            </select>
+          </div>
+        </div>
+        <div class="control-actions practice-actions">
+          <button id="startPracticeBtn" class="small-btn primary" type="button">▶ Start Autopilot</button>
+          <button id="stepPracticeBtn" class="small-btn" type="button">Advance One Step</button>
+          <button id="stopPracticeBtn" class="small-btn" type="button">Pause</button>
+          <button id="resetPracticeBtn" class="small-btn danger" type="button">Reset Sandbox</button>
+        </div>
+        <span id="practiceMessage" class="control-message"></span>
+      </section>
+
+      <section class="control-card">
+        <div class="eyebrow">2 · YOUR STREAM</div>
+        <h3>Practice Broadcast</h3>
+        <p>Attach your Twitch or YouTube stream to the selected sandbox game and preview it beside the automation.</p>
+        <div class="control-stack">
+          <select id="practiceStreamProvider" class="select-field"><option value="twitch">Twitch</option><option value="youtube">YouTube</option><option value="other">Other</option></select>
+          <input id="practiceStreamUrl" class="field" type="url" placeholder="Paste your Twitch / YouTube stream URL">
+          <input id="practiceBroadcastTitle" class="field" placeholder="Practice broadcast title" value="Wildman Practice Night">
+        </div>
+        <div class="control-actions"><button id="savePracticeStreamBtn" class="small-btn primary" type="button">Attach Stream</button><a id="openPracticeStream" class="small-btn" href="#" target="_blank" rel="noopener">Open Stream</a></div>
+        <span id="practiceStreamMessage" class="control-message"></span>
+      </section>
+    </div>
+
+    <section class="control-card practice-scoreboard-card">
+      <div class="section-heading"><div><div class="eyebrow">LIVE SANDBOX OUTPUT</div><h3>Scoreboard + Stream</h3></div><div id="practiceLiveStatus" class="status-pill">SCHEDULED</div></div>
+      <div class="practice-stage">
+        <div id="practiceStreamStage" class="practice-stream"><div class="featured-placeholder"><div><strong>Stream not attached</strong><p>Paste your stream above when you go live tonight.</p></div></div></div>
+        <div class="practice-scoreboard">
+          <div class="practice-team"><span id="practiceHomeName">HOME</span><strong id="practiceHomeScore">0</strong></div>
+          <div class="practice-center-score"><span id="practicePeriod">PRE</span><b id="practiceClock">20:00</b><small id="practiceRound">Sandbox</small></div>
+          <div class="practice-team away"><span id="practiceAwayName">AWAY</span><strong id="practiceAwayScore">0</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="practice-grid lower">
+      <section class="control-card">
+        <div class="section-heading"><div><div class="eyebrow">AUTOMATED CHECK</div><h3>Operator Checklist</h3></div><span id="checklistProgress" class="status-pill">0/7</span></div>
+        <div id="practiceChecklist" class="practice-checklist"></div>
+      </section>
+      <section class="control-card">
+        <div class="section-heading"><div><div class="eyebrow">SYSTEM TRACE</div><h3>Automation Log</h3></div><button id="clearPracticeLogBtn" class="small-btn" type="button">Clear Log</button></div>
+        <div id="practiceLog" class="practice-log"><div class="empty-state">Waiting for the first practice action.</div></div>
+      </section>
+    </div>
+
+    <section class="control-card" style="margin-top:16px">
+      <div class="section-heading"><div><div class="eyebrow">FAKE DATA · PRIVATE SANDBOX</div><h3>Practice Standings</h3></div><span class="status-pill">NOT PUBLIC</span></div>
+      <div id="practiceStandings"><div class="empty-state">Standings will populate as sandbox games finish.</div></div>
+    </section>
+
+    <section class="control-card" style="margin-top:16px">
+      <div class="section-heading"><div><div class="eyebrow">FAKE DATA · PRIVATE SANDBOX</div><h3>Practice Player Leaderboard</h3></div><span class="status-pill">AUTO-REBUILT</span></div>
+      <div id="practiceLeaderboard"><div class="empty-state">Player totals will populate as the simulation generates goals, assists, shots, hits and goalie work.</div></div>
+    </section>
+  </section>
+</main>
+
+<footer><div class="section-shell footer-inner"><div><b>WILDMAN PRACTICE NIGHT</b><span>Private sandbox · automation rehearsal · fake results</span></div><p>Break it here so tournament night survives.</p></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js"></script>
+<script src="management-guard.js"></script>
+<script src="script.js"></script>
+<script src="practice-night.js"></script>
+</body>
+</html>
