@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/management", "destination": "/management.html" },
     { "source": "/scouting-lab", "destination": "/scouting-lab.html" },
+    { "source": "/hitmen", "destination": "/hitmen-workspace.html" },
     { "source": "/tournament-control", "destination": "/tournament-control.html" },
     { "source": "/practice-night", "destination": "/practice-night.html" },
     { "source": "/operator-assistant", "destination": "/operator-assistant.html" },
