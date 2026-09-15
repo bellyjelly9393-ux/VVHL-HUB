@@ -51,8 +51,10 @@ async function loadBackendState() {
         : backendState.teams.filter((t) =>
             backendState.memberships.some((m) => m.team_id === t.id),
           );
-    if (!allowed.some((t) => t.id === backendState.teamId))
-      backendState.teamId = allowed[0]?.id || "";
+    if (!allowed.some((t) => t.id === backendState.teamId)) {
+      const preferredTeam = allowed.find((t) => t.name === "Wildman Hockey") || allowed[0];
+      backendState.teamId = preferredTeam?.id || "";
+    }
     if (backendState.teamId)
       localStorage.setItem("vvhl-team-context", backendState.teamId);
   }
@@ -64,7 +66,7 @@ function renderAccountPanel() {
   const panel = document.getElementById("accountPanel");
   if (!panel) return;
   if (!backendState.user) {
-    panel.innerHTML = `<div><div class="eyebrow">SECURE LEAGUE ACCESS</div><h3>Management Sign In</h3><p>Sign in to access shared team information.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email"><input id="authPassword" class="field" type="password" placeholder="Password"><button id="signIn" class="small-btn primary" type="button">Sign In</button><button id="signUp" class="small-btn" type="button">Create Account</button><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`;
+    panel.innerHTML = `<div><div class="eyebrow">SECURE WILDMAN ACCESS</div><h3>Management Sign In</h3><p>Sign in to access Wildman Hockey and Wildman Academy management tools.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email"><input id="authPassword" class="field" type="password" placeholder="Password"><button id="signIn" class="small-btn primary" type="button">Sign In</button><button id="signUp" class="small-btn" type="button">Create Account</button><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`;
     document.getElementById("signIn").onclick = () => authenticate("signin");
     document.getElementById("signUp").onclick = () => authenticate("signup");
     document.getElementById("resetPassword").onclick = resetPassword;
