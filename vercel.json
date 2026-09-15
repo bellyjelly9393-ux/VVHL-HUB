@@ -1,6 +1,11 @@
 {
   "rewrites": [
     { "source": "/management", "destination": "/management.html" },
-    { "source": "/scouting-lab", "destination": "/scouting-lab.html" }
+    { "source": "/scouting-lab", "destination": "/scouting-lab.html" },
+    { "source": "/tournament-control", "destination": "/tournament-control.html" },
+    { "source": "/pro-series", "destination": "/pro-series.html" },
+    { "source": "/game-center", "destination": "/game-center.html" },
+    { "source": "/multiview", "destination": "/multiview.html" },
+    { "source": "/esports-hub", "destination": "/esports-hub.html" }
   ]
 }
