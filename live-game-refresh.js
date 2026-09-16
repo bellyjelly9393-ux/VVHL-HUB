@@ -6,7 +6,7 @@
   const gameId=new URLSearchParams(location.search).get('id'); if(!gameId)return;
   const esc=v=>String(v??'').replace(/[&<>'\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'\"':"&quot;"})[c]);
   const fmt=v=>v?new Date(v).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'TBD';
-  const isMobile=()=>/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'');
+  const isMobile=()=>window.matchMedia?.('(max-width: 900px)').matches || (navigator.maxTouchPoints||0)>1 || /Android|iPhone|iPad|iPod|Mobile|SamsungBrowser/i.test(navigator.userAgent||'');
   function twitchChannel(raw){try{return new URL(raw).pathname.split('/').filter(Boolean).pop()||'';}catch{return String(raw||'').split('/').filter(Boolean).pop()||'';}}
   function youtubeId(raw){try{const u=new URL(raw);if(u.hostname.includes('youtu.be'))return u.pathname.slice(1);if(u.searchParams.get('v'))return u.searchParams.get('v');const p=u.pathname.split('/').filter(Boolean),i=p.findIndex(x=>x==='embed'||x==='live');return i>=0?p[i+1]||'':'';}catch{return '';}}
   function directStreamCard(g,label='Open stream'){
@@ -18,7 +18,7 @@
     if(p==='twitch'){
       const ch=twitchChannel(g.stream_url);
       if(ch){
-        if(isMobile()) return `<div class="mobile-stream-fallback"><div class="live-play-icon">▶</div><strong>${esc(g.broadcast_title||'Twitch broadcast')}</strong><p>Twitch's embedded player is unreliable inside some Android and in-app browsers. Open the live feed directly and keep this Game Center page open for the score and stats.</p><a class="btn btn-primary" href="${esc(g.stream_url)}" target="_blank" rel="noopener noreferrer">WATCH ON TWITCH →</a><button class="small-btn" type="button" data-try-twitch="${esc(ch)}">Try embedded player</button></div>`;
+        if(isMobile()) return `<div class="mobile-stream-fallback"><div class="live-play-icon">▶</div><strong>${esc(g.broadcast_title||'Twitch broadcast')}</strong><p>Twitch's embedded player is currently unreliable on some mobile browsers. Open the live broadcast directly in Twitch while this Game Center keeps the live score and game state updated.</p><a class="btn btn-primary" href="${esc(g.stream_url)}" target="_blank" rel="noopener noreferrer">WATCH ON TWITCH →</a></div>`;
         const parent=encodeURIComponent(location.hostname);
         return `<div class="stream-embed-stack"><iframe class="network-stream" src="https://player.twitch.tv/?channel=${encodeURIComponent(ch)}&parent=${parent}&autoplay=false&muted=true" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="Live Twitch stream"></iframe>${directStreamCard(g,'Open on Twitch')}</div>`;
       }
@@ -40,11 +40,6 @@
     const timing=g.status==='live'?`${g.period?`Period ${g.period}`:'LIVE'}${g.clock?` · ${g.clock}`:''}`:g.status==='final'?'FINAL':fmt(g.scheduled_at);
     const hitmenControls=g.source_provider==='hitmen-workspace'?'<a class="small-btn" href="hitmen-workspace.html">Hitmen Controls</a>':'';
     root.innerHTML=`<div class="game-top-actions"><a class="profile-back" href="game-center.html">← Back to Game Center</a>${hitmenControls}</div><div class="eyebrow">${esc(e?.name||'ESPORTS GAME')}</div><div class="live-scoreboard"><div><a href="${home?.slug==='wildman-hockey'?'team.html':`esports-team.html?team=${encodeURIComponent(home?.slug||'')}`}"><strong>${esc(home?.name||'TBD')}</strong></a></div><div class="live-score"><span>${esc(score)}</span><small>${esc((g.status||'scheduled').toUpperCase())} · ${esc(timing)}</small></div><div><a href="${away?.slug==='wildman-hockey'?'team.html':`esports-team.html?team=${encodeURIComponent(away?.slug||'')}`}"><strong>${esc(away?.name||'TBD')}</strong></a></div></div><div class="stream-shell">${embed(g)}</div><div class="status-board" style="margin-top:18px"><div class="wm-stat"><div class="eyebrow">STAGE</div><strong>${esc(g.stage||'TBD')}</strong><span>${esc(g.round_label||'Tournament')}</span></div><div class="wm-stat"><div class="eyebrow">COMMENTARY</div><strong>${esc((g.commentary_status||'none').toUpperCase())}</strong><span>${esc(g.commentary_label||'Wildman broadcast coverage')}</span></div><div class="wm-stat"><div class="eyebrow">STREAM</div><strong>${g.stream_url?'ASSIGNED':'TBD'}</strong><span>${esc(g.stream_provider||'Provider pending')}</span></div><div class="wm-stat"><div class="eyebrow">AUTO REFRESH</div><strong>8 SEC</strong><span>${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})}</span></div></div><section class="profile-section"><div class="section-heading"><div><div class="eyebrow">BOX SCORE</div><h2>PLAYER STATS</h2></div><a class="small-btn" href="multiview.html?games=${encodeURIComponent(g.id)}">Open Multiview</a></div>${statsTable(stats,players,teams)}</section>${g.vod_url?`<section class="profile-section"><a class="ops-card" href="${esc(g.vod_url)}" target="_blank" rel="noopener"><small>Postgame</small><h3>Watch VOD</h3><span class="ops-link">OPEN VOD →</span></a></section>`:''}`;
-    root.querySelector('[data-try-twitch]')?.addEventListener('click',ev=>{
-      const ch=ev.currentTarget.dataset.tryTwitch;
-      const parent=encodeURIComponent(location.hostname);
-      ev.currentTarget.closest('.mobile-stream-fallback').outerHTML=`<div class="stream-embed-stack"><iframe class="network-stream" src="https://player.twitch.tv/?channel=${encodeURIComponent(ch)}&parent=${parent}&autoplay=false&muted=true" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen title="Live Twitch stream"></iframe>${directStreamCard(g,'Open on Twitch')}</div>`;
-    });
   }
   load();setInterval(()=>{if(!document.hidden)load();},8000);
 })();
