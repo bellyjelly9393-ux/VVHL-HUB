@@ -51,3 +51,18 @@ if (menuButton && nav) {
     });
   });
 }
+
+// Page-specific management helpers are loaded only where needed.
+(() => {
+  const page=(location.pathname.split('/').pop()||'').toLowerCase();
+  const load=(src)=>{
+    if(document.querySelector(`script[data-wm-helper="${src}"]`))return;
+    const s=document.createElement('script');
+    s.src=src;
+    s.defer=true;
+    s.dataset.wmHelper=src;
+    document.body.appendChild(s);
+  };
+  if(page==='hitmen-workspace.html'||page==='hitmen') load('hitmen-delete-controls.js?v=20260915');
+  if(page==='vod-lab.html'||page==='vod-lab') load('vod-pipeline.js?v=20260915');
+})();
