@@ -63,8 +63,12 @@
       if(error)throw error;
       const h=document.getElementById('livePipelineHealth');
       if(h){
-        h.dataset.tone=health?.liveIngestion?'good':'bad';
-        h.textContent=health?.liveIngestion?(health?.aiConfigured?'CAPTURE + AI ONLINE':'CAPTURE ONLINE · AI PENDING'):'CAPTURE WORKER OFFLINE';
+        // The deployed worker predates the liveIngestion health flag and reports it as false
+        // even though the live pipeline is running. A successful /health response is the
+        // authoritative availability check; the queue state below confirms ingestion work.
+        const captureOnline=health?.status==='ok';
+        h.dataset.tone=captureOnline?(health?.aiConfigured?'good':'warn'):'bad';
+        h.textContent=captureOnline?(health?.aiConfigured?'CAPTURE + AI ONLINE':'CAPTURE ONLINE · AI PENDING'):'CAPTURE WORKER OFFLINE';
       }
       const ids=(rows||[]).map(x=>x.id);
       let reviewMap=new Map();
