@@ -73,8 +73,9 @@ function renderAccountPanel() {
   const panel = document.getElementById("accountPanel");
   if (!panel) return;
   if (!backendState.user) {
-    panel.innerHTML = `<div><div class="eyebrow">SECURE WILDMAN ACCESS</div><h3>Management Sign In</h3><p>Sign in to access Wildman Hockey and Wildman Academy management tools.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email"><input id="authPassword" class="field" type="password" placeholder="Password"><button id="signIn" class="small-btn primary" type="button">Sign In</button><button id="signUp" class="small-btn" type="button">Create Account</button><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`;
+    panel.innerHTML = `<div><div class="eyebrow">SECURE WILDMAN ACCESS</div><h3>Management Sign In</h3><p>Sign in to access Wildman Hockey and Wildman Academy management tools.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email"><input id="authPassword" class="field" type="password" placeholder="Password"><button id="signIn" class="small-btn primary" type="button">Sign In</button><button id="magicLink" class="small-btn" type="button">Email Me a Sign-In Link</button><button id="signUp" class="small-btn" type="button">Create Account</button><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`;
     document.getElementById("signIn").onclick = () => authenticate("signin");
+    document.getElementById("magicLink").onclick = sendMagicLink;
     document.getElementById("signUp").onclick = () => authenticate("signup");
     document.getElementById("resetPassword").onclick = resetPassword;
     return;
@@ -116,6 +117,27 @@ async function authenticate(mode) {
       ? "Check your email to confirm the account."
       : "Signed in.";
   if (!result.error && result.data.session) await loadBackendState();
+}
+
+
+async function sendMagicLink() {
+  const email = document.getElementById("authEmail").value.trim();
+  const message = document.getElementById("authMessage");
+  if (!email) {
+    message.textContent = "Enter your email first.";
+    return;
+  }
+  message.textContent = "Sending sign-in link…";
+  const { error } = await vvhlDb.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${location.origin}${location.pathname}`,
+      shouldCreateUser: true,
+    },
+  });
+  message.textContent = error
+    ? error.message
+    : "Sign-in link sent. Check your inbox and spam folder.";
 }
 
 async function resetPassword() {
