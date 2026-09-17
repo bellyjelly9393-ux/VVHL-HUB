@@ -144,6 +144,55 @@ def probe(source):
     return duration
 
 
+def detect_periods(source, duration):
+    """Best-effort local OCR period detection. Returns [] when confidence is insufficient."""
+    folder = ROOT / ('detect-' + uuid4().hex)
+    folder.mkdir(exist_ok=True)
+    try:
+        command(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
+                 '-i', str(source), '-vf', 'fps=1/10,scale=1280:720:force_original_aspect_ratio=decrease',
+                 '-q:v', '5', str(folder / '%05d.jpg')], 180)
+        samples = sorted(folder.glob('*.jpg'))
+        if not samples:
+            return []
+        hits = {1: [], 2: [], 3: []}
+        for idx, frame in enumerate(samples):
+            try:
+                raw = subprocess.run(
+                    ['tesseract', str(frame), 'stdout', '--psm', '11'],
+                    capture_output=True, check=False, timeout=8
+                ).stdout.decode('utf-8', 'ignore').upper()
+            except Exception:
+                continue
+            compact = ''.join(ch for ch in raw if ch.isalnum() or ch.isspace())
+            second = idx * 10.0
+            tests = {
+                1: ('1ST' in compact or 'PERIOD 1' in compact or '1 PERIOD' in compact),
+                2: ('2ND' in compact or 'PERIOD 2' in compact or '2 PERIOD' in compact),
+                3: ('3RD' in compact or 'PERIOD 3' in compact or '3 PERIOD' in compact),
+            }
+            for period, ok in tests.items():
+                if ok:
+                    hits[period].append(second)
+        if not all(hits[p] for p in (1, 2, 3)):
+            return []
+        p1 = max(0.0, hits[1][0] - 10.0)
+        p2 = max(p1 + 30.0, hits[2][0] - 10.0)
+        p3 = max(p2 + 30.0, hits[3][0] - 10.0)
+        if not (p1 < p2 < p3 < duration):
+            return []
+        # Reject clearly implausible detections instead of fabricating period windows.
+        if p2 - p1 < 120 or p3 - p2 < 120 or duration - p3 < 120:
+            return []
+        return [
+            {'label': 'Period 1', 'start': round(p1, 1), 'end': round(p2, 1)},
+            {'label': 'Period 2', 'start': round(p2, 1), 'end': round(p3, 1)},
+            {'label': 'Period 3', 'start': round(p3, 1), 'end': round(duration, 1)},
+        ]
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
 def segments(periods, duration):
     if not periods:
         periods = [{'label': 'Full recording', 'start': 0, 'end': duration}]
@@ -234,8 +283,23 @@ def process(job_id):
         raise Problem(410, 'Temporary recording expired. Upload the recording again.')
     result = job['result']
     duration = probe(source)
-    plan = segments(job['metadata'].get('periods', []), duration)
-    result.update({'duration': duration, 'total_chunks': len(plan), 'frame_step_seconds': FRAME_STEP})
+    periods = job['metadata'].get('periods', [])
+    auto_detected = False
+    if not periods:
+        periods = detect_periods(source, duration)
+        auto_detected = True
+        if not periods:
+            result.update({'duration': duration, 'detected_periods': [], 'period_detection': 'needs_review'})
+            update(job_id, 'needs_periods', result, 'Automatic period detection could not confidently find all three periods. Use the manual markers, then retry without re-uploading.')
+            return
+        with connect() as db:
+            meta = dict(job['metadata'])
+            meta['periods'] = periods
+            db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
+    plan = segments(periods, duration)
+    result.update({'duration': duration, 'detected_periods': periods if auto_detected else [],
+                   'period_detection': 'auto' if auto_detected else 'manual',
+                   'total_chunks': len(plan), 'frame_step_seconds': FRAME_STEP})
     result.setdefault('chunks', [])
     update(job_id, 'processing', result)
     if not os.getenv('OPENAI_API_KEY') or not os.getenv('OPENAI_MODEL'):
@@ -407,11 +471,29 @@ class Handler(BaseHTTPRequestHandler):
                     update(job_id, 'failed', error='Upload interrupted. Start a new review.')
                     raise
             return self.reply(202, get_job(job_id, owner))
+        if parts[2:] == ['periods'] and self.command == 'PUT':
+            data = self.body()
+            periods = data.get('periods', [])
+            if not isinstance(periods, list) or not periods:
+                raise Problem(400, 'Add the real period ranges first.')
+            try:
+                clean = [{'label': str(p['label'])[:80], 'start': float(p['start']), 'end': float(p['end'])} for p in periods]
+                segments(clean, probe(directory / 'source.mp4'))
+            except (KeyError, TypeError, ValueError):
+                raise Problem(400, 'Invalid period ranges')
+            with WRITE_LOCK, connect() as db:
+                job = get_job(job_id, owner)
+                if job['status'] != 'needs_periods':
+                    raise Problem(409, 'This review is not waiting for period boundaries.')
+                meta = dict(job['metadata'])
+                meta['periods'] = clean
+                db.execute('UPDATE jobs SET metadata=?,status=?,error=? WHERE id=?', (json.dumps(meta), 'queued', '', job_id))
+            return self.reply(202, get_job(job_id, owner))
         if parts[2:] == ['retry'] and self.command == 'POST':
             with WRITE_LOCK:
                 job = get_job(job_id, owner)
                 if job['status'] not in ('failed', 'awaiting_ai'):
-                    raise Problem(409, 'Only failed or waiting reviews can be retried.')
+                    raise Problem(409, 'Only failed or AI-waiting reviews can be retried.')
                 if not (directory / 'source.mp4').exists():
                     raise Problem(410, 'Recording expired. Start a new review.')
                 update(job_id, 'queued')
