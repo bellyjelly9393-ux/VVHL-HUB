@@ -57,6 +57,7 @@
     if($('hsPriority'))$('hsPriority').textContent=S.pool.filter(x=>x.status==='priority'||x.priority===1).length;
     if($('hsBids'))$('hsBids').textContent=S.pool.filter(x=>x.status==='bid_target').length+S.bids.filter(x=>['target','active_bid'].includes(x.status)).length;
     if($('hsReports'))$('hsReports').textContent=S.reports.length;
+    if($('hsIntelCount'))$('hsIntelCount').textContent=S.intel.length;
     if($('hitmenReportCount'))$('hitmenReportCount').textContent=S.reports.length;
     renderPool();renderReportSelect();renderReports();renderBids();renderInvites();
   }
@@ -66,19 +67,22 @@
     const q=val('hsSearch').trim().toLowerCase();
     const pos=val('hsPositionFilter');
     const status=val('hsStatusFilter');
+    const intel=val('hsIntelFilter');
     let rows=S.pool.filter(r=>{
       const p=r.scouting_players||{};
       const matchesText=!q||[p.gamertag,p.primary_position,p.platform,r.status,r.projected_role].some(v=>String(v||'').toLowerCase().includes(q));
       const matchesPos=!pos||String(p.primary_position||'').toUpperCase()===pos;
       const matchesStatus=!status||r.status===status;
-      return matchesText&&matchesPos&&matchesStatus;
+      const hasIntel=S.intel.some(i=>i.scouting_player_id===r.scouting_player_id);
+      const matchesIntel=!intel||(intel==='yes'&&hasIntel)||(intel==='no'&&!hasIntel);
+      return matchesText&&matchesPos&&matchesStatus&&matchesIntel;
     });
     rows.sort((a,b)=>String(a.scouting_players?.gamertag||'').localeCompare(String(b.scouting_players?.gamertag||''),undefined,{sensitivity:'base'}));
     const pages=Math.max(1,Math.ceil(rows.length/S.pageSize));
     if(S.page>pages)S.page=pages;
     const from=(S.page-1)*S.pageSize;
     const shown=rows.slice(from,from+S.pageSize);
-    $('hsPoolBody').innerHTML=shown.map(r=>{const p=r.scouting_players||{};return `<tr data-hs-player="${r.id}"><td><b>${esc(p.gamertag||'Unknown')}</b><br><small>${esc(p.platform||'')}</small></td><td>${esc(p.primary_position||'—')}</td><td><span class="hs-tag">${esc((r.status||'unscouted').replaceAll('_',' '))}</span></td><td>${r.priority??'—'}</td><td>${r.fit_grade??'—'}</td><td>${money(r.target_bid)}</td><td>${money(r.max_bid)}</td></tr>`}).join('');
+    $('hsPoolBody').innerHTML=shown.map(r=>{const p=r.scouting_players||{},hasIntel=S.intel.some(i=>i.scouting_player_id===r.scouting_player_id);return `<tr data-hs-player="${r.id}"><td><b>${esc(p.gamertag||'Unknown')}</b><br><small>${esc(p.platform||'')}</small></td><td>${esc(p.primary_position||'—')}</td><td>${hasIntel?'<span class="hs-tag">ChelScout</span>':'—'}</td><td><span class="hs-tag">${esc((r.status||'unscouted').replaceAll('_',' '))}</span></td><td>${r.priority??'—'}</td><td>${r.fit_grade??'—'}</td><td>${money(r.target_bid)}</td><td>${money(r.max_bid)}</td></tr>`}).join('');
     if($('hsPoolEmpty'))$('hsPoolEmpty').hidden=rows.length!==0;
     if($('hsPoolMeta'))$('hsPoolMeta').textContent=rows.length?`Showing ${from+1}-${Math.min(from+shown.length,rows.length)} of ${rows.length.toLocaleString()} players · Page ${S.page}/${pages}`:'No matching players';
     if($('hsPrevPage'))$('hsPrevPage').disabled=S.page<=1;
@@ -174,7 +178,7 @@
   function bind(){
     document.querySelectorAll('[data-hs-tab]').forEach(b=>b.onclick=()=>activate(b.dataset.hsTab));
     const resetPool=()=>{S.page=1;renderPool();};
-    $('hsSearch')?.addEventListener('input',resetPool);$('hsPositionFilter')?.addEventListener('change',resetPool);$('hsStatusFilter')?.addEventListener('change',resetPool);
+    $('hsSearch')?.addEventListener('input',resetPool);$('hsPositionFilter')?.addEventListener('change',resetPool);$('hsStatusFilter')?.addEventListener('change',resetPool);$('hsIntelFilter')?.addEventListener('change',resetPool);
     $('hsPrevPage')?.addEventListener('click',()=>{if(S.page>1){S.page--;renderPool();}});$('hsNextPage')?.addEventListener('click',()=>{S.page++;renderPool();});
     $('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsChelScoutImport')?.addEventListener('click',importChelScout);$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);
   }
