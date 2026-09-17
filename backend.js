@@ -31,6 +31,13 @@ async function loadBackendState() {
     .order("name");
   backendState.teams = teams || [];
   if (user) {
+    // Automatically claim any active team invite tied to this signed-in email
+    // before loading memberships, so access appears immediately after login.
+    try {
+      await vvhlDb.rpc("claim_my_team_invite");
+    } catch (error) {
+      console.warn("Could not auto-claim team invite", error);
+    }
     const [{ data: profile }, { data: memberships }] = await Promise.all([
       vvhlDb
         .from("profiles")
