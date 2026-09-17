@@ -24,6 +24,23 @@
       const r=await db().from('team_scouting_pool')
         .select('id,scouting_player_id,status,priority,fit_grade,projected_role,target_bid,max_bid,management_note,updated_at,scouting_players(id,gamertag,platform,primary_position)')
         .eq('team_id',TEAM_ID)
+        .order('id',{ascending:true})
+        .range(from,from+batch-1);
+      if(r.error)return r;
+      all.push(...(r.data||[]));
+      if((r.data||[]).length<batch)break;
+    }
+    return {data:all,error:null};
+  }
+
+
+  async function fetchFullIntel(){
+    const all=[]; const batch=1000;
+    for(let from=0;;from+=batch){
+      const r=await db().from('team_chelscout_intel')
+        .select('id,scouting_player_id,chelscout_uid,league_id,season,player_name,signed_position,played_position,role_chip,role_band,projected_rank,pool_rank,pool_n,fair_value_m,likely_price_m,likely_band_m,walk_above_m,availability_label,availability_reaches,reliability,confidence,onice_impact,onice_read,risks,notes,dna,career,comparables,projections,raw_payload,imported_at')
+        .eq('team_id',TEAM_ID)
+        .order('id',{ascending:true})
         .range(from,from+batch-1);
       if(r.error)return r;
       all.push(...(r.data||[]));
@@ -42,7 +59,7 @@
         fetchFullPool(),
         db().from('team_scouting_reports').select('id,scouting_player_id,author_id,overall_grade,offense_grade,defense_grade,hockey_iq_grade,puck_movement_grade,positioning_grade,communication_grade,consistency_grade,strengths,concerns,projected_role,recommendation,notes,created_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('created_at',{ascending:false}),
         db().from('team_bid_board').select('id,scouting_player_id,target_price,max_price,priority,status,plan,note,updated_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('priority',{ascending:true,nullsFirst:false}).order('updated_at',{ascending:false}),
-        db().from('team_chelscout_intel').select('id,scouting_player_id,chelscout_uid,league_id,season,player_name,signed_position,played_position,role_chip,role_band,projected_rank,pool_rank,pool_n,fair_value_m,likely_price_m,likely_band_m,walk_above_m,availability_label,availability_reaches,reliability,confidence,onice_impact,onice_read,risks,notes,dna,career,comparables,projections,raw_payload,imported_at').eq('team_id',TEAM_ID).order('imported_at',{ascending:false})
+        fetchFullIntel()
       ];
       if(S.role==='admin')queries.push(db().from('team_access_invites').select('id,email,role,display_name,active,claimed_by,claimed_at,created_at').eq('team_id',TEAM_ID).order('created_at',{ascending:false}));
       const r=await Promise.all(queries);const err=r.find(x=>x.error)?.error;if(err)throw err;
@@ -118,6 +135,17 @@
       ${career.length?`<p><b>Career:</b> ${career.slice(0,4).map(s=>`S${esc(s.season)} ${esc(s.league)} ${esc(s.pos)} · ${esc(s.gp)} GP · ${esc(s.pts)} PTS · ${esc(s.ppg)} PPG`).join('<br>')}</p>`:''}</div>`;
   }
 
+
+  async function pasteChelScout(){
+    if(!navigator.clipboard?.readText){msg('hsChelScoutMsg','Clipboard access is not available here. Long-press the box and paste instead.');return;}
+    try{
+      const text=await navigator.clipboard.readText();
+      if(!text.trim()){msg('hsChelScoutMsg','Clipboard is empty.');return;}
+      $('hsChelScoutJson').value=text;
+      msg('hsChelScoutMsg','Pasted from clipboard ✓');
+    }catch(e){msg('hsChelScoutMsg','Clipboard permission was blocked. Long-press the box and paste instead.');}
+  }
+
   async function importChelScout(){
     const r=S.pool.find(x=>x.id===S.selected);if(!r){msg('hsChelScoutMsg','Select a player first.');return;}
     const raw=val('hsChelScoutJson').trim();if(!raw){msg('hsChelScoutMsg','Paste the ChelScout JSON response first.');return;}
@@ -180,7 +208,7 @@
     const resetPool=()=>{S.page=1;renderPool();};
     $('hsSearch')?.addEventListener('input',resetPool);$('hsPositionFilter')?.addEventListener('change',resetPool);$('hsStatusFilter')?.addEventListener('change',resetPool);$('hsIntelFilter')?.addEventListener('change',resetPool);
     $('hsPrevPage')?.addEventListener('click',()=>{if(S.page>1){S.page--;renderPool();}});$('hsNextPage')?.addEventListener('click',()=>{S.page++;renderPool();});
-    $('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsChelScoutImport')?.addEventListener('click',importChelScout);$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);
+    $('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsChelScoutPaste')?.addEventListener('click',pasteChelScout);$('hsChelScoutImport')?.addEventListener('click',importChelScout);$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);
   }
   bind();window.addEventListener('vvhl-auth-change',()=>setTimeout(load,0));if(state().user)setTimeout(load,200);
 })();+Number(v).toFixed(2)+'M';
