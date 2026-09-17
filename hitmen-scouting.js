@@ -119,7 +119,7 @@
     const raw=val('hsChelScoutJson').trim();if(!raw){msg('hsChelScoutMsg','Paste the ChelScout JSON response first.');return;}
     let j;try{j=JSON.parse(raw);}catch(e){msg('hsChelScoutMsg','That is not valid JSON.');return;}
     const uid=Number(j.uid);if(!uid){msg('hsChelScoutMsg','ChelScout UID is missing from this payload.');return;}
-    const target=j.fv_by_league_x?.['39']||j.fv_by_league?.['39']||{};
+    const target=j.fv_by_league?.['39']||j.fv_by_league_x?.['39']||{};
     const names=Array.isArray(j.name_history)?j.name_history:[];
     const pname=j.current_name||names[names.length-1]?.name||r.scouting_players?.gamertag||null;
     const payload={team_id:TEAM_ID,scouting_player_id:r.scouting_player_id,chelscout_uid:uid,league_id:39,season:target.season||55,player_name:pname,signed_position:j.role?.group||j.dna?.signed_group||null,played_position:j.onice?.position||j.expect?.pos||null,role_chip:j.role?.chip||null,role_band:j.role?.band||null,projected_rank:j.role?.proj||target?.projected_rank||null,pool_rank:j.role?.pool_rank??null,pool_n:j.role?.pool_n??null,fair_value_m:target.fair_value_M??null,likely_price_m:j.price?.likely_M??null,likely_band_m:j.price?.likely_band_M||[],walk_above_m:target.zones?.walk_above_M??null,availability_label:j.availability?.label||null,availability_reaches:j.availability?.reaches_you??null,reliability:j.crisk?.level||null,confidence:target.confidence||j.crisk?.confidence||null,onice_impact:j.onice?.impact??null,onice_read:j.onice?.read||null,risks:j.plain?.risks||[],notes:j.plain?.notes||[],dna:j.dna_by_league?.['39']||j.dna||{},career:j.career||[],comparables:j.comparables||[],projections:j.expect?.projected?.by_league||{},raw_payload:j,imported_by:state().user.id,updated_at:new Date().toISOString()};
