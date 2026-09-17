@@ -7,6 +7,11 @@ if (document.body.classList.contains('wildman-site')) {
   imageStyles.href = 'wildman-images.css';
   document.head.appendChild(imageStyles);
 
+  const polishStyles = document.createElement('link');
+  polishStyles.rel = 'stylesheet';
+  polishStyles.href = 'visual-polish.css?v=20260916';
+  document.head.appendChild(polishStyles);
+
   const heroImage = document.querySelector('.wm-visual-hero img');
   if (heroImage) {
     heroImage.decoding = 'async';
@@ -52,7 +57,7 @@ if (menuButton && nav) {
   });
 }
 
-// Page-specific management helpers are loaded only where needed.
+// Lightweight visual upgrades and page-specific management helpers.
 (() => {
   const page=(location.pathname.split('/').pop()||'').toLowerCase();
   const load=(src)=>{
@@ -63,6 +68,10 @@ if (menuButton && nav) {
     s.dataset.wmHelper=src;
     document.body.appendChild(s);
   };
-  if(page==='hitmen-workspace.html'||page==='hitmen') load('hitmen-delete-controls.js?v=20260915');
-  if(page==='vod-lab.html'||page==='vod-lab') load('vod-pipeline.js?v=20260915');
+  if(document.body.classList.contains('wildman-site')) load('ui-polish.js?v=20260916');
+  if(page==='hitmen-workspace.html'||page==='hitmen') load('hitmen-delete-controls.js?v=20260916');
+  if(page==='vod-lab.html'||page==='vod-lab') {
+    load('vod-pipeline.js?v=20260916');
+    load('vod-pipeline-polish.js?v=20260916');
+  }
 })();
