@@ -14,7 +14,7 @@ if (document.body.classList.contains('wildman-site')) {
 
   const finishStyles = document.createElement('link');
   finishStyles.rel = 'stylesheet';
-  finishStyles.href = 'pipeline-finish.css?v=20260916';
+  finishStyles.href = 'pipeline-finish.css?v=20260916b';
   document.head.appendChild(finishStyles);
 
   const heroImage = document.querySelector('.wm-visual-hero img');
@@ -81,6 +81,7 @@ if (menuButton && nav) {
   if(page==='vod-lab.html'||page==='vod-lab') {
     load('vod-pipeline.js?v=20260916b');
     load('vod-pipeline-polish.js?v=20260916b');
+    load('vod-local-marker.js?v=20260916');
     load('vod-postgame-link.js?v=20260916');
   }
   if(page==='postgame-desk.html'||page==='postgame-desk') {
