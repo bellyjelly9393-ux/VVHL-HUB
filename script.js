@@ -12,6 +12,11 @@ if (document.body.classList.contains('wildman-site')) {
   polishStyles.href = 'visual-polish.css?v=20260916c';
   document.head.appendChild(polishStyles);
 
+  const finishStyles = document.createElement('link');
+  finishStyles.rel = 'stylesheet';
+  finishStyles.href = 'pipeline-finish.css?v=20260916';
+  document.head.appendChild(finishStyles);
+
   const heroImage = document.querySelector('.wm-visual-hero img');
   if (heroImage) {
     heroImage.decoding = 'async';
