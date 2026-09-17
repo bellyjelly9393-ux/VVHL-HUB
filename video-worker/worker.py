@@ -21,6 +21,24 @@ MAX_STORAGE = int(os.getenv('MAX_STORAGE_MB', '1800')) * 1024**2
 RETENTION = int(os.getenv('MEDIA_RETENTION_HOURS', '24')) * 3600
 ORIGINS = set(filter(None, os.getenv('ALLOWED_ORIGINS', '').split(',')))
 USERS = set(filter(None, os.getenv('VIDEO_REVIEW_USER_IDS', '').split(',')))
+
+def origin_allowed(origin):
+    if not origin:
+        return True
+    if origin_allowed(origin):
+        return True
+    try:
+        parsed = urlsplit(origin)
+    except ValueError:
+        return False
+    host = (parsed.hostname or '').lower()
+    if parsed.scheme != 'https':
+        return False
+    return (
+        host == 'wildmanhockey-esportshub.vercel.app'
+        or host == 'vvhl-hub-psi.vercel.app'
+        or (host.startswith('wildmanhockey-esportshub-') and host.endswith('-chelmachine-vvhl.vercel.app'))
+    )
 WRITE_LOCK = threading.Lock()
 STOP = threading.Event()
 CHUNK = 120
@@ -292,7 +310,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_OPTIONS(self):
-        if self.headers.get('Origin') not in ORIGINS:
+        if not origin_allowed(self.headers.get('Origin')):
             return self.reply(403, {'error': 'Origin not allowed'})
         self.send_response(204)
         self.send_header('Access-Control-Allow-Origin', self.headers['Origin'])
@@ -327,7 +345,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {'status': 'ok', 'aiConfigured': bool(os.getenv('OPENAI_API_KEY') and os.getenv('OPENAI_MODEL')),
                                     'maxUploadBytes': MAX_UPLOAD, 'liveIngestion': False})
         origin = self.headers.get('Origin')
-        if origin and origin not in ORIGINS:
+        if origin and not origin_allowed(origin):
             raise Problem(403, 'Origin not allowed')
         owner = authenticate(self.headers.get('Authorization'))
         if path == '/jobs' and self.command == 'GET':
