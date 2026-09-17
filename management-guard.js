@@ -1,13 +1,20 @@
 (() => {
   const managementRoles = new Set(["owner", "gm", "agm"]);
+  const HITMEN_TEAM_ID = "b0bcbdda-da9d-419d-8f61-b34937966d49";
 
   function hasManagementAccess(state) {
     if (!state?.user) return false;
     const profileRole = String(state.profile?.role || "").toLowerCase();
     if (profileRole === "admin" || profileRole === "commissioner") return true;
-    return (state.memberships || []).some(
-      (membership) => membership.active !== false && managementRoles.has(String(membership.role || "").toLowerCase()),
-    );
+
+    const page = (location.pathname.split("/").pop() || "").toLowerCase();
+    const hitmenPage = page === "hitmen" || page === "hitmen-workspace.html";
+
+    return (state.memberships || []).some((membership) => {
+      const role = String(membership.role || "").toLowerCase();
+      if (membership.active === false || !managementRoles.has(role)) return false;
+      return hitmenPage ? membership.team_id === HITMEN_TEAM_ID : true;
+    });
   }
 
   function renderManagementAccess(state = window.VVHLBackend?.state || {}) {
@@ -15,6 +22,8 @@
     const protectedSections = document.querySelectorAll("[data-management-content]");
     const lockedMessage = document.getElementById("managementLockedMessage");
     const accessStatus = document.getElementById("managementAccessStatus");
+    const page = (location.pathname.split("/").pop() || "").toLowerCase();
+    const hitmenPage = page === "hitmen" || page === "hitmen-workspace.html";
 
     protectedSections.forEach((section) => {
       section.hidden = !allowed;
@@ -24,7 +33,10 @@
       lockedMessage.hidden = allowed;
       if (!state.user) {
         lockedMessage.innerHTML =
-          "<b>Management sign-in required.</b><p>Scouting, opponent tendencies, lineup recommendations and film-room notes are restricted to authorized Wildman/VVHL management.</p>";
+          "<b>Management sign-in required.</b><p>This workspace is restricted to authorized management accounts.</p>";
+      } else if (hitmenPage) {
+        lockedMessage.innerHTML =
+          "<b>Calgary Hitmen access not assigned.</b><p>Your account is signed in, but it does not currently have an active Owner, GM or AGM membership for the Calgary Hitmen.</p>";
       } else {
         lockedMessage.innerHTML =
           "<b>Management access not assigned.</b><p>Your account is signed in, but it is not currently assigned an Owner, GM, AGM, Commissioner or Admin role.</p>";
@@ -33,7 +45,16 @@
 
     if (accessStatus) {
       if (allowed) {
-        const role = String(state.profile?.role || state.memberships?.[0]?.role || "management").toUpperCase();
+        const hitmenMembership = (state.memberships || []).find(
+          (m) => m.team_id === HITMEN_TEAM_ID && m.active !== false,
+        );
+        const role = String(
+          state.profile?.role === "admin"
+            ? "admin"
+            : hitmenPage
+              ? hitmenMembership?.role || "management"
+              : state.profile?.role || state.memberships?.[0]?.role || "management",
+        ).toUpperCase();
         accessStatus.textContent = `AUTHORIZED · ${role}`;
       } else {
         accessStatus.textContent = state.user ? "SIGNED IN · ACCESS RESTRICTED" : "PRIVATE · MANAGEMENT ONLY";
