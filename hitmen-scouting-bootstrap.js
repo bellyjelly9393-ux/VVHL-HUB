@@ -21,7 +21,7 @@
       <div class="hs-kpi"><small>Players in Pool</small><strong id="hsScouted">0</strong></div>
       <div class="hs-kpi"><small>Priority Targets</small><strong id="hsPriority">0</strong></div>
       <div class="hs-kpi"><small>Bid Targets</small><strong id="hsBids">0</strong></div>
-      <div class="hs-kpi"><small>Reports Logged</small><strong id="hsReports">0</strong></div>
+      <div class="hs-kpi"><small>Reports Logged</small><strong id="hsReports">0</strong></div><div class="hs-kpi"><small>ChelScout Intel</small><strong id="hsIntelCount">0</strong></div>
     </div>
     <div class="hs-tabs">
       <button class="hs-tab active" data-hs-tab="pool" type="button">Scouting Pool</button>
@@ -34,7 +34,7 @@
       <div class="hs-grid">
         <section class="hs-card">
           <div class="hs-card-head"><h3>Calgary Player Pool</h3><div class="hs-actions" style="margin:0"><input id="hsSearch" class="hs-input" type="search" placeholder="Search gamertag" style="max-width:220px"><select id="hsPositionFilter" class="hs-select" style="max-width:130px"><option value="">All Positions</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option></select><select id="hsStatusFilter" class="hs-select" style="max-width:150px"><option value="">All Statuses</option><option value="unscouted">Unscouted</option><option value="unscouted">Unscouted</option><option value="scouted">Scouted</option><option value="watch">Watch</option><option value="priority">Priority</option><option value="bid_target">Bid Target</option><option value="pass">Pass</option><option value="signed">Signed</option><option value="lost">Lost</option></select></div></div>
-          <div class="hs-table-wrap"><table class="hs-table"><thead><tr><th>Player</th><th>Pos</th><th>Status</th><th>Priority</th><th>Fit</th><th>Target</th><th>Max</th></tr></thead><tbody id="hsPoolBody"></tbody></table></div>
+          <div class="hs-table-wrap"><table class="hs-table"><thead><tr><th>Player</th><th>Pos</th><th>Intel</th><th>Status</th><th>Priority</th><th>Fit</th><th>Target</th><th>Max</th></tr></thead><tbody id="hsPoolBody"></tbody></table></div>
           <div id="hsPoolEmpty" class="hs-empty" hidden>No players match these filters.</div>
           <div class="hs-actions" style="justify-content:space-between"><span id="hsPoolMeta" class="hs-msg"></span><div class="hs-actions" style="margin:0"><button id="hsPrevPage" class="hs-btn" type="button">Previous</button><button id="hsNextPage" class="hs-btn" type="button">Next</button></div></div>
         </section>
