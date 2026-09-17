@@ -1,6 +1,6 @@
 (() => {
   const TEAM_ID='b0bcbdda-da9d-419d-8f61-b34937966d49';
-  const S={pool:[],reports:[],bids:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100};
+  const S={pool:[],reports:[],bids:[],intel:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100};
   const db=()=>window.VVHLBackend?.db;
   const state=()=>window.VVHLBackend?.state||{};
   const $=id=>document.getElementById(id);
@@ -41,11 +41,12 @@
       const queries=[
         fetchFullPool(),
         db().from('team_scouting_reports').select('id,scouting_player_id,author_id,overall_grade,offense_grade,defense_grade,hockey_iq_grade,puck_movement_grade,positioning_grade,communication_grade,consistency_grade,strengths,concerns,projected_role,recommendation,notes,created_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('created_at',{ascending:false}),
-        db().from('team_bid_board').select('id,scouting_player_id,target_price,max_price,priority,status,plan,note,updated_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('priority',{ascending:true,nullsFirst:false}).order('updated_at',{ascending:false})
+        db().from('team_bid_board').select('id,scouting_player_id,target_price,max_price,priority,status,plan,note,updated_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('priority',{ascending:true,nullsFirst:false}).order('updated_at',{ascending:false}),
+        db().from('team_chelscout_intel').select('id,scouting_player_id,chelscout_uid,league_id,season,player_name,signed_position,played_position,role_chip,role_band,projected_rank,pool_rank,pool_n,fair_value_m,likely_price_m,likely_band_m,walk_above_m,availability_label,availability_reaches,reliability,confidence,onice_impact,onice_read,risks,notes,dna,career,comparables,projections,imported_at').eq('team_id',TEAM_ID).order('imported_at',{ascending:false})
       ];
       if(S.role==='admin')queries.push(db().from('team_access_invites').select('id,email,role,display_name,active,claimed_by,claimed_at,created_at').eq('team_id',TEAM_ID).order('created_at',{ascending:false}));
       const r=await Promise.all(queries);const err=r.find(x=>x.error)?.error;if(err)throw err;
-      S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.invites=r[3]?.data||[];render();
+      S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.intel=r[3].data||[];S.invites=r[4]?.data||[];render();
     }catch(e){console.error(e);msg('hsStatus',e.message||'Could not load scouting desk.');}
     finally{S.loading=false;}
   }
@@ -90,6 +91,41 @@
     $('hsEditor').hidden=false;$('hsSelectedName').textContent=p.gamertag||'Player';$('hsSelectedMeta').textContent=[p.primary_position,p.platform].filter(Boolean).join(' · ');
     $('hsStatusEdit').value=r.status||'scouted';$('hsPriorityEdit').value=r.priority??'';$('hsFitEdit').value=r.fit_grade??'';$('hsRoleEdit').value=r.projected_role||'';$('hsTargetBid').value=r.target_bid??'';$('hsMaxBid').value=r.max_bid??'';$('hsMgmtNote').value=r.management_note||'';
     if($('hsReportPlayer'))$('hsReportPlayer').value=r.scouting_player_id;
+    renderIntel(r.scouting_player_id);
+  }
+
+  const mval=v=>v==null?'—':`${Number(v).toFixed(2)}M`;
+  function renderIntel(pid){
+    const box=$('hsIntelView');if(!box)return;
+    const x=S.intel.find(i=>i.scouting_player_id===pid);
+    if(!x){box.className='hs-empty';box.innerHTML='No ChelScout intelligence imported for this player yet.';if($('hsIntelMeta'))$('hsIntelMeta').textContent='';return;}
+    box.className='';
+    if($('hsIntelMeta'))$('hsIntelMeta').textContent=`UID ${x.chelscout_uid} · S${x.season||'—'} · imported ${new Date(x.imported_at).toLocaleString()}`;
+    const risks=Array.isArray(x.risks)?x.risks:[];
+    const notes=Array.isArray(x.notes)?x.notes:[];
+    const career=Array.isArray(x.career)?x.career:[];
+    const spokes=Array.isArray(x.dna?.spokes)?x.dna.spokes:[];
+    box.innerHTML=`<div class="hs-report"><div class="hs-grades"><div class="hs-grade"><small>Role</small><b>${esc(x.role_chip||x.role_band||'—')}</b></div><div class="hs-grade"><small>Fair Value</small><b>${mval(x.fair_value_m)}</b></div><div class="hs-grade"><small>Likely Bid</small><b>${mval(x.likely_price_m)}</b></div><div class="hs-grade"><small>Walk Above</small><b>${mval(x.walk_above_m)}</b></div></div>
+      <p><b>Availability:</b> ${esc(x.availability_label||'—')}${x.availability_reaches!=null?` · ${Math.round(Number(x.availability_reaches)*100)}% reaches CHL`:''}</p>
+      <p><b>Confidence:</b> ${esc(x.confidence||x.reliability||'—')} · <b>Projected rank:</b> ${esc(x.projected_rank||'—')} · <b>On-ice:</b> ${esc(x.onice_read||'—')}${x.onice_impact!=null?` (${Number(x.onice_impact).toFixed(3)})`:''}</p>
+      ${risks.length?`<p><b>Risks:</b> ${risks.map(esc).join(' · ')}</p>`:''}${notes.length?`<p><b>Profile:</b> ${notes.map(esc).join(' · ')}</p>`:''}
+      ${spokes.length?`<p><b>DNA:</b> ${spokes.map(s=>`${esc(s.label)} ${Math.round(Number(s.fill||0)*100)}`).join(' · ')}</p>`:''}
+      ${career.length?`<p><b>Career:</b> ${career.slice(0,4).map(s=>`S${esc(s.season)} ${esc(s.league)} ${esc(s.pos)} · ${esc(s.gp)} GP · ${esc(s.pts)} PTS · ${esc(s.ppg)} PPG`).join('<br>')}</p>`:''}</div>`;
+  }
+
+  async function importChelScout(){
+    const r=S.pool.find(x=>x.id===S.selected);if(!r){msg('hsChelScoutMsg','Select a player first.');return;}
+    const raw=val('hsChelScoutJson').trim();if(!raw){msg('hsChelScoutMsg','Paste the ChelScout JSON response first.');return;}
+    let j;try{j=JSON.parse(raw);}catch(e){msg('hsChelScoutMsg','That is not valid JSON.');return;}
+    const uid=Number(j.uid);if(!uid){msg('hsChelScoutMsg','ChelScout UID is missing from this payload.');return;}
+    const target=j.fv_by_league_x?.['39']||j.fv_by_league?.['39']||{};
+    const names=Array.isArray(j.name_history)?j.name_history:[];
+    const pname=j.current_name||names[names.length-1]?.name||r.scouting_players?.gamertag||null;
+    const payload={team_id:TEAM_ID,scouting_player_id:r.scouting_player_id,chelscout_uid:uid,league_id:39,season:target.season||55,player_name:pname,signed_position:j.role?.group||j.dna?.signed_group||null,played_position:j.onice?.position||j.expect?.pos||null,role_chip:j.role?.chip||null,role_band:j.role?.band||null,projected_rank:j.role?.proj||target?.projected_rank||null,pool_rank:j.role?.pool_rank??null,pool_n:j.role?.pool_n??null,fair_value_m:target.fair_value_M??null,likely_price_m:j.price?.likely_M??null,likely_band_m:j.price?.likely_band_M||[],walk_above_m:target.zones?.walk_above_M??null,availability_label:j.availability?.label||null,availability_reaches:j.availability?.reaches_you??null,reliability:j.crisk?.level||null,confidence:target.confidence||j.crisk?.confidence||null,onice_impact:j.onice?.impact??null,onice_read:j.onice?.read||null,risks:j.plain?.risks||[],notes:j.plain?.notes||[],dna:j.dna_by_league?.['39']||j.dna||{},career:j.career||[],comparables:j.comparables||[],projections:j.expect?.projected?.by_league||{},raw_payload:j,imported_by:state().user.id,updated_at:new Date().toISOString()};
+    msg('hsChelScoutMsg','Importing…');
+    const q=await db().from('team_chelscout_intel').upsert(payload,{onConflict:'team_id,chelscout_uid,season'}).select('id').single();
+    if(q.error){msg('hsChelScoutMsg',q.error.message);return;}
+    msg('hsChelScoutMsg','ChelScout intelligence imported ✓');$('hsChelScoutJson').value='';await load();select(r.id);
   }
 
   async function addPlayer(e){
@@ -139,7 +175,7 @@
     const resetPool=()=>{S.page=1;renderPool();};
     $('hsSearch')?.addEventListener('input',resetPool);$('hsPositionFilter')?.addEventListener('change',resetPool);$('hsStatusFilter')?.addEventListener('change',resetPool);
     $('hsPrevPage')?.addEventListener('click',()=>{if(S.page>1){S.page--;renderPool();}});$('hsNextPage')?.addEventListener('click',()=>{S.page++;renderPool();});
-    $('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);
+    $('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsChelScoutImport')?.addEventListener('click',importChelScout);$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);
   }
   bind();window.addEventListener('vvhl-auth-change',()=>setTimeout(load,0));if(state().user)setTimeout(load,200);
 })();
