@@ -71,7 +71,7 @@
                 <summary style="cursor:pointer;font-weight:700">Import ChelScout GM Hub JSON</summary>
                 <p class="hs-msg">Paste the JSON response from your authorized ChelScout GM Hub scout request. It stays private to Calgary management.</p>
                 <textarea id="hsChelScoutJson" class="hs-textarea" style="min-height:150px" placeholder='{"availability":...,"career":[...],"dna":...}'></textarea>
-                <div class="hs-actions"><button id="hsChelScoutImport" class="hs-btn primary" type="button">Import ChelScout Intel</button><span id="hsChelScoutMsg" class="hs-msg"></span></div>
+                <div class="hs-actions"><button id="hsChelScoutPaste" class="hs-btn" type="button">Paste from Clipboard</button><button id="hsChelScoutImport" class="hs-btn primary" type="button">Import ChelScout Intel</button><span id="hsChelScoutMsg" class="hs-msg"></span></div>
               </details>
             </div>
           </div>
