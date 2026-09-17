@@ -78,6 +78,7 @@ if (menuButton && nav) {
     load('hitmen-delete-controls.js?v=20260916');
     load('hitmen-vod-handoff.js?v=20260916');
     load('live-pipeline-status.js?v=20260917a');
+    load('hitmen-scouting-bootstrap.js?v=20260917');
   }
   if(page==='tournament-control.html'||page==='tournament-control') {
     load('live-pipeline-status.js?v=20260917a');
