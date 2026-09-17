@@ -1,6 +1,6 @@
 (() => {
   const TEAM_ID='b0bcbdda-da9d-419d-8f61-b34937966d49';
-  const S={pool:[],reports:[],bids:[],invites:[],selected:null,role:null,loading:false};
+  const S={pool:[],reports:[],bids:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100};
   const db=()=>window.VVHLBackend?.db;
   const state=()=>window.VVHLBackend?.state||{};
   const $=id=>document.getElementById(id);
@@ -18,6 +18,20 @@
 
   async function claimInvite(){if(!state().user)return;try{await db().rpc('claim_my_team_invite');}catch(e){console.warn(e);}}
 
+  async function fetchFullPool(){
+    const all=[]; const batch=1000;
+    for(let from=0;;from+=batch){
+      const r=await db().from('team_scouting_pool')
+        .select('id,scouting_player_id,status,priority,fit_grade,projected_role,target_bid,max_bid,management_note,updated_at,scouting_players(id,gamertag,platform,primary_position)')
+        .eq('team_id',TEAM_ID)
+        .range(from,from+batch-1);
+      if(r.error)return r;
+      all.push(...(r.data||[]));
+      if((r.data||[]).length<batch)break;
+    }
+    return {data:all,error:null};
+  }
+
   async function load(){
     if(S.loading||!state().user)return;S.loading=true;
     try{
@@ -25,7 +39,7 @@
       if(!allowed()){document.querySelectorAll('[data-hitmen-scouting]').forEach(x=>x.hidden=true);return;}
       document.querySelectorAll('[data-hitmen-scouting]').forEach(x=>x.hidden=false);
       const queries=[
-        db().from('team_scouting_pool').select('id,scouting_player_id,status,priority,fit_grade,projected_role,target_bid,max_bid,management_note,updated_at,scouting_players(id,gamertag,platform,primary_position)').eq('team_id',TEAM_ID).order('priority',{ascending:true,nullsFirst:false}).order('updated_at',{ascending:false}),
+        fetchFullPool(),
         db().from('team_scouting_reports').select('id,scouting_player_id,author_id,overall_grade,offense_grade,defense_grade,hockey_iq_grade,puck_movement_grade,positioning_grade,communication_grade,consistency_grade,strengths,concerns,projected_role,recommendation,notes,created_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('created_at',{ascending:false}),
         db().from('team_bid_board').select('id,scouting_player_id,target_price,max_price,priority,status,plan,note,updated_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('priority',{ascending:true,nullsFirst:false}).order('updated_at',{ascending:false})
       ];
@@ -47,10 +61,27 @@
   }
 
   function renderPool(){
-    if(!$('hsPoolBody'))return;const q=val('hsSearch').trim().toLowerCase();
-    const rows=S.pool.filter(r=>{const p=r.scouting_players||{};return !q||[p.gamertag,p.primary_position,p.platform,r.status,r.projected_role].some(v=>String(v||'').toLowerCase().includes(q));});
-    $('hsPoolBody').innerHTML=rows.map(r=>{const p=r.scouting_players||{};return `<tr data-hs-player="${r.id}"><td><b>${esc(p.gamertag||'Unknown')}</b><br><small>${esc(p.platform||'')}</small></td><td>${esc(p.primary_position||'—')}</td><td><span class="hs-tag">${esc((r.status||'scouted').replaceAll('_',' '))}</span></td><td>${r.priority??'—'}</td><td>${r.fit_grade??'—'}</td><td>${money(r.target_bid)}</td><td>${money(r.max_bid)}</td></tr>`}).join('');
-    if($('hsPoolEmpty'))$('hsPoolEmpty').hidden=S.pool.length!==0;
+    if(!$('hsPoolBody'))return;
+    const q=val('hsSearch').trim().toLowerCase();
+    const pos=val('hsPositionFilter');
+    const status=val('hsStatusFilter');
+    let rows=S.pool.filter(r=>{
+      const p=r.scouting_players||{};
+      const matchesText=!q||[p.gamertag,p.primary_position,p.platform,r.status,r.projected_role].some(v=>String(v||'').toLowerCase().includes(q));
+      const matchesPos=!pos||String(p.primary_position||'').toUpperCase()===pos;
+      const matchesStatus=!status||r.status===status;
+      return matchesText&&matchesPos&&matchesStatus;
+    });
+    rows.sort((a,b)=>String(a.scouting_players?.gamertag||'').localeCompare(String(b.scouting_players?.gamertag||''),undefined,{sensitivity:'base'}));
+    const pages=Math.max(1,Math.ceil(rows.length/S.pageSize));
+    if(S.page>pages)S.page=pages;
+    const from=(S.page-1)*S.pageSize;
+    const shown=rows.slice(from,from+S.pageSize);
+    $('hsPoolBody').innerHTML=shown.map(r=>{const p=r.scouting_players||{};return `<tr data-hs-player="${r.id}"><td><b>${esc(p.gamertag||'Unknown')}</b><br><small>${esc(p.platform||'')}</small></td><td>${esc(p.primary_position||'—')}</td><td><span class="hs-tag">${esc((r.status||'unscouted').replaceAll('_',' '))}</span></td><td>${r.priority??'—'}</td><td>${r.fit_grade??'—'}</td><td>${money(r.target_bid)}</td><td>${money(r.max_bid)}</td></tr>`}).join('');
+    if($('hsPoolEmpty'))$('hsPoolEmpty').hidden=rows.length!==0;
+    if($('hsPoolMeta'))$('hsPoolMeta').textContent=rows.length?`Showing ${from+1}-${Math.min(from+shown.length,rows.length)} of ${rows.length.toLocaleString()} players · Page ${S.page}/${pages}`:'No matching players';
+    if($('hsPrevPage'))$('hsPrevPage').disabled=S.page<=1;
+    if($('hsNextPage'))$('hsNextPage').disabled=S.page>=pages;
     document.querySelectorAll('[data-hs-player]').forEach(tr=>tr.onclick=()=>select(tr.dataset.hsPlayer));
   }
 
@@ -105,7 +136,10 @@
 
   function bind(){
     document.querySelectorAll('[data-hs-tab]').forEach(b=>b.onclick=()=>activate(b.dataset.hsTab));
-    $('hsSearch')?.addEventListener('input',renderPool);$('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);
+    const resetPool=()=>{S.page=1;renderPool();};
+    $('hsSearch')?.addEventListener('input',resetPool);$('hsPositionFilter')?.addEventListener('change',resetPool);$('hsStatusFilter')?.addEventListener('change',resetPool);
+    $('hsPrevPage')?.addEventListener('click',()=>{if(S.page>1){S.page--;renderPool();}});$('hsNextPage')?.addEventListener('click',()=>{S.page++;renderPool();});
+    $('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);
   }
   bind();window.addEventListener('vvhl-auth-change',()=>setTimeout(load,0));if(state().user)setTimeout(load,200);
 })();
