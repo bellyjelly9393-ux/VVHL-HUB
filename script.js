@@ -14,7 +14,7 @@ if (document.body.classList.contains('wildman-site')) {
 
   const finishStyles = document.createElement('link');
   finishStyles.rel = 'stylesheet';
-  finishStyles.href = 'pipeline-finish.css?v=20260916b';
+  finishStyles.href = 'pipeline-finish.css?v=20260916c';
   document.head.appendChild(finishStyles);
 
   const heroImage = document.querySelector('.wm-visual-hero img');
@@ -77,6 +77,10 @@ if (menuButton && nav) {
   if(page==='hitmen-workspace.html'||page==='hitmen') {
     load('hitmen-delete-controls.js?v=20260916');
     load('hitmen-vod-handoff.js?v=20260916');
+    load('live-pipeline-status.js?v=20260916');
+  }
+  if(page==='tournament-control.html'||page==='tournament-control') {
+    load('live-pipeline-status.js?v=20260916');
   }
   if(page==='vod-lab.html'||page==='vod-lab') {
     load('vod-pipeline.js?v=20260916b');
