@@ -330,7 +330,7 @@ def process(job_id):
 def cleanup():
     now = time.time()
     with connect() as db:
-        rows = db.execute("SELECT id,created FROM jobs WHERE status NOT IN ('processing','queued','uploading')").fetchall()
+        rows = db.execute("SELECT id,created FROM jobs WHERE status NOT IN ('retrieving','processing','queued','uploading')").fetchall()
     for row in rows:
         if now - row['created'] > RETENTION:
             shutil.rmtree(ROOT / row['id'], ignore_errors=True)
@@ -343,12 +343,16 @@ def work_loop():
     while not STOP.is_set():
         cleanup()
         with connect() as db:
-            row = db.execute("SELECT id FROM jobs WHERE status='queued' ORDER BY created LIMIT 1").fetchone()
+            row = db.execute("SELECT id,status FROM jobs WHERE status IN ('queued','retrieving') ORDER BY created LIMIT 1").fetchone()
         if not row:
             STOP.wait(2)
             continue
         try:
-            process(row['id'])
+            if row['status'] == 'retrieving':
+                from replay import retrieve
+                retrieve(row['id'])
+            else:
+                process(row['id'])
         except Problem as exc:
             update(row['id'], 'failed', error=exc.message)
         except Exception:
@@ -412,6 +416,14 @@ class Handler(BaseHTTPRequestHandler):
         if origin and not origin_allowed(origin):
             raise Problem(403, 'Origin not allowed')
         owner = authenticate(self.headers.get('Authorization'))
+        if path.startswith('/reviews/'):
+            from replay import read_review, resolve
+            parts = path.strip('/').split('/')
+            if len(parts) != 3 or (parts[2], self.command) not in [('analyze', 'POST'), ('job', 'GET')]:
+                raise Problem(404, 'Not found')
+            review = read_review(parts[1], self.headers.get('Authorization'))
+            job = resolve(review, owner, create=self.command == 'POST')
+            return self.reply(200, {'job': job})
         if path == '/jobs' and self.command == 'GET':
             with connect() as db:
                 rows = db.execute('SELECT id FROM jobs WHERE owner=? ORDER BY created DESC LIMIT 50', (owner,)).fetchall()
@@ -430,7 +442,7 @@ class Handler(BaseHTTPRequestHandler):
             except (KeyError, TypeError, ValueError):
                 raise Problem(400, 'Invalid period ranges')
             with WRITE_LOCK, connect() as db:
-                active = db.execute("SELECT count(*) FROM jobs WHERE status IN ('awaiting_upload','uploading','queued','processing','awaiting_ai')").fetchone()[0]
+                active = db.execute("SELECT count(*) FROM jobs WHERE status IN ('retrieving','awaiting_upload','uploading','queued','processing','awaiting_ai')").fetchone()[0]
                 if active >= 3:
                     raise Problem(429, 'Finish or expire existing reviews before starting another.')
                 job_id = str(uuid4())

@@ -18,6 +18,7 @@ class Handler(worker.Handler):
                 'maxUploadBytes': worker.MAX_UPLOAD,
                 'liveIngestion': live_pipeline.configured(),
                 'liveProvider': 'twitch' if live_pipeline.configured() else None,
+                'replayRetrieval': 'twitch',
             })
         return super().dispatch()
 
