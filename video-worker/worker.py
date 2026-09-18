@@ -802,6 +802,17 @@ class Handler(BaseHTTPRequestHandler):
                     raise Problem(410, 'Recording expired. Start a new review.')
                 update(job_id, 'queued')
             return self.reply(202, get_job(job_id, owner))
+        if parts[2:] == ['reanalyze'] and self.command == 'POST':
+            with WRITE_LOCK:
+                job = get_job(job_id, owner)
+                if job['status'] not in ('ready_for_review', 'failed', 'awaiting_ai'):
+                    raise Problem(409, 'Wait for the current analysis to finish before starting a fresh scout pass.')
+                if not (directory / 'source.mp4').exists():
+                    raise Problem(410, 'Recording expired. Start a new review.')
+                # Preserve the recording and metadata, but clear old AI evidence so the
+                # upgraded scout performs a genuine fresh pass rather than reusing old chunks.
+                update(job_id, 'queued', result={}, error='')
+            return self.reply(202, get_job(job_id, owner))
         raise Problem(404, 'Not found')
 
     def handle_request(self):
