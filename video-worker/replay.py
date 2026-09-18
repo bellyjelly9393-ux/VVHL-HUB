@@ -15,9 +15,13 @@ def replay_url(value):
     if (parsed.scheme != 'https' or parsed.hostname not in ('twitch.tv', 'www.twitch.tv')
             or parsed.username or parsed.password or parsed.port not in (None, 443)):
         raise worker.Problem(422, 'No saved recording is available. Add a Twitch replay link or use Upload recording. A channel link cannot identify an old game.')
-    match = re.fullmatch(r'/(?:videos|v)/([0-9]+)/?', parsed.path)
+    # Twitch mobile/share links can include the channel before /v/<id>, e.g.
+    # /aichelmachine/v/2876177579?sr=a. Normalize all supported replay shapes
+    # to Twitch's canonical /videos/<id> URL.
+    match = (re.fullmatch(r'/(?:videos|v)/([0-9]+)/?', parsed.path)
+             or re.fullmatch(r'/[^/]+/v/([0-9]+)/?', parsed.path))
     if not match:
-        raise worker.Problem(422, 'No saved recording is available. Add a Twitch replay link (twitch.tv/videos/...) or use Upload recording. A channel link cannot identify an old game.')
+        raise worker.Problem(422, 'This is not a recognized Twitch replay link. Paste the VOD share link (including channel/v/ID or videos/ID), or upload the recording.')
     return 'https://www.twitch.tv/videos/' + match.group(1)
 
 
