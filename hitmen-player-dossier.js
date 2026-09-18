@@ -197,7 +197,7 @@
     if(status==='bid_target'){
       const existing=await db().from('team_bid_board').select('id').eq('team_id',TEAM_ID).eq('scouting_player_id',current.pool.scouting_player_id).maybeSingle();
       if(!existing.error&&!existing.data){
-        await db().from('team_bid_board').insert({team_id:TEAM_ID,scouting_player_id:current.pool.scouting_player_id,status:'target',priority:current.pool.priority||1,target_price:current.pool.target_bid,max_price:current.pool.max_bid,created_by:u,updated_by:u});
+        await db().from('team_bid_board').insert({team_id:TEAM_ID,scouting_player_id:current.pool.scouting_player_id,status:'target',priority:current.pool.priority||1,target_price:current.pool.target_bid,max_price:current.pool.max_bid,plan:current.pool.projected_role||null,note:current.pool.management_note||null,updated_by:u,updated_at:new Date().toISOString()});
       }
     }
     document.querySelectorAll('[data-hsd-status]').forEach(b=>b.classList.toggle('active',b.dataset.hsdStatus===status));
