@@ -37,6 +37,15 @@
         <div id="hsTargetBoard" class="hs-target-board"></div>
         <div id="hsTargetEmpty" class="hs-empty" hidden>No targets yet. Mark players Watch, Priority or Bid Target from their profile.</div>
       </section>
+      <section class="hs-card" style="margin-top:14px">
+        <div class="hs-card-head"><div><div class="eyebrow">ONE-CLICK EXTERNAL SYNC</div><h3>ChelScout → Wildman</h3></div><span id="hsChelSyncBadge" class="hs-tag">READY</span></div>
+        <p class="hs-msg">Sync a ChelScout player report you legitimately opened into the matching Calgary profile without sending ChelScout cookies or passwords to Wildman.</p>
+        <div class="hs-actions">
+          <button id="hsCopyChelSync" class="hs-btn primary" type="button">Copy “Send to Wildman” Bookmark</button>
+          <a class="hs-btn" href="https://chelscout.net/scout/player" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">Open ChelScout Player Scout ↗</a>
+        </div>
+        <div id="hsChelSyncMsg" class="hs-msg" style="margin-top:9px">Save the copied JavaScript as a browser bookmark URL once. On an exact ChelScout player report, tap that bookmark to send the report here.</div>
+      </section>
     </div>
 
     <div class="hs-pane" data-hs-pane="pool">
@@ -164,6 +173,10 @@
     s.src = 'hitmen-scouting.js';
     s.dataset.hitmenScoutingJs = '1';
     document.body.appendChild(s);
+    const sync = document.createElement('script');
+    sync.src = 'hitmen-chelscout-sync.js';
+    sync.dataset.hitmenChelScoutSync = '1';
+    document.body.appendChild(sync);
   };
 
   let claimBusy = false;
