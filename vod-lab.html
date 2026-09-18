@@ -73,17 +73,19 @@
               <div class="vod-actions"><button id="archiveVod" class="small-btn" type="button">Archive</button><button id="deleteVod" class="small-btn" type="button">Delete</button></div>
             </div>
 
-            <div class="section-divider"></div>
-            <div class="eyebrow">SEGMENT BUILDER</div><h3>Period Boundaries</h3>
-            <p class="section-note">Enter where each period actually starts in the VOD. The end of one period becomes the start of the next. Use the total VOD length for the final period end.</p>
-            <div class="segment-builder">
-              <label>P1 start<input id="period1Start" class="field mono" value="0:00"></label>
-              <label>P2 start<input id="period2Start" class="field mono" placeholder="28:40"></label>
-              <label>P3 start<input id="period3Start" class="field mono" placeholder="57:15"></label>
-              <label>VOD end<input id="periodVodEnd" class="field mono" placeholder="1:27:05"></label>
-              <label class="wide">OT starts, comma separated<input id="periodOtStarts" class="field mono" placeholder="1:20:10, 1:31:42"></label>
+            <div id="manualPeriodBuilder">
+              <div class="section-divider"></div>
+              <div class="eyebrow">MANUAL FALLBACK</div><h3>Period Boundaries</h3>
+              <p class="section-note">Only use this if automatic period detection asks for help. Enter where each period actually starts in the recorded game.</p>
+              <div class="segment-builder">
+                <label>P1 start<input id="period1Start" class="field mono" value="0:00"></label>
+                <label>P2 start<input id="period2Start" class="field mono" placeholder="28:40"></label>
+                <label>P3 start<input id="period3Start" class="field mono" placeholder="57:15"></label>
+                <label>VOD end<input id="periodVodEnd" class="field mono" placeholder="1:27:05"></label>
+                <label class="wide">OT starts, comma separated<input id="periodOtStarts" class="field mono" placeholder="1:20:10, 1:31:42"></label>
+              </div>
+              <div class="vod-actions"><button id="buildSegments" class="small-btn primary" type="button">Build / Update Periods</button><button id="addCustomSegment" class="small-btn" type="button">Add Custom Segment</button></div>
             </div>
-            <div class="vod-actions"><button id="buildSegments" class="small-btn primary" type="button">Build / Update Periods</button><button id="addCustomSegment" class="small-btn" type="button">Add Custom Segment</button></div>
             <div id="segmentList" class="segment-list"></div>
 
             <div id="segmentEditorWrap" hidden>
