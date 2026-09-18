@@ -18,7 +18,7 @@
     try{
       const u=new URL(String(value||'').trim());
       if(u.protocol!=='https:'||!['twitch.tv','www.twitch.tv'].includes(u.hostname.toLowerCase()))return '';
-      const m=u.pathname.match(/^\/(?:videos|v)\/(\d+)\/?$/);
+      const m=u.pathname.match(/^\/(?:videos|v)\/(\d+)\/?$/)||u.pathname.match(/^\/[^/]+\/v\/(\d+)\/?$/);
       return m?`https://www.twitch.tv/videos/${m[1]}`:'';
     }catch{return '';}
   }
@@ -74,7 +74,7 @@
       const review=await currentReview();if(!review)return;
       const raw=document.getElementById('vodReplayUrl').value.trim();
       const url=normalizeTwitchReplay(raw);
-      if(!url)throw new Error('Paste a Twitch replay link such as twitch.tv/videos/123… or a Twitch share link using /v/123…');
+      if(!url)throw new Error('Paste a Twitch replay link such as twitch.tv/videos/123… or a Twitch share link such as twitch.tv/channel/v/123…');
       const {data,error}=await db().from('vod_review_sessions').update({vod_url:url,source_provider:'twitch',updated_at:new Date().toISOString()}).eq('id',review.id).select('id');
       if(error)throw error;if(!data?.length)throw new Error('Replay link was not saved. Check your access.');
       document.getElementById('vodReplayUrl').value=url;
