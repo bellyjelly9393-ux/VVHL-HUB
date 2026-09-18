@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 
 import worker
 import live_pipeline
+import replay
 
 
 class Handler(worker.Handler):
@@ -19,6 +20,7 @@ class Handler(worker.Handler):
                 'liveIngestion': live_pipeline.configured(),
                 'liveProvider': 'twitch' if live_pipeline.configured() else None,
                 'replayRetrieval': 'twitch',
+                'twitchAuthConfigured': replay.twitch_auth_configured(),
             })
         return super().dispatch()
 
