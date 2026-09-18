@@ -86,9 +86,10 @@
     if(!state.reviews.length){el.innerHTML=`<div class="vod-empty">No VOD reviews in this workspace yet.</div>`;return;}
     el.innerHTML=state.reviews.map(r=>{
       const segs=reviewSegments(r.id),done=segs.filter(s=>s.status==="complete").length;
-      return `<button class="vod-row${r.id===state.selectedReviewId?" active":""}" data-vod-id="${esc(r.id)}"><strong>${esc(r.title)}</strong><span>${esc(r.opponent_label||"No opponent label")}</span><small>${esc(String(r.game_type||"scouting").replaceAll("_"," "))} · ${done}/${segs.length} segments complete · ${r.game_date?new Date(r.game_date).toLocaleDateString():"No date"}</small></button>`;
+      return `<div class="vod-library-entry"><button class="vod-row${r.id===state.selectedReviewId?" active":""}" data-vod-id="${esc(r.id)}"><strong>${esc(r.title)}</strong><span>${esc(r.opponent_label||"No opponent label")}</span><small>${esc(String(r.game_type||"scouting").replaceAll("_"," "))} · ${done}/${segs.length} segments complete · ${r.game_date?new Date(r.game_date).toLocaleDateString():"No date"}</small></button><button type="button" class="small-btn" data-delete-vod="${esc(r.id)}" aria-label="Delete ${esc(r.title)}">Delete review</button></div>`;
     }).join("");
     el.querySelectorAll("[data-vod-id]").forEach(b=>b.addEventListener("click",()=>selectReview(b.dataset.vodId)));
+    el.querySelectorAll("[data-delete-vod]").forEach(b=>b.addEventListener("click",()=>deleteReview(b.dataset.deleteVod)));
   }
   function renderDetail(){
     const r=currentReview(),empty=$("vodEmpty"),detail=$("vodDetail");
@@ -159,7 +160,7 @@
     setStatus("Creating VOD review…"); const {data,error}=await db().from("vod_review_sessions").insert(payload).select().single();
     if(error)return setStatus(error.message,"error");
     state.selectedReviewId=data.id; state.selectedSegmentId=""; $("newVodTitle").value="";$("newVodOpponent").value="";$("newVodUrl").value="";$("newVodDuration").value="";
-    await loadData(); setStatus("VOD review created. Add the actual period boundaries next.","success");
+    await loadData(); setStatus("VOD review created. Select it below, then choose your recording and press Upload & Start Pipeline. Period times are optional.","success");
   }
 
   async function buildSegments(){
@@ -236,7 +237,18 @@
     const {error}=await db().from("vod_review_sessions").update(payload).eq("id",r.id); if(error)return setStatus(error.message,"error"); await loadData(); state.selectedReviewId=r.id;renderAll();setStatus(allDone?"Game report saved and VOD review marked complete.":"Game report saved. Unfinished segments remain in the review queue.","success");
   }
   async function archiveReview(){const r=currentReview();if(!r)return;const {error}=await db().from("vod_review_sessions").update({status:"archived",updated_at:new Date().toISOString()}).eq("id",r.id);if(error)return setStatus(error.message,"error");state.selectedReviewId="";state.selectedSegmentId="";await loadData();setStatus("VOD review archived.","success");}
-  async function deleteReview(){const r=currentReview();if(!r)return;if(!confirm(`Delete '${r.title}' and all of its period analysis?`))return;const {error}=await db().from("vod_review_sessions").delete().eq("id",r.id);if(error)return setStatus(error.message,"error");state.selectedReviewId="";state.selectedSegmentId="";await loadData();setStatus("VOD review deleted.","success");}
+  async function deleteReview(id){
+    const r=typeof id==="string"?state.reviews.find(review=>review.id===id):currentReview();
+    if(!r)return;
+    if(!confirm(`Permanently delete '${r.title}' and its saved period analysis and markers? This cannot be undone.`))return;
+    try{
+      const {data,error}=await db().from("vod_review_sessions").delete().eq("id",r.id).eq("team_id",state.teamId).select("id");
+      if(error)throw error;
+      if(!data?.length)throw new Error("Review was not deleted. Refresh and check your management access.");
+      if(state.selectedReviewId===r.id){state.selectedReviewId="";state.selectedSegmentId="";}
+      await loadData();setStatus("VOD review deleted.","success");
+    }catch(error){setStatus(error.message||"Could not delete review.","error");}
+  }
 
   function bind(){
     $("vodTeam")?.addEventListener("change",e=>{state.teamId=e.target.value;state.selectedReviewId="";state.selectedSegmentId="";loadData();});

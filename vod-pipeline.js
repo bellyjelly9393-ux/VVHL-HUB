@@ -10,7 +10,8 @@
   const statusEl=()=>document.getElementById('vodPipelineStatus');
   function setStatus(text,tone=''){
     const el=statusEl(); if(!el)return;
-    el.textContent=text; el.dataset.tone=tone;
+    if(el.textContent!==text)el.textContent=text;
+    if(el.dataset.tone!==tone)el.dataset.tone=tone;
   }
 
   async function token(){
@@ -128,7 +129,10 @@
       const autoImported=await importDetectedPeriods(reviewId,job);
       if(autoImported)document.getElementById('refreshVod')?.click();
       const done=['ready_for_review','failed','expired','awaiting_ai','needs_periods'].includes(job.status);
-      if(job.status==='needs_periods')setStatus('The upload is safe, but automatic period detection was not confident enough. Use the manual P1/P2/P3 marker below, Build / Update Periods, then press Continue / Retry. No re-upload.','warn');
+      if(job.status==='needs_periods'){
+        if(selectedReviewId()===reviewId)document.getElementById('manualPeriodBuilder')?.setAttribute('open','');
+        setStatus('The upload is safe, but automatic period detection was not confident enough. Use the manual P1/P2/P3 marker below, Build / Update Periods, then press Continue / Retry. No re-upload.','warn');
+      }
       else if(job.status==='awaiting_ai')setStatus(job.result?.period_detection==='auto'?'Periods detected automatically ✓ Video is split and ready. AI scouting is the only remaining connection. No re-upload needed.':'Video validated and split into period-sized work. AI is not connected to Railway yet. No re-upload is needed once the AI connection is added.','warn');
       else if(job.status==='ready_for_review'){setStatus('AI period review finished. Importing results into VOD Lab…','good');await ingest(job,reviewId);}
       else if(job.status==='failed'||job.status==='expired')setStatus(job.error||`Pipeline ${job.status}.`,'bad');
@@ -179,7 +183,18 @@
     }catch{}
   }
 
-  const observer=new MutationObserver(()=>{install();syncStoredStatus();});
+  let lastSelectedReviewId='';
+  const observer=new MutationObserver(()=>{
+    install();
+    const id=selectedReviewId();
+    if(id!==lastSelectedReviewId){
+      lastSelectedReviewId=id;
+      clearInterval(pollTimer);pollTimer=null;
+      document.getElementById('manualPeriodBuilder')?.removeAttribute('open');
+      setStatus('Choose the recording once. Automatic period detection runs after upload.');
+      syncStoredStatus();
+    }
+  });
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});});
   else{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});}
 })();
