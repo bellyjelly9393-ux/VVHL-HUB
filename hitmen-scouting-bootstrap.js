@@ -11,7 +11,7 @@
   };
 
   const markup = `
-  <section class="hs-desk" data-hitmen-scouting hidden>
+  <section id="hitmen-scouting" class="hs-desk" data-hitmen-scouting hidden>
     <div class="hs-header">
       <div><div class="eyebrow">SEASON 55 · PRIVATE TEAM INTELLIGENCE</div><h2>SCOUTING + BIDDING DESK</h2></div>
       <p>One shared Calgary board for every player you scout, every report management writes, and every bid ceiling you want ready before bidding opens.</p>
@@ -33,7 +33,7 @@
     <div class="hs-pane active" data-hs-pane="pool">
       <div class="hs-grid">
         <section class="hs-card">
-          <div class="hs-card-head"><h3>Calgary Player Pool</h3><div class="hs-actions" style="margin:0"><input id="hsSearch" class="hs-input" type="search" placeholder="Search gamertag" style="max-width:220px"><select id="hsPositionFilter" class="hs-select" style="max-width:130px"><option value="">All Positions</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option></select><select id="hsStatusFilter" class="hs-select" style="max-width:150px"><option value="">All Statuses</option><option value="unscouted">Unscouted</option><option value="unscouted">Unscouted</option><option value="scouted">Scouted</option><option value="watch">Watch</option><option value="priority">Priority</option><option value="bid_target">Bid Target</option><option value="pass">Pass</option><option value="signed">Signed</option><option value="lost">Lost</option></select></div></div>
+          <div class="hs-card-head"><h3>Calgary Player Pool</h3><div class="hs-actions" style="margin:0"><input id="hsSearch" class="hs-input" type="search" placeholder="Search gamertag" style="max-width:220px"><select id="hsPositionFilter" class="hs-select" style="max-width:130px"><option value="">All Positions</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option></select><select id="hsStatusFilter" class="hs-select" style="max-width:150px"><option value="">All Statuses</option><option value="unscouted">Unscouted</option><option value="scouted">Scouted</option><option value="watch">Watch</option><option value="priority">Priority</option><option value="bid_target">Bid Target</option><option value="pass">Pass</option><option value="signed">Signed</option><option value="lost">Lost</option></select><select id="hsIntelFilter" class="hs-select" style="max-width:150px"><option value="">All Intel</option><option value="yes">ChelScout Intel</option><option value="no">No ChelScout</option></select></div></div>
           <div class="hs-table-wrap"><table class="hs-table"><thead><tr><th>Player</th><th>Pos</th><th>Intel</th><th>Status</th><th>Priority</th><th>Fit</th><th>Target</th><th>Max</th></tr></thead><tbody id="hsPoolBody"></tbody></table></div>
           <div id="hsPoolEmpty" class="hs-empty" hidden>No players match these filters.</div>
           <div class="hs-actions" style="justify-content:space-between"><span id="hsPoolMeta" class="hs-msg"></span><div class="hs-actions" style="margin:0"><button id="hsPrevPage" class="hs-btn" type="button">Previous</button><button id="hsNextPage" class="hs-btn" type="button">Next</button></div></div>
@@ -54,7 +54,7 @@
             <div class="hs-player-head"><div><small>SELECTED PLAYER</small><h3 id="hsSelectedName">Player</h3><small id="hsSelectedMeta"></small></div><button id="hsRemove" class="hs-btn" type="button">Remove</button></div>
             <form id="hsEditForm">
               <div class="hs-form">
-                <label><span class="hs-label">Status</span><select id="hsStatusEdit" class="hs-select"><option value="scouted">Scouted</option><option value="watch">Watch</option><option value="priority">Priority</option><option value="bid_target">Bid Target</option><option value="pass">Pass</option><option value="signed">Signed</option><option value="lost">Lost</option></select></label>
+                <label><span class="hs-label">Status</span><select id="hsStatusEdit" class="hs-select"><option value="unscouted">Unscouted</option><option value="scouted">Scouted</option><option value="watch">Watch</option><option value="priority">Priority</option><option value="bid_target">Bid Target</option><option value="pass">Pass</option><option value="signed">Signed</option><option value="lost">Lost</option></select></label>
                 <label><span class="hs-label">Priority 1-5</span><input id="hsPriorityEdit" class="hs-input" type="number" min="1" max="5"></label>
                 <label><span class="hs-label">Fit Grade 1-10</span><input id="hsFitEdit" class="hs-input" type="number" min="1" max="10"></label>
                 <label><span class="hs-label">Projected Role</span><input id="hsRoleEdit" class="hs-input" placeholder="Top line C, RD, depth G…"></label>
