@@ -136,6 +136,7 @@
       return;
     }
     r.status=status;
+    const existingBid=S.bids.find(x=>x.scouting_player_id===r.scouting_player_id);
     if(status==='bid_target'){
       await syncBid(r.scouting_player_id,{
         target_bid:r.target_bid,
@@ -145,6 +146,13 @@
         projected_role:r.projected_role,
         management_note:r.management_note
       });
+    }else if(existingBid){
+      await db().from('team_bid_board').update({
+        status:status==='pass'?'pass':'watch',
+        updated_by:state().user.id,
+        updated_at:new Date().toISOString()
+      }).eq('id',existingBid.id);
+      existingBid.status=status==='pass'?'pass':'watch';
     }
     render();
     msg('hsStatus',`${r.scouting_players?.gamertag||'Player'} marked ${status.replaceAll('_',' ')} ✓`);
