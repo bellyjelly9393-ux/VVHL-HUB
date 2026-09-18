@@ -58,11 +58,12 @@
     const anchor=detail.querySelector('.vod-detail-head'); if(!anchor)return;
     const panel=document.createElement('div');
     panel.id='vodPipelinePanel'; panel.className='analysis-note'; panel.style.marginTop='16px';
-    panel.innerHTML=`<div class="eyebrow">GAME ANALYSIS</div><h3 style="margin:6px 0 8px">Retrieve Recording · Detect Periods · Analyze</h3><p>Analyze Game reuses this game's capture or retrieves its saved Twitch replay. Existing jobs resume without starting again.</p><div class="vod-actions"><button id="vodAnalyzeGame" class="small-btn primary" type="button">Analyze Game</button><button id="vodCheckPipeline" class="small-btn" type="button">Check Status</button><button id="vodRetryPipeline" class="small-btn" type="button">Continue / Retry</button></div><details style="margin-top:12px"><summary>Recording source / upload fallback</summary><p>A Twitch replay link identifies the recording. Channel links alone cannot identify a past game. Use a recording containing one game.</p><label>Saved Twitch replay URL<input id="vodReplayUrl" class="field" type="url" placeholder="https://www.twitch.tv/videos/..."></label><button id="vodSaveReplay" class="small-btn" type="button">Save replay link</button><p>Or upload an MP4 / MOV recording:</p><input id="vodPipelineFile" class="field" type="file" accept="video/mp4,video/quicktime,.mp4,.mov"><button id="vodStartPipeline" class="small-btn" type="button">Upload & Start Pipeline</button></details><small id="vodPipelineStatus">Press Analyze Game to retrieve the saved recording.</small>`;
+    panel.innerHTML=`<div class="eyebrow">GAME ANALYSIS</div><h3 style="margin:6px 0 8px">Retrieve Recording · Detect Periods · Analyze</h3><p>Analyze Game reuses this game's capture or retrieves its saved Twitch replay. Existing jobs resume without starting again.</p><div class="vod-actions"><button id="vodAnalyzeGame" class="small-btn primary" type="button">Analyze Game</button><button id="vodCheckPipeline" class="small-btn" type="button">Check Status</button><button id="vodRetryPipeline" class="small-btn" type="button">Continue / Retry</button><button id="vodEliteReanalyze" class="small-btn" type="button">Re-run Elite Scout</button></div><details style="margin-top:12px"><summary>Recording source / upload fallback</summary><p>A Twitch replay link identifies the recording. Channel links alone cannot identify a past game. Use a recording containing one game.</p><label>Saved Twitch replay URL<input id="vodReplayUrl" class="field" type="url" placeholder="https://www.twitch.tv/videos/..."></label><button id="vodSaveReplay" class="small-btn" type="button">Save replay link</button><p>Or upload an MP4 / MOV recording:</p><input id="vodPipelineFile" class="field" type="file" accept="video/mp4,video/quicktime,.mp4,.mov"><button id="vodStartPipeline" class="small-btn" type="button">Upload & Start Pipeline</button></details><small id="vodPipelineStatus">Press Analyze Game to retrieve the saved recording.</small>`;
     anchor.insertAdjacentElement('afterend',panel);
     document.getElementById('vodStartPipeline')?.addEventListener('click',start);
     document.getElementById('vodCheckPipeline')?.addEventListener('click',checkSelected);
     document.getElementById('vodRetryPipeline')?.addEventListener('click',retry);
+    document.getElementById('vodEliteReanalyze')?.addEventListener('click',reanalyzeElite);
     document.getElementById('vodAnalyzeGame')?.addEventListener('click',analyzeGame);
     document.getElementById('vodSaveReplay')?.addEventListener('click',saveReplay);
     syncStoredStatus();
@@ -143,6 +144,24 @@
       }
       beginPoll(review.worker_job_id,review.id);
     }catch(e){setStatus(e.message||'Retry is not available yet.','bad');}
+  }
+
+  async function reanalyzeElite(){
+    try{
+      const review=await currentReview();
+      if(!review?.worker_job_id)throw new Error('There is no saved recording to re-analyze yet.');
+      if(!confirm('Run a fresh Elite Scout pass on the saved recording? This replaces the old AI evidence but keeps the video.'))return;
+      setStatus('Starting a fresh elite scouting pass on the saved recording…');
+      const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/reanalyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+      await db().from('vod_review_sessions').update({
+        worker_status:job.status,status:'queued',
+        full_game_summary:null,recurring_patterns:null,strengths:null,corrections:null,
+        tactical_report:null,player_report:null,professional_writeup:null,
+        worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()
+      }).eq('id',review.id);
+      setStatus('Fresh scout pass queued. The original recording is being reused.','good');
+      beginPoll(review.worker_job_id,review.id);
+    }catch(e){setStatus(e.message||'Fresh scout pass could not be started.','bad');}
   }
 
   function beginPoll(jobId,reviewId){
