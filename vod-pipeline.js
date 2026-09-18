@@ -14,6 +14,15 @@
     if(el.dataset.tone!==tone)el.dataset.tone=tone;
   }
 
+  function normalizeTwitchReplay(value){
+    try{
+      const u=new URL(String(value||'').trim());
+      if(u.protocol!=='https:'||!['twitch.tv','www.twitch.tv'].includes(u.hostname.toLowerCase()))return '';
+      const m=u.pathname.match(/^\/(?:videos|v)\/(\d+)\/?$/);
+      return m?`https://www.twitch.tv/videos/${m[1]}`:'';
+    }catch{return '';}
+  }
+
   async function token(){
     const {data,error}=await db().auth.getSession();
     if(error)throw error;
@@ -62,10 +71,12 @@
   async function saveReplay(){
     try{
       const review=await currentReview();if(!review)return;
-      const url=document.getElementById('vodReplayUrl').value.trim();
-      if(!/^https:\/\/(www\.)?twitch\.tv\/videos\/\d+\/?(?:[?#].*)?$/.test(url))throw new Error('Paste a Twitch replay URL: https://www.twitch.tv/videos/...');
+      const raw=document.getElementById('vodReplayUrl').value.trim();
+      const url=normalizeTwitchReplay(raw);
+      if(!url)throw new Error('Paste a Twitch replay link such as twitch.tv/videos/123… or a Twitch share link using /v/123…');
       const {data,error}=await db().from('vod_review_sessions').update({vod_url:url,source_provider:'twitch',updated_at:new Date().toISOString()}).eq('id',review.id).select('id');
       if(error)throw error;if(!data?.length)throw new Error('Replay link was not saved. Check your access.');
+      document.getElementById('vodReplayUrl').value=url;
       setStatus('Replay link saved. Press Analyze Game.','good');
     }catch(e){setStatus(e.message,'bad');}
   }
@@ -185,19 +196,37 @@
 
   async function ingest(job,reviewId){
     const chunks=job?.result?.chunks||[]; if(!chunks.length)return;
-    const {data:segments,error}=await db().from('vod_review_segments').select('*').eq('review_id',reviewId).order('start_seconds');
+    let {data:segments,error}=await db().from('vod_review_segments').select('*').eq('review_id',reviewId).order('start_seconds');
     if(error)throw error;
+
+    const fallbackFullGame=job?.result?.period_detection==='full_game_fallback';
+    if((!segments||!segments.length)&&fallbackFullGame){
+      const {data:review,error:rerr}=await db().from('vod_review_sessions').select('team_id').eq('id',reviewId).maybeSingle();
+      if(rerr)throw rerr;
+      const duration=Number(job?.result?.duration)||Math.max(...chunks.map(c=>Number(c.end)||0));
+      const {data:created,error:cerr}=await db().from('vod_review_segments').insert({
+        review_id:reviewId,team_id:review.team_id,segment_type:'custom',segment_index:1,label:'Full Game',
+        start_seconds:0,end_seconds:duration,status:'queued',confidence:'preliminary'
+      }).select('*').single();
+      if(cerr)throw cerr;
+      segments=[created];
+    }
+
     const existingMarkers=await db().from('vod_review_markers').select('timestamp_seconds,note').eq('review_id',reviewId);
     const seen=new Set((existingMarkers.data||[]).map(m=>`${Math.round(Number(m.timestamp_seconds)||0)}|${m.note}`));
     const summaries=[]; const markers=[];
     for(const seg of segments||[]){
-      const matched=chunks.filter(c=>c.label===seg.label);
+      const matched=fallbackFullGame?chunks:chunks.filter(c=>c.label===seg.label);
       if(!matched.length)continue;
       const summary=matched.map(c=>c.review?.summary).filter(Boolean).join('\n\n');
       const uncertainties=[...new Set(matched.flatMap(c=>c.review?.uncertainties||[]))];
       const playerNotes=matched.flatMap(c=>(c.review?.observations||[]).filter(o=>o.player).map(o=>`${o.player} — ${o.note}`));
       const notes=summary+(uncertainties.length?`\n\nNeeds review: ${uncertainties.join(' | ')}`:'');
-      const {error:uerr}=await db().from('vod_review_segments').update({analysis_summary:notes||null,player_notes:playerNotes,tags:[...new Set(matched.flatMap(c=>(c.review?.observations||[]).map(o=>o.source)))],status:'needs_review',confidence:'preliminary',updated_at:new Date().toISOString()}).eq('id',seg.id);
+      const {error:uerr}=await db().from('vod_review_segments').update({
+        analysis_summary:notes||null,player_notes:playerNotes,
+        tags:[...new Set(matched.flatMap(c=>(c.review?.observations||[]).map(o=>o.source)))],
+        status:'needs_review',confidence:'preliminary',updated_at:new Date().toISOString()
+      }).eq('id',seg.id);
       if(uerr)throw uerr;
       if(summary)summaries.push(`${seg.label}: ${summary}`);
       for(const c of matched)for(const o of c.review?.observations||[]){
@@ -208,9 +237,21 @@
       }
     }
     if(markers.length){const {error:merr}=await db().from('vod_review_markers').insert(markers);if(merr)throw merr;}
-    const {error:rerr}=await db().from('vod_review_sessions').update({full_game_summary:summaries.join('\n\n')||null,status:'reviewing',worker_status:'ready_for_review',worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',reviewId);
+
+    const rollup=job?.result?.game_rollup||{};
+    const payload={
+      full_game_summary:rollup.summary||summaries.join('\n\n')||null,
+      recurring_patterns:rollup.patterns||null,
+      strengths:rollup.strengths||null,
+      corrections:rollup.corrections||null,
+      status:'reviewing',worker_status:'ready_for_review',
+      worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    };
+    const {error:rerr}=await db().from('vod_review_sessions').update(payload).eq('id',reviewId);
     if(rerr)throw rerr;
-    setStatus('Period analysis imported. Review the AI notes/markers, then save the final game report.','good');
+    setStatus(fallbackFullGame
+      ?'Full-game AI scouting report imported. Automatic period detection was skipped; review the evidence and report below.'
+      :'Period analysis imported. Review the AI notes/markers, then save the final game report.','good');
     setTimeout(()=>document.getElementById('refreshVod')?.click(),350);
   }
 
