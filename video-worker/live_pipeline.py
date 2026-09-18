@@ -360,7 +360,15 @@ def resume_monitor(queue_id, job_id):
     while not STOP.is_set():
         try:
             saved = queue_state(queue_id)
-            if saved and saved.get('status') in ('captured', 'processing', 'awaiting_ai'):
+            job = worker.get_job(job_id)
+            # A worker recovery may legitimately reactivate a queue row that was
+            # previously marked failed. Reattach monitoring when the persisted
+            # worker job itself is active, then let monitor_review publish truth.
+            active = job.get('status') in ('queued', 'processing', 'awaiting_ai', 'ready_for_review')
+            if saved and active and saved.get('status') in ('captured', 'processing', 'awaiting_ai', 'failed'):
+                if saved.get('status') == 'failed' and job.get('status') in ('queued', 'processing'):
+                    queue_update(queue_id, 'processing', error=None, worker_job_id=job_id,
+                                 duration=(job.get('result') or {}).get('duration'))
                 monitor_review(queue_id, job_id)
             return
         except (OSError, ValueError, urllib.error.URLError):
