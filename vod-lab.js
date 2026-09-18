@@ -67,7 +67,16 @@
       if(r.error) throw r.error; if(s.error) throw s.error; if(m.error) throw m.error;
       state.reviews=r.data||[]; state.segments=s.data||[]; state.markers=m.data||[];
       if(state.selectedReviewId&&!state.reviews.some(x=>x.id===state.selectedReviewId)){state.selectedReviewId="";state.selectedSegmentId="";}
-      renderAll(); setStatus(`${teamName()} VOD Lab ready · ${state.reviews.length} review${state.reviews.length===1?"":"s"}.`,"success");
+      const requestedReview=new URLSearchParams(location.search).get("review");
+      if(!state.selectedReviewId&&requestedReview&&state.reviews.some(x=>x.id===requestedReview)){
+        state.selectedReviewId=requestedReview;
+        state.selectedSegmentId=reviewSegments(requestedReview)[0]?.id||"";
+      }
+      renderAll();
+      if(requestedReview&&state.selectedReviewId===requestedReview){
+        setTimeout(()=>document.getElementById("vodDetail")?.scrollIntoView({behavior:"smooth",block:"start"}),120);
+      }
+      setStatus(`${teamName()} VOD Lab ready · ${state.reviews.length} review${state.reviews.length===1?"":"s"}.`,"success");
     }catch(error){
       console.error(error);
       const schema=String(error?.message||"").toLowerCase().includes("vod_review")||String(error?.code||"").startsWith("PGRST");
@@ -147,7 +156,11 @@
   }
   function renderAll(){renderKpis();renderLibrary();renderDetail();}
 
-  function selectReview(id){state.selectedReviewId=id; const first=reviewSegments(id)[0]; state.selectedSegmentId=first?.id||""; renderAll();}
+  function selectReview(id){
+    state.selectedReviewId=id; const first=reviewSegments(id)[0]; state.selectedSegmentId=first?.id||""; renderAll();
+    const url=new URL(location.href);url.searchParams.set("review",id);history.replaceState(null,"",url);
+    setTimeout(()=>document.getElementById("vodDetail")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
+  }
   function selectSegment(id){state.selectedSegmentId=id; renderSegments();renderSegmentEditor(); document.getElementById("segmentEditorWrap")?.scrollIntoView({behavior:"smooth",block:"start"});}
   function openSegmentById(id){const r=currentReview(),s=state.segments.find(x=>x.id===id); if(!r?.vod_url||!s)return; window.open(timestampUrl(r.vod_url,s.start_seconds),"_blank","noopener");}
 
