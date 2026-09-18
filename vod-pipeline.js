@@ -220,8 +220,24 @@
       if(!matched.length)continue;
       const summary=matched.map(c=>c.review?.summary).filter(Boolean).join('\n\n');
       const uncertainties=[...new Set(matched.flatMap(c=>c.review?.uncertainties||[]))];
-      const playerNotes=matched.flatMap(c=>(c.review?.observations||[]).filter(o=>o.player).map(o=>`${o.player} — ${o.note}`));
-      const notes=summary+(uncertainties.length?`\n\nNeeds review: ${uncertainties.join(' | ')}`:'');
+      const observationPlayers=matched.flatMap(c=>(c.review?.observations||[]).filter(o=>o.player).map(o=>`${o.player} — ${o.note}`));
+      const evaluatedPlayers=matched.flatMap(c=>(c.review?.player_evaluations||[]).map(p=>{
+        const pos=p.position?` (${p.position})`:'';
+        const stamps=(p.evidence_timestamps||[]).map(x=>Math.floor(Number(x)||0)).filter(Number.isFinite);
+        const evidence=stamps.length?` [evidence: ${stamps.join(', ')}s]`:'';
+        return `${p.player}${pos} — Strengths: ${p.strengths||'—'} | Concerns: ${p.concerns||'—'} | Habits: ${p.habits||'—'} | Coach: ${p.coach_note||'—'} | Confidence: ${p.confidence||'low'}${evidence}`;
+      }));
+      const playerNotes=[...new Set([...evaluatedPlayers,...observationPlayers])];
+      const tactical=matched.map(c=>c.review?.tactical).filter(Boolean);
+      const tacticalText=tactical.length?[
+        ...new Set(tactical.flatMap(t=>[
+          t.offense&&`Offense: ${t.offense}`, t.defense&&`Defense: ${t.defense}`,
+          t.transition&&`Transition: ${t.transition}`, t.forecheck&&`Forecheck: ${t.forecheck}`,
+          t.special_teams&&`Special teams: ${t.special_teams}`, t.goalie&&`Goalie: ${t.goalie}`,
+          t.game_management&&`Game management: ${t.game_management}`
+        ].filter(Boolean)))
+      ].join('\n'):'';
+      const notes=[summary,tacticalText,uncertainties.length?`Needs review: ${uncertainties.join(' | ')}`:''].filter(Boolean).join('\n\n');
       const {error:uerr}=await db().from('vod_review_segments').update({
         analysis_summary:notes||null,player_notes:playerNotes,
         tags:[...new Set(matched.flatMap(c=>(c.review?.observations||[]).map(o=>o.source)))],
@@ -230,7 +246,9 @@
       if(uerr)throw uerr;
       if(summary)summaries.push(`${seg.label}: ${summary}`);
       for(const c of matched)for(const o of c.review?.observations||[]){
-        const note=`[AI ${String(o.source||'gameplay').replaceAll('_',' ')}] ${o.note}`;
+        const category=String(o.category||'general').replaceAll('_',' ');
+        const impact=o.impact?` · ${o.impact}`:'';
+        const note=`[AI ${String(o.source||'gameplay').replaceAll('_',' ')} · ${category}${impact}] ${o.note}`;
         const key=`${Math.round(Number(o.timestamp)||0)}|${note}`;
         if(seen.has(key))continue; seen.add(key);
         markers.push({review_id:reviewId,segment_id:seg.id,team_id:seg.team_id,timestamp_seconds:Number(o.timestamp)||0,category:'general',player_label:o.player||null,note,created_by:auth().user?.id||null});
@@ -244,6 +262,9 @@
       recurring_patterns:rollup.patterns||null,
       strengths:rollup.strengths||null,
       corrections:rollup.corrections||null,
+      tactical_report:rollup.tactical_report||null,
+      player_report:rollup.player_report||null,
+      professional_writeup:rollup.professional_writeup||null,
       status:'reviewing',worker_status:'ready_for_review',
       worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()
     };
