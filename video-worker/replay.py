@@ -53,7 +53,7 @@ def resolve(review, owner, create=False):
         rows = db.execute('SELECT id,metadata FROM jobs WHERE owner=? ORDER BY created DESC', (owner,)).fetchall()
         for row in rows:
             meta = json.loads(row['metadata'])
-            if (row['id'] == review.get('worker_job_id') or meta.get('review_id') == review['id']
+            if (row['id'] == review.get('worker_job_id') or meta.get('review_id') == review['id'] or meta.get('game_id') == review['id']
                     or (meta.get('media_queue_id') and meta['media_queue_id'] == review.get('media_queue_id'))):
                 job = worker.get_job(row['id'], owner)
                 if job['status'] == 'expired':

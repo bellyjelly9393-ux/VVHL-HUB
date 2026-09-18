@@ -356,7 +356,29 @@ def loop():
         STOP.wait(POLL_SECONDS)
 
 
+def resume_monitor(queue_id, job_id):
+    while not STOP.is_set():
+        try:
+            saved = queue_state(queue_id)
+            if saved and saved.get('status') in ('captured', 'processing', 'awaiting_ai'):
+                monitor_review(queue_id, job_id)
+            return
+        except (OSError, ValueError, urllib.error.URLError):
+            # Retry without stopping ingestion or losing the persisted job.
+            STOP.wait(POLL_SECONDS)
+
+
 def start():
+    # A deployment restarts monitoring too, not just the persisted analysis jobs.
+    # Captured recordings remain on the volume and must still reach their game review.
+    if configured():
+        with worker.connect() as db:
+            saved = db.execute("SELECT id,metadata FROM jobs WHERE status NOT IN ('expired','failed')").fetchall()
+        for row in saved:
+            queue_id = json.loads(row['metadata']).get('media_queue_id')
+            if queue_id:
+                threading.Thread(target=resume_monitor, args=(queue_id, row['id']),
+                                 daemon=True, name=f'wildman-resume-{queue_id}').start()
     thread = threading.Thread(target=loop, daemon=True, name='wildman-live-ingest')
     thread.start()
     return thread
