@@ -122,10 +122,13 @@
             <div class="section-divider"></div>
             <div class="eyebrow">FULL GAME ROLLUP</div><h3>Game Report</h3>
             <div class="rollup-grid">
-              <label class="wide">Full-game summary<textarea id="gameSummary" class="text-input" placeholder="Overall game read after the periods are complete..."></textarea></label>
-              <label>Recurring patterns<textarea id="gamePatterns" class="text-input" placeholder="What repeatedly showed up across periods?"></textarea></label>
-              <label>Strengths<textarea id="gameStrengths" class="text-input" placeholder="What worked consistently?"></textarea></label>
-              <label class="wide">Corrections / focus<textarea id="gameCorrections" class="text-input" placeholder="What should be fixed or emphasized next time?"></textarea></label>
+              <label class="wide">Full-game summary<textarea id="gameSummary" class="text-input" placeholder="Overall game identity and evidence-based read..."></textarea></label>
+              <label>Recurring patterns<textarea id="gamePatterns" class="text-input" placeholder="Repeatable tendencies across multiple sequences..."></textarea></label>
+              <label>Strengths<textarea id="gameStrengths" class="text-input" placeholder="What consistently worked and why?"></textarea></label>
+              <label class="wide">Corrections / focus<textarea id="gameCorrections" class="text-input" placeholder="Actionable next-game corrections and priorities..."></textarea></label>
+              <label class="wide">Tactical report<textarea id="gameTactical" class="text-input" placeholder="Entries, breakouts, forecheck, transition, defensive structure, special teams, goalie..."></textarea></label>
+              <label class="wide">Player scouting report<textarea id="gamePlayers" class="text-input" placeholder="Player-by-player strengths, concerns, habits, role fit and coaching notes..."></textarea></label>
+              <label class="wide">Professional write-up<textarea id="gameProfessional" class="text-input" placeholder="Polished hockey-operations / postgame analysis..."></textarea></label>
             </div>
             <div class="vod-actions"><button id="buildRollup" class="small-btn" type="button">Build Draft From Periods</button><button id="saveRollup" class="small-btn primary" type="button">Save Game Report</button></div>
             <div class="analysis-note"><strong>Analysis automation:</strong> the segment queue is ready for a future video-processing worker. Until that worker is connected, this page deliberately does not pretend it watched the video. Period packets can be sent to an analyzer independently, then saved back here.</div>
