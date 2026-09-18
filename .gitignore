@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+video-worker/data/
+.venv/
