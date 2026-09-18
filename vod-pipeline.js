@@ -10,7 +10,8 @@
   const statusEl=()=>document.getElementById('vodPipelineStatus');
   function setStatus(text,tone=''){
     const el=statusEl(); if(!el)return;
-    el.textContent=text; el.dataset.tone=tone;
+    if(el.textContent!==text)el.textContent=text;
+    if(el.dataset.tone!==tone)el.dataset.tone=tone;
   }
 
   async function token(){
@@ -48,12 +49,39 @@
     const anchor=detail.querySelector('.vod-detail-head'); if(!anchor)return;
     const panel=document.createElement('div');
     panel.id='vodPipelinePanel'; panel.className='analysis-note'; panel.style.marginTop='16px';
-    panel.innerHTML=`<div class="eyebrow">ONE-UPLOAD PIPELINE</div><h3 style="margin:6px 0 8px">Upload Once · Auto-Detect Periods · Analyze</h3><p>Select the actual recording once. Wildman uploads it to the Railway worker, automatically looks for the NHL period indicator, builds P1/P2/P3 when confidence is high, then analyzes those windows. The manual marker below is only the fallback.</p><input id="vodPipelineFile" class="field" type="file" accept="video/mp4,video/quicktime,.mp4,.mov"><div class="vod-actions" style="margin-top:10px"><button id="vodStartPipeline" class="small-btn primary" type="button">Upload & Start Pipeline</button><button id="vodCheckPipeline" class="small-btn" type="button">Check Status</button><button id="vodRetryPipeline" class="small-btn" type="button">Continue / Retry</button></div><small id="vodPipelineStatus">Choose the recording once. Automatic period detection runs after upload.</small>`;
+    panel.innerHTML=`<div class="eyebrow">GAME ANALYSIS</div><h3 style="margin:6px 0 8px">Retrieve Recording · Detect Periods · Analyze</h3><p>Analyze Game reuses this game's capture or retrieves its saved Twitch replay. Existing jobs resume without starting again.</p><div class="vod-actions"><button id="vodAnalyzeGame" class="small-btn primary" type="button">Analyze Game</button><button id="vodCheckPipeline" class="small-btn" type="button">Check Status</button><button id="vodRetryPipeline" class="small-btn" type="button">Continue / Retry</button></div><details style="margin-top:12px"><summary>Recording source / upload fallback</summary><p>A Twitch replay link identifies the recording. Channel links alone cannot identify a past game. Use a recording containing one game.</p><label>Saved Twitch replay URL<input id="vodReplayUrl" class="field" type="url" placeholder="https://www.twitch.tv/videos/..."></label><button id="vodSaveReplay" class="small-btn" type="button">Save replay link</button><p>Or upload an MP4 / MOV recording:</p><input id="vodPipelineFile" class="field" type="file" accept="video/mp4,video/quicktime,.mp4,.mov"><button id="vodStartPipeline" class="small-btn" type="button">Upload & Start Pipeline</button></details><small id="vodPipelineStatus">Press Analyze Game to retrieve the saved recording.</small>`;
     anchor.insertAdjacentElement('afterend',panel);
     document.getElementById('vodStartPipeline')?.addEventListener('click',start);
     document.getElementById('vodCheckPipeline')?.addEventListener('click',checkSelected);
     document.getElementById('vodRetryPipeline')?.addEventListener('click',retry);
+    document.getElementById('vodAnalyzeGame')?.addEventListener('click',analyzeGame);
+    document.getElementById('vodSaveReplay')?.addEventListener('click',saveReplay);
     syncStoredStatus();
+  }
+
+  async function saveReplay(){
+    try{
+      const review=await currentReview();if(!review)return;
+      const url=document.getElementById('vodReplayUrl').value.trim();
+      if(!/^https:\/\/(www\.)?twitch\.tv\/videos\/\d+\/?(?:[?#].*)?$/.test(url))throw new Error('Paste a Twitch replay URL: https://www.twitch.tv/videos/...');
+      const {data,error}=await db().from('vod_review_sessions').update({vod_url:url,source_provider:'twitch',updated_at:new Date().toISOString()}).eq('id',review.id).select('id');
+      if(error)throw error;if(!data?.length)throw new Error('Replay link was not saved. Check your access.');
+      setStatus('Replay link saved. Press Analyze Game.','good');
+    }catch(e){setStatus(e.message,'bad');}
+  }
+
+  async function analyzeGame(){
+    if(busy)return;busy=true;
+    const button=document.getElementById('vodAnalyzeGame');button.disabled=true;
+    try{
+      const review=await currentReview();if(!review)throw new Error('Select a game first.');
+      setStatus('Finding this game’s recording…');
+      const {job}=await workerFetch(`/reviews/${encodeURIComponent(review.id)}/analyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+      if(selectedReviewId()!==review.id)return;
+      if(!job)throw new Error('No recording found.');
+      beginPoll(job.id,review.id);
+    }catch(e){setStatus(e.message||'Could not retrieve recording.','bad');}
+    finally{busy=false;button.disabled=false;}
   }
 
   async function start(){
@@ -81,7 +109,6 @@
   async function checkSelected(){
     try{
       const review=await currentReview(); if(!review)throw new Error('Select a VOD review first.');
-      if(!review.worker_job_id)throw new Error('This review has not been uploaded to the video worker yet.');
       await checkJob(review.worker_job_id,review.id,true);
     }catch(e){setStatus(e.message||'Could not check pipeline.','bad');}
   }
@@ -113,6 +140,9 @@
   async function importDetectedPeriods(reviewId,job){
     const periods=job?.result?.detected_periods||[];
     if(job?.result?.period_detection!=='auto'||periods.length<3)return false;
+    const {data:existing,error:existingError}=await db().from('vod_review_segments').select('id').eq('review_id',reviewId).limit(1);
+    if(existingError)throw existingError;
+    if(existing?.length)return false;
     const {data:review,error:rerr}=await db().from('vod_review_sessions').select('team_id').eq('id',reviewId).maybeSingle();
     if(rerr)throw rerr;if(!review?.team_id)return false;
     const payload=periods.map((p,i)=>({review_id:reviewId,team_id:review.team_id,segment_type:'period',segment_index:i+1,label:p.label||`Period ${i+1}`,start_seconds:Number(p.start),end_seconds:Number(p.end),status:'queued',confidence:'preliminary'}));
@@ -123,19 +153,31 @@
 
   async function checkJob(jobId,reviewId,loud=false){
     try{
-      const job=await workerFetch(`/jobs/${encodeURIComponent(jobId)}`);
-      await db().from('vod_review_sessions').update({worker_status:job.status,worker_updated_at:new Date().toISOString()}).eq('id',reviewId);
+      const response=await workerFetch(`/reviews/${encodeURIComponent(reviewId)}/job`);
+      const job=response.job;
+      if(selectedReviewId()!==reviewId)return;
+      if(!job){if(loud)setStatus('Press Analyze Game to retrieve the saved recording.');return;}
+      if(job.waiting_for_capture){setStatus(`Game capture: ${job.status}. Waiting for the saved recording; no upload needed.`,'good');return;}
+      const {error:saveError}=await db().from('vod_review_sessions').update({worker_job_id:job.id,worker_status:job.status,worker_updated_at:new Date().toISOString()}).eq('id',reviewId);
+      if(saveError)throw saveError;
       const autoImported=await importDetectedPeriods(reviewId,job);
       if(autoImported)document.getElementById('refreshVod')?.click();
       const done=['ready_for_review','failed','expired','awaiting_ai','needs_periods'].includes(job.status);
-      if(job.status==='needs_periods')setStatus('The upload is safe, but automatic period detection was not confident enough. Use the manual P1/P2/P3 marker below, Build / Update Periods, then press Continue / Retry. No re-upload.','warn');
+      if(job.status==='needs_periods'){
+        if(selectedReviewId()===reviewId)document.getElementById('manualPeriodBuilder')?.setAttribute('open','');
+        setStatus('The upload is safe, but automatic period detection was not confident enough. Use the manual P1/P2/P3 marker below, Build / Update Periods, then press Continue / Retry. No re-upload.','warn');
+      }
       else if(job.status==='awaiting_ai')setStatus(job.result?.period_detection==='auto'?'Periods detected automatically ✓ Video is split and ready. AI scouting is the only remaining connection. No re-upload needed.':'Video validated and split into period-sized work. AI is not connected to Railway yet. No re-upload is needed once the AI connection is added.','warn');
-      else if(job.status==='ready_for_review'){setStatus('AI period review finished. Importing results into VOD Lab…','good');await ingest(job,reviewId);}
+      else if(job.status==='ready_for_review'){
+        const review=await currentReview();
+        if(review?.status==='complete'||(review?.status==='reviewing'&&review?.full_game_summary))setStatus('Analysis is saved. Review the notes and game report below.','good');
+        else{setStatus('AI period review finished. Importing results into VOD Lab…','good');await ingest(job,reviewId);}
+      }
       else if(job.status==='failed'||job.status==='expired')setStatus(job.error||`Pipeline ${job.status}.`,'bad');
       else setStatus(`Pipeline: ${String(job.status).replaceAll('_',' ')}${job.result?.total_chunks?` · ${job.result.chunks?.length||0}/${job.result.total_chunks} chunks`:''}`,'good');
       if(done){clearInterval(pollTimer);pollTimer=null;}
       if(loud&&job.status==='ready_for_review')document.getElementById('refreshVod')?.click();
-    }catch(e){if(loud)setStatus(e.message||'Could not reach video worker.','bad');}
+    }catch(e){setStatus(e.message||'Could not reach video worker. Retrying…','bad');}
   }
 
   async function ingest(job,reviewId){
@@ -172,14 +214,28 @@
   async function syncStoredStatus(){
     try{
       const review=await currentReview(); if(!review)return;
+      if(selectedReviewId()!==review.id)return;
+      const source=document.getElementById('vodReplayUrl');if(source)source.value=review.vod_url||'';
       if(review.worker_job_id){
         const extra=review.source_file_name?` · ${review.source_file_name}`:'';
         setStatus(`Saved pipeline: ${String(review.worker_status||'unknown').replaceAll('_',' ')}${extra}`);
       }
+      beginPoll(review.worker_job_id,review.id);
     }catch{}
   }
 
-  const observer=new MutationObserver(()=>{install();syncStoredStatus();});
+  let lastSelectedReviewId='';
+  const observer=new MutationObserver(()=>{
+    install();
+    const id=selectedReviewId();
+    if(id!==lastSelectedReviewId){
+      lastSelectedReviewId=id;
+      clearInterval(pollTimer);pollTimer=null;
+      document.getElementById('manualPeriodBuilder')?.removeAttribute('open');
+      setStatus('Press Analyze Game to retrieve the saved recording.');
+      syncStoredStatus();
+    }
+  });
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});});
   else{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});}
 })();

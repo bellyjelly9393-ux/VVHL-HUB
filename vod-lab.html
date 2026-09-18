@@ -66,14 +66,15 @@
         </section>
 
         <section class="vod-panel">
-          <div id="vodEmpty" class="vod-empty"><strong>Select or create a VOD review.</strong><br>Then define the real period start times from the stream recording.</div>
+          <div id="vodEmpty" class="vod-empty"><strong>Select or create a VOD review.</strong><br>Then press Analyze Game to retrieve its recording and detect periods.</div>
           <div id="vodDetail" hidden>
             <div class="vod-detail-head">
               <div><div class="eyebrow" id="vodDetailTeam">TEAM VOD</div><h2 id="vodDetailTitle">Game VOD</h2><p id="vodDetailMeta"></p><a id="vodOpenLink" class="video-link" href="#" target="_blank" rel="noopener">OPEN FULL VOD ↗</a></div>
               <div class="vod-actions"><button id="archiveVod" class="small-btn" type="button">Archive</button><button id="deleteVod" class="small-btn" type="button">Delete</button></div>
             </div>
 
-            <div id="manualPeriodBuilder">
+            <details id="manualPeriodBuilder">
+              <summary>Manual period times (optional fallback)</summary>
               <div class="section-divider"></div>
               <div class="eyebrow">MANUAL FALLBACK</div><h3>Period Boundaries</h3>
               <p class="section-note">Only use this if automatic period detection asks for help. Enter where each period actually starts in the recorded game.</p>
@@ -85,7 +86,7 @@
                 <label class="wide">OT starts, comma separated<input id="periodOtStarts" class="field mono" placeholder="1:20:10, 1:31:42"></label>
               </div>
               <div class="vod-actions"><button id="buildSegments" class="small-btn primary" type="button">Build / Update Periods</button><button id="addCustomSegment" class="small-btn" type="button">Add Custom Segment</button></div>
-            </div>
+            </details>
             <div id="segmentList" class="segment-list"></div>
 
             <div id="segmentEditorWrap" hidden>
