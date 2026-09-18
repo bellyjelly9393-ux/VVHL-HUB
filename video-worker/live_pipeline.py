@@ -309,7 +309,14 @@ def handle_item(item):
         source, duration = capture_twitch(item, folder)
         queue_update(item['id'], 'captured', duration=duration)
         job_id = create_review_job(item, source, duration)
-        monitor_review(item['id'], job_id)
+        # Do not block live ingest while AI reviews the previous game.
+        # The next queued game must be capturable immediately after this one is finalized.
+        threading.Thread(
+            target=monitor_review,
+            args=(item['id'], job_id),
+            daemon=True,
+            name=f"wildman-vod-monitor-{item['id']}"
+        ).start()
     except Exception as exc:
         # Keep the stored message intentionally generic. Provider responses and tokens should
         # never wind up in a management UI or database error field.
