@@ -63,9 +63,10 @@
     const periods=segments.filter(s=>['period','overtime'].includes(s.segment_type));
     const completed=periods.filter(s=>s.status==='complete').length;
     const analyzed=periods.filter(s=>s.analysis_summary||s.offense_notes||s.defense_notes||s.transition_notes||s.special_teams_notes).length;
-    const hasEvidence=Boolean(current.full_game_summary||current.recurring_patterns||current.strengths||current.corrections||analyzed);
+    const hasEvidence=Boolean(current.professional_writeup||current.player_report||current.tactical_report||current.full_game_summary||current.recurring_patterns||current.strengths||current.corrections||analyzed);
     const worker=String(current.worker_status||'not uploaded').replaceAll('_',' ');
-    root.innerHTML=`<div class="key-stat-grid"><div class="key-stat"><small>VOD Review</small><strong>${esc(current.title)}</strong></div><div class="key-stat"><small>Pipeline</small><strong>${esc(worker.toUpperCase())}</strong></div><div class="key-stat"><small>Periods</small><strong>${completed}/${periods.length||3} verified</strong></div><div class="key-stat"><small>Markers</small><strong>${markers.length}</strong></div></div>${current.full_game_summary?`<div class="network-note" style="margin-top:12px"><strong>Film rollup</strong><br>${esc(current.full_game_summary)}</div>`:'<div class="empty-state" style="margin-top:12px">The VOD review exists, but the full-game rollup has not been saved yet.</div>'}`;
+    const reportPreview=current.professional_writeup||current.full_game_summary||current.tactical_report||current.player_report||'';
+    root.innerHTML=`<div class="key-stat-grid"><div class="key-stat"><small>VOD Review</small><strong>${esc(current.title)}</strong></div><div class="key-stat"><small>Pipeline</small><strong>${esc(worker.toUpperCase())}</strong></div><div class="key-stat"><small>Periods</small><strong>${completed}/${periods.length||3} verified</strong></div><div class="key-stat"><small>Markers</small><strong>${markers.length}</strong></div></div>${reportPreview?`<div class="network-note" style="margin-top:12px"><strong>Professional film report</strong><br>${esc(reportPreview)}</div>`:'<div class="empty-state" style="margin-top:12px">The VOD review exists, but the full-game rollup has not been saved yet.</div>'}`;
     if(btn)btn.disabled=!hasEvidence;if(link)link.href=`vod-lab.html?team=wildman-hockey&review=${encodeURIComponent(current.id)}`;
   }
 
@@ -73,10 +74,13 @@
     if(!current)return'';
     const periodLines=segments.filter(s=>s.analysis_summary).map(s=>`${s.label}: ${s.analysis_summary}`);
     const lines=[];
-    if(current.full_game_summary)lines.push(current.full_game_summary);else if(periodLines.length)lines.push(periodLines.join('\n'));
-    if(current.recurring_patterns)lines.push(`Recurring patterns: ${current.recurring_patterns}`);
-    if(current.strengths)lines.push(`What worked: ${current.strengths}`);
-    if(current.corrections)lines.push(`Corrections / next-game focus: ${current.corrections}`);
+    if(current.professional_writeup)lines.push(`PROFESSIONAL HOCKEY REPORT\n${current.professional_writeup}`);
+    if(current.full_game_summary)lines.push(`SCOUTING SUMMARY\n${current.full_game_summary}`);else if(periodLines.length)lines.push(periodLines.join('\n'));
+    if(current.tactical_report)lines.push(`TACTICAL REPORT\n${current.tactical_report}`);
+    if(current.player_report)lines.push(`PLAYER SCOUTING REPORT\n${current.player_report}`);
+    if(current.recurring_patterns)lines.push(`RECURRING PATTERNS\n${current.recurring_patterns}`);
+    if(current.strengths)lines.push(`STRENGTHS\n${current.strengths}`);
+    if(current.corrections)lines.push(`CORRECTIONS / NEXT-GAME FOCUS\n${current.corrections}`);
     return lines.join('\n\n');
   }
 
