@@ -14,6 +14,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
 
 import worker
@@ -24,6 +25,7 @@ QUEUE_SECRET = os.getenv('WORKER_QUEUE_SECRET', '')
 SUPABASE_URL = os.getenv('SUPABASE_URL', '').rstrip('/')
 SUPABASE_KEY = os.getenv('SUPABASE_PUBLISHABLE_KEY', '')
 CAPTURE_QUALITY = os.getenv('LIVE_CAPTURE_QUALITY', '480p')
+CAPTURE_STREAM_SELECTOR = os.getenv('LIVE_CAPTURE_STREAM_SELECTOR', f'{CAPTURE_QUALITY},360p,best')
 MAX_LIVE_SECONDS = int(os.getenv('LIVE_CAPTURE_MAX_SECONDS', '3600'))
 MIN_CAPTURE_BYTES = int(os.getenv('LIVE_CAPTURE_MIN_MB', '5')) * 1024**2
 POLL_SECONDS = max(3, int(os.getenv('LIVE_QUEUE_POLL_SECONDS', '5')))
@@ -93,9 +95,13 @@ def safe_terminate(proc):
 
 
 def capture_twitch(item, folder):
-    url = str(item.get('stream_url') or '')
-    if 'twitch.tv' not in url.lower():
+    raw_url = str(item.get('stream_url') or '').strip()
+    if 'twitch.tv' not in raw_url.lower():
         raise RuntimeError('Automatic live capture currently supports Twitch streams only.')
+    # Mobile share links commonly append ?sr=a and similar tracking params.
+    # Streamlink only needs the channel path, so normalize to a clean public URL.
+    parsed = urlsplit(raw_url)
+    url = urlunsplit(('https', parsed.netloc.lower(), parsed.path.rstrip('/'), '', ''))
     folder.mkdir(parents=True, exist_ok=True)
     ts_path = folder / 'capture.ts'
     mp4_path = folder / 'source.mp4'
@@ -105,7 +111,8 @@ def capture_twitch(item, folder):
     # this copy is for coaching vision analysis, not archival broadcast mastering.
     args = [
         'streamlink', '--stdout', '--retry-streams', '5', '--retry-open', '3',
-        url, CAPTURE_QUALITY,
+        '--twitch-supported-codecs', 'h264,h265,av1',
+        url, CAPTURE_STREAM_SELECTOR,
     ]
     with ts_path.open('wb') as out:
         proc = subprocess.Popen(args, stdout=out, stderr=subprocess.DEVNULL)
