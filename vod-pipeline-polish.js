@@ -45,7 +45,7 @@
     const stages=[
       {icon:'🎥',label:'1 · Source',name:'Game Review',done:Boolean(r)},
       {icon:'⏱',label:'2 · Split',name:'Periods',done:periods.length>=3},
-      {icon:'☁',label:'3 · Send',name:'Upload Once',done:Boolean(r?.worker_job_id)},
+      {icon:'☁',label:'3 · Retrieve',name:'Recording',done:Boolean(r?.worker_job_id)&&worker!=='retrieving'},
       {icon:'🧠',label:'4 · Analyze',name:'AI Review',done:analysisDone,blocked},
       {icon:'🔎',label:'5 · Verify',name:'Human Review',done:allComplete,active:analysisDone&&!allComplete},
       {icon:'✍',label:'6 · Publish',name:'Write-Up',done:writeup&&allComplete,active:allReviewed&&!writeup}
@@ -53,8 +53,9 @@
     const firstPending=stages.findIndex(s=>!s.done&&!s.blocked);
     root.innerHTML=stages.map((s,i)=>`<div class="vod-pipeline-step ${s.done?'done':''} ${s.blocked?'blocked':''} ${(s.active||i===firstPending)?'active':''}"><div class="step-icon">${s.done?'✓':s.icon}</div><small>${esc(s.label)}</small><b>${esc(s.name)}</b></div>`).join('');
     let next='Create or select a VOD review.';
-    if(r&&!periods.length)next='Next: enter the real P1, P2 and P3 start times, then build the period windows.';
-    else if(r&&periods.length>=3&&!r.worker_job_id)next='Next: choose the MP4/MOV once and press Upload & Start Pipeline.';
+    if(r&&!r.worker_job_id)next='Next: press Analyze Game to use the saved capture or Twitch replay. Upload is an optional fallback.';
+    else if(worker==='needs_periods')next='Automatic detection needs help: open Manual period times, save the period boundaries, then press Continue / Retry.';
+    else if(worker==='retrieving')next='Retrieving the saved Twitch replay. You can leave this page and return to check progress.';
     else if(blocked)next='Blocked only at AI: the video is validated and reusable. Connect the AI API on Railway, then press Retry AI. No re-upload.';
     else if(r?.worker_job_id&&!analysisDone)next=`Next: let Railway finish. Current status: ${String(worker||'processing').replaceAll('_',' ')}.`;
     else if(analysisDone&&!allComplete)next='Next: review the imported period notes and markers. Correct anything questionable, then mark each segment complete.';
@@ -96,7 +97,8 @@
     }catch(e){alert(e.message||'Could not build the write-up packet.');}
   }
 
-  const observer=new MutationObserver(()=>{install();clearTimeout(timer);timer=setTimeout(refresh,180);});
+  let lastReview='';
+  const observer=new MutationObserver(()=>{install();const id=reviewId();if(id!==lastReview){lastReview=id;clearTimeout(timer);timer=setTimeout(refresh,180);}});
   const start=()=>{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});setInterval(()=>{if(!document.hidden)refresh();},15000);};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
