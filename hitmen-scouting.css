@@ -13,3 +13,14 @@
   .hs-quick-actions{min-width:160px}
   .hs-quick-btn{padding:5px 8px;font-size:8px}
 }
+
+.hs-target-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.hs-target-card{appearance:none;width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;text-align:left;padding:14px;border-radius:15px;border:1px solid rgba(216,173,85,.14);background:linear-gradient(145deg,rgba(27,17,34,.94),rgba(9,5,12,.98));color:#fff;cursor:pointer}
+.hs-target-card:hover{border-color:rgba(216,173,85,.4);transform:translateY(-1px)}
+.hs-target-jersey{display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:rgba(190,31,45,.18);font-size:24px}
+.hs-target-copy{min-width:0;display:grid;gap:3px}.hs-target-copy strong{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hs-target-copy small,.hs-target-copy span{color:#a99eaf;font-size:10px}.hs-target-copy b{color:#e5c77d}
+.hs-target-meta{text-align:right;display:grid;gap:2px}.hs-target-meta b{font:900 20px/1 "Barlow Condensed",sans-serif;color:#f0d58d}.hs-target-meta small{color:#8e8397;font-size:9px}
+.hs-target-actions{flex-wrap:wrap}.hs-target-actions .hs-btn{min-width:110px}
+.hs-report.external{border-color:rgba(88,166,255,.2);background:rgba(40,100,180,.05)}
+@media(max-width:980px){.hs-target-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:620px){.hs-target-board{grid-template-columns:1fr}.hs-target-card{grid-template-columns:auto 1fr}.hs-target-meta{grid-column:2;text-align:left;display:flex;gap:8px;align-items:baseline}.hs-target-actions{display:grid;grid-template-columns:1fr 1fr}.hs-target-actions .hs-btn{width:100%;min-width:0}}
