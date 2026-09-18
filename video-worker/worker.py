@@ -25,7 +25,7 @@ USERS = set(filter(None, os.getenv('VIDEO_REVIEW_USER_IDS', '').split(',')))
 def origin_allowed(origin):
     if not origin:
         return True
-    if origin_allowed(origin):
+    if origin in ORIGINS:
         return True
     try:
         parsed = urlsplit(origin)
