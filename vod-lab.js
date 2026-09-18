@@ -98,6 +98,11 @@
     $("vodDetailTitle").textContent=r.title;
     $("vodDetailMeta").textContent=`${r.opponent_label||"Opponent not labeled"} · ${r.game_date?new Date(r.game_date).toLocaleString():"No date"} · ${r.duration_seconds!=null?fmtTime(r.duration_seconds):"length not set"}`;
     const link=$("vodOpenLink"); link.href=r.vod_url||"#"; link.style.display=r.vod_url?"inline-flex":"none";
+    const manualBuilder=$("manualPeriodBuilder");
+    if(manualBuilder){
+      const hasWorker=Boolean(r.worker_job_id);
+      manualBuilder.hidden=hasWorker && r.worker_status!=="needs_periods";
+    }
     $("periodVodEnd").value=r.duration_seconds!=null?fmtTime(r.duration_seconds):"";
     const segs=reviewSegments();
     const p=(i)=>segs.find(s=>s.segment_type==="period"&&s.segment_index===i);
@@ -111,7 +116,13 @@
   }
   function renderSegments(){
     const el=$("segmentList"),segs=reviewSegments();
-    if(!segs.length){el.innerHTML=`<div class="vod-empty">No periods built yet. Enter the period start timestamps above.</div>`;return;}
+    if(!segs.length){
+      const r=currentReview();
+      const txt=r?.worker_job_id&&r.worker_status!=="needs_periods"
+        ? "Automatic capture is still processing. Periods will appear here when detection finishes."
+        : "No periods built yet. Use the manual fallback only if automatic detection asks for help.";
+      el.innerHTML=`<div class="vod-empty">${txt}</div>`;return;
+    }
     el.innerHTML=segs.map(s=>`<article class="segment-card${s.id===state.selectedSegmentId?" selected":""}">
       <div class="segment-card-head"><div><h4>${esc(s.label)}</h4><small>${fmtTime(s.start_seconds)} → ${fmtTime(s.end_seconds)}${s.end_seconds!=null?` · ${fmtTime(s.end_seconds-s.start_seconds)}`:""}</small></div><span class="segment-pill ${esc(s.status)}">${esc(String(s.status).replaceAll("_"," "))}</span></div>
       <div class="segment-card-actions"><button class="small-btn" type="button" data-segment-id="${esc(s.id)}">Review</button><button class="small-btn" type="button" data-segment-open="${esc(s.id)}">Open Timestamp</button></div>
