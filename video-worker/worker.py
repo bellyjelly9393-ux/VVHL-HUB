@@ -67,6 +67,9 @@ def initialize():
           error TEXT NOT NULL DEFAULT '')''')
         # Resume processing from persisted per-chunk results. Incomplete uploads are not queued.
         db.execute("UPDATE jobs SET status='queued' WHERE status='processing'")
+        # Older builds paused jobs when OCR could not find P1/P2/P3. The current
+        # worker can safely review the full recording instead, so resume them.
+        db.execute("UPDATE jobs SET status='queued', error='' WHERE status='needs_periods'")
         db.execute("UPDATE jobs SET status='failed', error='Upload interrupted; create a new review.' WHERE status='uploading'")
 
 
@@ -275,6 +278,68 @@ Do not label anything verified: a coach must review the evidence. If not hockey,
     return parsed
 
 
+def build_rollup(chunks):
+    """Turn chunk-level visual evidence into a concise full-game scouting report."""
+    if not chunks:
+        return {'summary': '', 'patterns': '', 'strengths': '', 'corrections': ''}
+    key, model = os.getenv('OPENAI_API_KEY'), os.getenv('OPENAI_MODEL')
+    if not key or not model:
+        return {'summary': ' '.join((c.get('review') or {}).get('summary', '') for c in chunks if (c.get('review') or {}).get('summary')),
+                'patterns': '', 'strengths': '', 'corrections': ''}
+    evidence = []
+    for chunk in chunks:
+        review = chunk.get('review') or {}
+        evidence.append({
+            'label': chunk.get('label'),
+            'start': chunk.get('start'),
+            'end': chunk.get('end'),
+            'summary': review.get('summary', ''),
+            'observations': (review.get('observations') or [])[:16],
+            'uncertainties': (review.get('uncertainties') or [])[:8],
+        })
+    prompt = '''Build a concise EA hockey scouting/coaching report from the supplied reviewed video evidence.
+Use only the evidence supplied. Do not invent score, goals, player identities, stats, period boundaries,
+or events that are not supported. Distinguish recurring patterns from one-off observations. If evidence
+is sparse or conflicting, say so. The report should be useful to a GM or coach reviewing a scouting game.
+Return JSON with summary, patterns, strengths, corrections. Each field is a plain string.'''
+    schema = {
+        'type': 'object', 'additionalProperties': False,
+        'required': ['summary', 'patterns', 'strengths', 'corrections'],
+        'properties': {
+            'summary': {'type': 'string'},
+            'patterns': {'type': 'string'},
+            'strengths': {'type': 'string'},
+            'corrections': {'type': 'string'},
+        }
+    }
+    response = http_json(
+        'https://api.openai.com/v1/responses',
+        {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
+        {
+            'model': model,
+            'store': False,
+            'input': [{'role': 'user', 'content': [
+                {'type': 'input_text', 'text': prompt + '\n\nReviewed evidence:\n' + json.dumps(evidence)}
+            ]}],
+            'max_output_tokens': 2400,
+            'text': {'format': {'type': 'json_schema', 'name': 'game_scouting_rollup',
+                                'strict': True, 'schema': schema}},
+        }
+    )
+    if response.get('status') != 'completed':
+        raise Problem(502, 'AI scouting rollup was incomplete.')
+    output_text = ''.join(
+        part.get('text', '')
+        for item in response.get('output', [])
+        for part in item.get('content', [])
+        if part.get('type') == 'output_text'
+    )
+    parsed = json.loads(output_text)
+    if not all(isinstance(parsed.get(k), str) for k in ('summary', 'patterns', 'strengths', 'corrections')):
+        raise Problem(502, 'AI returned an invalid scouting rollup.')
+    return parsed
+
+
 def process(job_id):
     job = get_job(job_id)
     directory = ROOT / job_id
@@ -284,22 +349,31 @@ def process(job_id):
     result = job['result']
     duration = probe(source)
     periods = job['metadata'].get('periods', [])
-    auto_detected = False
+    period_mode = 'manual' if periods else None
     if not periods:
-        periods = detect_periods(source, duration)
-        auto_detected = True
-        if not periods:
-            result.update({'duration': duration, 'detected_periods': [], 'period_detection': 'needs_review'})
-            update(job_id, 'needs_periods', result, 'Automatic period detection could not confidently find all three periods. Use the manual markers, then retry without re-uploading.')
-            return
-        with connect() as db:
-            meta = dict(job['metadata'])
-            meta['periods'] = periods
-            db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
+        detected = detect_periods(source, duration)
+        if detected:
+            periods = detected
+            period_mode = 'auto'
+            with connect() as db:
+                meta = dict(job['metadata'])
+                meta['periods'] = periods
+                db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
+        else:
+            # OCR is an enhancement, not a gate. Review the full recording in normal
+            # overlapping chunks so a user can still get a useful scouting report.
+            periods = []
+            period_mode = 'full_game_fallback'
     plan = segments(periods, duration)
-    result.update({'duration': duration, 'detected_periods': periods if auto_detected else [],
-                   'period_detection': 'auto' if auto_detected else 'manual',
-                   'total_chunks': len(plan), 'frame_step_seconds': FRAME_STEP})
+    result.update({
+        'duration': duration,
+        'detected_periods': periods if period_mode == 'auto' else [],
+        'period_detection': period_mode,
+        'period_note': ('Automatic P1/P2/P3 detection was not confident; analysis covers the full recording.'
+                        if period_mode == 'full_game_fallback' else ''),
+        'total_chunks': len(plan),
+        'frame_step_seconds': FRAME_STEP
+    })
     result.setdefault('chunks', [])
     update(job_id, 'processing', result)
     if not os.getenv('OPENAI_API_KEY') or not os.getenv('OPENAI_MODEL'):
@@ -324,8 +398,17 @@ def process(job_id):
         finally:
             shutil.rmtree(frame_dir, ignore_errors=True)
     result.pop('plan', None)
+    try:
+        result['game_rollup'] = build_rollup(result['chunks'])
+    except Exception:
+        # Chunk evidence is still valuable even if the second-pass rollup fails.
+        result['game_rollup'] = {
+            'summary': '\n\n'.join((c.get('review') or {}).get('summary', '') for c in result['chunks'] if (c.get('review') or {}).get('summary')),
+            'patterns': '',
+            'strengths': '',
+            'corrections': ''
+        }
     update(job_id, 'ready_for_review', result)
-
 
 def cleanup():
     now = time.time()
