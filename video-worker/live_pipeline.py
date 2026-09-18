@@ -18,6 +18,8 @@ from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
 
 import worker
+from streamlink import Streamlink
+from streamlink.exceptions import StreamlinkError
 
 ROOT = worker.ROOT
 STOP = worker.STOP
@@ -98,8 +100,7 @@ def capture_twitch(item, folder):
     raw_url = str(item.get('stream_url') or '').strip()
     if 'twitch.tv' not in raw_url.lower():
         raise RuntimeError('Automatic live capture currently supports Twitch streams only.')
-    # Mobile share links commonly append ?sr=a and similar tracking params.
-    # Streamlink only needs the channel path, so normalize to a clean public URL.
+
     parsed = urlsplit(raw_url)
     url = urlunsplit(('https', parsed.netloc.lower(), parsed.path.rstrip('/'), '', ''))
     folder.mkdir(parents=True, exist_ok=True)
@@ -107,51 +108,73 @@ def capture_twitch(item, folder):
     mp4_path = folder / 'source.mp4'
     queue_update(item['id'], 'capturing')
 
-    # Streamlink resolves Twitch's public HLS feed. We record a moderate rendition because
-    # this copy is for coaching vision analysis, not archival broadcast mastering.
-    args = [
-        'streamlink', '--stdout', '--retry-streams', '5', '--retry-open', '3',
-        '--twitch-supported-codecs', 'h264,h265,av1',
-        url, CAPTURE_STREAM_SELECTOR,
-    ]
-    with ts_path.open('wb') as out:
-        proc = subprocess.Popen(args, stdout=out, stderr=subprocess.PIPE, text=True)
-        started = time.time()
-        saw_final = False
-        while proc.poll() is None and not STOP.is_set():
-            if time.time() - started > MAX_LIVE_SECONDS:
-                safe_terminate(proc)
-                raise RuntimeError('Live capture exceeded the configured game-length safety limit.')
-            try:
-                state = queue_state(item['id']) or {}
-                if state.get('source_status') == 'final':
-                    saw_final = True
-                    safe_terminate(proc)
-                    break
-                if state.get('status') == 'cancelled':
-                    safe_terminate(proc)
-                    raise RuntimeError('Live capture was cancelled.')
-            except (OSError, ValueError, urllib.error.URLError):
-                # A short Supabase hiccup should not kill the recording. The safety timer
-                # still prevents a forgotten capture from running forever.
-                pass
-            STOP.wait(POLL_SECONDS)
-        if proc.poll() is None:
-            safe_terminate(proc)
-        stderr_text = ''
+    # Resolve Twitch first, then open an actually available rendition instead of
+    # asking the CLI for a hard-coded quality that may not exist on this channel.
+    session = Streamlink()
+    session.set_option('stream-timeout', 20)
+    try:
+        streams = session.streams(url)
+    except StreamlinkError as exc:
+        low = str(exc).lower()
+        if '403' in low or 'integrity' in low or 'access token' in low:
+            raise RuntimeError('Twitch blocked the server-side stream request; authenticated Twitch playback may be required.')
+        raise RuntimeError('Twitch channel is reachable but no playable live stream was available to the capture worker.')
+
+    if not streams:
+        raise RuntimeError('Twitch channel is reachable but no playable live stream was available to the capture worker.')
+
+    wanted = []
+    for name in (CAPTURE_QUALITY, '480p', '360p', 'best'):
+        if name and name not in wanted:
+            wanted.append(name)
+    selected_name = next((name for name in wanted if name in streams), None)
+    if selected_name is None:
+        # Prefer video renditions over audio-only if Twitch exposes unusual names.
+        video_names = [name for name in streams.keys() if name not in ('audio_only', 'worst')]
+        selected_name = video_names[-1] if video_names else next(iter(streams.keys()))
+
+    try:
+        fd = streams[selected_name].open()
+    except StreamlinkError:
+        raise RuntimeError('Twitch stream was found but the selected video rendition could not be opened.')
+
+    started = time.time()
+    last_state_check = 0.0
+    saw_final = False
+    try:
+        with ts_path.open('wb') as out:
+            while not STOP.is_set():
+                now = time.time()
+                if now - started > MAX_LIVE_SECONDS:
+                    raise RuntimeError('Live capture exceeded the configured game-length safety limit.')
+
+                if now - last_state_check >= POLL_SECONDS:
+                    last_state_check = now
+                    try:
+                        state = queue_state(item['id']) or {}
+                        if state.get('source_status') == 'final':
+                            saw_final = True
+                            break
+                        if state.get('status') == 'cancelled':
+                            raise RuntimeError('Live capture was cancelled.')
+                    except (OSError, ValueError, urllib.error.URLError):
+                        pass
+
+                try:
+                    chunk = fd.read(1024 * 1024)
+                except StreamlinkError:
+                    raise RuntimeError('Twitch playback ended before the game was finalized.')
+                if not chunk:
+                    if saw_final:
+                        break
+                    raise RuntimeError('Twitch playback ended before the game was finalized.')
+                out.write(chunk)
+                out.flush()
+    finally:
         try:
-            stderr_text = (proc.stderr.read() if proc.stderr else '')[-1600:]
+            fd.close()
         except Exception:
-            stderr_text = ''
-        if proc.returncode not in (0, -15, -9) and not saw_final:
-            low = stderr_text.lower()
-            if 'no playable streams' in low or 'no streams found' in low or 'is offline' in low:
-                raise RuntimeError('Twitch channel is reachable but no playable live stream was available to the capture worker.')
-            if 'client-integrity' in low or 'integrity token' in low or 'access token' in low or '403' in low:
-                raise RuntimeError('Twitch blocked the server-side stream request; authenticated Twitch playback may be required.')
-            if 'stream' in low and ('not found' in low or 'quality' in low):
-                raise RuntimeError('Twitch is live, but the requested video rendition was not available.')
-            raise RuntimeError('Twitch capture failed before video data was received.')
+            pass
 
     if not ts_path.exists() or ts_path.stat().st_size < MIN_CAPTURE_BYTES:
         raise RuntimeError('The live capture was too short to review.')
@@ -300,6 +323,8 @@ def handle_item(item):
             'Twitch blocked the server-side stream request; authenticated Twitch playback may be required.',
             'Twitch is live, but the requested video rendition was not available.',
             'Twitch capture failed before video data was received.',
+            'Twitch stream was found but the selected video rendition could not be opened.',
+            'Twitch playback ended before the game was finalized.',
             'The live capture was too short to review.',
             'No automatic VOD review owner is configured.',
         )
