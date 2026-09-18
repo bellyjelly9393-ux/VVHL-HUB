@@ -115,7 +115,7 @@ def capture_twitch(item, folder):
         url, CAPTURE_STREAM_SELECTOR,
     ]
     with ts_path.open('wb') as out:
-        proc = subprocess.Popen(args, stdout=out, stderr=subprocess.DEVNULL)
+        proc = subprocess.Popen(args, stdout=out, stderr=subprocess.PIPE, text=True)
         started = time.time()
         saw_final = False
         while proc.poll() is None and not STOP.is_set():
@@ -138,8 +138,20 @@ def capture_twitch(item, folder):
             STOP.wait(POLL_SECONDS)
         if proc.poll() is None:
             safe_terminate(proc)
+        stderr_text = ''
+        try:
+            stderr_text = (proc.stderr.read() if proc.stderr else '')[-1600:]
+        except Exception:
+            stderr_text = ''
         if proc.returncode not in (0, -15, -9) and not saw_final:
-            raise RuntimeError('Twitch stream could not be captured. Confirm the channel is live.')
+            low = stderr_text.lower()
+            if 'no playable streams' in low or 'no streams found' in low or 'is offline' in low:
+                raise RuntimeError('Twitch channel is reachable but no playable live stream was available to the capture worker.')
+            if 'client-integrity' in low or 'integrity token' in low or 'access token' in low or '403' in low:
+                raise RuntimeError('Twitch blocked the server-side stream request; authenticated Twitch playback may be required.')
+            if 'stream' in low and ('not found' in low or 'quality' in low):
+                raise RuntimeError('Twitch is live, but the requested video rendition was not available.')
+            raise RuntimeError('Twitch capture failed before video data was received.')
 
     if not ts_path.exists() or ts_path.stat().st_size < MIN_CAPTURE_BYTES:
         raise RuntimeError('The live capture was too short to review.')
@@ -284,6 +296,10 @@ def handle_item(item):
             'Live capture exceeded the configured game-length safety limit.',
             'Live capture was cancelled.',
             'Twitch stream could not be captured. Confirm the channel is live.',
+            'Twitch channel is reachable but no playable live stream was available to the capture worker.',
+            'Twitch blocked the server-side stream request; authenticated Twitch playback may be required.',
+            'Twitch is live, but the requested video rendition was not available.',
+            'Twitch capture failed before video data was received.',
             'The live capture was too short to review.',
             'No automatic VOD review owner is configured.',
         )
