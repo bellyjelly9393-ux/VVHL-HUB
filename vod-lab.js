@@ -122,6 +122,9 @@
     const ots=segs.filter(s=>s.segment_type==="overtime").map(s=>fmtTime(s.start_seconds));
     $("periodOtStarts").value=ots.join(", ");
     $("gameSummary").value=r.full_game_summary||""; $("gamePatterns").value=r.recurring_patterns||""; $("gameStrengths").value=r.strengths||""; $("gameCorrections").value=r.corrections||"";
+    if($("gameTactical")) $("gameTactical").value=r.tactical_report||"";
+    if($("gamePlayers")) $("gamePlayers").value=r.player_report||"";
+    if($("gameProfessional")) $("gameProfessional").value=r.professional_writeup||"";
     renderSegments(); renderSegmentEditor();
   }
   function renderSegments(){
@@ -246,7 +249,7 @@
   }
   async function saveRollup(){
     const r=currentReview(); if(!r)return; const segs=reviewSegments(); const allDone=segs.length>0&&segs.every(s=>s.status==="complete");
-    const payload={full_game_summary:$("gameSummary").value.trim()||null,recurring_patterns:$("gamePatterns").value.trim()||null,strengths:$("gameStrengths").value.trim()||null,corrections:$("gameCorrections").value.trim()||null,status:allDone?"complete":"reviewing",updated_at:new Date().toISOString()};
+    const payload={full_game_summary:$("gameSummary").value.trim()||null,recurring_patterns:$("gamePatterns").value.trim()||null,strengths:$("gameStrengths").value.trim()||null,corrections:$("gameCorrections").value.trim()||null,tactical_report:$("gameTactical")?.value.trim()||null,player_report:$("gamePlayers")?.value.trim()||null,professional_writeup:$("gameProfessional")?.value.trim()||null,status:allDone?"complete":"reviewing",updated_at:new Date().toISOString()};
     const {error}=await db().from("vod_review_sessions").update(payload).eq("id",r.id); if(error)return setStatus(error.message,"error"); await loadData(); state.selectedReviewId=r.id;renderAll();setStatus(allDone?"Game report saved and VOD review marked complete.":"Game report saved. Unfinished segments remain in the review queue.","success");
   }
   async function archiveReview(){const r=currentReview();if(!r)return;const {error}=await db().from("vod_review_sessions").update({status:"archived",updated_at:new Date().toISOString()}).eq("id",r.id);if(error)return setStatus(error.message,"error");state.selectedReviewId="";state.selectedSegmentId="";await loadData();setStatus("VOD review archived.","success");}
