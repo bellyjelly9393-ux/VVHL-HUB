@@ -361,11 +361,17 @@ def resume_monitor(queue_id, job_id):
         try:
             saved = queue_state(queue_id)
             job = worker.get_job(job_id)
+            if not saved:
+                return
+            if job.get('status') == 'failed':
+                queue_update(queue_id, 'failed', error=job.get('error') or 'Video analysis failed.',
+                             worker_job_id=job_id, duration=(job.get('result') or {}).get('duration'))
+                return
             # A worker recovery may legitimately reactivate a queue row that was
             # previously marked failed. Reattach monitoring when the persisted
             # worker job itself is active, then let monitor_review publish truth.
             active = job.get('status') in ('queued', 'processing', 'awaiting_ai', 'ready_for_review')
-            if saved and active and saved.get('status') in ('captured', 'processing', 'awaiting_ai', 'failed'):
+            if active and saved.get('status') in ('captured', 'processing', 'awaiting_ai', 'failed'):
                 if saved.get('status') == 'failed' and job.get('status') in ('queued', 'processing'):
                     queue_update(queue_id, 'processing', error=None, worker_job_id=job_id,
                                  duration=(job.get('result') or {}).get('duration'))
@@ -381,7 +387,7 @@ def start():
     # Captured recordings remain on the volume and must still reach their game review.
     if configured():
         with worker.connect() as db:
-            saved = db.execute("SELECT id,metadata FROM jobs WHERE status NOT IN ('expired','failed')").fetchall()
+            saved = db.execute("SELECT id,metadata FROM jobs WHERE status != 'expired'").fetchall()
         for row in saved:
             queue_id = json.loads(row['metadata']).get('media_queue_id')
             if queue_id:
