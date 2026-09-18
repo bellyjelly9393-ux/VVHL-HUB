@@ -177,6 +177,10 @@
     sync.src = 'hitmen-chelscout-sync.js';
     sync.dataset.hitmenChelScoutSync = '1';
     document.body.appendChild(sync);
+    const dossier = document.createElement('script');
+    dossier.src = 'hitmen-player-dossier.js';
+    dossier.dataset.hitmenPlayerDossier = '1';
+    document.body.appendChild(dossier);
   };
 
   let claimBusy = false;
