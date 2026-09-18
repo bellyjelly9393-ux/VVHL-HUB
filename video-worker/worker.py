@@ -86,6 +86,22 @@ def initialize():
                 meta[marker] = True
                 db.execute("UPDATE jobs SET metadata=?,status='queued',error='' WHERE id=?",
                            (json.dumps(meta), row['id']))
+        # One diagnostic retry for captures that reached OpenAI but received a 429.
+        # This distinguishes temporary rate limiting from API billing/quota problems.
+        retry429 = db.execute("SELECT id,metadata,error FROM jobs WHERE status='failed'").fetchall()
+        for row in retry429:
+            try:
+                meta = json.loads(row['metadata'])
+            except (TypeError, ValueError):
+                continue
+            marker = 'ai_429_diagnostic_retry_20260918'
+            source = ROOT / row['id'] / 'source.mp4'
+            if (meta.get('automatic_live_capture') and not meta.get(marker)
+                    and source.exists()
+                    and row['error'] == 'AI review hit the OpenAI rate or usage limit. Retry shortly.'):
+                meta[marker] = True
+                db.execute("UPDATE jobs SET metadata=?,status='queued',error='' WHERE id=?",
+                           (json.dumps(meta), row['id']))
         db.execute("UPDATE jobs SET status='failed', error='Upload interrupted; create a new review.' WHERE status='uploading'")
 
 
@@ -287,7 +303,17 @@ Do not label anything verified: a coach must review the evidence. If not hockey,
         if exc.code == 404:
             raise Problem(502, 'AI review model was not found. Check OPENAI_MODEL.')
         if exc.code == 429:
-            raise Problem(429, 'AI review hit the OpenAI rate or usage limit. Retry shortly.')
+            code = ''
+            try:
+                payload = json.loads(exc.read().decode('utf-8', 'ignore'))
+                code = str((payload.get('error') or {}).get('code') or (payload.get('error') or {}).get('type') or '')
+            except Exception:
+                pass
+            if code in ('insufficient_quota', 'billing_hard_limit_reached'):
+                raise Problem(429, 'OpenAI API quota/billing is not available for this key. Add API billing/credits, then retry.')
+            if code in ('rate_limit_exceeded', 'tokens'):
+                raise Problem(429, 'OpenAI API rate limit reached. Retry after the rate window resets.')
+            raise Problem(429, 'OpenAI API returned HTTP 429. Check API billing/usage limits, then retry.')
         if exc.code == 400:
             raise Problem(502, 'AI review request was rejected by the configured model (HTTP 400).')
         raise Problem(502, f'AI review request failed with HTTP {exc.code}.')
