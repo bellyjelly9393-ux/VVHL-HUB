@@ -93,7 +93,10 @@
       const periods=await periodsFor(review.id);
       const file=document.getElementById('vodPipelineFile')?.files?.[0];
       if(!file)throw new Error('Choose the MP4 or MOV recording first.');
-      if(file.size>700*1024*1024)throw new Error('This recording is over the current 700 MB worker upload limit.');
+      const healthResponse=await fetch(WORKER+'/health',{cache:'no-store'});
+      if(!healthResponse.ok)throw new Error('Video worker is unavailable. Try again shortly.');
+      const health=await healthResponse.json();
+      if(file.size>health.maxUploadBytes)throw new Error(`This recording exceeds the current ${Math.floor(health.maxUploadBytes/1024/1024)} MB limit.`);
       setStatus('Creating secure video job…');
       const job=await workerFetch('/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game_id:review.id,title:review.title||'Game VOD',vod_url:review.vod_url||'',players:'',periods:periods.length>=3?periods.map(p=>({label:p.label,start:p.start,end:p.end})):[]})});
       await db().from('vod_review_sessions').update({worker_job_id:job.id,worker_status:job.status,source_file_name:file.name,worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',review.id);
