@@ -682,7 +682,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(403, {'error': 'Origin not allowed'})
         self.send_response(204)
         self.send_header('Access-Control-Allow-Origin', self.headers['Origin'])
-        self.send_header('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Authorization,Content-Type')
         self.send_header('Vary', 'Origin')
         self.end_headers()
@@ -716,6 +716,18 @@ class Handler(BaseHTTPRequestHandler):
         if origin and not origin_allowed(origin):
             raise Problem(403, 'Origin not allowed')
         owner = authenticate(self.headers.get('Authorization'))
+        if path == '/twitch-auth':
+            from replay import twitch_auth_configured, save_twitch_auth, clear_twitch_auth
+            if self.command == 'GET':
+                return self.reply(200, {'configured': twitch_auth_configured()})
+            if self.command == 'POST':
+                data = self.body()
+                save_twitch_auth(data.get('token'))
+                return self.reply(200, {'configured': True})
+            if self.command == 'DELETE':
+                clear_twitch_auth()
+                return self.reply(200, {'configured': False})
+            raise Problem(405, 'Method not allowed')
         if path.startswith('/reviews/'):
             from replay import read_review, resolve
             parts = path.strip('/').split('/')
@@ -831,7 +843,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             self.reply(500, {'error': 'Request could not be completed.'})
 
-    do_GET = do_POST = do_PUT = handle_request
+    do_GET = do_POST = do_PUT = do_DELETE = handle_request
 
 
 if __name__ == '__main__':
