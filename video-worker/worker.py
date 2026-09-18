@@ -70,6 +70,22 @@ def initialize():
         # Older builds paused jobs when OCR could not find P1/P2/P3. The current
         # worker can safely review the full recording instead, so resume them.
         db.execute("UPDATE jobs SET status='queued', error='' WHERE status='needs_periods'")
+        # One-time recovery for automatic captures that failed while the AI model
+        # configuration was being corrected. Preserve the recording and all results.
+        failed = db.execute("SELECT id,metadata,error FROM jobs WHERE status='failed'").fetchall()
+        for row in failed:
+            try:
+                meta = json.loads(row['metadata'])
+            except (TypeError, ValueError):
+                continue
+            marker = 'ai_model_retry_20260918'
+            source = ROOT / row['id'] / 'source.mp4'
+            if (meta.get('automatic_live_capture') and not meta.get(marker)
+                    and source.exists()
+                    and row['error'] == 'Processing or AI request failed. Check worker configuration and retry.'):
+                meta[marker] = True
+                db.execute("UPDATE jobs SET metadata=?,status='queued',error='' WHERE id=?",
+                           (json.dumps(meta), row['id']))
         db.execute("UPDATE jobs SET status='failed', error='Upload interrupted; create a new review.' WHERE status='uploading'")
 
 
@@ -260,10 +276,23 @@ Do not label anything verified: a coach must review the evidence. If not hockey,
           'required': ['timestamp', 'source', 'note', 'player'], 'properties': {
             'timestamp': {'type': 'number'}, 'source': {'type': 'string', 'enum': ['gameplay', 'shot_chart', 'action_tracker', 'period_stats']},
             'note': {'type': 'string'}, 'player': {'type': ['string', 'null']}}}}}}
-    result = http_json('https://api.openai.com/v1/responses',
-        {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
-        {'model': model, 'store': False, 'input': [{'role': 'user', 'content': content}],
-         'max_output_tokens': 4000, 'text': {'format': {'type': 'json_schema', 'name': 'hockey_review', 'strict': True, 'schema': schema}}})
+    try:
+        result = http_json('https://api.openai.com/v1/responses',
+            {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
+            {'model': model, 'store': False, 'input': [{'role': 'user', 'content': content}],
+             'max_output_tokens': 4000, 'text': {'format': {'type': 'json_schema', 'name': 'hockey_review', 'strict': True, 'schema': schema}}})
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            raise Problem(502, 'AI review authorization failed. Check the OpenAI API key and model access.')
+        if exc.code == 404:
+            raise Problem(502, 'AI review model was not found. Check OPENAI_MODEL.')
+        if exc.code == 429:
+            raise Problem(429, 'AI review hit the OpenAI rate or usage limit. Retry shortly.')
+        if exc.code == 400:
+            raise Problem(502, 'AI review request was rejected by the configured model (HTTP 400).')
+        raise Problem(502, f'AI review request failed with HTTP {exc.code}.')
+    except urllib.error.URLError:
+        raise Problem(503, 'AI review service could not be reached. Retry shortly.')
     if result.get('status') != 'completed':
         raise Problem(502, 'AI review was incomplete. Retry this review.')
     text = ''.join(c.get('text', '') for item in result.get('output', []) for c in item.get('content', []) if c.get('type') == 'output_text')
