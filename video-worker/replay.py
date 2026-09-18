@@ -97,9 +97,17 @@ def retrieve(job_id):
     source.unlink(missing_ok=True)
     if worker.disk_used() + 150 * 1024**2 >= worker.MAX_STORAGE:
         raise worker.Problem(507, 'Temporary video storage is full. Try again after cleanup.')
-    proc = subprocess.Popen(['streamlink', '--stream-timeout', '20', '--retry-streams', '0',
-                             '-o', str(source), url, '480p,360p,best'],
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    args = ['streamlink', '--stream-timeout', '20', '--retry-streams', '0',
+            '--webbrowser-executable', '/usr/bin/chromium', '--webbrowser-headless']
+    twitch_token = os.getenv('TWITCH_AUTH_TOKEN', '').strip()
+    if twitch_token:
+        args.append('--twitch-api-header=Authorization=OAuth ' + twitch_token)
+    args.extend(['-o', str(source), url, '480p,360p,best'])
+    # Keep Streamlink diagnostics local to the job so we can classify Twitch failures
+    # without ever exposing auth headers or storing tokens in application logs.
+    diagnostic = folder / 'streamlink-error.log'
+    with diagnostic.open('wb') as err:
+        proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=err)
     deadline = time.monotonic() + 1800
     try:
         while proc.poll() is None:
@@ -109,7 +117,16 @@ def retrieve(job_id):
             if time.monotonic() > deadline or worker.STOP.wait(1):
                 raise worker.Problem(504, 'Replay retrieval timed out. Try Analyze Game again or upload the recording.')
         if proc.returncode or not source.exists() or not source.stat().st_size:
-            raise worker.Problem(422, 'Twitch could not provide this replay. It may be unavailable or restricted. Use another replay link or upload the recording.')
+            detail = ''
+            try:
+                detail = diagnostic.read_text(errors='ignore')[-6000:].lower()
+            except OSError:
+                pass
+            if any(term in detail for term in ('client-integrity', 'client integrity', 'webbrowser', 'chromium')):
+                raise worker.Problem(422, 'Twitch requires a browser integrity check for this VOD and the automatic check did not complete. Retry once; if it persists, authenticated Twitch playback is required.')
+            if any(term in detail for term in ('subscriber', 'authentication', 'unauthorized', 'forbidden', '403', 'restricted')):
+                raise worker.Problem(422, 'Twitch requires authenticated playback for this VOD. Add the optional Twitch worker authorization or upload the recording.')
+            raise worker.Problem(422, 'Twitch did not provide a playable replay to the server. The VOD can still exist in your account even when anonymous server playback is blocked.')
         if source.stat().st_size > worker.MAX_UPLOAD:
             raise worker.Problem(413, 'Replay exceeds the video size limit.')
         worker.probe(source)
@@ -129,3 +146,4 @@ def retrieve(job_id):
                 proc.kill()
                 proc.wait()
         source.unlink(missing_ok=True)
+        diagnostic.unlink(missing_ok=True)
