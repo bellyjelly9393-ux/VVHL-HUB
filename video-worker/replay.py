@@ -1,5 +1,6 @@
 """Authenticated, idempotent replay retrieval using the review's saved source."""
 import json
+import os
 import re
 import subprocess
 import time
@@ -8,6 +9,33 @@ from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 import worker
+
+TWITCH_AUTH_FILE = worker.ROOT / '.twitch-auth-token'
+
+def twitch_auth_configured():
+    try:
+        return bool(os.getenv('TWITCH_AUTH_TOKEN', '').strip()) or (TWITCH_AUTH_FILE.exists() and bool(TWITCH_AUTH_FILE.read_text().strip()))
+    except OSError:
+        return bool(os.getenv('TWITCH_AUTH_TOKEN', '').strip())
+
+def read_twitch_auth():
+    env = os.getenv('TWITCH_AUTH_TOKEN', '').strip()
+    if env:
+        return env
+    try:
+        return TWITCH_AUTH_FILE.read_text().strip() if TWITCH_AUTH_FILE.exists() else ''
+    except OSError:
+        return ''
+
+def save_twitch_auth(token):
+    value = str(token or '').strip()
+    if not re.fullmatch(r'[A-Za-z0-9]{20,200}', value):
+        raise worker.Problem(422, 'That does not look like a Twitch web auth token.')
+    TWITCH_AUTH_FILE.write_text(value)
+    os.chmod(TWITCH_AUTH_FILE, 0o600)
+
+def clear_twitch_auth():
+    TWITCH_AUTH_FILE.unlink(missing_ok=True)
 
 
 def replay_url(value):
@@ -99,7 +127,7 @@ def retrieve(job_id):
         raise worker.Problem(507, 'Temporary video storage is full. Try again after cleanup.')
     args = ['streamlink', '--stream-timeout', '20', '--retry-streams', '0',
             '--webbrowser-executable', '/usr/bin/chromium', '--webbrowser-headless']
-    twitch_token = os.getenv('TWITCH_AUTH_TOKEN', '').strip()
+    twitch_token = read_twitch_auth()
     if twitch_token:
         args.append('--twitch-api-header=Authorization=OAuth ' + twitch_token)
     args.extend(['-o', str(source), url, '480p,360p,best'])
@@ -125,8 +153,10 @@ def retrieve(job_id):
             if any(term in detail for term in ('client-integrity', 'client integrity', 'webbrowser', 'chromium')):
                 raise worker.Problem(422, 'Twitch requires a browser integrity check for this VOD and the automatic check did not complete. Retry once; if it persists, authenticated Twitch playback is required.')
             if any(term in detail for term in ('subscriber', 'authentication', 'unauthorized', 'forbidden', '403', 'restricted')):
-                raise worker.Problem(422, 'Twitch requires authenticated playback for this VOD. Add the optional Twitch worker authorization or upload the recording.')
-            raise worker.Problem(422, 'Twitch did not provide a playable replay to the server. The VOD can still exist in your account even when anonymous server playback is blocked.')
+                raise worker.Problem(422, 'Twitch requires authenticated playback for this VOD. Connect Twitch Retrieval in VOD Lab, then Analyze Game again.')
+            if not twitch_token:
+                raise worker.Problem(422, 'Twitch blocked anonymous replay playback. Connect Twitch Retrieval in VOD Lab, then Analyze Game again.')
+            raise worker.Problem(422, 'Twitch still did not provide a playable replay with the connected session. Refresh the Twitch connection or upload the recording.')
         if source.stat().st_size > worker.MAX_UPLOAD:
             raise worker.Problem(413, 'Replay exceeds the video size limit.')
         worker.probe(source)
