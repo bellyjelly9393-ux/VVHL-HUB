@@ -43,7 +43,7 @@ WRITE_LOCK = threading.Lock()
 STOP = threading.Event()
 CHUNK = 120
 OVERLAP = 5
-FRAME_STEP = 2  # Sparse first-pass review, not automatic event counting.
+FRAME_STEP = 6  # ~20 high-detail frames per two-minute chunk to stay inside API token-rate limits.
 
 
 class Problem(Exception):
@@ -99,6 +99,24 @@ def initialize():
             if (meta.get('automatic_live_capture') and not meta.get(marker)
                     and source.exists()
                     and row['error'] == 'AI review hit the OpenAI rate or usage limit. Retry shortly.'):
+                meta[marker] = True
+                db.execute("UPDATE jobs SET metadata=?,status='queued',error='' WHERE id=?",
+                           (json.dumps(meta), row['id']))
+        # Retry rate-limited automatic captures once with the lower frame density above.
+        # A metadata marker prevents restart loops if the account remains rate limited.
+        rate_limited = db.execute("SELECT id,metadata,error FROM jobs WHERE status='failed'").fetchall()
+        for row in rate_limited:
+            try:
+                meta = json.loads(row['metadata'])
+            except (TypeError, ValueError):
+                continue
+            marker = 'lower_frame_rate_retry_20260918'
+            source = ROOT / row['id'] / 'source.mp4'
+            if (meta.get('automatic_live_capture') and not meta.get(marker) and source.exists()
+                    and row['error'] in (
+                        'OpenAI API rate limit reached. Retry after the rate window resets.',
+                        'OpenAI API returned HTTP 429. Check API billing/usage limits, then retry.'
+                    )):
                 meta[marker] = True
                 db.execute("UPDATE jobs SET metadata=?,status='queued',error='' WHERE id=?",
                            (json.dumps(meta), row['id']))
@@ -292,33 +310,58 @@ Do not label anything verified: a coach must review the evidence. If not hockey,
           'required': ['timestamp', 'source', 'note', 'player'], 'properties': {
             'timestamp': {'type': 'number'}, 'source': {'type': 'string', 'enum': ['gameplay', 'shot_chart', 'action_tracker', 'period_stats']},
             'note': {'type': 'string'}, 'player': {'type': ['string', 'null']}}}}}}
-    try:
-        result = http_json('https://api.openai.com/v1/responses',
-            {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
-            {'model': model, 'store': False, 'input': [{'role': 'user', 'content': content}],
-             'max_output_tokens': 4000, 'text': {'format': {'type': 'json_schema', 'name': 'hockey_review', 'strict': True, 'schema': schema}}})
-    except urllib.error.HTTPError as exc:
-        if exc.code in (401, 403):
-            raise Problem(502, 'AI review authorization failed. Check the OpenAI API key and model access.')
-        if exc.code == 404:
-            raise Problem(502, 'AI review model was not found. Check OPENAI_MODEL.')
-        if exc.code == 429:
+    request_payload = {
+        'model': model, 'store': False,
+        'input': [{'role': 'user', 'content': content}],
+        'max_output_tokens': 4000,
+        'text': {'format': {'type': 'json_schema', 'name': 'hockey_review',
+                            'strict': True, 'schema': schema}}
+    }
+    result = None
+    for attempt in range(3):
+        try:
+            result = http_json(
+                'https://api.openai.com/v1/responses',
+                {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
+                request_payload
+            )
+            break
+        except urllib.error.HTTPError as exc:
             code = ''
-            try:
-                payload = json.loads(exc.read().decode('utf-8', 'ignore'))
-                code = str((payload.get('error') or {}).get('code') or (payload.get('error') or {}).get('type') or '')
-            except Exception:
-                pass
-            if code in ('insufficient_quota', 'billing_hard_limit_reached'):
-                raise Problem(429, 'OpenAI API quota/billing is not available for this key. Add API billing/credits, then retry.')
-            if code in ('rate_limit_exceeded', 'tokens'):
-                raise Problem(429, 'OpenAI API rate limit reached. Retry after the rate window resets.')
-            raise Problem(429, 'OpenAI API returned HTTP 429. Check API billing/usage limits, then retry.')
-        if exc.code == 400:
-            raise Problem(502, 'AI review request was rejected by the configured model (HTTP 400).')
-        raise Problem(502, f'AI review request failed with HTTP {exc.code}.')
-    except urllib.error.URLError:
-        raise Problem(503, 'AI review service could not be reached. Retry shortly.')
+            if exc.code == 429:
+                try:
+                    payload = json.loads(exc.read().decode('utf-8', 'ignore'))
+                    code = str((payload.get('error') or {}).get('code') or
+                               (payload.get('error') or {}).get('type') or '')
+                except Exception:
+                    pass
+                if code in ('insufficient_quota', 'billing_hard_limit_reached'):
+                    raise Problem(429, 'OpenAI API quota/billing is not available for this key. Add API billing/credits, then retry.')
+                if attempt < 2:
+                    try:
+                        retry_after = float(exc.headers.get('Retry-After', '0') or 0)
+                    except (TypeError, ValueError):
+                        retry_after = 0
+                    delay = min(75, max(20, retry_after, 30 * (attempt + 1)))
+                    if STOP.wait(delay):
+                        raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
+                    continue
+                if code in ('rate_limit_exceeded', 'tokens'):
+                    raise Problem(429, 'OpenAI API rate limit reached after automatic backoff. Retry later.')
+                raise Problem(429, 'OpenAI API returned HTTP 429 after automatic backoff. Check API usage limits.')
+            if exc.code in (401, 403):
+                raise Problem(502, 'AI review authorization failed. Check the OpenAI API key and model access.')
+            if exc.code == 404:
+                raise Problem(502, 'AI review model was not found. Check OPENAI_MODEL.')
+            if exc.code == 400:
+                raise Problem(502, 'AI review request was rejected by the configured model (HTTP 400).')
+            raise Problem(502, f'AI review request failed with HTTP {exc.code}.')
+        except urllib.error.URLError:
+            if attempt < 2:
+                if STOP.wait(10 * (attempt + 1)):
+                    raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
+                continue
+            raise Problem(503, 'AI review service could not be reached after retries.')
     if result.get('status') != 'completed':
         raise Problem(502, 'AI review was incomplete. Retry this review.')
     text = ''.join(c.get('text', '') for item in result.get('output', []) for c in item.get('content', []) if c.get('type') == 'output_text')
