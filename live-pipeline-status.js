@@ -92,9 +92,19 @@
       const source=r.source_kind==='team_game'?'HITMEN GAME':'TOURNAMENT GAME';
       const age=r.updated_at?new Date(r.updated_at).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'';
       const dur=fmtSeconds(r.duration_seconds);
-      const reviewLink=review?`<a class="small-btn" href="vod-lab.html${r.source_kind==='team_game'?'?team=calgary-hitmen':''}">Open VOD Review</a>`:'';
-      return `<article class="live-pipeline-row" data-tone="${tone(r.status)}"><div class="live-pipeline-icon">${providerIcon(r.provider)}</div><div class="live-pipeline-copy"><div class="live-pipeline-meta"><span>${esc(source)}</span><span>${esc(String(r.provider||'external').toUpperCase())}</span>${age?`<span>${esc(age)}</span>`:''}${dur?`<span>${esc(dur)}</span>`:''}</div><strong>${esc(title)}</strong><p>${esc(desc)}</p>${r.last_error?`<small class="live-pipeline-error">${esc(r.last_error)}</small>`:''}</div><div class="live-pipeline-actions"><span class="pipeline-state-pill">${esc(title)}</span>${reviewLink}<a class="small-btn" href="${esc(r.stream_url)}" target="_blank" rel="noopener">Stream</a></div></article>`;
+      const params=new URLSearchParams();
+      if(r.source_kind==='team_game')params.set('team','calgary-hitmen');
+      if(review?.id)params.set('review',review.id);
+      const reviewUrl=review?`vod-lab.html?${params.toString()}`:'';
+      const reviewLink=review?`<a class="small-btn primary" href="${esc(reviewUrl)}">Review Now</a>`:'';
+      const cardAttrs=review?` data-review-target="${esc(reviewUrl)}" role="link" tabindex="0" aria-label="Open ${esc(review.title||'VOD review')}"`:'';
+      return `<article class="live-pipeline-row${review?' review-clickable':''}" data-tone="${tone(r.status)}"${cardAttrs}><div class="live-pipeline-icon">${providerIcon(r.provider)}</div><div class="live-pipeline-copy"><div class="live-pipeline-meta"><span>${esc(source)}</span><span>${esc(String(r.provider||'external').toUpperCase())}</span>${age?`<span>${esc(age)}</span>`:''}${dur?`<span>${esc(dur)}</span>`:''}</div><strong>${esc(title)}</strong><p>${esc(desc)}</p>${r.last_error?`<small class="live-pipeline-error">${esc(r.last_error)}</small>`:''}</div><div class="live-pipeline-actions"><span class="pipeline-state-pill">${esc(title)}</span>${reviewLink}<a class="small-btn" href="${esc(r.stream_url)}" target="_blank" rel="noopener">Stream</a></div></article>`;
     }).join('');
+    el.querySelectorAll('[data-review-target]').forEach(card=>{
+      const open=()=>{if(card.dataset.reviewTarget)location.href=card.dataset.reviewTarget;};
+      card.addEventListener('click',event=>{if(event.target.closest('a,button,input,select,textarea,label'))return;open();});
+      card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});
+    });
   }
 
   function start(){host();load();timer=setInterval(()=>{if(!document.hidden)load();},5000);}
