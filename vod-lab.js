@@ -131,9 +131,11 @@
     const el=$("segmentList"),segs=reviewSegments();
     if(!segs.length){
       const r=currentReview();
-      const txt=r?.worker_job_id&&r.worker_status!=="needs_periods"
-        ? "Automatic capture is still processing. Periods will appear here when detection finishes."
-        : "No periods built yet. Use the manual fallback only if automatic detection asks for help.";
+      const txt=r?.worker_status==="ready_for_review"
+        ? "Full-game scouting analysis is ready. Automatic P1/P2/P3 detection was not confident enough for this recording, so the report below covers the available full-game evidence."
+        : r?.worker_job_id&&r.worker_status!=="needs_periods"
+          ? "Automatic capture or analysis is still processing. Periods will appear here if detection succeeds."
+          : "No periods built yet. Use the manual fallback only if automatic detection asks for help.";
       el.innerHTML=`<div class="vod-empty">${txt}</div>`;return;
     }
     el.innerHTML=segs.map(s=>`<article class="segment-card${s.id===state.selectedSegmentId?" selected":""}">
