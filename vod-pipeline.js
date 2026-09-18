@@ -153,12 +153,21 @@
       if(!confirm('Run a fresh Elite Scout pass on the saved recording? This replaces the old AI evidence but keeps the video.'))return;
       setStatus('Starting a fresh elite scouting pass on the saved recording…');
       const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/reanalyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-      await db().from('vod_review_sessions').update({
+      const oldAiMarkers=await db().from('vod_review_markers').delete().eq('review_id',review.id).like('note','[AI%');
+      if(oldAiMarkers.error)throw oldAiMarkers.error;
+      const resetSegments=await db().from('vod_review_segments').update({
+        analysis_summary:null,offense_notes:null,defense_notes:null,transition_notes:null,
+        special_teams_notes:null,player_notes:[],tags:[],status:'queued',confidence:'preliminary',
+        updated_at:new Date().toISOString()
+      }).eq('review_id',review.id);
+      if(resetSegments.error)throw resetSegments.error;
+      const resetReview=await db().from('vod_review_sessions').update({
         worker_status:job.status,status:'queued',
         full_game_summary:null,recurring_patterns:null,strengths:null,corrections:null,
         tactical_report:null,player_report:null,professional_writeup:null,
         worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()
       }).eq('id',review.id);
+      if(resetReview.error)throw resetReview.error;
       setStatus('Fresh scout pass queued. The original recording is being reused.','good');
       beginPoll(review.worker_job_id,review.id);
     }catch(e){setStatus(e.message||'Fresh scout pass could not be started.','bad');}
