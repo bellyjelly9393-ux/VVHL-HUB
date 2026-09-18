@@ -21,7 +21,7 @@
       <div class="hs-kpi"><small>Players in Pool</small><strong id="hsScouted">0</strong></div>
       <div class="hs-kpi"><small>Priority Targets</small><strong id="hsPriority">0</strong></div>
       <div class="hs-kpi"><small>Bid Targets</small><strong id="hsBids">0</strong></div>
-      <div class="hs-kpi"><small>Reports Logged</small><strong id="hsReports">0</strong></div><div class="hs-kpi"><small>ChelScout Intel</small><strong id="hsIntelCount">0</strong></div>
+      <div class="hs-kpi"><small>Reports Logged</small><strong id="hsReports">0</strong></div>
     </div>
     <div class="hs-tabs">
       <button class="hs-tab active" data-hs-tab="pool" type="button">Scouting Pool</button>
@@ -33,9 +33,8 @@
     <div class="hs-pane active" data-hs-pane="pool">
       <div class="hs-grid">
         <section class="hs-card">
-          <div class="hs-card-head"><h3>Calgary Player Pool</h3><div class="hs-actions" style="margin:0"><input id="hsSearch" class="hs-input" type="search" placeholder="Search gamertag" style="max-width:220px"><select id="hsPositionFilter" class="hs-select" style="max-width:130px"><option value="">All Positions</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option></select><select id="hsStatusFilter" class="hs-select" style="max-width:150px"><option value="">All Statuses</option><option value="unscouted">Unscouted</option><option value="scouted">Scouted</option><option value="watch">Watch</option><option value="priority">Priority</option><option value="bid_target">Bid Target</option><option value="pass">Pass</option><option value="signed">Signed</option><option value="lost">Lost</option></select><select id="hsIntelFilter" class="hs-select" style="max-width:150px"><option value="">All Intel</option><option value="yes">ChelScout Intel</option><option value="no">No ChelScout</option></select></div></div>
-          <div class="hs-pool-key"><b>ChelScout:</b> Fair = modeled value · Market = expected auction price · Walk = price ceiling. Calgary Target/Max stay separate so management makes the final call.</div>
-          <div class="hs-table-wrap"><table class="hs-table"><thead><tr><th>Player / Quick Action</th><th>Pos</th><th>Status</th><th>Fair $</th><th>Market $</th><th>Walk $</th><th>Our Target</th><th>Our Max</th></tr></thead><tbody id="hsPoolBody"></tbody></table></div>
+          <div class="hs-card-head"><h3>Calgary Player Pool</h3><div class="hs-actions" style="margin:0"><input id="hsSearch" class="hs-input" type="search" placeholder="Search gamertag" style="max-width:220px"><select id="hsPositionFilter" class="hs-select" style="max-width:130px"><option value="">All Positions</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option></select><select id="hsStatusFilter" class="hs-select" style="max-width:150px"><option value="">All Statuses</option><option value="unscouted">Unscouted</option><option value="scouted">Scouted</option><option value="watch">Watch</option><option value="priority">Priority</option><option value="bid_target">Bid Target</option><option value="pass">Pass</option><option value="signed">Signed</option><option value="lost">Lost</option></select></div></div>
+          <div class="hs-table-wrap"><table class="hs-table"><thead><tr><th>Player</th><th>Pos</th><th>Status</th><th>Priority</th><th>Fit</th><th>Target</th><th>Max</th></tr></thead><tbody id="hsPoolBody"></tbody></table></div>
           <div id="hsPoolEmpty" class="hs-empty" hidden>No players match these filters.</div>
           <div class="hs-actions" style="justify-content:space-between"><span id="hsPoolMeta" class="hs-msg"></span><div class="hs-actions" style="margin:0"><button id="hsPrevPage" class="hs-btn" type="button">Previous</button><button id="hsNextPage" class="hs-btn" type="button">Next</button></div></div>
         </section>
@@ -72,7 +71,7 @@
                 <summary style="cursor:pointer;font-weight:700">Import ChelScout GM Hub JSON</summary>
                 <p class="hs-msg">Paste the JSON response from your authorized ChelScout GM Hub scout request. It stays private to Calgary management.</p>
                 <textarea id="hsChelScoutJson" class="hs-textarea" style="min-height:150px" placeholder='{"availability":...,"career":[...],"dna":...}'></textarea>
-                <div class="hs-actions"><button id="hsChelScoutPaste" class="hs-btn" type="button">Paste from Clipboard</button><button id="hsChelScoutImport" class="hs-btn primary" type="button">Import ChelScout Intel</button><span id="hsChelScoutMsg" class="hs-msg"></span></div>
+                <div class="hs-actions"><button id="hsChelScoutImport" class="hs-btn primary" type="button">Import ChelScout Intel</button><span id="hsChelScoutMsg" class="hs-msg"></span></div>
               </details>
             </div>
           </div>
