@@ -222,29 +222,40 @@ def text_rollup(job):
     chunks = result.get('chunks') or []
     if not chunks:
         return result
+    # The core worker already creates the richer second-pass report. Reuse it instead
+    # of spending a second API call on the same evidence.
+    existing = result.get('game_rollup') or {}
+    if existing.get('professional_writeup') and existing.get('player_report'):
+        return result
     if not os.getenv('OPENAI_API_KEY') or not os.getenv('OPENAI_MODEL'):
         return result
+
     summaries = []
     for chunk in chunks:
         review = chunk.get('review') or {}
-        observations = review.get('observations') or []
         summaries.append({
             'start': chunk.get('start'), 'end': chunk.get('end'),
             'summary': review.get('summary', ''),
-            'observations': observations[:12],
-            'uncertainties': (review.get('uncertainties') or [])[:8],
+            'tactical': review.get('tactical', {}),
+            'player_evaluations': (review.get('player_evaluations') or [])[:12],
+            'observations': (review.get('observations') or [])[:20],
+            'uncertainties': (review.get('uncertainties') or [])[:10],
         })
-    prompt = '''Build a concise EA hockey coaching rollup from chunk reviews.
-Use only the supplied reviewed evidence. Do not invent period boundaries, player identities,
-stats, scores, goals, or events. Distinguish patterns from one-off observations. Return JSON
-with summary, patterns, strengths, corrections. Each field must be a plain string suitable
-for a human editor. Mention uncertainty when evidence is sparse or conflicting.'''
+    prompt = '''Produce an NHL-caliber pro scouting/video-coach report for competitive EA hockey.
+Use only supplied reviewed evidence. Do not invent identity, score, stats, goals, periods, controller inputs
+or unseen plays. Distinguish recurring patterns from one-off sequences and process from result.
+Cover team tactics, transition, forecheck, defensive structure, offensive spacing/shot selection,
+identified-player strengths/concerns/habits, actionable corrections, and a polished professional write-up.
+Use precise hockey terminology without hype and preserve uncertainty.'''
     schema = {
         'type': 'object', 'additionalProperties': False,
-        'required': ['summary', 'patterns', 'strengths', 'corrections'],
+        'required': ['summary', 'patterns', 'strengths', 'corrections',
+                     'tactical_report', 'player_report', 'professional_writeup'],
         'properties': {
             'summary': {'type': 'string'}, 'patterns': {'type': 'string'},
             'strengths': {'type': 'string'}, 'corrections': {'type': 'string'},
+            'tactical_report': {'type': 'string'}, 'player_report': {'type': 'string'},
+            'professional_writeup': {'type': 'string'},
         }
     }
     api = worker.http_json(
@@ -255,8 +266,9 @@ for a human editor. Mention uncertainty when evidence is sparse or conflicting.'
             'input': [{'role': 'user', 'content': [
                 {'type': 'input_text', 'text': prompt + '\n\nChunk evidence:\n' + json.dumps(summaries)}
             ]}],
-            'max_output_tokens': 2200,
-            'text': {'format': {'type': 'json_schema', 'name': 'game_rollup', 'strict': True, 'schema': schema}},
+            'max_output_tokens': 5000,
+            'text': {'format': {'type': 'json_schema', 'name': 'elite_game_rollup',
+                                'strict': True, 'schema': schema}},
         }
     )
     text = ''.join(
@@ -268,7 +280,6 @@ for a human editor. Mention uncertainty when evidence is sparse or conflicting.'
     if text:
         result['game_rollup'] = json.loads(text)
     return result
-
 
 def monitor_review(queue_id, job_id):
     last_status = None
