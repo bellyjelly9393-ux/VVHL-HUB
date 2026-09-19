@@ -103,3 +103,9 @@ body.hs-dossier-open{overflow:hidden}
   .hsd-kpis{grid-template-columns:1fr 1fr;margin-left:14px;margin-right:14px}.hsd-kpi:last-child{grid-column:1/-1}.hsd-meta-strip{padding-left:18px;padding-right:18px}
   .hsd-ask-form{grid-template-columns:1fr 44px}
 }
+
+.hs-player-history{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;margin:7px 0 2px;padding:7px 9px;border-radius:10px;background:rgba(99,102,241,.08);border:1px solid rgba(129,140,248,.16);font-size:10px;line-height:1.35}
+.hs-player-history b{color:#c4b5fd;letter-spacing:.08em;font-size:8px}
+.hs-player-history span{color:#d8d1df}
+.hs-remove-bid{min-height:30px;padding:0 9px;border-color:rgba(248,113,113,.28);color:#fecaca}
+.hs-remove-bid:hover{background:rgba(248,113,113,.10);border-color:rgba(248,113,113,.48)}
