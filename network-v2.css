@@ -71,3 +71,5 @@
 .wildman-site a{--link-accent:#d9a63b}
 .wildman-site .menu-toggle{border-color:rgba(217,166,59,.32);color:#e8c36b;background:#09090b}
 @media(max-width:1180px){.wm-join-btn{display:none}}
+
+.network-service[href]{display:block;color:inherit;text-decoration:none;transition:.2s ease}.network-service[href]:hover{transform:translateY(-3px);border-color:rgba(255,216,121,.52)!important}.network-service[href] h3{color:#f4f1e9}
