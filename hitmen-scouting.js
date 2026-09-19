@@ -228,12 +228,12 @@
 
     box.innerHTML=shown.map(r=>{
       const p=r.scouting_players||{},current=r.status||'unscouted';
-      const {x,fair,likely,walk}=marketData(r);
+      const {x,ps,ext,fair,likely,walk}=marketData(r);
       const tier=marketTier(fair,likely,walk);
       const career=careerFor(r);
       const reports=reportCountFor(r);
-      const rank=x?.pool_rank!=null?(x.pool_n!=null?`#${x.pool_rank} / ${x.pool_n}`:`#${x.pool_rank}`):(x?.projected_rank||'—');
-      const role=x?.role_chip||x?.role_band||r.projected_role||'Role unconfirmed';
+      const rank=x?.pool_rank!=null?(x.pool_n!=null?`#${x.pool_rank} / ${x.pool_n}`:`#${x.pool_rank}`):(x?.projected_rank||(ps?.market_snapshot?.impact_rank!=null?`#${ps.market_snapshot.impact_rank} / ${ps.market_snapshot.impact_pool||'—'}`:'—'));
+      const role=x?.role_chip||x?.role_band||ps?.market_snapshot?.role||ps?.archetype||r.projected_role||'Role unconfirmed';
       const price=likely!=null?`${likely.toFixed(likely<10?2:1).replace(/\\.00$/,'')}M`:(r.target_bid!=null?`${(Number(r.target_bid)/1e6).toFixed(2)}M`:'—');
       const fairLabel=fair!=null?`${fair.toFixed(fair<10?2:1).replace(/\\.00$/,'')}M fair`:'No fair value';
       const gp=career.gp??'—',pts=career.pts??career.points??'—',ppg=career.ppg??'—';
@@ -247,7 +247,7 @@
         </div>
         <div class="hs-player-subline">
           <span>${esc(gp)} GP</span><span>${esc(pts)} PTS</span><span>${esc(ppg)} PPG</span>
-          <span>${esc(x?.confidence||x?.reliability||'SCOUTING OPEN')}</span>
+          <span>${esc(x?.confidence||x?.reliability||ps?.confidence||'SCOUTING OPEN')}</span>
         </div>
         ${hasRecentExperience(r)?`<div class="hs-player-history"><b>RECENT EXPERIENCE</b><span>${esc(experienceLabel(r))}</span></div>`:''}
         <div class="hs-player-rankline"><b>CHL · S55</b><span>${esc(rank)}</span><span>${reports} report${reports===1?'':'s'}</span><span>Fit ${r.fit_grade??'—'}</span></div>
