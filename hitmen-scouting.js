@@ -1,6 +1,6 @@
 (() => {
   const TEAM_ID='b0bcbdda-da9d-419d-8f61-b34937966d49';
-  const S={pool:[],reports:[],externalReports:[],bids:[],intel:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100};
+  const S={pool:[],reports:[],externalReports:[],autoReports:[],bids:[],intel:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100};
   const db=()=>window.VVHLBackend?.db;
   const state=()=>window.VVHLBackend?.state||{};
   const $=id=>document.getElementById(id);
@@ -43,11 +43,12 @@
         db().from('team_scouting_reports').select('id,scouting_player_id,author_id,overall_grade,offense_grade,defense_grade,hockey_iq_grade,puck_movement_grade,positioning_grade,communication_grade,consistency_grade,strengths,concerns,projected_role,recommendation,notes,created_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('created_at',{ascending:false}),
         db().from('team_bid_board').select('id,scouting_player_id,target_price,max_price,priority,status,plan,note,updated_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('priority',{ascending:true,nullsFirst:false}).order('updated_at',{ascending:false}),
         db().from('team_chelscout_intel').select('id,scouting_player_id,chelscout_uid,league_id,season,player_name,signed_position,played_position,role_chip,role_band,projected_rank,pool_rank,pool_n,fair_value_m,likely_price_m,likely_band_m,walk_above_m,availability_label,availability_reaches,reliability,confidence,onice_impact,onice_read,risks,notes,dna,career,comparables,projections,imported_at').eq('team_id',TEAM_ID).order('imported_at',{ascending:false}),
-        db().from('team_external_scouting_reports').select('id,scouting_player_id,source,source_report_id,report_type,author_label,report_title,summary,strengths,concerns,recommendation,grades,tags,raw_payload,imported_at').eq('team_id',TEAM_ID).order('imported_at',{ascending:false})
+        db().from('team_external_scouting_reports').select('id,scouting_player_id,source,source_report_id,report_type,author_label,report_title,summary,strengths,concerns,recommendation,grades,tags,raw_payload,imported_at').eq('team_id',TEAM_ID).order('imported_at',{ascending:false}),
+        db().from('scouting_auto_reports').select('id,scouting_player_id,season,report_version,archetype,strengths,risks,development_focus,summary,stats_snapshot,generated_at').order('generated_at',{ascending:false})
       ];
       if(S.role==='admin')queries.push(db().from('team_access_invites').select('id,email,role,display_name,active,claimed_by,claimed_at,created_at').eq('team_id',TEAM_ID).order('created_at',{ascending:false}));
       const r=await Promise.all(queries);const err=r.find(x=>x.error)?.error;if(err)throw err;
-      S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.intel=r[3].data||[];S.externalReports=r[4].data||[];S.invites=r[5]?.data||[];render();
+      S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.intel=r[3].data||[];S.externalReports=r[4].data||[];S.autoReports=r[5].data||[];S.invites=r[6]?.data||[];render();
     }catch(e){console.error(e);msg('hsStatus',e.message||'Could not load scouting desk.');}
     finally{S.loading=false;}
   }
@@ -57,7 +58,7 @@
     if($('hsScouted'))$('hsScouted').textContent=S.pool.length;
     if($('hsPriority'))$('hsPriority').textContent=S.pool.filter(x=>x.status==='priority'||x.priority===1).length;
     if($('hsBids'))$('hsBids').textContent=S.pool.filter(x=>x.status==='bid_target').length+S.bids.filter(x=>['target','active_bid'].includes(x.status)).length;
-    const totalReports=S.reports.length+S.externalReports.length;
+    const totalReports=S.reports.length+S.externalReports.length+S.autoReports.length;
     if($('hsReports'))$('hsReports').textContent=totalReports;
     if($('hitmenReportCount'))$('hitmenReportCount').textContent=totalReports;
     renderTargets();renderPool();renderReportSelect();renderReports();renderBids();renderInvites();
@@ -78,7 +79,7 @@
     box.innerHTML=rows.map(r=>{
       const p=r.scouting_players||{};
       const intel=S.intel.find(x=>x.scouting_player_id===r.scouting_player_id);
-      const reportCount=S.reports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+S.externalReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length;
+      const reportCount=S.reports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+S.externalReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+S.autoReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length;
       const badge=r.status==='bid_target'?'BID TARGET':r.status==='priority'?'PRIORITY':'WATCH';
       return `<button type="button" class="hs-target-card" data-hs-target="${r.id}">
         <span class="hs-target-jersey">🏒</span>
@@ -203,15 +204,29 @@
 
   function renderExternalReports(pid){
     const box=$('hsExternalReports');if(!box)return;
-    const rows=S.externalReports.filter(x=>x.scouting_player_id===pid);
-    if($('hsExternalReportEmpty'))$('hsExternalReportEmpty').hidden=rows.length!==0;
-    if($('hsExternalReportMeta'))$('hsExternalReportMeta').textContent=rows.length?`${rows.length} imported ChelScout report${rows.length===1?'':'s'}`:'';
-    box.innerHTML=rows.map(r=>`<article class="hs-report external"><div class="hs-card-head"><div><b>${esc(r.report_title||r.report_type||'ChelScout report')}</b><br><small>${esc(r.author_label||'ChelScout')} · ${new Date(r.imported_at).toLocaleString()}</small></div><span class="hs-tag">CHELSCOUT</span></div>
+    const external=S.externalReports.filter(x=>x.scouting_player_id===pid);
+    const autos=S.autoReports.filter(x=>x.scouting_player_id===pid);
+    const total=external.length+autos.length;
+    if($('hsExternalReportEmpty'))$('hsExternalReportEmpty').hidden=total!==0;
+    if($('hsExternalReportMeta'))$('hsExternalReportMeta').textContent=total?(`${total} pre-scout / imported report${total===1?'':'s'}`):'';
+    const autoHtml=autos.map(r=>{
+      const strengths=Array.isArray(r.strengths)?r.strengths:[];
+      const risks=Array.isArray(r.risks)?r.risks:[];
+      const focus=Array.isArray(r.development_focus)?r.development_focus:[];
+      return `<article class="hs-report external"><div class="hs-card-head"><div><b>${esc(r.archetype||'Historical pre-scout')}</b><br><small>${esc(r.season||'Historical sample')} · generated ${new Date(r.generated_at).toLocaleString()}</small></div><span class="hs-tag">PRE-SCOUT</span></div>
+        ${r.summary?`<p>${esc(r.summary)}</p>`:''}
+        ${strengths.length?`<p><b>Signals:</b> ${strengths.map(esc).join(' · ')}</p>`:''}
+        ${risks.length?`<p><b>Risks:</b> ${risks.map(esc).join(' · ')}</p>`:''}
+        ${focus.length?`<p><b>Verify:</b> ${focus.map(esc).join(' · ')}</p>`:''}
+      </article>`;
+    }).join('');
+    const externalHtml=external.map(r=>`<article class="hs-report external"><div class="hs-card-head"><div><b>${esc(r.report_title||r.report_type||'ChelScout report')}</b><br><small>${esc(r.author_label||'ChelScout')} · ${new Date(r.imported_at).toLocaleString()}</small></div><span class="hs-tag">CHELSCOUT</span></div>
       ${r.recommendation?`<p><b>Recommendation:</b> ${esc(r.recommendation)}</p>`:''}
       ${r.summary?`<p>${esc(r.summary)}</p>`:''}
       ${r.strengths?`<p><b>Strengths:</b> ${esc(r.strengths)}</p>`:''}
       ${r.concerns?`<p><b>Concerns:</b> ${esc(r.concerns)}</p>`:''}
     </article>`).join('');
+    box.innerHTML=autoHtml+externalHtml;
   }
 
   async function importChelScoutReports(){
