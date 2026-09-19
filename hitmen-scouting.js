@@ -110,8 +110,8 @@
     if(ratio<=.90)return {key:'strong',label:'STRONG'};
     if(ratio<=1.03)return {key:'good',label:'GOOD'};
     if(ratio<=1.15)return {key:'fair',label:'FAIR'};
-    if(ratio<=1.35)return {key:'premium',label:'PREM'};
     if(walk!=null&&v>=walk)return {key:'walk',label:'WALK'};
+    if(ratio<=1.35)return {key:'premium',label:'PREM'};
     return {key:'over',label:'OVER'};
   }
   function marketPin(fair,likely,walk){
