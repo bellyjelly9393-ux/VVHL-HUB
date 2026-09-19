@@ -13,7 +13,7 @@
   const groups = {
     'index.html':'index.html',
     'team.html':'team.html','history.html':'team.html',
-    'esports-hub.html':'esports-hub.html','esports-team.html':'esports-hub.html','esports-player.html':'esports-hub.html',
+    'esports-hub.html':'esports-hub.html','esports-team.html':'esports-hub.html','esports-player.html':'esports-hub.html','services.html':'esports-hub.html',
     'events.html':'events.html','event-format.html':'events.html','pro-series.html':'events.html','caps-gaming.html':'events.html',
     'game-center.html':'game-center.html','multiview.html':'game-center.html','vod-center.html':'game-center.html','reports.html':'game-center.html','game.html':'game-center.html','live-game.html':'game-center.html','postgame.html':'game-center.html',
     'players.html':'players.html','player-rusty.html':'players.html','player-williamson20.html':'players.html','player-williamson88.html':'players.html','rosters.html':'players.html','season.html':'players.html',
