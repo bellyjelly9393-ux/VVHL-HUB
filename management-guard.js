@@ -8,7 +8,7 @@
     if (profileRole === "admin" || profileRole === "commissioner") return true;
 
     const page = (location.pathname.split("/").pop() || "").toLowerCase();
-    const hitmenPage = page === "hitmen" || page === "hitmen-workspace.html";
+    const hitmenPage = ["hitmen","hitmen-workspace.html","hitmen-locker-room.html","hitmen-battle-plan.html","hitmen-card-vault.html"].includes(page);
 
     return (state.memberships || []).some((membership) => {
       const role = String(membership.role || "").toLowerCase();
@@ -23,7 +23,7 @@
     const lockedMessage = document.getElementById("managementLockedMessage");
     const accessStatus = document.getElementById("managementAccessStatus");
     const page = (location.pathname.split("/").pop() || "").toLowerCase();
-    const hitmenPage = page === "hitmen" || page === "hitmen-workspace.html";
+    const hitmenPage = ["hitmen","hitmen-workspace.html","hitmen-locker-room.html","hitmen-battle-plan.html","hitmen-card-vault.html"].includes(page);
 
     protectedSections.forEach((section) => {
       section.hidden = !allowed;
