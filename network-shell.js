@@ -1,7 +1,26 @@
 (() => {
+  if (!document.querySelector('link[href="network-v2.css"]')) {
+    const polish = document.createElement('link');
+    polish.rel = 'stylesheet';
+    polish.href = 'network-v2.css';
+    document.head.appendChild(polish);
+  }
+
   const body = document.body;
   const isPrivate = body.classList.contains('management-protected');
   const path = location.pathname.split('/').pop() || 'index.html';
+
+  const groups = {
+    'index.html':'index.html',
+    'team.html':'team.html','history.html':'team.html',
+    'esports-hub.html':'esports-hub.html','esports-team.html':'esports-hub.html','esports-player.html':'esports-hub.html',
+    'events.html':'events.html','event-format.html':'events.html','pro-series.html':'events.html','caps-gaming.html':'events.html',
+    'game-center.html':'game-center.html','multiview.html':'game-center.html','vod-center.html':'game-center.html','reports.html':'game-center.html','game.html':'game-center.html','live-game.html':'game-center.html','postgame.html':'game-center.html',
+    'players.html':'players.html','player-rusty.html':'players.html','player-williamson20.html':'players.html','player-williamson88.html':'players.html','rosters.html':'players.html','season.html':'players.html',
+    'academy.html':'academy.html',
+    'wildman-media.html':'wildman-media.html'
+  };
+  const activePath = groups[path] || path;
 
   const publicNav = [
     ['index.html','Home'],
@@ -23,7 +42,7 @@
           <span class="brand-copy wm-brand-copy">WILDMAN HOCKEY<br><b>ESPORTS NETWORK</b></span>
         </a>
         <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
-        <nav class="main-nav">${publicNav.map(([href,label]) => `<a href="${href}"${path===href?' class="active-nav"':''}>${label}</a>`).join('')}</nav>
+        <nav class="main-nav">${publicNav.map(([href,label]) => `<a href="${href}"${activePath===href?' class="active-nav"':''}>${label}</a>`).join('')}</nav>
         <a class="wm-join-btn" href="management.html">Sign In</a>
       `;
     }
