@@ -86,11 +86,13 @@
         </div>
 
         <div class="hs-market-scopes">
-          <button class="active" type="button" data-hs-scope="bidable">Bidable <span id="hsScopeBidable">0</span></button>
+          <button class="active" type="button" data-hs-scope="experienced">Recent Experience <span id="hsScopeExperienced">0</span></button>
+          <button type="button" data-hs-scope="bidable">All Bidable <span id="hsScopeBidable">0</span></button>
           <button type="button" data-hs-scope="everyone">Everyone <span id="hsScopeEveryone">0</span></button>
           <button type="button" data-hs-scope="bargains">Bargains <span id="hsScopeBargains">0</span></button>
           <button type="button" data-hs-scope="snake">Snake list <span id="hsScopeSnake">0</span></button>
         </div>
+        <div class="hs-pool-key"><b>Recent Experience:</b> only current S55 Calgary-pool players with documented S53 or S54 CHL, NCAA, or ECHL history. Pre-scout reports generate automatically as history is imported.</div>
 
         <div class="hs-market-reach"><span>REACH</span><b>Could still be here</b><small>Price, role and Calgary fit are blended from your saved team plan plus imported scouting intelligence.</small></div>
 
@@ -173,7 +175,7 @@
     <div class="hs-pane" data-hs-pane="bids">
       <section class="hs-card">
         <div class="hs-card-head"><h3>Calgary Bidding Board</h3><span class="hs-msg">Shared target and ceiling plan</span></div>
-        <div class="hs-table-wrap"><table class="hs-table"><thead><tr><th>Player</th><th>Pos</th><th>Priority</th><th>Status</th><th>Target Price</th><th>Max Price</th><th>Role / Plan</th></tr></thead><tbody id="hsBidBody"></tbody></table></div>
+        <div class="hs-table-wrap"><table class="hs-table"><thead><tr><th>Player</th><th>Pos</th><th>Priority</th><th>Status</th><th>Target Price</th><th>Max Price</th><th>Role / Plan</th><th>Remove</th></tr></thead><tbody id="hsBidBody"></tbody></table></div>
         <div id="hsBidEmpty" class="hs-empty" hidden>No bid targets yet. Add bid numbers to a player in the Scouting Pool.</div>
       </section>
     </div>
