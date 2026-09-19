@@ -133,8 +133,16 @@
   function isSnake(r){
     return ['bid_target','priority','watch'].includes(r.status)||Number(r.priority||9)<=2;
   }
+  function recentHistoryFor(r){
+    return S.history.filter(h=>h.scouting_player_id===r.scouting_player_id&&[53,54].includes(Number(h.season))&&['CHL','NCAA','ECHL'].includes(String(h.league||'').toUpperCase()));
+  }
+  function hasRecentExperience(r){return recentHistoryFor(r).length>0;}
+  function experienceLabel(r){
+    return recentHistoryFor(r).slice(0,3).map(h=>`S${h.season} ${h.league}${h.team_name?` · ${h.team_name}`:''}${h.position?` (${h.position})`:''}`).join(' · ');
+  }
   function scopeMatch(r,scope){
     if(scope==='everyone')return true;
+    if(scope==='experienced')return hasRecentExperience(r);
     if(scope==='bargains')return isBargain(r);
     if(scope==='snake')return isSnake(r);
     return !['signed','lost','pass'].includes(r.status);
@@ -158,9 +166,11 @@
     const status=val('hsStatusFilter');
 
     const everybody=S.pool;
+    const experienced=everybody.filter(hasRecentExperience);
     const bidable=everybody.filter(r=>scopeMatch(r,'bidable'));
     const bargains=everybody.filter(isBargain);
     const snake=everybody.filter(isSnake);
+    if($('hsScopeExperienced'))$('hsScopeExperienced').textContent=experienced.length.toLocaleString();
     if($('hsScopeBidable'))$('hsScopeBidable').textContent=bidable.length.toLocaleString();
     if($('hsScopeEveryone'))$('hsScopeEveryone').textContent=everybody.length.toLocaleString();
     if($('hsScopeBargains'))$('hsScopeBargains').textContent=bargains.length.toLocaleString();
@@ -169,7 +179,8 @@
     let rows=S.pool.filter(r=>{
       const p=r.scouting_players||{};
       const x=intelFor(r);
-      const matchesText=!q||[p.gamertag,p.primary_position,p.platform,r.status,r.projected_role,x?.player_name,x?.role_chip,x?.role_band,x?.projected_rank].some(v=>String(v||'').toLowerCase().includes(q));
+      const historyText=experienceLabel(r);
+      const matchesText=!q||[p.gamertag,p.primary_position,p.platform,r.status,r.projected_role,x?.player_name,x?.role_chip,x?.role_band,x?.projected_rank,historyText].some(v=>String(v||'').toLowerCase().includes(q));
       const matchesPos=positionMatch(p.primary_position,pos);
       const matchesStatus=!status||r.status===status;
       return matchesText&&matchesPos&&matchesStatus&&scopeMatch(r,S.scope);
