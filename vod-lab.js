@@ -66,6 +66,8 @@
       ]);
       if(r.error) throw r.error; if(s.error) throw s.error; if(m.error) throw m.error;
       state.reviews=r.data||[]; state.segments=s.data||[]; state.markers=m.data||[];
+      const linkedReview=new URLSearchParams(location.search).get('review');
+      if(!state.selectedReviewId && linkedReview && state.reviews.some(x=>x.id===linkedReview)) state.selectedReviewId=linkedReview;
       if(state.selectedReviewId&&!state.reviews.some(x=>x.id===state.selectedReviewId)){state.selectedReviewId="";state.selectedSegmentId="";}
       const requestedReview=new URLSearchParams(location.search).get("review");
       if(!state.selectedReviewId&&requestedReview&&state.reviews.some(x=>x.id===requestedReview)){
