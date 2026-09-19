@@ -1,6 +1,6 @@
 (() => {
   const TEAM_ID='b0bcbdda-da9d-419d-8f61-b34937966d49';
-  const S={pool:[],reports:[],externalReports:[],autoReports:[],bids:[],intel:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'bidable',sort:'price_high'};
+  const S={pool:[],reports:[],externalReports:[],autoReports:[],bids:[],intel:[],history:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'experienced',sort:'price_high'};
   const db=()=>window.VVHLBackend?.db;
   const state=()=>window.VVHLBackend?.state||{};
   const $=id=>document.getElementById(id);
@@ -44,11 +44,12 @@
         db().from('team_bid_board').select('id,scouting_player_id,target_price,max_price,priority,status,plan,note,updated_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('priority',{ascending:true,nullsFirst:false}).order('updated_at',{ascending:false}),
         db().from('team_chelscout_intel').select('id,scouting_player_id,chelscout_uid,league_id,season,player_name,signed_position,played_position,role_chip,role_band,projected_rank,pool_rank,pool_n,fair_value_m,likely_price_m,likely_band_m,walk_above_m,availability_label,availability_reaches,reliability,confidence,onice_impact,onice_read,risks,notes,dna,career,comparables,projections,imported_at').eq('team_id',TEAM_ID).order('imported_at',{ascending:false}),
         db().from('team_external_scouting_reports').select('id,scouting_player_id,source,source_report_id,report_type,author_label,report_title,summary,strengths,concerns,recommendation,grades,tags,raw_payload,imported_at').eq('team_id',TEAM_ID).order('imported_at',{ascending:false}),
-        db().from('scouting_auto_reports').select('id,scouting_player_id,season,report_version,archetype,strengths,risks,development_focus,summary,stats_snapshot,generated_at').order('generated_at',{ascending:false})
+        db().from('scouting_auto_reports').select('id,scouting_player_id,season,report_version,archetype,strengths,risks,development_focus,summary,stats_snapshot,generated_at').order('generated_at',{ascending:false}),
+        db().from('team_player_league_history').select('id,scouting_player_id,source_player_uid,season,league,league_id,team_name,position,phase,stats,imported_at').eq('team_id',TEAM_ID).in('season',[53,54]).in('league',['CHL','NCAA','ECHL']).order('season',{ascending:false})
       ];
       if(S.role==='admin')queries.push(db().from('team_access_invites').select('id,email,role,display_name,active,claimed_by,claimed_at,created_at').eq('team_id',TEAM_ID).order('created_at',{ascending:false}));
       const r=await Promise.all(queries);const err=r.find(x=>x.error)?.error;if(err)throw err;
-      S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.intel=r[3].data||[];S.externalReports=r[4].data||[];S.autoReports=r[5].data||[];S.invites=r[6]?.data||[];render();
+      S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.intel=r[3].data||[];S.externalReports=r[4].data||[];S.autoReports=r[5].data||[];S.history=r[6].data||[];S.invites=r[7]?.data||[];render();
     }catch(e){console.error(e);msg('hsStatus',e.message||'Could not load scouting desk.');}
     finally{S.loading=false;}
   }
