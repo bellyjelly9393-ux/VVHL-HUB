@@ -222,6 +222,7 @@
           <span>${esc(gp)} GP</span><span>${esc(pts)} PTS</span><span>${esc(ppg)} PPG</span>
           <span>${esc(x?.confidence||x?.reliability||'SCOUTING OPEN')}</span>
         </div>
+        ${hasRecentExperience(r)?`<div class="hs-player-history"><b>RECENT EXPERIENCE</b><span>${esc(experienceLabel(r))}</span></div>`:''}
         <div class="hs-player-rankline"><b>CHL · S55</b><span>${esc(rank)}</span><span>${reports} report${reports===1?'':'s'}</span><span>Fit ${r.fit_grade??'—'}</span></div>
         <div class="hs-card-market">
           <div class="hs-market-labels"><span>STEAL</span><span>STRONG</span><span>GOOD</span><span>FAIR</span><span>PREM</span><span>OVER</span><span>WALK</span></div>
