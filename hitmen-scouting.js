@@ -1,6 +1,6 @@
 (() => {
   const TEAM_ID='b0bcbdda-da9d-419d-8f61-b34937966d49';
-  const S={pool:[],reports:[],externalReports:[],autoReports:[],bids:[],intel:[],history:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'experienced',sort:'price_high'};
+  const S={pool:[],reports:[],externalReports:[],preScout:[],autoReports:[],bids:[],intel:[],history:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'experienced',sort:'price_high'};
   const db=()=>window.VVHLBackend?.db;
   const state=()=>window.VVHLBackend?.state||{};
   const $=id=>document.getElementById(id);
@@ -32,6 +32,20 @@
     return {data:all,error:null};
   }
 
+  async function fetchFullPreScout(){
+    const all=[]; const batch=1000;
+    for(let from=0;;from+=batch){
+      const r=await db().from('team_pre_scout_reports')
+        .select('id,scouting_player_id,data_status,confidence,archetype,summary,career_snapshot,market_snapshot,generated_at,updated_at')
+        .eq('team_id',TEAM_ID)
+        .range(from,from+batch-1);
+      if(r.error)return r;
+      all.push(...(r.data||[]));
+      if((r.data||[]).length<batch)break;
+    }
+    return {data:all,error:null};
+  }
+
   async function load(){
     if(S.loading||!state().user)return;S.loading=true;
     try{
@@ -44,12 +58,13 @@
         db().from('team_bid_board').select('id,scouting_player_id,target_price,max_price,priority,status,plan,note,updated_at,scouting_players(gamertag,primary_position)').eq('team_id',TEAM_ID).order('priority',{ascending:true,nullsFirst:false}).order('updated_at',{ascending:false}),
         db().from('team_chelscout_intel').select('id,scouting_player_id,chelscout_uid,league_id,season,player_name,signed_position,played_position,role_chip,role_band,projected_rank,pool_rank,pool_n,fair_value_m,likely_price_m,likely_band_m,walk_above_m,availability_label,availability_reaches,reliability,confidence,onice_impact,onice_read,risks,notes,dna,career,comparables,projections,imported_at').eq('team_id',TEAM_ID).order('imported_at',{ascending:false}),
         db().from('team_external_scouting_reports').select('id,scouting_player_id,source,source_report_id,report_type,author_label,report_title,summary,strengths,concerns,recommendation,grades,tags,raw_payload,imported_at').eq('team_id',TEAM_ID).order('imported_at',{ascending:false}),
+        fetchFullPreScout(),
         db().from('scouting_auto_reports').select('id,scouting_player_id,season,report_version,archetype,strengths,risks,development_focus,summary,stats_snapshot,generated_at').order('generated_at',{ascending:false}),
         db().from('team_player_league_history').select('id,scouting_player_id,source_player_uid,season,league,league_id,team_name,position,phase,stats,imported_at').eq('team_id',TEAM_ID).in('season',[53,54]).in('league',['CHL','NCAA','ECHL']).order('season',{ascending:false})
       ];
       if(S.role==='admin')queries.push(db().from('team_access_invites').select('id,email,role,display_name,active,claimed_by,claimed_at,created_at').eq('team_id',TEAM_ID).order('created_at',{ascending:false}));
       const r=await Promise.all(queries);const err=r.find(x=>x.error)?.error;if(err)throw err;
-      S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.intel=r[3].data||[];S.externalReports=r[4].data||[];S.autoReports=r[5].data||[];S.history=r[6].data||[];S.invites=r[7]?.data||[];render();
+      S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.intel=r[3].data||[];S.externalReports=r[4].data||[];S.preScout=r[5].data||[];S.autoReports=r[6].data||[];S.history=r[7].data||[];S.invites=r[8]?.data||[];render();
     }catch(e){console.error(e);msg('hsStatus',e.message||'Could not load scouting desk.');}
     finally{S.loading=false;}
   }
@@ -59,7 +74,7 @@
     if($('hsScouted'))$('hsScouted').textContent=S.pool.length;
     if($('hsPriority'))$('hsPriority').textContent=S.pool.filter(x=>x.status==='priority'||x.priority===1).length;
     if($('hsBids'))$('hsBids').textContent=S.pool.filter(x=>x.status==='bid_target').length+S.bids.filter(x=>['target','active_bid'].includes(x.status)).length;
-    const totalReports=S.reports.length+S.externalReports.length+S.autoReports.length;
+    const totalReports=S.reports.length+S.externalReports.length+S.preScout.length+S.autoReports.length;
     if($('hsReports'))$('hsReports').textContent=totalReports;
     if($('hitmenReportCount'))$('hitmenReportCount').textContent=totalReports;
     renderTargets();renderPool();renderReportSelect();renderReports();renderBids();renderInvites();
@@ -92,16 +107,27 @@
   }
 
   function intelFor(r){return S.intel.find(x=>x.scouting_player_id===r.scouting_player_id)||null;}
+  function preScoutFor(r){return S.preScout.find(x=>x.scouting_player_id===r.scouting_player_id)||null;}
+  function externalFor(r){return S.externalReports.find(x=>x.scouting_player_id===r.scouting_player_id)||null;}
+  function pickNum(...vals){for(const v of vals){const z=Number(v);if(v!==''&&v!=null&&Number.isFinite(z))return z;}return null;}
   function latestCareer(x){
     const rows=Array.isArray(x?.career)?x.career:[];
     return rows.slice().sort((a,b)=>Number(b.season||0)-Number(a.season||0))[0]||{};
   }
+  function careerFor(r){
+    const x=intelFor(r),ps=preScoutFor(r),ext=externalFor(r),raw=ext?.raw_payload||{};
+    const rows=Array.isArray(x?.career)&&x.career.length?x.career:
+      Array.isArray(ps?.career_snapshot?.league_history)&&ps.career_snapshot.league_history.length?ps.career_snapshot.league_history:
+      Array.isArray(raw?.career)&&raw.career.length?raw.career:
+      recentHistoryFor(r).map(h=>({season:h.season,league:h.league,team:h.team_name,pos:h.position,...(h.stats||{})}));
+    return rows.slice().sort((a,b)=>Number(b.season||0)-Number(a.season||0))[0]||{};
+  }
   function marketData(r){
-    const x=intelFor(r);
-    const fair=x?.fair_value_m!=null?Number(x.fair_value_m):null;
-    const likely=x?.likely_price_m!=null?Number(x.likely_price_m):(r.target_bid!=null?Number(r.target_bid)/1e6:null);
-    const walk=x?.walk_above_m!=null?Number(x.walk_above_m):(r.max_bid!=null?Number(r.max_bid)/1e6:null);
-    return {x,fair,likely,walk};
+    const x=intelFor(r),ps=preScoutFor(r),ext=externalFor(r),pm=ps?.market_snapshot||{},raw=ext?.raw_payload||{};
+    const fair=pickNum(x?.fair_value_m,pm.fair_value_m,pm.fair_value,raw.fair_value_m,raw.fair_value);
+    const likely=pickNum(x?.likely_price_m,pm.likely_price_m,pm.expected_market_m,raw.likely_price_m,raw.expected_market_m,r.target_bid!=null?Number(r.target_bid)/1e6:null);
+    const walk=pickNum(x?.walk_above_m,pm.walk_above_m,pm.walk_m,raw.walk_above_m,raw.walk_m,r.max_bid!=null?Number(r.max_bid)/1e6:null);
+    return {x,ps,ext,fair,likely,walk};
   }
   function marketTier(fair,likely,walk){
     if(likely==null&&fair==null)return {key:'unknown',label:'NO PRICE'};
@@ -124,6 +150,7 @@
   function reportCountFor(r){
     return S.reports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+
       S.externalReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+
+      S.preScout.filter(x=>x.scouting_player_id===r.scouting_player_id).length+
       S.autoReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length;
   }
   function isBargain(r){
@@ -203,7 +230,7 @@
       const p=r.scouting_players||{},current=r.status||'unscouted';
       const {x,fair,likely,walk}=marketData(r);
       const tier=marketTier(fair,likely,walk);
-      const career=latestCareer(x);
+      const career=careerFor(r);
       const reports=reportCountFor(r);
       const rank=x?.pool_rank!=null?(x.pool_n!=null?`#${x.pool_rank} / ${x.pool_n}`:`#${x.pool_rank}`):(x?.projected_rank||'—');
       const role=x?.role_chip||x?.role_band||r.projected_role||'Role unconfirmed';
