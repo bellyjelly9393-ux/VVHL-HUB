@@ -1,0 +1,73 @@
+/* Final visual layer for Wildman Esports Network */
+:root{
+  --network-gold:#d9a63b;
+  --network-gold-bright:#ffd879;
+  --network-purple:#7842bc;
+  --network-bg:#030304;
+  --network-panel:#0a0a0d;
+  --network-border:rgba(217,166,59,.24);
+}
+.wm-join-btn{
+  display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 16px;
+  border-radius:10px;border:1px solid rgba(255,216,121,.5);
+  background:linear-gradient(180deg,rgba(217,166,59,.18),rgba(28,19,7,.18));
+  color:#f7e3ac;text-decoration:none;text-transform:uppercase;font-size:10px;font-weight:900;letter-spacing:.08em;
+  box-shadow:0 0 22px rgba(217,166,59,.09);
+}
+.wm-join-btn:hover{border-color:#ffd879;color:#fff4cf;box-shadow:0 0 28px rgba(217,166,59,.18)}
+.wildman-site .btn-primary,
+.wildman-site .small-btn.primary,
+.wildman-site button.primary{
+  background:linear-gradient(180deg,#f1ca70,#b8791f)!important;
+  border-color:#f4d57f!important;color:#120c03!important;
+  box-shadow:0 8px 24px rgba(217,166,59,.18)!important;
+}
+.wildman-site .btn-secondary{border-color:rgba(217,166,59,.38)!important;color:#f0cf82!important}
+.wildman-site .live-dot{background:#f2b83f!important;box-shadow:0 0 16px rgba(242,184,63,.7)!important}
+.wildman-site .academy-plan,
+.wildman-site .academy-paths>article,
+.wildman-site .academy-paths>details,
+.wildman-site .academy-coaches>article,
+.wildman-site .academy-player-card,
+.wildman-site .academy-challenge{
+  border-color:var(--network-border)!important;
+  background:linear-gradient(145deg,rgba(15,14,13,.97),rgba(6,6,8,.98))!important;
+}
+.wildman-site .academy-plan>span,
+.wildman-site .academy-price,
+.wildman-site .academy-nav a,
+.wildman-site .academy-coaches a{color:#e4b34d!important}
+.wildman-site .private-hero,
+.wildman-site .vod-hero{
+  border-color:var(--network-border)!important;
+  background:
+    radial-gradient(circle at 78% 30%,rgba(120,66,188,.18),transparent 32%),
+    radial-gradient(circle at 18% 16%,rgba(217,166,59,.14),transparent 30%),
+    linear-gradient(145deg,#070708,#030304)!important;
+}
+.wildman-site .private-hero h1 span,
+.wildman-site .vod-hero h1 span{color:#d9a63b!important}
+.wildman-site .private-hero-mark,
+.wildman-site .private-hero-badge,
+.wildman-site .vod-badges span{border-color:rgba(217,166,59,.35)!important;color:#edc86e!important}
+.wildman-site .shot-analysis-panel,
+.wildman-site .chel-auto-panel,
+.wildman-site .shot-map-card,
+.wildman-site .shot-capture-card,
+.wildman-site .scout-browser,
+.wildman-site .scout-detail-panel,
+.wildman-site .scout-side-panel{
+  border-color:var(--network-border)!important;
+  background:linear-gradient(145deg,rgba(12,12,14,.98),rgba(5,5,7,.99))!important;
+}
+.wildman-site .featured-broadcast,
+.wildman-site .live-stream-card,
+.wildman-site .live-score-card,
+.wildman-site .live-panel,
+.wildman-site .multi-grid,
+.wildman-site .report-list>*{
+  border-color:var(--network-border)!important;
+}
+.wildman-site a{--link-accent:#d9a63b}
+.wildman-site .menu-toggle{border-color:rgba(217,166,59,.32);color:#e8c36b;background:#09090b}
+@media(max-width:1180px){.wm-join-btn{display:none}}
