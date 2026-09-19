@@ -113,8 +113,8 @@
     const bottom=first(ext?.recommendation,raw.bottom_line,own?.recommendation);
     const model=marketModel(d),fair=model.fair,likely=model.likely,walk=model.walk;
     const career=dossierCareer(d),last=career[0]||{};
-    const strengths=first(own?.strengths,ext?.strengths);
-    const concerns=first(own?.concerns,ext?.concerns,arr(x.risks));
+    const strengths=first(own?.strengths,ext?.strengths,ps?.strengths);
+    const concerns=first(own?.concerns,ext?.concerns,arr(x.risks),ps?.risks);
     const parts=[];
     parts.push((p.gamertag||x.player_name||'This player')+' projects as '+(role||'an unsettled role')+' for Calgary.');
     if(read)parts.push(read);
