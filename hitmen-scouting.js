@@ -205,35 +205,35 @@
       const tier=marketTier(fair,likely,walk);
       const career=latestCareer(x);
       const reports=reportCountFor(r);
-      const rank=x?.pool_rank!=null?(x.pool_n!=null?\`#\${x.pool_rank} / \${x.pool_n}\`:\`#\${x.pool_rank}\`):(x?.projected_rank||'—');
+      const rank=x?.pool_rank!=null?(x.pool_n!=null?`#${x.pool_rank} / ${x.pool_n}`:`#${x.pool_rank}`):(x?.projected_rank||'—');
       const role=x?.role_chip||x?.role_band||r.projected_role||'Role unconfirmed';
-      const price=likely!=null?\`\${likely.toFixed(likely<10?2:1).replace(/\\.00$/,'')}M\`:(r.target_bid!=null?\`\${(Number(r.target_bid)/1e6).toFixed(2)}M\`:'—');
-      const fairLabel=fair!=null?\`\${fair.toFixed(fair<10?2:1).replace(/\\.00$/,'')}M fair\`:'No fair value';
+      const price=likely!=null?`${likely.toFixed(likely<10?2:1).replace(/\\.00$/,'')}M`:(r.target_bid!=null?`${(Number(r.target_bid)/1e6).toFixed(2)}M`:'—');
+      const fairLabel=fair!=null?`${fair.toFixed(fair<10?2:1).replace(/\\.00$/,'')}M fair`:'No fair value';
       const gp=career.gp??'—',pts=career.pts??career.points??'—',ppg=career.ppg??'—';
-      const qb=(s,label)=>\`<button type="button" class="hs-quick-btn \${current===s?'active':''}" data-hs-row-quick="\${s}" data-hs-row-id="\${r.id}">\${label}</button>\`;
-      return \`<article class="hs-player-card tier-\${tier.key}" data-hs-player="\${r.id}">
+      const qb=(s,label)=>`<button type="button" class="hs-quick-btn ${current===s?'active':''}" data-hs-row-quick="${s}" data-hs-row-id="${r.id}">${label}</button>`;
+      return `<article class="hs-player-card tier-${tier.key}" data-hs-player="${r.id}">
         <div class="hs-player-card-head">
-          <button class="hs-player-name" type="button">\${esc(p.gamertag||'Unknown')}</button>
-          <span class="hs-position-badge">\${esc(p.primary_position||'—')}</span>
-          <span class="hs-player-role">\${esc(role)}</span>
-          <span class="hs-player-price"><b>$\${esc(price)}</b><small>\${esc(fairLabel)}</small></span>
+          <button class="hs-player-name" type="button">${esc(p.gamertag||'Unknown')}</button>
+          <span class="hs-position-badge">${esc(p.primary_position||'—')}</span>
+          <span class="hs-player-role">${esc(role)}</span>
+          <span class="hs-player-price"><b>$${esc(price)}</b><small>${esc(fairLabel)}</small></span>
         </div>
         <div class="hs-player-subline">
-          <span>\${esc(gp)} GP</span><span>\${esc(pts)} PTS</span><span>\${esc(ppg)} PPG</span>
-          <span>\${esc(x?.confidence||x?.reliability||'SCOUTING OPEN')}</span>
+          <span>${esc(gp)} GP</span><span>${esc(pts)} PTS</span><span>${esc(ppg)} PPG</span>
+          <span>${esc(x?.confidence||x?.reliability||'SCOUTING OPEN')}</span>
         </div>
-        <div class="hs-player-rankline"><b>CHL · S55</b><span>\${esc(rank)}</span><span>\${reports} report\${reports===1?'':'s'}</span><span>Fit \${r.fit_grade??'—'}</span></div>
+        <div class="hs-player-rankline"><b>CHL · S55</b><span>${esc(rank)}</span><span>${reports} report${reports===1?'':'s'}</span><span>Fit ${r.fit_grade??'—'}</span></div>
         <div class="hs-card-market">
           <div class="hs-market-labels"><span>STEAL</span><span>STRONG</span><span>GOOD</span><span>FAIR</span><span>PREM</span><span>OVER</span><span>WALK</span></div>
-          <div class="hs-card-market-bar"><i style="left:\${marketPin(fair,likely,walk)}%"></i></div>
-          <div class="hs-card-market-foot"><strong>\${tier.label}</strong><span>\${walk!=null?\`walk \${walk.toFixed(walk<10?2:1)}M\`:'Calgary plan'}</span></div>
+          <div class="hs-card-market-bar"><i style="left:${marketPin(fair,likely,walk)}%"></i></div>
+          <div class="hs-card-market-foot"><strong>${tier.label}</strong><span>${walk!=null?`walk ${walk.toFixed(walk<10?2:1)}M`:'Calgary plan'}</span></div>
         </div>
-        <div class="hs-player-actions"><span class="hs-tag">\${esc(current.replaceAll('_',' '))}</span><div class="hs-quick-actions">\${qb('bid_target','Target')}\${qb('watch','Watch')}\${qb('pass','Pass')}</div></div>
-      </article>\`;
+        <div class="hs-player-actions"><span class="hs-tag">${esc(current.replaceAll('_',' '))}</span><div class="hs-quick-actions">${qb('bid_target','Target')}${qb('watch','Watch')}${qb('pass','Pass')}</div></div>
+      </article>`;
     }).join('');
 
     if($('hsPoolEmpty'))$('hsPoolEmpty').hidden=rows.length!==0;
-    if($('hsPoolMeta'))$('hsPoolMeta').textContent=rows.length?\`Showing \${from+1}-\${Math.min(from+shown.length,rows.length)} of \${rows.length.toLocaleString()} players · Page \${S.page}/\${pages}\`:'No matching players';
+    if($('hsPoolMeta'))$('hsPoolMeta').textContent=rows.length?`Showing ${from+1}-${Math.min(from+shown.length,rows.length)} of ${rows.length.toLocaleString()} players · Page ${S.page}/${pages}`:'No matching players';
     if($('hsPrevPage'))$('hsPrevPage').disabled=S.page<=1;
     if($('hsNextPage'))$('hsNextPage').disabled=S.page>=pages;
 
