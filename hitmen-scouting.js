@@ -425,7 +425,45 @@
     const r=await db().from('team_scouting_reports').insert(data);if(r.error){msg('hsReportMsg',r.error.message);return;}msg('hsReportMsg','Report saved ✓');e.target.reset();await load();
   }
   function renderReports(){if(!$('hsReportList'))return;$('hsReportList').innerHTML=S.reports.map(r=>`<div class="hs-report"><b>${esc(r.scouting_players?.gamertag||'Unknown')}</b> <span class="hs-tag">${esc((r.recommendation||'report').replaceAll('_',' '))}</span><br><small>${new Date(r.created_at).toLocaleString()}</small><div class="hs-grades"><div class="hs-grade"><small>Overall</small><b>${r.overall_grade??'—'}</b></div><div class="hs-grade"><small>Offense</small><b>${r.offense_grade??'—'}</b></div><div class="hs-grade"><small>Defense</small><b>${r.defense_grade??'—'}</b></div><div class="hs-grade"><small>IQ</small><b>${r.hockey_iq_grade??'—'}</b></div></div>${r.strengths?`<p><b>Strengths:</b> ${esc(r.strengths)}</p>`:''}${r.concerns?`<p><b>Concerns:</b> ${esc(r.concerns)}</p>`:''}${r.notes?`<p>${esc(r.notes)}</p>`:''}</div>`).join('');if($('hsReportEmpty'))$('hsReportEmpty').hidden=S.reports.length!==0;}
-  function renderBids(){if(!$('hsBidBody'))return;const map=new Map(S.bids.map(b=>[b.scouting_player_id,b]));const rows=S.pool.filter(p=>p.status==='bid_target'||p.target_bid!=null||p.max_bid!=null||map.has(p.scouting_player_id));$('hsBidBody').innerHTML=rows.map(p=>{const b=map.get(p.scouting_player_id)||{},sp=p.scouting_players||{};return `<tr><td><b>${esc(sp.gamertag||'Unknown')}</b></td><td>${esc(sp.primary_position||'—')}</td><td>${b.priority??p.priority??'—'}</td><td><span class="hs-tag">${esc((b.status||p.status||'watch').replaceAll('_',' '))}</span></td><td>${money(b.target_price??p.target_bid)}</td><td>${money(b.max_price??p.max_bid)}</td><td>${esc(b.plan||p.projected_role||'—')}</td></tr>`}).join('');if($('hsBidEmpty'))$('hsBidEmpty').hidden=rows.length!==0;}
+  function renderBids(){
+    if(!$('hsBidBody'))return;
+    const map=new Map(S.bids.map(b=>[b.scouting_player_id,b]));
+    const rows=S.pool.filter(p=>p.status==='bid_target'||p.target_bid!=null||p.max_bid!=null||map.has(p.scouting_player_id));
+    $('hsBidBody').innerHTML=rows.map(p=>{
+      const b=map.get(p.scouting_player_id)||{},sp=p.scouting_players||{};
+      return `<tr>
+        <td><b>${esc(sp.gamertag||'Unknown')}</b></td>
+        <td>${esc(sp.primary_position||'—')}</td>
+        <td>${b.priority??p.priority??'—'}</td>
+        <td><span class="hs-tag">${esc((b.status||p.status||'watch').replaceAll('_',' '))}</span></td>
+        <td>${money(b.target_price??p.target_bid)}</td>
+        <td>${money(b.max_price??p.max_bid)}</td>
+        <td>${esc(b.plan||p.projected_role||'—')}</td>
+        <td><button type="button" class="hs-btn hs-remove-bid" data-hs-remove-bid="${p.scouting_player_id}">Remove</button></td>
+      </tr>`;
+    }).join('');
+    if($('hsBidEmpty'))$('hsBidEmpty').hidden=rows.length!==0;
+    document.querySelectorAll('[data-hs-remove-bid]').forEach(btn=>btn.onclick=()=>removeFromBidBoard(btn.dataset.hsRemoveBid));
+  }
+
+  async function removeFromBidBoard(pid){
+    const p=S.pool.find(x=>x.scouting_player_id===pid);if(!p)return;
+    const name=p.scouting_players?.gamertag||'this player';
+    if(!confirm(`Remove ${name} from the Calgary bidding board? They will stay in scouting as Watch.`))return;
+    const bid=S.bids.find(x=>x.scouting_player_id===pid);
+    if(bid){
+      const del=await db().from('team_bid_board').delete().eq('id',bid.id);
+      if(del.error){msg('hsStatus',del.error.message);return;}
+    }
+    const upd=await db().from('team_scouting_pool').update({
+      status:'watch',priority:null,target_bid:null,max_bid:null,updated_by:state().user.id,updated_at:new Date().toISOString()
+    }).eq('id',p.id);
+    if(upd.error){msg('hsStatus',upd.error.message);return;}
+    S.bids=S.bids.filter(x=>x.scouting_player_id!==pid);
+    p.status='watch';p.priority=null;p.target_bid=null;p.max_bid=null;
+    render();
+    msg('hsStatus',`${name} removed from bidding board ✓`);
+  }
 
   async function saveInvite(e){
     e.preventDefault();if(S.role!=='admin')return;msg('hsInviteMsg','Saving…');const email=val('hsInviteEmail').trim().toLowerCase();if(!email)return;
