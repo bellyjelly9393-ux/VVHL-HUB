@@ -83,6 +83,30 @@
       <div class="hsd-market"><div>STEAL</div><div>STRONG</div><div>GOOD</div><div>FAIR</div><div>OVER</div><div>WALK</div><span class="hsd-market-pin" style="left:${pos}%"><i></i><b>${moneyM(likely??fair)}</b></span></div>`;
   }
 
+  function scoutAnswer(d,question){
+    const p=d.pool.scouting_players||{},x=d.intel||{},ext=latest(d.external),own=latest(d.reports),raw=ext?.raw_payload||{};
+    const role=first(d.pool.projected_role,x.role_chip,x.role_band,raw.meta);
+    const read=first(ext?.summary,raw.summary,x.onice_read,arr(x.notes)[0],own?.notes);
+    const bottom=first(ext?.recommendation,raw.bottom_line,own?.recommendation);
+    const fair=num(x.fair_value_m,raw.fair_value_m,raw.fair_value);
+    const likely=num(x.likely_price_m,raw.likely_price_m);
+    const walk=num(x.walk_above_m,raw.walk_above_m);
+    const career=arr(x.career),last=career[0]||{};
+    const strengths=first(own?.strengths,ext?.strengths);
+    const concerns=first(own?.concerns,ext?.concerns,arr(x.risks));
+    const parts=[];
+    parts.push((p.gamertag||x.player_name||'This player')+' projects as '+(role||'an unsettled role')+' for Calgary.');
+    if(read)parts.push(read);
+    if(last.gp!=null||last.ppg!=null)parts.push('Latest sample: '+(last.gp??'—')+' GP, '+(last.pts??last.points??'—')+' points, '+(last.ppg??'—')+' PPG.');
+    if(strengths)parts.push('What helps: '+text(strengths)+'.');
+    if(concerns)parts.push('What to verify: '+text(concerns)+'.');
+    if(fair!=null||likely!=null)parts.push('Market read: fair value '+moneyM(fair)+', likely price '+moneyM(likely)+(walk!=null?', walk point '+moneyM(walk):'')+'.');
+    if(d.pool.fit_grade!=null)parts.push('Calgary fit is '+d.pool.fit_grade+'/10 with priority '+(d.pool.priority??'not set')+'.');
+    if(bottom)parts.push('Bottom line: '+bottom);
+    if(question&&/bid|price|cost|market/i.test(question)&&likely==null&&fair==null)parts.push('There is not enough imported pricing data yet to make a useful market call.');
+    return parts.filter(Boolean).join(' ');
+  }
+
   async function fetchData(poolId){
     const pool=await db().from('team_scouting_pool')
       .select('id,scouting_player_id,status,priority,fit_grade,projected_role,target_bid,max_bid,management_note,updated_at,scouting_players(id,gamertag,platform,primary_position)')
@@ -117,11 +141,18 @@
     const names=arr(raw.name_history).map(v=>typeof v==='string'?v:v.name).filter(Boolean);
     const spokes=arr(x.dna?.spokes).length?x.dna.spokes:arr(raw.dna?.spokes);
     const reportCount=d.reports.length+d.external.length;
+    const scoutSummary=scoutAnswer(d,'Give me an honest scouting report');
+    const comps=arr(x.comparables).length?x.comparables:arr(raw.comparables);
+    const compHtml=comps.slice(0,8).map(v=>{const label=typeof v==='string'?v:first(v.name,v.player,v.gamertag,v.label);return label?`<span>${esc(label)}</span>`:'';}).join('');
+    const careerGp=arr(x.career).reduce((t,r)=>t+(Number(r.gp)||0),0);
     return `
       <header class="hsd-head">
         <div><h2>${esc(p.gamertag||x.player_name||'Player')}</h2><div class="hsd-badges">${confidence?`<span class="confidence">${esc(confidence.toUpperCase())}</span>`:''}${pos?`<span>${esc(pos)}</span>`:''}${role?`<span class="role">${esc(role)}</span>`:''}<span>${reportCount} report${reportCount===1?'':'s'}</span></div></div>
+        <button class="hsd-ask-btn" data-hsd-jump-ask type="button">ASK</button>
         <button class="hsd-close" data-hsd-close type="button">×</button>
       </header>
+
+      <div class="hsd-meta-strip"><span>CHL · S55</span><span>${careerGp||'—'} career GP</span><span>${esc(p.platform||'platform unconfirmed')}</span><span>${esc(d.pool.status||'unscouted')}</span></div>
 
       <div class="hsd-actions">
         <button data-hsd-status="watch" type="button">＋ Add to Plan</button>
@@ -163,6 +194,8 @@
         ${arr(spokes).length?`<div class="hsd-style-tags">${arr(spokes).slice(0,5).map(s=>`<span>${esc(first(s.label,s.name))}</span>`).join('')}</div>`:''}
       </section>
 
+      ${compHtml?`<section class="hsd-section"><h3>PLAYS LIKE</h3><div class="hsd-comparables">${compHtml}</div></section>`:''}
+
       <section class="hsd-section"><h3>CAREER</h3>${careerTable(x.career)}</section>
 
       <section class="hsd-section"><h3>KNOWN NAMES</h3>
@@ -173,7 +206,9 @@
         <div class="hsd-report-stack">${d.external.map(r=>reportCard(r,'CHELSCOUT')).join('')}${d.reports.map(r=>reportCard(r,'CALGARY MANAGEMENT')).join('')||'<div class="hsd-empty">No reports saved yet.</div>'}</div>
       </section>
 
-      ${narrative?`<section class="hsd-section hsd-long-read"><div class="hsd-brandline">WILDMAN INTELLIGENCE</div><h3>GM READ</h3><p>${esc(narrative)}</p></section>`:''}
+      ${narrative?`<section class="hsd-section hsd-long-read"><div class="hsd-brandline">WILDMAN INTELLIGENCE</div><h3>FULL SCOUTING READ</h3><p>${esc(narrative)}</p></section>`:''}
+
+      <section id="hsdScoutChat" class="hsd-scout-chat"><div class="hsd-scout-chat-head">WILDMAN SCOUT · ASK ABOUT ${esc(p.gamertag||x.player_name||'PLAYER')}</div><div id="hsdScoutAnswer" class="hsd-scout-answer">${esc(scoutSummary)}</div><form id="hsdAskForm" class="hsd-ask-form"><input id="hsdAskInput" placeholder="Ask about fit, price, role, risk…"><button type="submit">↑</button></form></section>
 
       <footer class="hsd-footer"><button data-hsd-close type="button">Close Dossier</button><span>Private Calgary Hitmen management workspace</span></footer>
     `;
@@ -219,6 +254,14 @@
   function bind(){
     document.querySelectorAll('[data-hsd-status]').forEach(b=>b.addEventListener('click',()=>setStatus(b.dataset.hsdStatus)));
     document.getElementById('hsdNote')?.addEventListener('input',saveNote);
+    document.querySelector('[data-hsd-jump-ask]')?.addEventListener('click',()=>document.getElementById('hsdScoutChat')?.scrollIntoView({behavior:'smooth',block:'center'}));
+    document.getElementById('hsdAskForm')?.addEventListener('submit',e=>{
+      e.preventDefault();
+      const input=document.getElementById('hsdAskInput'),answer=document.getElementById('hsdScoutAnswer');
+      if(!current||!answer)return;
+      answer.textContent=scoutAnswer(current,input?.value||'Give me an honest scouting report');
+      if(input)input.value='';
+    });
     document.addEventListener('keydown',escKey);
   }
   function escKey(e){if(e.key==='Escape')close();}
