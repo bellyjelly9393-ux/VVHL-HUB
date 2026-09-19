@@ -161,3 +161,5 @@ function renderBids(){
 
 window.addEventListener('vvhl-auth-change',()=>setTimeout(onAuthState,0));
 setTimeout(onAuthState,250);
+
+(() => { const tab = new URLSearchParams(location.search).get('tab'); if (['pool','reports','bids'].includes(tab)) activateTab(tab); })();
