@@ -1,6 +1,6 @@
 (() => {
   const TEAM_ID='b0bcbdda-da9d-419d-8f61-b34937966d49';
-  const S={pool:[],reports:[],externalReports:[],autoReports:[],bids:[],intel:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100};
+  const S={pool:[],reports:[],externalReports:[],autoReports:[],bids:[],intel:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'bidable',sort:'price_high'};
   const db=()=>window.VVHLBackend?.db;
   const state=()=>window.VVHLBackend?.state||{};
   const $=id=>document.getElementById(id);
@@ -90,38 +90,142 @@
     box.querySelectorAll('[data-hs-target]').forEach(b=>b.onclick=()=>{activate('pool');select(b.dataset.hsTarget);setTimeout(()=>$('hsEditor')?.scrollIntoView({behavior:'smooth',block:'start'}),50);});
   }
 
+  function intelFor(r){return S.intel.find(x=>x.scouting_player_id===r.scouting_player_id)||null;}
+  function latestCareer(x){
+    const rows=Array.isArray(x?.career)?x.career:[];
+    return rows.slice().sort((a,b)=>Number(b.season||0)-Number(a.season||0))[0]||{};
+  }
+  function marketData(r){
+    const x=intelFor(r);
+    const fair=x?.fair_value_m!=null?Number(x.fair_value_m):null;
+    const likely=x?.likely_price_m!=null?Number(x.likely_price_m):(r.target_bid!=null?Number(r.target_bid)/1e6:null);
+    const walk=x?.walk_above_m!=null?Number(x.walk_above_m):(r.max_bid!=null?Number(r.max_bid)/1e6:null);
+    return {x,fair,likely,walk};
+  }
+  function marketTier(fair,likely,walk){
+    if(likely==null&&fair==null)return {key:'unknown',label:'NO PRICE'};
+    const v=likely??fair,base=fair??v;
+    const ratio=base>0?v/base:1;
+    if(ratio<=.75)return {key:'steal',label:'STEAL'};
+    if(ratio<=.90)return {key:'strong',label:'STRONG'};
+    if(ratio<=1.03)return {key:'good',label:'GOOD'};
+    if(ratio<=1.15)return {key:'fair',label:'FAIR'};
+    if(ratio<=1.35)return {key:'premium',label:'PREM'};
+    if(walk!=null&&v>=walk)return {key:'walk',label:'WALK'};
+    return {key:'over',label:'OVER'};
+  }
+  function marketPin(fair,likely,walk){
+    const v=likely??fair;
+    if(v==null)return 50;
+    const ceiling=Math.max(walk||0,(fair||v)*1.55,v*1.12,3);
+    return Math.max(3,Math.min(97,(v/ceiling)*100));
+  }
+  function reportCountFor(r){
+    return S.reports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+
+      S.externalReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+
+      S.autoReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length;
+  }
+  function isBargain(r){
+    const {fair,likely}=marketData(r);
+    return fair!=null&&likely!=null&&likely<=fair*.95;
+  }
+  function isSnake(r){
+    return ['bid_target','priority','watch'].includes(r.status)||Number(r.priority||9)<=2;
+  }
+  function scopeMatch(r,scope){
+    if(scope==='everyone')return true;
+    if(scope==='bargains')return isBargain(r);
+    if(scope==='snake')return isSnake(r);
+    return !['signed','lost','pass'].includes(r.status);
+  }
+  function positionMatch(playerPos,filter){
+    const p=String(playerPos||'').toUpperCase();
+    if(!filter)return true;
+    if(filter==='F')return ['LW','C','RW'].includes(p);
+    if(filter==='D')return ['LD','RD'].includes(p);
+    return p===filter;
+  }
+  function marketSortValue(r){
+    const {fair,likely}=marketData(r);
+    return likely??fair??(r.target_bid!=null?Number(r.target_bid)/1e6:-1);
+  }
+
   function renderPool(){
-    if(!$('hsPoolBody'))return;
+    const box=$('hsPoolBody');if(!box)return;
     const q=val('hsSearch').trim().toLowerCase();
     const pos=val('hsPositionFilter');
     const status=val('hsStatusFilter');
+
+    const everybody=S.pool;
+    const bidable=everybody.filter(r=>scopeMatch(r,'bidable'));
+    const bargains=everybody.filter(isBargain);
+    const snake=everybody.filter(isSnake);
+    if($('hsScopeBidable'))$('hsScopeBidable').textContent=bidable.length.toLocaleString();
+    if($('hsScopeEveryone'))$('hsScopeEveryone').textContent=everybody.length.toLocaleString();
+    if($('hsScopeBargains'))$('hsScopeBargains').textContent=bargains.length.toLocaleString();
+    if($('hsScopeSnake'))$('hsScopeSnake').textContent=snake.length.toLocaleString();
+
     let rows=S.pool.filter(r=>{
       const p=r.scouting_players||{};
-      const matchesText=!q||[p.gamertag,p.primary_position,p.platform,r.status,r.projected_role].some(v=>String(v||'').toLowerCase().includes(q));
-      const matchesPos=!pos||String(p.primary_position||'').toUpperCase()===pos;
+      const x=intelFor(r);
+      const matchesText=!q||[p.gamertag,p.primary_position,p.platform,r.status,r.projected_role,x?.player_name,x?.role_chip,x?.role_band,x?.projected_rank].some(v=>String(v||'').toLowerCase().includes(q));
+      const matchesPos=positionMatch(p.primary_position,pos);
       const matchesStatus=!status||r.status===status;
-      return matchesText&&matchesPos&&matchesStatus;
+      return matchesText&&matchesPos&&matchesStatus&&scopeMatch(r,S.scope);
     });
-    rows.sort((a,b)=>String(a.scouting_players?.gamertag||'').localeCompare(String(b.scouting_players?.gamertag||''),undefined,{sensitivity:'base'}));
+
+    rows.sort((a,b)=>{
+      if(S.sort==='name')return String(a.scouting_players?.gamertag||'').localeCompare(String(b.scouting_players?.gamertag||''),undefined,{sensitivity:'base'});
+      if(S.sort==='priority')return Number(a.priority||99)-Number(b.priority||99)||String(a.scouting_players?.gamertag||'').localeCompare(String(b.scouting_players?.gamertag||''));
+      if(S.sort==='fit')return Number(b.fit_grade||-1)-Number(a.fit_grade||-1)||marketSortValue(b)-marketSortValue(a);
+      if(S.sort==='price_low')return marketSortValue(a)-marketSortValue(b);
+      return marketSortValue(b)-marketSortValue(a);
+    });
+
     const pages=Math.max(1,Math.ceil(rows.length/S.pageSize));
     if(S.page>pages)S.page=pages;
     const from=(S.page-1)*S.pageSize;
     const shown=rows.slice(from,from+S.pageSize);
-    $('hsPoolBody').innerHTML=shown.map(r=>{
+
+    box.innerHTML=shown.map(r=>{
       const p=r.scouting_players||{},current=r.status||'unscouted';
-      const qb=(status,label)=>`<button type="button" class="hs-quick-btn ${current===status?'active':''}" data-hs-row-quick="${status}" data-hs-row-id="${r.id}">${label}</button>`;
-      return `<tr data-hs-player="${r.id}">
-        <td><b>${esc(p.gamertag||'Unknown')}</b><br><small>${esc(p.platform||'')}</small><div class="hs-quick-actions">${qb('bid_target','Target')}${qb('watch','Watch')}${qb('pass','Pass')}</div></td>
-        <td>${esc(p.primary_position||'—')}</td>
-        <td><span class="hs-tag">${esc(current.replaceAll('_',' '))}</span></td>
-        <td>${r.priority??'—'}</td><td>${r.fit_grade??'—'}</td><td>${money(r.target_bid)}</td><td>${money(r.max_bid)}</td>
-      </tr>`;
+      const {x,fair,likely,walk}=marketData(r);
+      const tier=marketTier(fair,likely,walk);
+      const career=latestCareer(x);
+      const reports=reportCountFor(r);
+      const rank=x?.pool_rank!=null?(x.pool_n!=null?\`#\${x.pool_rank} / \${x.pool_n}\`:\`#\${x.pool_rank}\`):(x?.projected_rank||'—');
+      const role=x?.role_chip||x?.role_band||r.projected_role||'Role unconfirmed';
+      const price=likely!=null?\`\${likely.toFixed(likely<10?2:1).replace(/\\.00$/,'')}M\`:(r.target_bid!=null?\`\${(Number(r.target_bid)/1e6).toFixed(2)}M\`:'—');
+      const fairLabel=fair!=null?\`\${fair.toFixed(fair<10?2:1).replace(/\\.00$/,'')}M fair\`:'No fair value';
+      const gp=career.gp??'—',pts=career.pts??career.points??'—',ppg=career.ppg??'—';
+      const qb=(s,label)=>\`<button type="button" class="hs-quick-btn \${current===s?'active':''}" data-hs-row-quick="\${s}" data-hs-row-id="\${r.id}">\${label}</button>\`;
+      return \`<article class="hs-player-card tier-\${tier.key}" data-hs-player="\${r.id}">
+        <div class="hs-player-card-head">
+          <button class="hs-player-name" type="button">\${esc(p.gamertag||'Unknown')}</button>
+          <span class="hs-position-badge">\${esc(p.primary_position||'—')}</span>
+          <span class="hs-player-role">\${esc(role)}</span>
+          <span class="hs-player-price"><b>$\${esc(price)}</b><small>\${esc(fairLabel)}</small></span>
+        </div>
+        <div class="hs-player-subline">
+          <span>\${esc(gp)} GP</span><span>\${esc(pts)} PTS</span><span>\${esc(ppg)} PPG</span>
+          <span>\${esc(x?.confidence||x?.reliability||'SCOUTING OPEN')}</span>
+        </div>
+        <div class="hs-player-rankline"><b>CHL · S55</b><span>\${esc(rank)}</span><span>\${reports} report\${reports===1?'':'s'}</span><span>Fit \${r.fit_grade??'—'}</span></div>
+        <div class="hs-card-market">
+          <div class="hs-market-labels"><span>STEAL</span><span>STRONG</span><span>GOOD</span><span>FAIR</span><span>PREM</span><span>OVER</span><span>WALK</span></div>
+          <div class="hs-card-market-bar"><i style="left:\${marketPin(fair,likely,walk)}%"></i></div>
+          <div class="hs-card-market-foot"><strong>\${tier.label}</strong><span>\${walk!=null?\`walk \${walk.toFixed(walk<10?2:1)}M\`:'Calgary plan'}</span></div>
+        </div>
+        <div class="hs-player-actions"><span class="hs-tag">\${esc(current.replaceAll('_',' '))}</span><div class="hs-quick-actions">\${qb('bid_target','Target')}\${qb('watch','Watch')}\${qb('pass','Pass')}</div></div>
+      </article>\`;
     }).join('');
+
     if($('hsPoolEmpty'))$('hsPoolEmpty').hidden=rows.length!==0;
-    if($('hsPoolMeta'))$('hsPoolMeta').textContent=rows.length?`Showing ${from+1}-${Math.min(from+shown.length,rows.length)} of ${rows.length.toLocaleString()} players · Page ${S.page}/${pages}`:'No matching players';
+    if($('hsPoolMeta'))$('hsPoolMeta').textContent=rows.length?\`Showing \${from+1}-\${Math.min(from+shown.length,rows.length)} of \${rows.length.toLocaleString()} players · Page \${S.page}/\${pages}\`:'No matching players';
     if($('hsPrevPage'))$('hsPrevPage').disabled=S.page<=1;
     if($('hsNextPage'))$('hsNextPage').disabled=S.page>=pages;
-    document.querySelectorAll('[data-hs-player]').forEach(tr=>tr.onclick=()=>select(tr.dataset.hsPlayer));
+
+    document.querySelectorAll('[data-hs-player]').forEach(card=>card.onclick=()=>select(card.dataset.hsPlayer));
     document.querySelectorAll('[data-hs-row-quick]').forEach(btn=>btn.onclick=e=>{
       e.preventDefault();e.stopPropagation();
       quickTargetRow(btn.dataset.hsRowId,btn.dataset.hsRowQuick);
@@ -321,8 +425,23 @@
   function bind(){
     document.querySelectorAll('[data-hs-tab]').forEach(b=>b.onclick=()=>activate(b.dataset.hsTab));
     const resetPool=()=>{S.page=1;renderPool();};
-    $('hsSearch')?.addEventListener('input',resetPool);$('hsPositionFilter')?.addEventListener('change',resetPool);$('hsStatusFilter')?.addEventListener('change',resetPool);
-    $('hsPrevPage')?.addEventListener('click',()=>{if(S.page>1){S.page--;renderPool();}});$('hsNextPage')?.addEventListener('click',()=>{S.page++;renderPool();});
+    $('hsSearch')?.addEventListener('input',resetPool);
+    $('hsPositionFilter')?.addEventListener('change',resetPool);
+    $('hsStatusFilter')?.addEventListener('change',resetPool);
+    $('hsSort')?.addEventListener('change',()=>{S.sort=val('hsSort')||'price_high';resetPool();});
+    document.querySelectorAll('[data-hs-position]').forEach(b=>b.addEventListener('click',()=>{
+      const value=b.dataset.hsPosition||'';
+      if($('hsPositionFilter'))$('hsPositionFilter').value=value;
+      document.querySelectorAll('[data-hs-position]').forEach(x=>x.classList.toggle('active',x===b));
+      resetPool();
+    }));
+    document.querySelectorAll('[data-hs-scope]').forEach(b=>b.addEventListener('click',()=>{
+      S.scope=b.dataset.hsScope||'bidable';
+      document.querySelectorAll('[data-hs-scope]').forEach(x=>x.classList.toggle('active',x===b));
+      resetPool();
+    }));
+    $('hsPrevPage')?.addEventListener('click',()=>{if(S.page>1){S.page--;renderPool();}});
+    $('hsNextPage')?.addEventListener('click',()=>{S.page++;renderPool();});
     $('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsChelScoutImport')?.addEventListener('click',importChelScout);$('hsChelScoutReportsImport')?.addEventListener('click',importChelScoutReports);document.querySelectorAll('[data-hs-quick]').forEach(b=>b.addEventListener('click',()=>quickTarget(b.dataset.hsQuick)));$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);
   }
   bind();window.addEventListener('vvhl-auth-change',()=>setTimeout(load,0));if(state().user)setTimeout(load,200);
