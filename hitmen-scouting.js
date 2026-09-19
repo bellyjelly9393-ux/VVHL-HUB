@@ -106,12 +106,42 @@
     if(S.page>pages)S.page=pages;
     const from=(S.page-1)*S.pageSize;
     const shown=rows.slice(from,from+S.pageSize);
-    $('hsPoolBody').innerHTML=shown.map(r=>{const p=r.scouting_players||{};return `<tr data-hs-player="${r.id}"><td><b>${esc(p.gamertag||'Unknown')}</b><br><small>${esc(p.platform||'')}</small></td><td>${esc(p.primary_position||'—')}</td><td><span class="hs-tag">${esc((r.status||'unscouted').replaceAll('_',' '))}</span></td><td>${r.priority??'—'}</td><td>${r.fit_grade??'—'}</td><td>${money(r.target_bid)}</td><td>${money(r.max_bid)}</td></tr>`}).join('');
+    $('hsPoolBody').innerHTML=shown.map(r=>{
+      const p=r.scouting_players||{},current=r.status||'unscouted';
+      const qb=(status,label)=>`<button type="button" class="hs-quick-btn ${current===status?'active':''}" data-hs-row-quick="${status}" data-hs-row-id="${r.id}">${label}</button>`;
+      return `<tr data-hs-player="${r.id}">
+        <td><b>${esc(p.gamertag||'Unknown')}</b><br><small>${esc(p.platform||'')}</small><div class="hs-quick-actions">${qb('bid_target','Target')}${qb('watch','Watch')}${qb('pass','Pass')}</div></td>
+        <td>${esc(p.primary_position||'—')}</td>
+        <td><span class="hs-tag">${esc(current.replaceAll('_',' '))}</span></td>
+        <td>${r.priority??'—'}</td><td>${r.fit_grade??'—'}</td><td>${money(r.target_bid)}</td><td>${money(r.max_bid)}</td>
+      </tr>`;
+    }).join('');
     if($('hsPoolEmpty'))$('hsPoolEmpty').hidden=rows.length!==0;
     if($('hsPoolMeta'))$('hsPoolMeta').textContent=rows.length?`Showing ${from+1}-${Math.min(from+shown.length,rows.length)} of ${rows.length.toLocaleString()} players · Page ${S.page}/${pages}`:'No matching players';
     if($('hsPrevPage'))$('hsPrevPage').disabled=S.page<=1;
     if($('hsNextPage'))$('hsNextPage').disabled=S.page>=pages;
     document.querySelectorAll('[data-hs-player]').forEach(tr=>tr.onclick=()=>select(tr.dataset.hsPlayer));
+    document.querySelectorAll('[data-hs-row-quick]').forEach(btn=>btn.onclick=e=>{
+      e.preventDefault();e.stopPropagation();
+      quickTargetRow(btn.dataset.hsRowId,btn.dataset.hsRowQuick);
+    });
+  }
+
+  async function quickTargetRow(id,status){
+    const r=S.pool.find(x=>x.id===id);if(!r)return;
+    const data={status,updated_by:state().user.id,updated_at:new Date().toISOString()};
+    if(status==='bid_target'&&r.priority==null)data.priority=1;
+    const q=await db().from('team_scouting_pool').update(data).eq('id',r.id);
+    if(q.error){msg('hsStatus',q.error.message);return;}
+    r.status=status;if(data.priority!=null)r.priority=data.priority;
+    const existing=S.bids.find(x=>x.scouting_player_id===r.scouting_player_id);
+    if(status==='bid_target')await syncBid(r.scouting_player_id,{...r,...data});
+    else if(existing){
+      await db().from('team_bid_board').update({status:status==='pass'?'pass':'watch',updated_by:state().user.id,updated_at:new Date().toISOString()}).eq('id',existing.id);
+      existing.status=status==='pass'?'pass':'watch';
+    }
+    render();
+    msg('hsStatus',`${r.scouting_players?.gamertag||'Player'} marked ${status.replaceAll('_',' ')} ✓`);
   }
 
   function select(id){
