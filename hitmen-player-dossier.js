@@ -152,13 +152,14 @@
     const confidence=first(x.confidence,x.reliability,rawReport.confidence,raw.confidence,ps.confidence);
     const role=first(d.pool.projected_role,x.role_chip,x.role_band,rawReport.meta,raw.role?.chip,raw.role?.band,ps.archetype);
     const pos=first(p.primary_position,x.played_position,x.signed_position,rawReport.position);
+    const pm=ps.market_snapshot||{};
     const model=marketModel(d),fair=model.fair,likely=model.likely,walk=model.walk;
     const read=first(ext?.summary,rawReport.summary,x.onice_read,arr(x.notes)[0],ps.summary,own?.notes);
     const bottom=first(ext?.recommendation,rawReport.bottom_line,own?.recommendation);
     const narrative=first(rawReport.narrative,ext?.summary,ps.summary,own?.notes);
     const career=dossierCareer(d),last=career[0]||{};
-    const onice=first(x.onice_read,raw.onice?.read);
-    const poolRank=x.pool_rank!=null?x.pool_rank:null,poolN=x.pool_n!=null?x.pool_n:null;
+    const onice=first(x.onice_read,raw.onice?.read,pm.possession_per_game?`${pm.possession_per_game} possession/game`:'');
+    const poolRank=x.pool_rank!=null?x.pool_rank:(pm.impact_rank??null),poolN=x.pool_n!=null?x.pool_n:(pm.impact_pool??null);
     const names=arr(raw.name_history).map(v=>typeof v==='string'?v:v.name).filter(Boolean);
     const spokes=arr(x.dna?.spokes).length?x.dna.spokes:arr(raw.dna?.spokes);
     const reportCount=d.reports.length+d.external.length+(d.preScout?1:0);
@@ -197,7 +198,7 @@
 
       <section class="hsd-section hsd-facts">
         <div><small>LAST SEASON</small><b>${esc([last.ppg!=null?last.ppg+' PPG':'',last.gp!=null?last.gp+' GP':'',last.pts!=null?last.pts+' PTS':''].filter(Boolean).join(' · ')||'—')}</b></div>
-        <div><small>PROJECT HERE</small><b>${esc(first(x.projected_rank,raw.role?.proj,'—'))}</b></div>
+        <div><small>PROJECT HERE</small><b>${esc(first(x.projected_rank,raw.role?.proj,pm.projected_ppg!=null?`${pm.projected_ppg} PPG${pm.projected_ppg_low!=null&&pm.projected_ppg_high!=null?` (${pm.projected_ppg_low}–${pm.projected_ppg_high})`:''}`:'','—'))}</b></div>
         <div><small>ON THE ICE</small><b>${esc(onice||'—')}${x.onice_impact!=null?' · '+Number(x.onice_impact).toFixed(2):''}</b></div>
       </section>
 
