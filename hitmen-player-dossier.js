@@ -41,6 +41,29 @@
     return null;
   }
 
+  function dossierCareer(d){
+    const intelRows=arr(d?.intel?.career);
+    if(intelRows.length)return intelRows;
+    const preRows=arr(d?.preScout?.career_snapshot?.league_history);
+    if(preRows.length)return preRows;
+    const externalRows=arr(latest(d?.external)?.raw_payload?.career);
+    if(externalRows.length)return externalRows;
+    return arr(d?.history).map(h=>({
+      season:h.season,league:h.league,team:h.team_name,pos:h.position,
+      gp:h.games_played,g:h.goals,a:h.assists,pts:h.points,ppg:h.ppg,plus_minus:h.plus_minus,
+      ...(h.stats||{})
+    }));
+  }
+
+  function marketModel(d){
+    const x=d?.intel||{},ps=d?.preScout||{},ext=latest(d?.external),raw=ext?.raw_payload||{},pm=ps?.market_snapshot||{};
+    return {
+      fair:num(x.fair_value_m,raw.fair_value_m,raw.fair_value,pm.fair_value_m,pm.fair_value),
+      likely:num(x.likely_price_m,raw.likely_price_m,raw.expected_market_m,pm.likely_price_m,pm.expected_market_m),
+      walk:num(x.walk_above_m,raw.walk_above_m,raw.walk_m,pm.walk_above_m,pm.walk_m)
+    };
+  }
+
   function radar(spokes){
     const items=arr(spokes).map(s=>({label:first(s.label,s.name),value:Math.max(0,Math.min(100,num(s.value,s.score,s.fill!=null?Number(s.fill)*100:null)||0))})).filter(x=>x.label).slice(0,7);
     if(items.length<3)return '<div class="hsd-empty">No style radar imported yet.</div>';
@@ -84,14 +107,12 @@
   }
 
   function scoutAnswer(d,question){
-    const p=d.pool.scouting_players||{},x=d.intel||{},ext=latest(d.external),own=latest(d.reports),raw=ext?.raw_payload||{};
-    const role=first(d.pool.projected_role,x.role_chip,x.role_band,raw.meta);
-    const read=first(ext?.summary,raw.summary,x.onice_read,arr(x.notes)[0],own?.notes);
+    const p=d.pool.scouting_players||{},x=d.intel||{},ps=d.preScout||{},ext=latest(d.external),own=latest(d.reports),raw=ext?.raw_payload||{};
+    const role=first(d.pool.projected_role,x.role_chip,x.role_band,raw.meta,ps.archetype);
+    const read=first(ext?.summary,raw.summary,x.onice_read,arr(x.notes)[0],ps.summary,own?.notes);
     const bottom=first(ext?.recommendation,raw.bottom_line,own?.recommendation);
-    const fair=num(x.fair_value_m,raw.fair_value_m,raw.fair_value);
-    const likely=num(x.likely_price_m,raw.likely_price_m);
-    const walk=num(x.walk_above_m,raw.walk_above_m);
-    const career=arr(x.career),last=career[0]||{};
+    const model=marketModel(d),fair=model.fair,likely=model.likely,walk=model.walk;
+    const career=dossierCareer(d),last=career[0]||{};
     const strengths=first(own?.strengths,ext?.strengths);
     const concerns=first(own?.concerns,ext?.concerns,arr(x.risks));
     const parts=[];
@@ -113,38 +134,38 @@
       .eq('team_id',TEAM_ID).eq('id',poolId).single();
     if(pool.error)throw pool.error;
     const pid=pool.data.scouting_player_id;
-    const [intel,reports,external,bid]=await Promise.all([
+    const [intel,reports,external,bid,preScout,history]=await Promise.all([
       db().from('team_chelscout_intel').select('*').eq('team_id',TEAM_ID).eq('scouting_player_id',pid).order('imported_at',{ascending:false}).limit(1),
       db().from('team_scouting_reports').select('*').eq('team_id',TEAM_ID).eq('scouting_player_id',pid).order('created_at',{ascending:false}),
       db().from('team_external_scouting_reports').select('*').eq('team_id',TEAM_ID).eq('scouting_player_id',pid).order('imported_at',{ascending:false}),
-      db().from('team_bid_board').select('*').eq('team_id',TEAM_ID).eq('scouting_player_id',pid).limit(1)
+      db().from('team_bid_board').select('*').eq('team_id',TEAM_ID).eq('scouting_player_id',pid).limit(1),
+      db().from('team_pre_scout_reports').select('*').eq('team_id',TEAM_ID).eq('scouting_player_id',pid).maybeSingle(),
+      db().from('team_player_league_history').select('*').eq('team_id',TEAM_ID).eq('scouting_player_id',pid).order('season',{ascending:false})
     ]);
-    const err=[intel,reports,external,bid].find(x=>x.error)?.error;if(err)throw err;
-    return {pool:pool.data,intel:intel.data?.[0]||null,reports:reports.data||[],external:external.data||[],bid:bid.data?.[0]||null};
+    const err=[intel,reports,external,bid,preScout,history].find(x=>x.error)?.error;if(err)throw err;
+    return {pool:pool.data,intel:intel.data?.[0]||null,reports:reports.data||[],external:external.data||[],bid:bid.data?.[0]||null,preScout:preScout.data||null,history:history.data||[]};
   }
 
   function build(d){
-    const p=d.pool.scouting_players||{},x=d.intel||{},raw=x.raw_payload||{},ext=latest(d.external),own=latest(d.reports);
+    const p=d.pool.scouting_players||{},x=d.intel||{},ps=d.preScout||{},raw=x.raw_payload||{},ext=latest(d.external),own=latest(d.reports);
     const rawReport=ext?.raw_payload||{};
-    const confidence=first(x.confidence,x.reliability,rawReport.confidence,raw.confidence);
-    const role=first(d.pool.projected_role,x.role_chip,x.role_band,rawReport.meta,raw.role?.chip,raw.role?.band);
+    const confidence=first(x.confidence,x.reliability,rawReport.confidence,raw.confidence,ps.confidence);
+    const role=first(d.pool.projected_role,x.role_chip,x.role_band,rawReport.meta,raw.role?.chip,raw.role?.band,ps.archetype);
     const pos=first(p.primary_position,x.played_position,x.signed_position,rawReport.position);
-    const fair=num(x.fair_value_m,rawReport.fair_value_m,rawReport.fair_value,raw.fv_by_league_x?.['39']?.fair_value_M);
-    const likely=num(x.likely_price_m,rawReport.likely_price_m,raw.price?.likely_M);
-    const walk=num(x.walk_above_m,rawReport.walk_above_m,raw.fv_by_league_x?.['39']?.zones?.walk_above_M);
-    const read=first(ext?.summary,rawReport.summary,x.onice_read,arr(x.notes)[0],own?.notes);
+    const model=marketModel(d),fair=model.fair,likely=model.likely,walk=model.walk;
+    const read=first(ext?.summary,rawReport.summary,x.onice_read,arr(x.notes)[0],ps.summary,own?.notes);
     const bottom=first(ext?.recommendation,rawReport.bottom_line,own?.recommendation);
-    const narrative=first(rawReport.narrative,ext?.summary,own?.notes);
-    const last=arr(x.career)[0]||{};
+    const narrative=first(rawReport.narrative,ext?.summary,ps.summary,own?.notes);
+    const career=dossierCareer(d),last=career[0]||{};
     const onice=first(x.onice_read,raw.onice?.read);
     const poolRank=x.pool_rank!=null?x.pool_rank:null,poolN=x.pool_n!=null?x.pool_n:null;
     const names=arr(raw.name_history).map(v=>typeof v==='string'?v:v.name).filter(Boolean);
     const spokes=arr(x.dna?.spokes).length?x.dna.spokes:arr(raw.dna?.spokes);
-    const reportCount=d.reports.length+d.external.length;
+    const reportCount=d.reports.length+d.external.length+(d.preScout?1:0);
     const scoutSummary=scoutAnswer(d,'Give me an honest scouting report');
     const comps=arr(x.comparables).length?x.comparables:arr(raw.comparables);
     const compHtml=comps.slice(0,8).map(v=>{const label=typeof v==='string'?v:first(v.name,v.player,v.gamertag,v.label);return label?`<span>${esc(label)}</span>`:'';}).join('');
-    const careerGp=arr(x.career).reduce((t,r)=>t+(Number(r.gp)||0),0);
+    const careerGp=career.reduce((t,r)=>t+(Number(r.gp??r.games_played)||0),0);
     return `
       <header class="hsd-head">
         <div><h2>${esc(p.gamertag||x.player_name||'Player')}</h2><div class="hsd-badges">${confidence?`<span class="confidence">${esc(confidence.toUpperCase())}</span>`:''}${pos?`<span>${esc(pos)}</span>`:''}${role?`<span class="role">${esc(role)}</span>`:''}<span>${reportCount} report${reportCount===1?'':'s'}</span></div></div>
@@ -196,7 +217,7 @@
 
       ${compHtml?`<section class="hsd-section"><h3>PLAYS LIKE</h3><div class="hsd-comparables">${compHtml}</div></section>`:''}
 
-      <section class="hsd-section"><h3>CAREER</h3>${careerTable(x.career)}</section>
+      <section class="hsd-section"><h3>CAREER</h3>${careerTable(career)}</section>
 
       <section class="hsd-section"><h3>KNOWN NAMES</h3>
         <div class="hsd-names">${(names.length?names:[p.gamertag]).map(n=>`<span>${esc(n)}</span>`).join('')}</div>
