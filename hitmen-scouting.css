@@ -49,3 +49,57 @@ body.hs-dossier-open{overflow:hidden}
 .hsd-brandline{font-size:10px;font-weight:900;letter-spacing:.13em;color:#e9c35f}.hsd-long-read p{font-size:17px;line-height:1.8;color:#e2e4e9;white-space:pre-line}
 .hsd-empty{padding:14px;border:1px dashed rgba(255,255,255,.12);border-radius:12px;color:#7e8794}.hsd-loading,.hsd-error{padding:50px 28px}.hsd-error h3{font-size:24px}.hsd-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 22px 28px;color:#777f8d;font-size:11px}.hsd-footer button{margin:0;background:#1a2230;border:1px solid rgba(255,255,255,.1)}
 @media(max-width:640px){.hs-dossier{width:100vw}.hsd-head{padding:20px 20px 16px}.hsd-head h2{font-size:34px}.hsd-actions{padding:16px 18px 8px;grid-template-columns:1.35fr 1fr}.hsd-actions button:last-child{grid-column:1/-1}.hsd-note{margin:8px 18px 20px}.hsd-read,.hsd-section,.hsd-value-grid{margin-left:14px;margin-right:14px}.hsd-value-grid strong{font-size:32px}.hsd-facts>div,.hsd-rank-row{grid-template-columns:115px 1fr}.hsd-footer{align-items:flex-start;flex-direction:column}.hsd-market>div{font-size:8px}}
+
+
+/* ChelScout-inspired Calgary scouting market */
+.hs-market-card{padding:0;overflow:hidden;background:
+  radial-gradient(circle at 92% 0,rgba(168,34,52,.20),transparent 30%),
+  linear-gradient(180deg,rgba(30,10,16,.98),rgba(7,7,11,.99));border-color:rgba(192,56,71,.28)}
+.hs-market-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding:18px 18px 10px}
+.hs-market-top h3{font-size:34px}.hs-market-top p{margin:6px 0 0;max-width:640px}
+.hs-market-live{padding:7px 10px;border-radius:999px;border:1px solid rgba(238,75,91,.32);background:rgba(153,34,50,.14);color:#ff9aa5;font-size:9px;font-weight:900;letter-spacing:.1em;white-space:nowrap}
+.hs-market-search{position:relative;margin:8px 14px 10px}.hs-market-search .hs-input{padding-left:38px;background:#201019;border-color:rgba(255,255,255,.10);min-height:46px}
+.hs-search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8b7f8b;font-size:20px;z-index:1}
+.hs-position-chips{display:flex;gap:7px;overflow:auto;padding:0 14px 10px;scrollbar-width:none}.hs-position-chips::-webkit-scrollbar{display:none}
+.hs-position-chips button,.hs-market-scopes button{appearance:none;border:1px solid rgba(255,255,255,.09);background:#171016;color:#b9abb6;border-radius:999px;padding:7px 10px;min-width:38px;font-size:10px;font-weight:900;cursor:pointer;white-space:nowrap}
+.hs-position-chips button.active,.hs-market-scopes button.active{background:#123d5d;border-color:#1d6b9f;color:#dff4ff}
+.hs-market-controls{display:flex;justify-content:space-between;gap:10px;padding:0 14px 10px}
+.hs-filter-menu{position:relative}.hs-filter-menu>summary{list-style:none;cursor:pointer;display:flex;align-items:center;min-height:38px;padding:0 14px;border:1px solid rgba(255,255,255,.09);border-radius:10px;background:#171016;color:#ddd4dc;font-weight:800;font-size:11px}.hs-filter-menu>summary::-webkit-details-marker{display:none}
+.hs-filter-menu[open]{z-index:6}.hs-filter-menu label{position:absolute;top:44px;left:0;min-width:190px;padding:11px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:#120d12;box-shadow:0 18px 50px rgba(0,0,0,.45)}.hs-filter-menu label span,.hs-sort-label span{display:block;margin-bottom:5px;color:#766e76;font-size:8px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.hs-sort-label{display:flex;align-items:center;gap:8px}.hs-sort-label span{margin:0}.hs-sort-label .hs-select{width:auto;min-width:180px;min-height:38px;padding:7px 9px;background:#171016}
+.hs-market-scopes{display:flex;gap:7px;overflow:auto;padding:9px 14px;border-top:1px solid rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.05);background:rgba(0,0,0,.16);scrollbar-width:none}.hs-market-scopes::-webkit-scrollbar{display:none}.hs-market-scopes button span{opacity:.72}
+.hs-market-reach{display:grid;grid-template-columns:auto auto 1fr;gap:9px;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.05);background:linear-gradient(90deg,rgba(116,31,45,.20),rgba(20,12,17,.22));font-size:10px}.hs-market-reach span{color:#b56b75;font-weight:900;letter-spacing:.1em}.hs-market-reach b{color:#e9dde0}.hs-market-reach small{color:#847984;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-player-market{display:grid;gap:8px;padding:10px 10px 2px}
+.hs-player-card{position:relative;padding:12px;border:1px solid rgba(255,255,255,.075);border-radius:13px;background:linear-gradient(180deg,rgba(38,17,25,.93),rgba(17,12,17,.98));cursor:pointer;transition:.16s ease}
+.hs-player-card:hover{border-color:rgba(224,69,87,.30);transform:translateY(-1px)}.hs-player-card:active{transform:scale(.995)}
+.hs-player-card-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"name pos price" "role role price";column-gap:8px;align-items:center}
+.hs-player-name{grid-area:name;appearance:none;border:0;background:none;color:#f7f3f5;text-align:left;padding:0;font-size:14px;font-weight:900;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hs-position-badge{grid-area:pos;justify-self:start;padding:3px 6px;border-radius:6px;background:rgba(129,39,54,.26);border:1px solid rgba(211,72,89,.20);color:#ffb3bd;font-size:9px;font-weight:900}
+.hs-player-role{grid-area:role;margin-top:2px;color:#897f88;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hs-player-price{grid-area:price;display:grid;text-align:right}.hs-player-price b{color:#e9d4a0;font:900 19px/1 "Barlow Condensed",sans-serif}.hs-player-price small{margin-top:3px;color:#7f767e;font-size:8px}
+.hs-player-subline,.hs-player-rankline{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;color:#8f848e;font-size:9px}.hs-player-subline span+span:before,.hs-player-rankline span+span:before{content:"·";margin-right:8px;color:#524a50}.hs-player-rankline b{color:#9e7b83;font-size:9px}
+.hs-card-market{margin-top:9px}.hs-market-labels{display:grid;grid-template-columns:repeat(7,1fr);gap:0;font-size:7px;font-weight:900;text-align:center;color:#a2a5a2}.hs-card-market-bar{position:relative;height:8px;margin-top:3px;border-radius:999px;background:linear-gradient(90deg,#1d8b58 0 14%,#2d9870 14% 28%,#4a927a 28% 42%,#8c8964 42% 56%,#ad7d4c 56% 70%,#b55e46 70% 84%,#9b3948 84% 100%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+.hs-card-market-bar i{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;transform:translate(-50%,-50%);background:#e4bf62;border:2px solid #2b2223;box-shadow:0 0 0 2px rgba(228,191,98,.15)}
+.hs-card-market-foot{display:flex;justify-content:space-between;margin-top:5px;font-size:8px}.hs-card-market-foot strong{color:#d8c082;letter-spacing:.06em}.hs-card-market-foot span{color:#746d73}
+.hs-player-actions{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}.hs-player-actions .hs-quick-actions{margin:0}
+.hs-market-paging{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 14px 14px}.hs-market-paging>div{display:flex;gap:7px}.hs-market-paging .hs-btn{min-height:34px;padding:0 10px}
+.hs-advanced-editor{margin-top:12px}.hs-advanced-editor>summary{cursor:pointer;font:900 17px/1 "Barlow Condensed",sans-serif;letter-spacing:.04em;text-transform:uppercase}.hs-advanced-inner{padding-top:16px}
+.hs-player-card.tier-steal,.hs-player-card.tier-strong{border-color:rgba(47,157,101,.22)}.hs-player-card.tier-walk,.hs-player-card.tier-over{border-color:rgba(190,74,73,.20)}
+
+.hsd-ask-btn{margin:0 8px 0 auto!important;min-width:54px;height:42px;border-radius:10px!important;border:1px solid rgba(222,72,87,.38)!important;background:rgba(116,31,45,.30)!important;color:#f1dce0!important;font-size:10px!important;font-weight:900!important;letter-spacing:.08em}
+.hsd-meta-strip{display:flex;flex-wrap:wrap;gap:7px;padding:0 24px 14px}.hsd-meta-strip span{padding:5px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.025);color:#9da4ae;font-size:9px;font-weight:800}
+.hsd-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 22px 22px}.hsd-kpi{padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(15,17,23,.42)}.hsd-kpi small{display:block;color:#76808e;font-size:9px;font-weight:900;letter-spacing:.07em}.hsd-kpi b{display:block;margin-top:5px;font:900 25px/1 "Barlow Condensed",sans-serif;color:#f0f1f5}
+.hsd-comparables{display:flex;flex-wrap:wrap;gap:8px}.hsd-comparables span{padding:8px 10px;border-radius:9px;border:1px solid rgba(75,130,202,.22);background:rgba(34,79,136,.13);color:#b8d6f5;font-size:11px;font-weight:800}
+.hsd-scout-chat{margin:0 22px 24px;border:1px solid rgba(220,67,84,.24);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,rgba(69,20,30,.24),rgba(12,14,19,.55))}.hsd-scout-chat-head{padding:13px 15px;border-bottom:1px solid rgba(255,255,255,.07);font-size:10px;font-weight:900;letter-spacing:.11em;color:#e1bd76}.hsd-scout-answer{padding:16px;color:#d7dbe2;line-height:1.65;white-space:pre-line}.hsd-ask-form{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px;border-top:1px solid rgba(255,255,255,.07)}.hsd-ask-form input{min-width:0;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:#111821;color:#fff;padding:11px 12px}.hsd-ask-form button{margin:0;min-width:45px;border-radius:10px;background:#d93f4d;border:0;color:#fff;font-weight:900}
+@media(max-width:640px){
+  .hs-market-top{padding:15px 13px 8px}.hs-market-top h3{font-size:31px}.hs-market-live{display:none}
+  .hs-market-search{margin-left:10px;margin-right:10px}.hs-position-chips,.hs-market-scopes{padding-left:10px;padding-right:10px}
+  .hs-market-controls{padding-left:10px;padding-right:10px}.hs-sort-label span{display:none}.hs-sort-label .hs-select{min-width:155px;max-width:48vw}
+  .hs-market-reach{grid-template-columns:auto 1fr;padding:9px 11px}.hs-market-reach small{grid-column:1/-1;white-space:normal}
+  .hs-player-market{padding:8px 7px 2px}.hs-player-card{padding:10px}.hs-player-card-head{grid-template-columns:minmax(0,1fr) auto auto}
+  .hs-player-name{font-size:13px}.hs-player-price b{font-size:18px}.hs-market-labels{font-size:6px}
+  .hs-player-actions{align-items:flex-end}.hs-quick-btn{font-size:7px;padding:4px 6px}
+  .hs-market-paging{align-items:flex-start;flex-direction:column}.hs-market-paging>div{width:100%}.hs-market-paging .hs-btn{flex:1}
+  .hsd-kpis{grid-template-columns:1fr 1fr;margin-left:14px;margin-right:14px}.hsd-kpi:last-child{grid-column:1/-1}.hsd-meta-strip{padding-left:18px;padding-right:18px}
+  .hsd-ask-form{grid-template-columns:1fr 44px}
+}
