@@ -18,7 +18,7 @@
     </div>
     <div id="hsStatus" class="hitmen-status">Loading Calgary scouting desk…</div>
     <div class="hs-kpis">
-      <div class="hs-kpi"><small>Players in Pool</small><strong id="hsScouted">0</strong></div>
+      <div class="hs-kpi"><small>ChelScout Focus</small><strong id="hsScouted">0</strong></div>
       <div class="hs-kpi"><small>Priority Targets</small><strong id="hsPriority">0</strong></div>
       <div class="hs-kpi"><small>Bid Targets</small><strong id="hsBids">0</strong></div>
       <div class="hs-kpi"><small>Reports Logged</small><strong id="hsReports">0</strong></div>
@@ -86,13 +86,14 @@
         </div>
 
         <div class="hs-market-scopes">
-          <button class="active" type="button" data-hs-scope="experienced">Recent Experience <span id="hsScopeExperienced">0</span></button>
-          <button type="button" data-hs-scope="bidable">All Bidable <span id="hsScopeBidable">0</span></button>
+          <button class="active" type="button" data-hs-scope="focus">ChelScout Focus <span id="hsScopeFocus">0</span></button>
+          <button type="button" data-hs-scope="experienced">Recent Experience <span id="hsScopeExperienced">0</span></button>
+          <button type="button" data-hs-scope="bidable">Confirmed Bidable <span id="hsScopeBidable">0</span></button>
           <button type="button" data-hs-scope="everyone">Everyone <span id="hsScopeEveryone">0</span></button>
           <button type="button" data-hs-scope="bargains">Bargains <span id="hsScopeBargains">0</span></button>
           <button type="button" data-hs-scope="snake">Snake list <span id="hsScopeSnake">0</span></button>
         </div>
-        <div class="hs-pool-key"><b>Recent Experience:</b> only current S55 Calgary-pool players with documented S53 or S54 CHL, NCAA, or ECHL history. Pre-scout reports generate automatically as history is imported.</div>
+        <div class="hs-pool-key"><b>ChelScout Focus:</b> the current filtered S55 market imported from ChelScout. Historical Calgary records stay underneath, but this is the working scouting universe. <b>Confirmed Bidable</b> is reserved for a full live bid-board sync.</div>
 
         <div class="hs-market-reach"><span>REACH</span><b>Could still be here</b><small>Price, role and Calgary fit are blended from your saved team plan plus imported scouting intelligence.</small></div>
 
