@@ -1,4 +1,21 @@
 (() => {
+  function ensurePresentationLayer(){
+    document.body?.classList.add('wm-ds');
+    if(!document.querySelector('link[href="network-v2.css"]')){
+      const link=document.createElement('link');
+      link.rel='stylesheet';
+      link.href='network-v2.css';
+      document.head.appendChild(link);
+    }
+    if(!document.querySelector('script[src="ui-polish.js"]')){
+      const s=document.createElement('script');
+      s.src='ui-polish.js';
+      s.async=false;
+      document.head.appendChild(s);
+    }
+  }
+  ensurePresentationLayer();
+
   const managementRoles = new Set(["owner", "gm", "agm"]);
   const HITMEN_TEAM_ID = "b0bcbdda-da9d-419d-8f61-b34937966d49";
 
@@ -8,7 +25,7 @@
     if (profileRole === "admin" || profileRole === "commissioner") return true;
 
     const page = (location.pathname.split("/").pop() || "").toLowerCase();
-    const hitmenPage = ["hitmen","hitmen-workspace.html","hitmen-locker-room.html","hitmen-battle-plan.html","hitmen-card-vault.html"].includes(page);
+    const hitmenPage = ["hitmen","hitmen-workspace.html","hitmen-management.html","hitmen-locker-room.html","hitmen-battle-plan.html","hitmen-card-vault.html"].includes(page);
 
     return (state.memberships || []).some((membership) => {
       const role = String(membership.role || "").toLowerCase();
@@ -23,7 +40,7 @@
     const lockedMessage = document.getElementById("managementLockedMessage");
     const accessStatus = document.getElementById("managementAccessStatus");
     const page = (location.pathname.split("/").pop() || "").toLowerCase();
-    const hitmenPage = ["hitmen","hitmen-workspace.html","hitmen-locker-room.html","hitmen-battle-plan.html","hitmen-card-vault.html"].includes(page);
+    const hitmenPage = ["hitmen","hitmen-workspace.html","hitmen-management.html","hitmen-locker-room.html","hitmen-battle-plan.html","hitmen-card-vault.html"].includes(page);
 
     protectedSections.forEach((section) => {
       section.hidden = !allowed;
