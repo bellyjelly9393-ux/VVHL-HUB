@@ -73,11 +73,14 @@ function renderAccountPanel() {
   const panel = document.getElementById("accountPanel");
   if (!panel) return;
   if (!backendState.user) {
-    panel.innerHTML = `<div><div class="eyebrow">SECURE WILDMAN ACCESS</div><h3>Management Sign In</h3><p>Sign in to access Wildman Hockey and Wildman Academy management tools.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email"><input id="authPassword" class="field" type="password" placeholder="Password"><button id="signIn" class="small-btn primary" type="button">Sign In</button><button id="magicLink" class="small-btn" type="button">Email Me a Sign-In Link</button><button id="signUp" class="small-btn" type="button">Create Account</button><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`;
-    document.getElementById("signIn").onclick = () => authenticate("signin");
-    document.getElementById("magicLink").onclick = sendMagicLink;
-    document.getElementById("signUp").onclick = () => authenticate("signup");
-    document.getElementById("resetPassword").onclick = resetPassword;
+    const signupPage = document.body.classList.contains("signup-page");
+    panel.innerHTML = signupPage
+      ? `<div><div class="eyebrow">JOIN THE WILDMAN NETWORK</div><h3>Create Your Account</h3><p>Create one Wildman account for tournaments, Academy access, player tools and any management permissions you are assigned later.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email" autocomplete="email"><input id="authPassword" class="field" type="password" placeholder="Password · 6+ characters" autocomplete="new-password"><button id="signUp" class="small-btn primary" type="button">Create Account</button><button id="signIn" class="small-btn" type="button">Already Have an Account? Sign In</button><button id="magicLink" class="small-btn" type="button">Email Me a Sign-In Link</button><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`
+      : `<div><div class="eyebrow">SECURE WILDMAN ACCESS</div><h3>Management Sign In</h3><p>Sign in to access any Wildman Hockey, Calgary Hitmen or tournament-management tools assigned to your account.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email" autocomplete="email"><input id="authPassword" class="field" type="password" placeholder="Password" autocomplete="current-password"><button id="signIn" class="small-btn primary" type="button">Sign In</button><button id="magicLink" class="small-btn" type="button">Email Me a Sign-In Link</button><a class="small-btn" href="signup.html">Create Account</a><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`;
+    document.getElementById("signIn")?.addEventListener("click", () => authenticate("signin"));
+    document.getElementById("magicLink")?.addEventListener("click", sendMagicLink);
+    document.getElementById("signUp")?.addEventListener("click", () => authenticate("signup"));
+    document.getElementById("resetPassword")?.addEventListener("click", resetPassword);
     return;
   }
   const allowed =
