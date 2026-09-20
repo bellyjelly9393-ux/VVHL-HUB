@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#070303">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="Private Calgary Hitmen GM MVP AI decision assistant.">
+  <title>GM MVP AI | Calgary Hitmen</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="wildman.css">
+  <link rel="stylesheet" href="management.css">
+  <link rel="stylesheet" href="hitmen-war-tools.css">
+  <link rel="stylesheet" href="hitmen-gm-ai.css">
+  <link rel="stylesheet" href="network-v2.css?v=20260920a">
+</head>
+<body class="wildman-site management-protected hitmen-tool-page wm-theme-hitmen">
+<header class="site-header hitmen-private-header">
+  <a class="brand" href="hitmen-workspace.html"><span class="wm-brand-mark">H</span><span class="brand-copy wm-brand-copy">CALGARY HITMEN<br><b>LGCHL SEASON 55</b></span></a>
+  <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <nav class="main-nav">
+    <a href="hitmen-workspace.html">War Room</a>
+    <a href="hitmen-management.html?tab=pool">Scouting</a>
+    <a href="hitmen-management.html?tab=bids">Target Board</a>
+    <a class="active-nav" href="hitmen-gm-ai.html">GM MVP AI</a>
+    <a href="hitmen-locker-room.html">Locker Room</a>
+    <a href="vod-lab.html?team=calgary-hitmen">Film Room</a>
+    <a href="hitmen-battle-plan.html">Battle Plan</a>
+  </nav>
+  <a class="hm-private-pill" href="admin.html">Private Admin</a>
+</header>
+
+<main>
+  <section class="section-shell section-block management-login-shell">
+    <div class="section-heading">
+      <div><div class="eyebrow">PRIVATE · CALGARY HOCKEY OPERATIONS</div><h2>GM MVP AI ACCESS</h2></div>
+      <div id="managementAccessStatus" class="status-pill">PRIVATE · MANAGEMENT ONLY</div>
+    </div>
+    <section id="accountPanel" class="panel account-panel"><div><div class="eyebrow">SECURE ACCESS</div><h3>Loading account…</h3></div></section>
+    <div id="managementLockedMessage" class="wm-card" style="margin-top:16px"><b>Calgary Hitmen access required.</b><p>This tool is restricted to Wildman Admin or active Calgary Hitmen Owner, GM and AGM accounts.</p></div>
+  </section>
+
+  <div data-management-content hidden>
+    <section class="gm-ai-hero">
+      <div class="gm-ai-hero-copy">
+        <div class="eyebrow">DATABASE-FIRST DECISION ENGINE</div>
+        <h1>GM MVP <span>AI.</span></h1>
+        <p>Ask roster, target, value and position questions against the Wildman Player Intelligence database before making a management decision.</p>
+        <div class="gm-ai-hero-meta">
+          <span>CALGARY HITMEN</span><b>SEASON 55</b><span>PRIVATE</span>
+        </div>
+      </div>
+      <div class="gm-ai-screen" aria-hidden="true">
+        <div class="gm-ai-screen-head"><span>WAR ROOM QUERY</span><b>ONLINE</b></div>
+        <div class="gm-ai-radar"></div>
+        <div class="gm-ai-screen-lines"><i></i><i></i><i></i><i></i></div>
+      </div>
+    </section>
+
+    <section class="section-shell gm-ai-shell">
+      <div class="gm-ai-grid">
+        <section class="panel gm-ai-console">
+          <div class="section-heading">
+            <div><div class="eyebrow">ASK THE WAR ROOM</div><h2>GM DECISION ASSISTANT</h2></div>
+            <div id="gmAiStatus" class="status-pill">READY</div>
+          </div>
+          <p class="section-note">This MVP searches permanent player identities, Calgary valuation snapshots and fit data first. It does not invent stats that are not in the database.</p>
+
+          <div class="gm-ai-prompt-row">
+            <textarea id="gmAiQuestion" class="text-input" rows="3" placeholder="Example: Show me the best RD under $5M for Calgary"></textarea>
+            <button id="gmAiAsk" class="small-btn primary" type="button">Ask GM MVP AI</button>
+          </div>
+
+          <div class="gm-ai-examples">
+            <button type="button" data-gm-example="Show me the best RD under $5M">Best RD under $5M</button>
+            <button type="button" data-gm-example="Show me C targets under $4M">Centers under $4M</button>
+            <button type="button" data-gm-example="Show me the best LD targets">Best LD targets</button>
+            <button type="button" data-gm-example="Show me goalies under $3M">Goalies under $3M</button>
+          </div>
+
+          <div id="gmAiAnswer" class="gm-ai-answer">
+            <div class="eyebrow">GM MVP AI</div>
+            <h3>READY FOR A QUESTION.</h3>
+            <p>Use natural language. The current MVP understands position and budget filters and ranks results using the Wildman valuation/fit data already attached to Calgary.</p>
+          </div>
+        </section>
+
+        <aside class="panel gm-ai-side">
+          <div class="eyebrow">DECISION INPUTS</div>
+          <h3>WHAT IT CHECKS</h3>
+          <div class="gm-ai-check"><span>01</span><div><b>Player Intelligence</b><small>Permanent Wildman player identity and position.</small></div></div>
+          <div class="gm-ai-check"><span>02</span><div><b>Calgary Valuation</b><small>Expected market, fair value and walk price.</small></div></div>
+          <div class="gm-ai-check"><span>03</span><div><b>Team Fit</b><small>Calgary fit and performance scores when available.</small></div></div>
+          <div class="gm-ai-check"><span>04</span><div><b>Management Evidence</b><small>Designed to sit beside scouting reports, VOD and chemistry evidence.</small></div></div>
+          <div class="gm-ai-links">
+            <a href="hitmen-management.html?tab=pool">Open Scouting Pool →</a>
+            <a href="hitmen-management.html?tab=bids">Open Target Board →</a>
+            <a href="hitmen-workspace.html">Back to War Room →</a>
+          </div>
+        </aside>
+      </div>
+
+      <section class="panel gm-ai-results-panel">
+        <div class="section-heading">
+          <div><div class="eyebrow">DATABASE MATCHES</div><h2>SHORTLIST</h2></div>
+          <div id="gmAiCount" class="status-pill">0 MATCHES</div>
+        </div>
+        <div id="gmAiResults" class="gm-ai-results"><div class="empty-state">Ask a roster question to build a Calgary shortlist.</div></div>
+      </section>
+    </section>
+  </div>
+</main>
+
+<footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN · GM MVP AI</b><span>Private · Database First · Human Decision</span></div><p>LGCHL Season 55</p></div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js"></script>
+<script src="management-guard.js"></script>
+<script src="wildman-player-intelligence.js"></script>
+<script src="script.js"></script>
+<script src="hitmen-gm-ai.js"></script>
+</body>
+</html>
