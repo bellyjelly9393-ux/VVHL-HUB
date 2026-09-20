@@ -2,6 +2,7 @@
   const TEAM_ID='b0bcbdda-da9d-419d-8f61-b34937966d49';
   const db=()=>window.VVHLBackend?.db;
   const state=()=>window.VVHLBackend?.state||{};
+  const intelligence=()=>window.WildmanPlayerIntelligence;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const moneyM=v=>v==null||v===''?'—':'$'+Number(v).toFixed(Number(v)<10?2:1).replace(/\.00$/,'')+'M';
   const money=v=>v==null||v===''?'—':'$'+Number(v).toLocaleString();
@@ -41,7 +42,28 @@
     return null;
   }
 
+  function normalizedValuation(d){
+    return arr(d?.normalized?.valuations)[0]||null;
+  }
+  function valuationSummary(d){
+    const v=normalizedValuation(d);
+    if(!v)return '';
+    return [v.model_version, v.source_kind, v.source_confidence].filter(Boolean).join(' · ');
+  }
+  function vodEvidenceHtml(d){
+    const rows=arr(d?.normalized?.vod).slice(0,12);
+    if(!rows.length)return '<div class="hsd-empty">No player-linked VOD observations yet. Film evidence will appear here as scouting reviews attach to the permanent player ID.</div>';
+    return '<div class="hsd-report-stack">'+rows.map(r=>'<article class="hsd-report"><div class="hsd-report-top"><span>VOD · '+esc(String(r.category||'observation').replaceAll('_',' ').toUpperCase())+'</span><small>'+esc(r.created_at?new Date(r.created_at).toLocaleDateString():'')+'</small></div><p>'+esc(r.observation||'')+'</p><p><b>Confidence:</b> '+esc(r.confidence||'preliminary')+(r.sentiment?' · '+esc(r.sentiment):'')+'</p></article>').join('')+'</div>';
+  }
+  function chemistryHtml(d){
+    const rows=arr(d?.normalized?.chemistry).slice(0,8);
+    if(!rows.length)return '<div class="hsd-empty">No saved chemistry pair yet. Wildman Chemistry v1 is ready to score role compatibility immediately; historical teammate and VOD evidence will increase the evidence count as it arrives.</div>';
+    return '<div class="hsd-table-wrap"><table class="hsd-table"><thead><tr><th>Pair</th><th>Overall</th><th>Role</th><th>History</th><th>VOD</th><th>Evidence</th></tr></thead><tbody>'+rows.map(r=>'<tr><td>'+esc(r.pair_key||'pair')+'</td><td>'+esc(r.overall_score??'—')+'</td><td>'+esc(r.role_compatibility??'—')+'</td><td>'+esc(r.teammate_history_score??'—')+'</td><td>'+esc(r.vod_tendency_score??'—')+'</td><td>'+esc(r.evidence_count??0)+'</td></tr>').join('')+'</tbody></table></div>';
+  }
+
   function dossierCareer(d){
+    const normalizedRows=arr(d?.normalized?.seasons).map(r=>({season:r.season,league:r.league,team:r.team_name,pos:r.position,gp:r.games_played,g:r.goals,a:r.assists,pts:r.points,ppg:r.ppg,plus_minus:r.plus_minus,data_class:r.data_class,evidence_confidence:r.evidence_confidence}));
+    if(normalizedRows.length)return normalizedRows;
     const intelRows=arr(d?.intel?.career);
     if(intelRows.length)return intelRows;
     const preRows=arr(d?.preScout?.career_snapshot?.league_history);
@@ -143,11 +165,12 @@
       db().from('team_player_league_history').select('*').eq('team_id',TEAM_ID).eq('scouting_player_id',pid).order('season',{ascending:false})
     ]);
     const err=[intel,reports,external,bid,preScout,history].find(x=>x.error)?.error;if(err)throw err;
-    return {pool:pool.data,intel:intel.data?.[0]||null,reports:reports.data||[],external:external.data||[],bid:bid.data?.[0]||null,preScout:preScout.data||null,history:history.data||[]};
+    const normalized=intelligence()?.contextForScoutingPlayer ? await intelligence().contextForScoutingPlayer(pid,TEAM_ID) : null;
+    return {pool:pool.data,intel:intel.data?.[0]||null,reports:reports.data||[],external:external.data||[],bid:bid.data?.[0]||null,preScout:preScout.data||null,history:history.data||[],normalized};
   }
 
   function build(d){
-    const p=d.pool.scouting_players||{},x=d.intel||{},ps=d.preScout||{},raw=x.raw_payload||{},ext=latest(d.external),own=latest(d.reports);
+    const p=d.pool.scouting_players||{},x=d.intel||{},ps=d.preScout||{},raw=x.raw_payload||{},ext=latest(d.external),own=latest(d.reports),ni=d.normalized||{},profile=ni.profile||{},normVal=normalizedValuation(d);
     const rawReport=ext?.raw_payload||{};
     const confidence=first(x.confidence,x.reliability,rawReport.confidence,raw.confidence,ps.confidence);
     const role=first(d.pool.projected_role,x.role_chip,x.role_band,rawReport.meta,raw.role?.chip,raw.role?.band,ps.archetype);
@@ -174,7 +197,7 @@
         <button class="hsd-close" data-hsd-close type="button">×</button>
       </header>
 
-      <div class="hsd-meta-strip"><span>CHL · S55</span><span>${careerGp||'—'} career GP</span><span>${esc(p.platform||'platform unconfirmed')}</span><span>${esc(d.pool.status||'unscouted')}</span></div>
+      <div class="hsd-meta-strip"><span>${esc(profile.public_id||'WPI pending')}</span><span>CHL · S55</span><span>${careerGp||'—'} career GP</span><span>${esc(p.platform||profile.platform||'platform unconfirmed')}</span><span>${esc(d.pool.status||'unscouted')}</span><span>${esc(profile.identity_confidence?profile.identity_confidence+' identity':'legacy identity')}</span></div>
 
       <div class="hsd-actions">
         <button data-hsd-status="watch" type="button">＋ Add to Plan</button>
@@ -192,6 +215,14 @@
       <section class="hsd-value-grid">
         <div><small>WILDMAN / SCOUT VALUE</small><strong>${moneyM(fair)}</strong><span>${d.pool.target_bid!=null?'Calgary target '+money(d.pool.target_bid):'target not set'}</span></div>
         <div><small>LIKELY PRICE</small><strong>${moneyM(likely)}</strong><span>${d.pool.max_bid!=null?'Calgary max '+money(d.pool.max_bid):walk!=null?'walk above '+moneyM(walk):'ceiling not set'}</span></div>
+      </section>
+
+      <section class="hsd-section">
+        <div class="hsd-brandline">WILDMAN VALUATION ENGINE</div>
+        <h3>VALUE PROVENANCE</h3>
+        ${normVal?`<div class="hsd-value-grid" style="margin:0"><div><small>FAIR VALUE</small><strong>${money(normVal.fair_value)}</strong><span>${esc(valuationSummary(d))}</span></div><div><small>EXPECTED MARKET</small><strong>${money(normVal.expected_market)}</strong><span>Band ${money(normVal.market_low)} – ${money(normVal.market_high)} · Walk ${money(normVal.walk_price)}</span></div></div><p style="margin-top:14px;color:#aab1bc"><b>Formula/source:</b> ${esc(normVal.explanation?.formula||normVal.explanation?.note||'Source-labeled valuation snapshot.')}</p>`:'<div class="hsd-empty">No normalized valuation snapshot yet.</div>'}
+        <div class="hsd-actions" style="padding:14px 0 0"><button id="hsdRevalue" type="button">Recalculate Wildman v1</button></div>
+        <small id="hsdRevalueStatus"></small>
       </section>
 
       <section class="hsd-section">${marketBand(fair,likely,walk)}</section>
@@ -228,9 +259,17 @@
         <div class="hsd-report-stack">${d.external.map(r=>reportCard(r,'CHELSCOUT')).join('')}${d.reports.map(r=>reportCard(r,'CALGARY MANAGEMENT')).join('')||'<div class="hsd-empty">No reports saved yet.</div>'}</div>
       </section>
 
+      <section class="hsd-section"><h3>CHEMISTRY ENGINE</h3>
+        ${chemistryHtml(d)}
+      </section>
+
+      <section class="hsd-section"><h3>VOD EVIDENCE</h3>
+        ${vodEvidenceHtml(d)}
+      </section>
+
       ${narrative?`<section class="hsd-section hsd-long-read"><div class="hsd-brandline">WILDMAN INTELLIGENCE</div><h3>FULL SCOUTING READ</h3><p>${esc(narrative)}</p></section>`:''}
 
-      <section id="hsdScoutChat" class="hsd-scout-chat"><div class="hsd-scout-chat-head">WILDMAN SCOUT · ASK ABOUT ${esc(p.gamertag||x.player_name||'PLAYER')}</div><div id="hsdScoutAnswer" class="hsd-scout-answer">${esc(scoutSummary)}</div><form id="hsdAskForm" class="hsd-ask-form"><input id="hsdAskInput" placeholder="Ask about fit, price, role, risk…"><button type="submit">↑</button></form></section>
+      <section id="hsdScoutChat" class="hsd-scout-chat"><div class="hsd-scout-chat-head">WILDMAN GM ASK · DATABASE FIRST · ${esc(p.gamertag||x.player_name||'PLAYER')}</div><div id="hsdScoutAnswer" class="hsd-scout-answer">${esc(scoutSummary)}</div><form id="hsdAskForm" class="hsd-ask-form"><input id="hsdAskInput" placeholder="Ask about fit, price, role, risk, or alternatives…"><button type="submit">↑</button></form></section>
 
       <footer class="hsd-footer"><button data-hsd-close type="button">Close Dossier</button><span>Private Calgary Hitmen management workspace</span></footer>
     `;
@@ -277,11 +316,32 @@
     document.querySelectorAll('[data-hsd-status]').forEach(b=>b.addEventListener('click',()=>setStatus(b.dataset.hsdStatus)));
     document.getElementById('hsdNote')?.addEventListener('input',saveNote);
     document.querySelector('[data-hsd-jump-ask]')?.addEventListener('click',()=>document.getElementById('hsdScoutChat')?.scrollIntoView({behavior:'smooth',block:'center'}));
-    document.getElementById('hsdAskForm')?.addEventListener('submit',e=>{
+    document.getElementById('hsdRevalue')?.addEventListener('click',async()=>{
+      if(!current||!intelligence()?.saveValuationV1)return;
+      const s=document.getElementById('hsdRevalueStatus');if(s)s.textContent='Calculating from normalized player history…';
+      try{
+        await intelligence().saveValuationV1({teamId:TEAM_ID,scoutingPlayerId:current.pool.scouting_player_id,fitGrade:current.pool.fit_grade,season:55});
+        current=await fetchData(current.pool.id);show(build(current));
+      }catch(err){if(s)s.textContent=err.message||'Could not calculate valuation.';}
+    });
+    document.getElementById('hsdAskForm')?.addEventListener('submit',async e=>{
       e.preventDefault();
       const input=document.getElementById('hsdAskInput'),answer=document.getElementById('hsdScoutAnswer');
       if(!current||!answer)return;
-      answer.textContent=scoutAnswer(current,input?.value||'Give me an honest scouting report');
+      const question=input?.value||'Give me an honest scouting report';
+      answer.textContent='Searching Wildman player intelligence, valuations and Calgary calculations…';
+      try{
+        const search=intelligence()?.databaseFirstPlayerSearch?await intelligence().databaseFirstPlayerSearch(question,{teamId:TEAM_ID,limit:8}):null;
+        const base=scoutAnswer(current,question);
+        const alternatives=search?.results?.filter(x=>x.profile?.id!==current.normalized?.profile?.id).slice(0,5)||[];
+        const recognized=[];
+        if(search?.recognized?.position)recognized.push('position '+search.recognized.position);
+        if(search?.recognized?.budget)recognized.push('budget '+money(search.recognized.budget));
+        const extra=alternatives.length?' Database match'+(recognized.length?' ('+recognized.join(', ')+')':'')+': '+alternatives.map(x=>x.profile.canonical_gamertag+(x.valuation?.expected_market!=null?' '+money(x.valuation.expected_market):'')).join(' · ')+'.':'';
+        answer.textContent=base+extra;
+      }catch(err){
+        answer.textContent=scoutAnswer(current,question)+' Database search note: '+(err.message||'search unavailable');
+      }
       if(input)input.value='';
     });
     document.addEventListener('keydown',escKey);
