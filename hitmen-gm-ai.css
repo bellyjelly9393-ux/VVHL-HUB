@@ -41,3 +41,5 @@
 .gm-import-status{margin-top:10px;font-size:.82rem;color:#a99b9e}
 .gm-import-status.success{color:#9ed8aa}.gm-import-status.error{color:#ff9aa2}
 .gm-source-note code{color:#f3c7cc}
+
+.gm-import-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
