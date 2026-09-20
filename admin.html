@@ -67,6 +67,19 @@
           <div class="wm-stat"><div class="eyebrow">TOURNAMENT OPS</div><strong>READY</strong><span>Schedules, streams and results.</span></div>
           <div class="wm-stat"><div class="eyebrow">NETWORK</div><strong>ONLINE</strong><span>Wildman public ecosystem.</span></div>
         </div>
+        <section class="panel" style="margin-top:18px">
+          <div class="section-heading">
+            <div><div class="eyebrow">VIDEO INFRASTRUCTURE</div><h2>MUX CONNECTION</h2></div>
+            <div id="muxConnectionBadge" class="status-pill">CHECKING</div>
+          </div>
+          <div class="status-board" style="margin-top:14px">
+            <div class="wm-stat"><div class="eyebrow">MUX API</div><strong id="muxApiState">CHECKING</strong><span id="muxApiNote">Verifying the Vercel integration.</span></div>
+            <div class="wm-stat"><div class="eyebrow">CREDENTIALS</div><strong id="muxCredentialState">—</strong><span>MUX_TOKEN_ID + MUX_TOKEN_SECRET stay server-side.</span></div>
+            <div class="wm-stat"><div class="eyebrow">WEBHOOK</div><strong id="muxWebhookState">—</strong><span id="muxWebhookNote">Checking signing-secret readiness.</span></div>
+            <div class="wm-stat"><div class="eyebrow">VOD LAB</div><strong>SAFE</strong><span>Existing Railway analysis remains intact while Mux is connected.</span></div>
+          </div>
+          <p id="muxConnectionMessage" class="section-note" style="margin-top:12px">Checking Mux without exposing any credentials…</p>
+        </section>
 
         <div class="ops-grid" style="margin-top:18px">
           <a class="ops-card" href="#accountManager">
@@ -153,6 +166,6 @@
   <script src="backend.js"></script>
   <script src="admin-guard.js"></script>
   <script src="script.js"></script>
-  <script src="admin.js"></script>
+  <script src="admin.js"></script><script src="mux-admin-status.js"></script>
 </body>
 </html>
