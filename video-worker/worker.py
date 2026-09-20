@@ -160,17 +160,50 @@ def authenticate(header):
         raise Problem(401, 'Sign in to continue.')
     base = os.getenv('SUPABASE_URL', '').rstrip('/')
     key = os.getenv('SUPABASE_PUBLISHABLE_KEY', '')
-    if not base.startswith('https://') or not key or not USERS:
+    if not base.startswith('https://') or not key:
         raise Problem(503, 'Worker access is not configured.')
+    headers = {'Authorization': header, 'apikey': key}
     try:
-        user = http_json(base + '/auth/v1/user', {'Authorization': header, 'apikey': key})
+        user = http_json(base + '/auth/v1/user', headers)
     except urllib.error.HTTPError as exc:
         raise Problem(401 if exc.code in (401, 403) else 503, 'Unable to verify sign-in.')
     except (OSError, ValueError):
         raise Problem(503, 'Sign-in verification temporarily unavailable.')
-    if user.get('id') not in USERS:
-        raise Problem(403, 'Video Review access has not been assigned to this account.')
-    return user['id']
+
+    user_id = user.get('id')
+    if not user_id:
+        raise Problem(401, 'Unable to verify sign-in.')
+
+    # Keep the explicit allow-list as a compatibility path, but do not make it the
+    # only door. Management access is already represented in Supabase and RLS.
+    # Owner/GM/AGM users should not need a Railway variable updated every time a
+    # team account changes.
+    if user_id in USERS:
+        return user_id
+
+    try:
+        profiles = http_json(
+            base + '/rest/v1/profiles?id=eq.' + user_id + '&select=role&limit=1',
+            headers
+        )
+        if profiles and str(profiles[0].get('role') or '').lower() in ('admin', 'commissioner'):
+            return user_id
+
+        memberships = http_json(
+            base + '/rest/v1/team_memberships?user_id=eq.' + user_id
+            + '&active=eq.true&role=in.(owner,gm,agm)&select=id&limit=1',
+            headers
+        )
+        if memberships:
+            return user_id
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            raise Problem(403, 'Video Review access has not been assigned to this account.')
+        raise Problem(503, 'Unable to verify management access.')
+    except (OSError, ValueError):
+        raise Problem(503, 'Management access verification temporarily unavailable.')
+
+    raise Problem(403, 'Video Review access has not been assigned to this account.')
 
 
 def disk_used():
