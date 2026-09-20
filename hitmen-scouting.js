@@ -22,7 +22,7 @@
     const all=[]; const batch=1000;
     for(let from=0;;from+=batch){
       const r=await db().from('team_scouting_pool')
-        .select('id,scouting_player_id,status,priority,fit_grade,projected_role,target_bid,max_bid,management_note,updated_at,scouting_players(id,gamertag,platform,primary_position)')
+        .select('id,scouting_player_id,status,priority,fit_grade,projected_role,target_bid,max_bid,management_note,market_status,market_league,market_team,market_price,market_source,market_updated_at,is_biddable,updated_at,scouting_players(id,gamertag,platform,primary_position)')
         .eq('team_id',TEAM_ID)
         .range(from,from+batch-1);
       if(r.error)return r;
@@ -64,7 +64,9 @@
       ];
       if(S.role==='admin')queries.push(db().from('team_access_invites').select('id,email,role,display_name,active,claimed_by,claimed_at,created_at').eq('team_id',TEAM_ID).order('created_at',{ascending:false}));
       const r=await Promise.all(queries);const err=r.find(x=>x.error)?.error;if(err)throw err;
-      S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.intel=r[3].data||[];S.externalReports=r[4].data||[];S.preScout=r[5].data||[];S.autoReports=r[6].data||[];S.history=r[7].data||[];S.invites=r[8]?.data||[];render();
+      S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.intel=r[3].data||[];S.externalReports=r[4].data||[];S.preScout=r[5].data||[];S.autoReports=r[6].data||[];S.history=r[7].data||[];S.invites=r[8]?.data||[];
+      if(hasLiveMarket()&&S.scope==='experienced')S.scope='bidable';
+      render();
     }catch(e){console.error(e);msg('hsStatus',e.message||'Could not load scouting desk.');}
     finally{S.loading=false;}
   }
@@ -167,11 +169,13 @@
   function experienceLabel(r){
     return recentHistoryFor(r).slice(0,3).map(h=>`S${h.season} ${h.league}${h.team_name?` · ${h.team_name}`:''}${h.position?` (${h.position})`:''}`).join(' · ');
   }
+  function hasLiveMarket(){return S.pool.some(r=>r.market_updated_at||r.is_biddable!==null&&r.is_biddable!==undefined);}
   function scopeMatch(r,scope){
     if(scope==='everyone')return true;
     if(scope==='experienced')return hasRecentExperience(r);
     if(scope==='bargains')return isBargain(r);
     if(scope==='snake')return isSnake(r);
+    if(scope==='bidable'&&hasLiveMarket())return r.is_biddable===true;
     return !['signed','lost','pass'].includes(r.status);
   }
   function positionMatch(playerPos,filter){
@@ -238,6 +242,7 @@
       const fairLabel=fair!=null?`${fair.toFixed(fair<10?2:1).replace(/\\.00$/,'')}M fair`:'No fair value';
       const gp=career.gp??'—',pts=career.pts??career.points??'—',ppg=career.ppg??'—';
       const qb=(s,label)=>`<button type="button" class="hs-quick-btn ${current===s?'active':''}" data-hs-row-quick="${s}" data-hs-row-id="${r.id}">${label}</button>`;
+      const liveMarket=r.market_updated_at?('<span class="hs-tag">'+esc(r.is_biddable===true?'BIDDABLE':(r.market_status||'MARKET'))+'</span>'):'';
       return `<article class="hs-player-card tier-${tier.key}" data-hs-player="${r.id}">
         <div class="hs-player-card-head">
           <button class="hs-player-name" type="button">${esc(p.gamertag||'Unknown')}</button>
@@ -256,7 +261,7 @@
           <div class="hs-card-market-bar"><i style="left:${marketPin(fair,likely,walk)}%"></i></div>
           <div class="hs-card-market-foot"><strong>${tier.label}</strong><span>${walk!=null?`walk ${walk.toFixed(walk<10?2:1)}M`:'Calgary plan'}</span></div>
         </div>
-        <div class="hs-player-actions"><span class="hs-tag">${esc(current.replaceAll('_',' '))}</span><div class="hs-quick-actions">${qb('bid_target','Target')}${qb('watch','Watch')}${qb('pass','Pass')}</div></div>
+        <div class="hs-player-actions"><span class="hs-tag">${esc(current.replaceAll('_',' '))}</span>${liveMarket}<div class="hs-quick-actions">${qb('bid_target','Target')}${qb('watch','Watch')}${qb('pass','Pass')}</div></div>
       </article>`;
     }).join('');
 
