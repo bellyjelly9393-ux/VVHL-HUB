@@ -1,18 +1,68 @@
 {
   "rewrites": [
-    { "source": "/management", "destination": "/management.html" },
-    { "source": "/scouting-lab", "destination": "/scouting-lab.html" },
-    { "source": "/hitmen", "destination": "/hitmen-workspace.html" },
-    { "source": "/vod-lab", "destination": "/vod-lab.html" },
-    { "source": "/tournament-control", "destination": "/tournament-control.html" },
-    { "source": "/practice-night", "destination": "/practice-night.html" },
-    { "source": "/operator-assistant", "destination": "/operator-assistant.html" },
-    { "source": "/postgame-desk", "destination": "/postgame-desk.html" },
-    { "source": "/reports", "destination": "/reports.html" },
-    { "source": "/postgame", "destination": "/postgame.html" },
-    { "source": "/pro-series", "destination": "/pro-series.html" },
-    { "source": "/game-center", "destination": "/game-center.html" },
-    { "source": "/multiview", "destination": "/multiview.html" },
-    { "source": "/esports-hub", "destination": "/esports-hub.html" }
+    {
+      "source": "/calgary",
+      "destination": "/hitmen-workspace.html"
+    },
+    {
+      "source": "/war-room",
+      "destination": "/hitmen-workspace.html"
+    },
+    {
+      "source": "/management",
+      "destination": "/management.html"
+    },
+    {
+      "source": "/scouting-lab",
+      "destination": "/scouting-lab.html"
+    },
+    {
+      "source": "/hitmen",
+      "destination": "/hitmen-workspace.html"
+    },
+    {
+      "source": "/vod-lab",
+      "destination": "/vod-lab.html"
+    },
+    {
+      "source": "/tournament-control",
+      "destination": "/tournament-control.html"
+    },
+    {
+      "source": "/practice-night",
+      "destination": "/practice-night.html"
+    },
+    {
+      "source": "/operator-assistant",
+      "destination": "/operator-assistant.html"
+    },
+    {
+      "source": "/postgame-desk",
+      "destination": "/postgame-desk.html"
+    },
+    {
+      "source": "/reports",
+      "destination": "/reports.html"
+    },
+    {
+      "source": "/postgame",
+      "destination": "/postgame.html"
+    },
+    {
+      "source": "/pro-series",
+      "destination": "/pro-series.html"
+    },
+    {
+      "source": "/game-center",
+      "destination": "/game-center.html"
+    },
+    {
+      "source": "/multiview",
+      "destination": "/multiview.html"
+    },
+    {
+      "source": "/esports-hub",
+      "destination": "/esports-hub.html"
+    }
   ]
 }
