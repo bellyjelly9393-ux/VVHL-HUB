@@ -8,6 +8,14 @@
   function hasAccess(){ return Boolean(window.VVHLManagementGuard?.hasAccess?.(auth())); }
   function setStatus(message,tone=""){ const el=$("vodStatus"); if(!el)return; el.textContent=message; el.className=`vod-status ${tone}`.trim(); }
   function detectProvider(url){ const s=String(url||"").toLowerCase(); if(s.includes("twitch.tv")) return "twitch"; if(s.includes("youtube.com")||s.includes("youtu.be")) return "youtube"; return "external"; }
+  function normalizeTwitchReplay(value){
+    try{
+      const u=new URL(String(value||"").trim());
+      if(u.protocol!=="https:"||!["twitch.tv","www.twitch.tv"].includes(u.hostname.toLowerCase())) return "";
+      const m=u.pathname.match(/^\\/(?:videos|v)\\/(\\d+)\\/?$/)||u.pathname.match(/^\\/[^/]+\\/v\\/(\\d+)\\/?$/);
+      return m?"https://www.twitch.tv/videos/"+m[1]:"";
+    }catch{return "";}
+  }
   function parseTime(value){
     const s=String(value??"").trim(); if(!s) return null; if(/^\d+$/.test(s)) return Number(s);
     const parts=s.split(":").map(Number); if(parts.some(Number.isNaN)||parts.length>3) return null;
@@ -170,12 +178,12 @@
   function openSegmentById(id){const r=currentReview(),s=state.segments.find(x=>x.id===id); if(!r?.vod_url||!s)return; window.open(timestampUrl(r.vod_url,s.start_seconds),"_blank","noopener");}
 
   async function createReview(){
-    const title=$("newVodTitle").value.trim(),url=$("newVodUrl").value.trim(),duration=parseTime($("newVodDuration").value),user=auth().user;
+    const title=$("newVodTitle").value.trim(),rawUrl=$("newVodUrl").value.trim(),provider=detectProvider(rawUrl),duration=parseTime($("newVodDuration").value),user=auth().user;\n    let url=rawUrl;\n    if(provider==="twitch"&&rawUrl){\n      const normalized=normalizeTwitchReplay(rawUrl);\n      if(!normalized) return setStatus("Paste a Twitch VOD replay link such as twitch.tv/videos/123… or twitch.tv/channel/v/123…. A channel link by itself cannot be processed.","error");\n      url=normalized;\n      $("newVodUrl").value=normalized;\n    }
     if(!title) return setStatus("Give the VOD review a title first.","error");
     if($("newVodDuration").value.trim()&&duration==null) return setStatus("VOD length must look like 45:20 or 1:32:10.","error");
     const dateVal=$("newVodDate").value;
     const intakeMode=$("newVodIntakeMode")?.value||"scout";
-    const payload={team_id:state.teamId,title,vod_url:url||null,source_provider:detectProvider(url),opponent_label:$("newVodOpponent").value.trim()||null,game_type:$("newVodType").value,intake_mode:intakeMode,game_date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),duration_seconds:duration,created_by:user?.id||null,status:intakeMode==="archive"?"ready":"queued"};
+    const payload={team_id:state.teamId,title,vod_url:url||null,source_provider:provider,opponent_label:$("newVodOpponent").value.trim()||null,game_type:$("newVodType").value,intake_mode:intakeMode,game_date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),duration_seconds:duration,created_by:user?.id||null,status:intakeMode==="archive"?"ready":"queued"};
     setStatus("Creating VOD review…"); const {data,error}=await db().from("vod_review_sessions").insert(payload).select().single();
     if(error)return setStatus(error.message,"error");
     state.selectedReviewId=data.id; state.selectedSegmentId=""; $("newVodTitle").value="";$("newVodOpponent").value="";$("newVodUrl").value="";$("newVodDuration").value="";
