@@ -59,7 +59,10 @@
           <div class="eyebrow">CHELSTATS DATA IMPORT</div>
           <p class="gm-source-note">Paste the JSON response containing <code>games</code>. The parser recomputes totals from individual game records instead of trusting summed percentage fields.</p>
           <textarea id="gmChelStatsJson" class="field gm-json-input" placeholder='{"games":[...]}'></textarea>
-          <button id="gmImportChelStats" class="small-btn primary" type="button">Import Game Data</button>
+          <div class="gm-import-actions">
+            <button id="gmLoadCalgaryLive" class="small-btn primary" type="button">Load Calgary Live Data</button>
+            <button id="gmImportChelStats" class="small-btn" type="button">Import Pasted JSON</button>
+          </div>
           <div id="gmImportStatus" class="gm-import-status">Using MVP sample data.</div>
         </div>
 
