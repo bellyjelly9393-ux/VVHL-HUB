@@ -970,3 +970,141 @@ body.wm-page-team .wm-segment-header{--wm-segment-image:url("assets/wildman/meet
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto !important;animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
 }
+
+
+/* ---------- Homepage: purple-first flagship presentation ---------- */
+body.wildman-home{
+  --wm-home-gold:var(--wm-purple-400) !important;
+  --wm-home-gold2:var(--wm-purple-300) !important;
+  --wm-home-purple:var(--wm-purple-500) !important;
+  background:
+    radial-gradient(circle at 82% 18%,rgba(117,64,216,.18),transparent 28%),
+    radial-gradient(circle at 18% 10%,rgba(89,40,153,.11),transparent 24%),
+    linear-gradient(180deg,#050208 0%,#09050f 48%,#050208 100%) !important;
+}
+.wildman-home .wm-home-header{border-bottom-color:rgba(164,116,255,.2) !important}
+.wildman-home .wm-home-header .main-nav a:hover,
+.wildman-home .wm-home-header .main-nav a.active-nav{color:#efe8ff !important}
+.wildman-home .wm-home-header .main-nav a.active-nav{border-bottom-color:var(--wm-purple-400) !important}
+.wildman-home .wm-home-hero{
+  border-color:rgba(164,116,255,.28) !important;
+  box-shadow:0 36px 100px rgba(0,0,0,.62),0 0 54px rgba(117,64,216,.12) !important;
+}
+.wildman-home .wm-home-hero-media img{
+  filter:saturate(.94) contrast(1.04) hue-rotate(6deg) !important;
+}
+.wildman-home .wm-home-hero-overlay{
+  background:
+    linear-gradient(90deg,rgba(5,2,8,.995) 0%,rgba(5,2,8,.96) 20%,rgba(8,4,14,.78) 39%,rgba(44,18,75,.24) 60%,rgba(0,0,0,.02) 76%),
+    linear-gradient(180deg,rgba(0,0,0,.03) 48%,rgba(5,2,8,.56) 100%) !important;
+}
+.wildman-home .wm-home-kicker i{color:var(--wm-purple-400) !important}
+.wildman-home .wm-title-gold{
+  background:linear-gradient(180deg,#f0e7ff 0%,#aa82ff 42%,#6c37c0 100%) !important;
+  -webkit-background-clip:text !important;
+  background-clip:text !important;
+  color:transparent !important;
+  filter:drop-shadow(0 5px 12px rgba(78,35,139,.46)) !important;
+}
+.wildman-home .wm-media-partner{
+  border-color:rgba(164,116,255,.3) !important;
+  background:rgba(11,6,17,.65) !important;
+}
+.wildman-home .wm-media-partner span,
+.wildman-home .wm-media-partner b{color:var(--wm-purple-300) !important}
+.wildman-home .wm-gold-btn{
+  color:#fff !important;
+  background:linear-gradient(135deg,#8d5bff,#5d2ca7) !important;
+  border-color:#b990ff !important;
+  box-shadow:0 10px 26px rgba(117,64,216,.26),0 0 18px rgba(154,109,255,.12) !important;
+}
+.wildman-home .wm-outline-btn{
+  color:#f5f0ff !important;
+  border-color:rgba(164,116,255,.45) !important;
+  background:rgba(6,3,10,.52) !important;
+}
+.wildman-home .wm-home-stats strong{color:#d6c2ff !important}
+.wildman-home .wm-feature-card{
+  border-color:rgba(164,116,255,.2) !important;
+  background:
+    radial-gradient(circle at 90% 10%,rgba(117,64,216,.07),transparent 30%),
+    linear-gradient(135deg,rgba(16,10,24,.97),rgba(6,4,10,.99)) !important;
+}
+.wildman-home .wm-feature-card:hover{border-color:rgba(183,147,255,.5) !important;box-shadow:0 20px 58px rgba(0,0,0,.42),0 0 24px rgba(117,64,216,.1) !important}
+.wildman-home .wm-feature-icon{
+  background:linear-gradient(145deg,#ab80ff,#5b2ba1) !important;
+  color:#fff !important;
+  box-shadow:0 10px 24px rgba(117,64,216,.22);
+}
+.wildman-home .wm-feature-arrow{color:var(--wm-purple-300) !important}
+.wildman-home .wm-home-ticker{border-color:rgba(164,116,255,.14) !important;background:rgba(117,64,216,.025) !important}
+.wildman-home .eyebrow{color:var(--wm-purple-300) !important}
+
+/* ---------- Generated matchup mini-visuals ---------- */
+.wm-matchup-visual{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.wm-mini-jersey{
+  position:relative;
+  width:34px;
+  height:31px;
+  display:grid;
+  place-items:center;
+  clip-path:polygon(18% 0,34% 9%,50% 5%,66% 9%,82% 0,100% 23%,84% 38%,78% 31%,78% 100%,22% 100%,22% 31%,16% 38%,0 23%);
+  background:linear-gradient(180deg,#6f3bd0,#241337);
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.85);
+  color:#fff;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.03em;
+}
+.wm-mini-jersey[data-team-theme="hitmen"]{background:linear-gradient(180deg,#d61f2c,#151515)}
+.wm-mini-jersey[data-team-theme="academy"]{background:linear-gradient(180deg,#8d5bff,#211032)}
+.wm-mini-vs{font-size:7px;font-weight:900;color:#8e8496}
+.wm-tab-upgraded{display:inline-flex !important;align-items:center;gap:6px}
+.wm-tab-icon{font-size:9px;opacity:.72}
+
+/* ---------- Section context textures ---------- */
+.wm-section-data::before,
+.wm-section-media::before,
+.wm-section-competition::before,
+.wm-section-development::before{
+  content:"";
+  position:absolute;
+  inset:18px 0 auto;
+  height:120px;
+  pointer-events:none;
+  opacity:.14;
+  mask-image:linear-gradient(180deg,#000,transparent);
+}
+.wm-section-data,.wm-section-media,.wm-section-competition,.wm-section-development{position:relative}
+.wm-section-data::before{
+  background:
+    linear-gradient(90deg,transparent 49.7%,rgba(154,109,255,.2) 49.8% 50.2%,transparent 50.3%),
+    repeating-linear-gradient(0deg,transparent 0 20px,rgba(154,109,255,.12) 21px 22px);
+}
+.wm-section-media::before{
+  background:
+    repeating-linear-gradient(90deg,transparent 0 12%,rgba(100,200,255,.11) 12.2% 12.5%,transparent 12.7% 25%),
+    linear-gradient(180deg,rgba(117,64,216,.12),transparent);
+}
+.wm-section-competition::before{
+  background:
+    radial-gradient(circle at 50% 50%,transparent 0 23%,rgba(255,139,61,.13) 23.4% 23.9%,transparent 24.2%),
+    linear-gradient(90deg,transparent 49.7%,rgba(154,109,255,.16) 49.8% 50.2%,transparent 50.3%);
+}
+.wm-section-development::before{
+  background:
+    linear-gradient(135deg,transparent 0 48%,rgba(154,109,255,.1) 49%,transparent 50%),
+    repeating-linear-gradient(90deg,transparent 0 18%,rgba(255,255,255,.04) 18.2% 18.4%,transparent 18.6% 36%);
+}
+
+/* ---------- Hitmen semantic card accent ---------- */
+body.wm-theme-hitmen .wm-semantic-card,
+body.hitmen-war-room .wm-semantic-card,
+body.hitmen-management .wm-semantic-card,
+body.hitmen-tool-page .wm-semantic-card{
+  border-color:rgba(215,25,45,.25) !important;
+}
+body.wm-theme-hitmen .wm-semantic-card::after,
+body.hitmen-war-room .wm-semantic-card::after,
+body.hitmen-management .wm-semantic-card::after,
+body.hitmen-tool-page .wm-semantic-card::after{color:#ff6d7d}
