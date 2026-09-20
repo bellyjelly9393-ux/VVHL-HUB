@@ -16,7 +16,7 @@
   }
   ensurePresentationLayer();
 
-  const managementRoles = new Set(["owner", "gm", "agm"]);
+  const managementRoles = new Set(["owner", "gm", "agm"]);\n  const hitmenRoles = new Set(["owner", "gm", "agm", "scout"]);
   const HITMEN_TEAM_ID = "b0bcbdda-da9d-419d-8f61-b34937966d49";
 
   function hasManagementAccess(state) {
@@ -29,8 +29,9 @@
 
     return (state.memberships || []).some((membership) => {
       const role = String(membership.role || "").toLowerCase();
-      if (membership.active === false || !managementRoles.has(role)) return false;
-      return hitmenPage ? membership.team_id === HITMEN_TEAM_ID : true;
+      if (membership.active === false) return false;
+      if (hitmenPage) return membership.team_id === HITMEN_TEAM_ID && hitmenRoles.has(role);
+      return managementRoles.has(role);
     });
   }
 
@@ -53,7 +54,7 @@
           "<b>Management sign-in required.</b><p>This workspace is restricted to authorized management accounts.</p>";
       } else if (hitmenPage) {
         lockedMessage.innerHTML =
-          "<b>Calgary Hitmen access not assigned.</b><p>Your account is signed in, but it does not currently have an active Owner, GM or AGM membership for the Calgary Hitmen.</p>";
+          "<b>Calgary Hitmen access not assigned.</b><p>Your account is signed in, but it does not currently have an active Owner, GM, AGM or Scout membership for the Calgary Hitmen.</p>";
       } else {
         lockedMessage.innerHTML =
           "<b>Management access not assigned.</b><p>Your account is signed in, but it is not currently assigned an Owner, GM, AGM, Commissioner or Admin role.</p>";
@@ -87,7 +88,7 @@
         (state.memberships || []).some((m) =>
           m.team_id === HITMEN_TEAM_ID &&
           m.active !== false &&
-          managementRoles.has(String(m.role || "").toLowerCase())
+          hitmenRoles.has(String(m.role || "").toLowerCase())
         )
       )
     );
