@@ -1180,8 +1180,7 @@ body.hitmen-tool-page .wm-semantic-card::after{color:#ff6d7d}
   .wildman-home .wm-home-features>.wm-feature-card:nth-child(1){grid-column:span 5}
   .wildman-home .wm-home-features>.wm-feature-card:nth-child(2){grid-column:span 3}
   .wildman-home .wm-home-features>.wm-feature-card:nth-child(3){grid-column:span 4}
-  .wildman-home .wm-home-features>.wm-feature-card:nth-child(4){grid-column:span 5}
-  .wildman-home .wm-home-features>.wm-feature-card:nth-child(5){grid-column:span 7}
+  .wildman-home .wm-home-features>.wm-feature-card:nth-child(4){grid-column:span 12}
 }
 
 
