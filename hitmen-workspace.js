@@ -20,7 +20,7 @@
   function userCanManageHitmen(){
     const state=auth(); if(!state.user||!S.team)return false;
     if(String(state.profile?.role||'').toLowerCase()==='admin') return true;
-    return (state.memberships||[]).some(m=>m.team_id===S.team.id && m.active!==false && ['owner','gm','agm'].includes(String(m.role||'').toLowerCase()));
+    return (state.memberships||[]).some(m=>m.team_id===S.team.id && m.active!==false && ['owner','gm','agm','scout'].includes(String(m.role||'').toLowerCase()));
   }
   function enforceHitmenAccess(){
     const ok=userCanManageHitmen();
@@ -28,7 +28,7 @@
     const locked=$('managementLockedMessage');
     if(locked){
       locked.hidden=ok;
-      if(!ok&&auth().user) locked.innerHTML='<b>Calgary workspace access not assigned.</b><p>This private LGCHL workspace requires the site admin account or an Owner/GM/AGM membership on Calgary Hitmen.</p>';
+      if(!ok&&auth().user) locked.innerHTML='<b>Calgary workspace access not assigned.</b><p>This private LGCHL workspace requires the site admin account or an Owner/GM/AGM/Scout membership on Calgary Hitmen.</p>';
     }
     return ok;
   }
