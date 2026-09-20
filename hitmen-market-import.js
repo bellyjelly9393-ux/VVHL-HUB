@@ -25,10 +25,10 @@
         <div><div class="eyebrow">WILDMAN ADMIN · LIVE MARKET FILTER</div><h3>ChelScout Market Import</h3></div>
         <span id="hsMarketImportBadge" class="hs-tag">READY</span>
       </div>
-      <p class="hs-msg">Paste the JSON response from a ChelScout GM Hub market request. Wildman matches by ChelScout/LG UID first, then exact gamertag, and updates Calgary's live availability without deleting historical player intelligence.</p>
+      <p class="hs-msg">Paste ChelScout Market text or a GM Hub JSON response. Wildman matches by ChelScout/LG UID first, then exact gamertag, and updates Calgary's live availability without deleting historical player intelligence.</p>
       <div class="hs-form">
         <label><span class="hs-label">ChelScout response</span><select id="hsMarketImportSource" class="hs-select">
-          <option value="bid-board">Bid Board / currently biddable</option>
+          <option value="bid-board">Filtered Market / currently shown</option>
           <option value="signings">Signings / won players</option>
           <option value="market-changes">Market Changes</option>
         </select></label>
@@ -36,7 +36,7 @@
           <option value="false">Partial / unsure</option>
           <option value="true">Full bid-board snapshot</option>
         </select></label>
-        <label class="wide"><span class="hs-label">Response JSON</span><textarea id="hsMarketImportJson" class="hs-textarea" style="min-height:180px" placeholder='Paste the full JSON response here'></textarea></label>
+        <label class="wide"><span class="hs-label">ChelScout Market text or JSON</span><textarea id="hsMarketImportJson" class="hs-textarea" style="min-height:180px" placeholder='Paste the ChelScout player list exactly as shown, or paste a JSON response'></textarea></label>
       </div>
       <div class="hs-actions">
         <button id="hsCopyMarketSync" class="hs-btn" type="button">Copy “Send Market to Wildman” Bookmark</button>
@@ -296,7 +296,7 @@
   async function preview(){
     const source=$('hsMarketImportSource')?.value||'bid-board';
     const raw=$('hsMarketImportJson')?.value.trim();
-    if(!raw)return message('Paste the ChelScout response JSON first.','EMPTY');
+    if(!raw)return message('Paste the ChelScout Market list or JSON response first.','EMPTY');
     let parsed=null;
     try{parsed=JSON.parse(raw);}catch(e){}
     if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)&&parsed.uid&&Array.isArray(parsed.career)&&(parsed.fv_by_league||parsed.expect||parsed.dna)){
