@@ -1173,3 +1173,13 @@ body.hitmen-tool-page .wm-semantic-card::after{color:#ff6d7d}
   border-color:rgba(183,147,255,.4) !important;
   box-shadow:0 22px 58px rgba(0,0,0,.36),0 0 28px rgba(117,64,216,.08) !important;
 }
+
+
+@media(min-width:1181px){
+  .wildman-home .wm-home-features{grid-template-columns:repeat(12,minmax(0,1fr)) !important}
+  .wildman-home .wm-home-features>.wm-feature-card:nth-child(1){grid-column:span 5}
+  .wildman-home .wm-home-features>.wm-feature-card:nth-child(2){grid-column:span 3}
+  .wildman-home .wm-home-features>.wm-feature-card:nth-child(3){grid-column:span 4}
+  .wildman-home .wm-home-features>.wm-feature-card:nth-child(4){grid-column:span 5}
+  .wildman-home .wm-home-features>.wm-feature-card:nth-child(5){grid-column:span 7}
+}
