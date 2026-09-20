@@ -46,6 +46,13 @@
     if(error)throw error; return data;
   }
 
+  function ensureScoutMode(review){
+    const mode=String(review?.intake_mode||'scout').toLowerCase();
+    if(mode==='scout')return true;
+    if(mode==='media')throw new Error('Media mode keeps this source available for Tournament Center and postgame content without starting scouting analysis. Change the intake mode to Scout before analyzing.');
+    throw new Error('Archive mode stores the source only and does not start the analysis worker. Change the intake mode to Scout before analyzing.');
+  }
+
   async function periodsFor(reviewId){
     const {data,error}=await db().from('vod_review_segments').select('id,label,segment_type,segment_index,start_seconds,end_seconds').eq('review_id',reviewId).in('segment_type',['period','overtime']).order('start_seconds');
     if(error)throw error;
@@ -129,6 +136,7 @@
     const button=document.getElementById('vodAnalyzeGame');button.disabled=true;
     try{
       const review=await currentReview();if(!review)throw new Error('Select a game first.');
+      ensureScoutMode(review);
       setStatus('Finding this game’s recording…');
       const {job}=await workerFetch(`/reviews/${encodeURIComponent(review.id)}/analyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
       if(selectedReviewId()!==review.id)return;
@@ -144,6 +152,7 @@
     try{
       const review=await currentReview();
       if(!review)throw new Error('Select a VOD review first.');
+      ensureScoutMode(review);
       const periods=await periodsFor(review.id);
       const file=document.getElementById('vodPipelineFile')?.files?.[0];
       if(!file)throw new Error('Choose the MP4 or MOV recording first.');
@@ -173,6 +182,7 @@
   async function retry(){
     try{
       const review=await currentReview(); if(!review?.worker_job_id)throw new Error('There is no saved worker job to continue.');
+      ensureScoutMode(review);
       if(review.worker_status==='needs_periods'){
         const periods=await periodsFor(review.id);
         if(periods.length<3)throw new Error('Automatic detection needs help. Mark P1, P2 and P3 below, press Build / Update Periods, then press Continue / Retry. The video stays uploaded.');
@@ -192,6 +202,7 @@
     try{
       const review=await currentReview();
       if(!review?.worker_job_id)throw new Error('There is no saved recording to re-analyze yet.');
+      ensureScoutMode(review);
       if(!confirm('Run a fresh Elite Scout pass on the saved recording? This replaces the old AI evidence but keeps the video.'))return;
       setStatus('Starting a fresh elite scouting pass on the saved recording…');
       const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/reanalyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
