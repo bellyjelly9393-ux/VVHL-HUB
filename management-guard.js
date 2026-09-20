@@ -79,6 +79,11 @@
     }
 
     document.body.classList.toggle("management-authorized", allowed);
+
+    const isAdmin = Boolean(state?.user && state.profile?.role === "admin");
+    document.querySelectorAll("[data-admin-only]").forEach((el) => {
+      el.hidden = !isAdmin;
+    });
   }
 
   window.VVHLManagementGuard = {
