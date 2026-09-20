@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080304">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Calgary Hitmen GM AI | Season 55</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="wildman.css">
+  <link rel="stylesheet" href="management.css">
+  <link rel="stylesheet" href="hitmen-workspace.css">
+  <link rel="stylesheet" href="hitmen-gm-ai.css">
+</head>
+<body class="wildman-site management-protected hitmen-war-room">
+<header class="site-header hitmen-private-header">
+  <a class="brand" href="hitmen-workspace.html"><span class="hm-brand-skull">H</span><span class="brand-copy">CALGARY HITMEN<br><b>LGCHL SEASON 55</b></span></a>
+  <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <nav class="main-nav">
+    <a href="hitmen-workspace.html">War Room</a>
+    <a href="hitmen-management.html?tab=pool">Scouting</a>
+    <a href="hitmen-management.html?tab=bids">Target Board</a>
+    <a class="active-nav" href="hitmen-gm-ai.html">GM AI</a>
+    <a href="hitmen-locker-room.html">Locker Room</a>
+  </nav>
+  <a class="hm-private-pill" href="management.html">Private Management</a>
+</header>
+
+<main>
+  <section class="section-shell management-login-shell">
+    <section id="accountPanel" class="panel account-panel"><div><div class="eyebrow">SECURE ACCESS</div><h3>Loading account…</h3></div></section>
+    <div id="managementLockedMessage" class="wm-card"><b>Management sign-in required.</b><p>This tool is private to Calgary Hitmen management.</p></div>
+  </section>
+
+  <div data-management-content hidden>
+    <section class="section-shell gm-ai-hero">
+      <div>
+        <div class="eyebrow">SEASON 55 · DECISION SUPPORT</div>
+        <h1>CALGARY GM AI</h1>
+        <p>Evidence-first scouting and bidding help. Facts and calculations stay separate from AI interpretation.</p>
+      </div>
+      <div class="gm-ai-status"><span class="dot"></span><b>MVP MODE</b><small>ChelStats-ready + deterministic hockey logic</small></div>
+    </section>
+
+    <section class="section-shell gm-ai-grid">
+      <aside class="gm-ai-sidebar">
+        <div class="gm-ai-panel">
+          <div class="eyebrow">PLAYER SEARCH</div>
+          <label for="gmPlayerSearch">Gamertag</label>
+          <div class="gm-search-row">
+            <input id="gmPlayerSearch" class="field" type="search" placeholder="Search player…">
+            <button id="gmSearchBtn" class="small-btn primary" type="button">Load</button>
+          </div>
+          <div id="gmSearchResults" class="gm-search-results"></div>
+        </div>
+
+        <div class="gm-ai-panel">
+          <div class="eyebrow">CHELSTATS DATA IMPORT</div>
+          <p class="gm-source-note">Paste the JSON response containing <code>games</code>. The parser recomputes totals from individual game records instead of trusting summed percentage fields.</p>
+          <textarea id="gmChelStatsJson" class="field gm-json-input" placeholder='{"games":[...]}'></textarea>
+          <div class="gm-import-actions">
+            <button id="gmLoadCalgaryLive" class="small-btn primary" type="button">Load Calgary Live Data</button>
+            <button id="gmImportChelStats" class="small-btn" type="button">Import Pasted JSON</button>
+          </div>
+          <div id="gmImportStatus" class="gm-import-status">Using MVP sample data.</div>
+        </div>
+
+        <div class="gm-ai-panel">
+          <div class="eyebrow">QUICK ACTIONS</div>
+          <button class="gm-action" data-question="scout">Scout this player</button>
+          <button class="gm-action" data-question="strengths">Strengths, weaknesses & risks</button>
+          <button class="gm-action" data-question="value">What is fair bidding value?</button>
+          <button class="gm-action" data-question="fit">How does this player fit Calgary?</button>
+        </div>
+
+        <div class="gm-ai-panel">
+          <div class="eyebrow">COMPARE</div>
+          <label for="gmCompareSearch">Second player</label>
+          <input id="gmCompareSearch" class="field" type="search" placeholder="Gamertag…">
+          <button id="gmCompareBtn" class="small-btn" type="button">Compare players</button>
+        </div>
+      </aside>
+
+      <section class="gm-ai-main">
+        <article id="gmPlayerCard" class="gm-player-card empty">
+          <div>
+            <div class="eyebrow">CURRENT PLAYER</div>
+            <h2>Select a player</h2>
+            <p>Start with a player search. The first version uses sample data while the real data feed is connected.</p>
+          </div>
+        </article>
+
+        <article class="gm-ai-panel gm-chat-panel">
+          <div class="gm-chat-head">
+            <div><div class="eyebrow">GM ASK</div><h3>Ask a roster or bidding question</h3></div>
+            <span>Evidence-first</span>
+          </div>
+          <div id="gmChat" class="gm-chat"></div>
+          <div id="gmSuggestions" class="gm-suggestions"></div>
+          <form id="gmAskForm" class="gm-ask-row">
+            <input id="gmQuestion" class="field" placeholder="Example: Is this player worth $4.5M?">
+            <button class="small-btn primary" type="submit">Ask</button>
+          </form>
+        </article>
+
+        <article class="gm-ai-panel">
+          <div class="gm-chat-head">
+            <div><div class="eyebrow">EVIDENCE</div><h3>Exact data used</h3></div>
+            <button id="gmEvidenceToggle" class="small-btn" type="button">Show / Hide</button>
+          </div>
+          <div id="gmEvidence" class="gm-evidence" hidden></div>
+        </article>
+      </section>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js"></script>
+<script src="management-guard.js"></script>
+<script src="script.js"></script>
+<script src="hitmen-gm-ai.js"></script>
+</body>
+</html>
