@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 
+// Environment refresh marker: 2026-09-20
+
 const SUPABASE_URL = "https://lrgllzvwgvqagcpiyvfd.supabase.co";
 const SUPABASE_KEY = "sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP";
 
