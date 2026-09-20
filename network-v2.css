@@ -1183,3 +1183,93 @@ body.hitmen-tool-page .wm-semantic-card::after{color:#ff6d7d}
   .wildman-home .wm-home-features>.wm-feature-card:nth-child(4){grid-column:span 5}
   .wildman-home .wm-home-features>.wm-feature-card:nth-child(5){grid-column:span 7}
 }
+
+
+/* ---------- Esports network identity ---------- */
+body.wm-page-network .ops-hero{
+  background:
+    linear-gradient(90deg,rgba(5,3,9,.985),rgba(8,4,14,.9) 50%,rgba(12,6,20,.72)),
+    radial-gradient(circle at 82% 26%,rgba(100,200,255,.06),transparent 24%),
+    radial-gradient(circle at 72% 60%,rgba(117,64,216,.24),transparent 34%) !important;
+}
+body.wm-page-network .ops-hero::after{
+  content:"NETWORK · TEAMS · EVENTS · PLAYERS";
+  position:absolute;
+  right:22px;
+  bottom:18px;
+  color:rgba(220,204,255,.42);
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.18em;
+}
+
+/* ---------- Semantic card texture library ---------- */
+.wm-card-vod{
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 9px,transparent 9px 28px),
+    radial-gradient(circle at 88% 16%,rgba(100,200,255,.055),transparent 28%),
+    linear-gradient(145deg,rgba(17,11,26,.96),rgba(6,4,10,.99)) !important;
+}
+.wm-card-chemistry{
+  background:
+    radial-gradient(circle at 76% 26%,rgba(154,109,255,.08) 0 4px,transparent 5px),
+    radial-gradient(circle at 88% 50%,rgba(154,109,255,.08) 0 4px,transparent 5px),
+    linear-gradient(145deg,rgba(17,11,26,.96),rgba(6,4,10,.99)) !important;
+}
+.wm-card-value{
+  background:
+    repeating-linear-gradient(0deg,transparent 0 18px,rgba(99,223,165,.025) 19px 20px),
+    radial-gradient(circle at 90% 12%,rgba(99,223,165,.045),transparent 30%),
+    linear-gradient(145deg,rgba(14,13,24,.96),rgba(6,4,10,.99)) !important;
+}
+.wm-card-tournament{
+  background:
+    radial-gradient(circle at 82% 16%,rgba(255,139,61,.065),transparent 28%),
+    radial-gradient(circle at 70% 64%,rgba(117,64,216,.08),transparent 32%),
+    linear-gradient(145deg,rgba(18,10,24,.97),rgba(6,4,10,.99)) !important;
+}
+.wm-card-media{
+  background:
+    repeating-linear-gradient(90deg,transparent 0 13%,rgba(100,200,255,.018) 13.2% 13.5%,transparent 13.7% 26%),
+    radial-gradient(circle at 88% 18%,rgba(100,200,255,.05),transparent 28%),
+    linear-gradient(145deg,rgba(16,10,25,.97),rgba(6,4,10,.99)) !important;
+}
+.wm-card-management{
+  background:
+    linear-gradient(135deg,transparent 0 47%,rgba(154,109,255,.025) 48%,transparent 49%),
+    radial-gradient(circle at 90% 12%,rgba(117,64,216,.055),transparent 30%),
+    linear-gradient(145deg,rgba(16,10,24,.97),rgba(6,4,10,.99)) !important;
+}
+.wm-card-roster{
+  background:
+    radial-gradient(ellipse at 90% 28%,rgba(154,109,255,.055),transparent 26%),
+    linear-gradient(145deg,rgba(17,11,26,.96),rgba(6,4,10,.99)) !important;
+}
+.wm-card-stats{
+  background:
+    linear-gradient(90deg,transparent 0 74%,rgba(154,109,255,.025) 74% 78%,transparent 78% 82%,rgba(154,109,255,.045) 82% 86%,transparent 86% 90%,rgba(154,109,255,.07) 90% 94%,transparent 94%),
+    linear-gradient(145deg,rgba(17,11,26,.96),rgba(6,4,10,.99)) !important;
+}
+
+/* ---------- Mobile touch and horizontal data polish ---------- */
+@media(max-width:680px){
+  .wildman-site .small-btn,
+  .wildman-site .btn,
+  .wildman-site .hub-tabs a,
+  .wildman-site button:not(.menu-toggle){
+    min-height:44px;
+  }
+  .wildman-site .wm-table-wrap,
+  .wildman-site .academy-table-wrap{
+    scroll-snap-type:x proximity;
+    -webkit-overflow-scrolling:touch;
+  }
+  .wildman-site table th:first-child,
+  .wildman-site table td:first-child{
+    position:sticky;
+    left:0;
+    z-index:1;
+    background:#0a0710;
+    box-shadow:8px 0 16px rgba(0,0,0,.16);
+  }
+}
