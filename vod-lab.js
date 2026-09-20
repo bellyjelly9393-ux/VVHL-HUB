@@ -178,16 +178,57 @@
   function openSegmentById(id){const r=currentReview(),s=state.segments.find(x=>x.id===id); if(!r?.vod_url||!s)return; window.open(timestampUrl(r.vod_url,s.start_seconds),"_blank","noopener");}
 
   async function createReview(){
-    const title=$("newVodTitle").value.trim(),rawUrl=$("newVodUrl").value.trim(),provider=detectProvider(rawUrl),duration=parseTime($("newVodDuration").value),user=auth().user;\n    let url=rawUrl;\n    if(provider==="twitch"&&rawUrl){\n      const normalized=normalizeTwitchReplay(rawUrl);\n      if(!normalized) return setStatus("Paste a Twitch VOD replay link such as twitch.tv/videos/123… or twitch.tv/channel/v/123…. A channel link by itself cannot be processed.","error");\n      url=normalized;\n      $("newVodUrl").value=normalized;\n    }
+    const title=$("newVodTitle").value.trim();
+    const rawUrl=$("newVodUrl").value.trim();
+    const provider=detectProvider(rawUrl);
+    const duration=parseTime($("newVodDuration").value);
+    const user=auth().user;
+    let url=rawUrl;
+
+    if(provider==="twitch"&&rawUrl){
+      const normalized=normalizeTwitchReplay(rawUrl);
+      if(!normalized){
+        return setStatus("Paste a Twitch VOD replay link such as twitch.tv/videos/123… or twitch.tv/channel/v/123…. A channel link by itself cannot be processed.","error");
+      }
+      url=normalized;
+      $("newVodUrl").value=normalized;
+    }
+
     if(!title) return setStatus("Give the VOD review a title first.","error");
     if($("newVodDuration").value.trim()&&duration==null) return setStatus("VOD length must look like 45:20 or 1:32:10.","error");
     const dateVal=$("newVodDate").value;
     const intakeMode=$("newVodIntakeMode")?.value||"scout";
-    const payload={team_id:state.teamId,title,vod_url:url||null,source_provider:provider,opponent_label:$("newVodOpponent").value.trim()||null,game_type:$("newVodType").value,intake_mode:intakeMode,game_date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),duration_seconds:duration,created_by:user?.id||null,status:intakeMode==="archive"?"ready":"queued"};
-    setStatus("Creating VOD review…"); const {data,error}=await db().from("vod_review_sessions").insert(payload).select().single();
+    const payload={
+      team_id:state.teamId,
+      title,
+      vod_url:url||null,
+      source_provider:provider,
+      opponent_label:$("newVodOpponent").value.trim()||null,
+      game_type:$("newVodType").value,
+      intake_mode:intakeMode,
+      game_date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),
+      duration_seconds:duration,
+      created_by:user?.id||null,
+      status:intakeMode==="archive"?"ready":"queued"
+    };
+    setStatus("Creating VOD review…");
+    const {data,error}=await db().from("vod_review_sessions").insert(payload).select().single();
     if(error)return setStatus(error.message,"error");
-    state.selectedReviewId=data.id; state.selectedSegmentId=""; $("newVodTitle").value="";$("newVodOpponent").value="";$("newVodUrl").value="";$("newVodDuration").value="";
-    await loadData(); setStatus(intakeMode==="scout"?"Scout review created. Analyze Game will retrieve the recording and run scouting intelligence.":intakeMode==="media"?"Media source created. It can feed broadcasts and postgame content without scouting analysis.":"Archive source saved. No analysis job will run unless you later change it to Scout.","success");
+    state.selectedReviewId=data.id;
+    state.selectedSegmentId="";
+    $("newVodTitle").value="";
+    $("newVodOpponent").value="";
+    $("newVodUrl").value="";
+    $("newVodDuration").value="";
+    await loadData();
+    setStatus(
+      intakeMode==="scout"
+        ?"Scout review created. Analyze Game will retrieve the recording and run scouting intelligence."
+        :intakeMode==="media"
+          ?"Media source created. It can feed broadcasts and postgame content without scouting analysis."
+          :"Archive source saved. No analysis job will run unless you later change it to Scout.",
+      "success"
+    );
   }
 
   async function buildSegments(){
