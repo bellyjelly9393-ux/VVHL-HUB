@@ -44,13 +44,17 @@
     const top=rows[0];
     const pos=top.profile?.primary_position||'player';
     const val=top.valuation;
+    const market=top.market||null;
     const budget=search.recognized?.budget;
     const parts=[
       '<div class="eyebrow">GM MVP AI</div>',
       '<h3>'+esc(top.profile?.gamertag||'TOP MATCH')+' LEADS THIS QUERY.</h3>',
-      '<p>I found <strong>'+rows.length+'</strong> current database match'+(rows.length===1?'':'es')+(search.recognized?.position?' at <strong>'+esc(search.recognized.position)+'</strong>':'')+(budget?' under <strong>'+money(budget)+'</strong>':'')+'. '
+      '<p>I found <strong>'+rows.length+'</strong> current database match'+(rows.length===1?'':'es')+(search.recognized?.position?' at <strong>'+esc(search.recognized.position)+'</strong>':'')+(budget?' under <strong>'+money(budget)+'</strong>':'')+(search.recognized?.marketFocus?' inside the imported ChelScout focus market':'')+'. '
     ];
-    if(val){
+    if(market){
+      parts.push('The top match is a '+esc(pos)+(market.role?' projected as <strong>'+esc(market.role)+'</strong>':'')+(market.tier?' with a <strong>'+esc(String(market.tier).replaceAll('_',' '))+'</strong> market read':'')+(market.reach_pct!=null?' and <strong>'+esc(market.reach_pct)+'% reach</strong>':'')+'. ');
+      if(val?.expected_market!=null||val?.fair_value!=null)parts.push('Market price/read: <strong>'+money(val?.expected_market??val?.fair_value)+'</strong>.');
+    }else if(val){
       parts.push('The top match is a '+esc(pos)+' with Calgary fit <strong>'+score(val.team_fit_score)+'</strong>, expected market <strong>'+money(val.expected_market)+'</strong> and walk price <strong>'+money(val.walk_price)+'</strong>.');
     }else{
       parts.push('The top match is a '+esc(pos)+', but Calgary does not have a saved valuation snapshot for this player yet.');
@@ -63,18 +67,19 @@
     const rows=search.results||[];
     $('gmAiCount').textContent=rows.length+' MATCH'+(rows.length===1?'':'ES');
     $('gmAiAnswer').innerHTML=answerText(search.question,search);
-    $('gmAiResults').innerHTML=rows.length?rows.map(({profile,valuation},i)=>`
+    $('gmAiResults').innerHTML=rows.length?rows.map(({profile,valuation,market},i)=>`
       <article class="gm-ai-result">
         <div class="gm-ai-result-head">
           <div><div class="eyebrow">#${i+1} DATABASE MATCH</div><h3>${esc(profile.gamertag)}</h3></div>
           <span class="gm-ai-result-pos">${esc(profile.primary_position||'—')}</span>
         </div>
         <div class="gm-ai-metrics">
-          <div class="gm-ai-metric"><small>EXPECTED</small><b>${money(valuation?.expected_market)}</b></div>
-          <div class="gm-ai-metric"><small>FAIR VALUE</small><b>${money(valuation?.fair_value)}</b></div>
-          <div class="gm-ai-metric"><small>CALGARY FIT</small><b>${score(valuation?.team_fit_score)}</b></div>
-          <div class="gm-ai-metric"><small>PERFORMANCE</small><b>${score(valuation?.performance_score)}</b></div>
+          <div class="gm-ai-metric"><small>MARKET</small><b>${money(valuation?.expected_market)}</b></div>
+          <div class="gm-ai-metric"><small>VALUE</small><b>${money(valuation?.fair_value)}</b></div>
+          <div class="gm-ai-metric"><small>REACH</small><b>${market?.reach_pct!=null?esc(market.reach_pct)+'%':'—'}</b></div>
+          <div class="gm-ai-metric"><small>RANK</small><b>${market?.rank!=null?'#'+esc(market.rank):score(valuation?.performance_score)}</b></div>
         </div>
+        ${market?'<div class="gm-ai-result-market">'+[market.tier&&String(market.tier).replaceAll('_',' '),market.role,market.server&&market.server+' server',market.projection&&'↑ '+market.projection].filter(Boolean).map(esc).join(' · ')+'</div>':''}
         <div class="gm-ai-result-actions">
           <a class="small-btn" href="hitmen-management.html?tab=pool">Scouting</a>
           <a class="small-btn" href="hitmen-management.html?tab=bids">Target Board</a>
