@@ -64,7 +64,7 @@
     };
   }
 
-  function valuationV1({position,seasonRecord,fitGrade,scarcityScore}={}){
+  function valuationV1({position,seasonRecord,fitGrade,scarcityScore,marketFactor=1,calibrationSample=0}={}){
     const pos=String(position||seasonRecord?.position||'').toUpperCase();
     const group=positionGroup(pos);
     const ppg=Number(seasonRecord?.ppg);
@@ -77,10 +77,11 @@
     const scarcity=scarcityScore!=null?clamp(scarcityScore):clamp(defaultScarcity[pos]??55);
     const score=performance*.50+reliability*.20+teamFit*.20+scarcity*.10;
     const fairValue=round250k(500000+(score/100)*7500000);
-    const expectedMarket=fairValue;
-    const marketLow=round250k(fairValue*.80);
-    const marketHigh=round250k(fairValue*1.20);
-    const walkPrice=round250k(fairValue*1.25);
+    const safeFactor=Math.max(.65,Math.min(1.5,Number(marketFactor)||1));
+    const expectedMarket=round250k(fairValue*safeFactor);
+    const marketLow=round250k(expectedMarket*.85);
+    const marketHigh=round250k(expectedMarket*1.15);
+    const walkPrice=round250k(Math.max(fairValue*1.25,expectedMarket*1.10));
     return {
       modelVersion:'wildman-v1',
       fairValue,expectedMarket,marketLow,marketHigh,walkPrice,
@@ -88,8 +89,42 @@
       reliabilityScore:Number(reliability.toFixed(1)),
       teamFitScore:Number(teamFit.toFixed(1)),
       roleScarcityScore:Number(scarcity.toFixed(1)),
-      formula:'Fair value = $500k + weighted score × $7.5M. Score = 50% production, 20% games/reliability, 20% Calgary fit, 10% positional scarcity. Market band = 80–120% of fair value; walk = 125%.',
-      inputs:{position:pos,ppg:Number.isFinite(ppg)?ppg:null,gp:Number.isFinite(gp)?gp:null,fitGrade:fitGrade??null,scarcityScore:scarcity}
+      formula:'Fair value = $500k + weighted score × $7.5M. Score = 50% production, 20% games/reliability, 20% Calgary fit, 10% positional scarcity. Expected market = fair value × observed S55 market factor when at least 5 matched auctions exist; otherwise factor = 1.00. Market band = 85–115% of expected market; walk = max(125% of fair value, 110% of expected market).',
+      inputs:{position:pos,ppg:Number.isFinite(ppg)?ppg:null,gp:Number.isFinite(gp)?gp:null,fitGrade:fitGrade??null,scarcityScore:scarcity,marketFactor:safeFactor,calibrationSample}
+    };
+  }
+
+  async function valuationCalibration({season=55,league='CHL'}={}){
+    if(!db())return {sample:0,marketFactor:1,meanAbsoluteError:null,matched:[]};
+    const {data:auctions,error}=await db().from('player_auction_results')
+      .select('player_id,final_price,observed_at,result_status')
+      .eq('season',season).eq('league',league).eq('result_status','won').not('final_price','is',null);
+    if(error)throw error;
+    const rows=auctions||[];
+    if(!rows.length)return {sample:0,marketFactor:1,meanAbsoluteError:null,matched:[]};
+    const ids=[...new Set(rows.map(x=>x.player_id))];
+    const {data:vals,error:vErr}=await db().from('player_valuation_snapshots')
+      .select('player_id,fair_value,calculated_at,model_version,source_kind')
+      .eq('season',season).in('player_id',ids).not('fair_value','is',null).order('calculated_at',{ascending:false});
+    if(vErr)throw vErr;
+    const matched=[];
+    for(const a of rows){
+      const choices=(vals||[]).filter(v=>v.player_id===a.player_id&&new Date(v.calculated_at)<=new Date(a.observed_at));
+      const v=choices[0]||(vals||[]).find(v=>v.player_id===a.player_id);
+      if(!v?.fair_value)continue;
+      matched.push({playerId:a.player_id,actual:Number(a.final_price),predicted:Number(v.fair_value),ratio:Number(a.final_price)/Number(v.fair_value),modelVersion:v.model_version});
+    }
+    if(!matched.length)return {sample:0,marketFactor:1,meanAbsoluteError:null,matched:[]};
+    const ratios=matched.map(x=>x.ratio).sort((a,b)=>a-b);
+    const mid=Math.floor(ratios.length/2);
+    const median=ratios.length%2?ratios[mid]:(ratios[mid-1]+ratios[mid])/2;
+    const mae=matched.reduce((sum,x)=>sum+Math.abs(x.actual-x.predicted),0)/matched.length;
+    return {
+      sample:matched.length,
+      marketFactor:matched.length>=5?Math.max(.65,Math.min(1.5,median)):1,
+      observedMedianRatio:Number(median.toFixed(3)),
+      meanAbsoluteError:Math.round(mae),
+      matched
     };
   }
 
@@ -97,13 +132,14 @@
     const context=await contextForScoutingPlayer(scoutingPlayerId,teamId);
     if(!context.profile)throw new Error('Permanent Wildman player identity is not linked yet.');
     const latest=context.seasons.find(x=>x.data_class!=='projection')||context.seasons[0]||null;
-    const model=valuationV1({position:context.profile.primary_position,seasonRecord:latest,fitGrade,scarcityScore});
+    const calibration=await valuationCalibration({season,league:'CHL'});
+    const model=valuationV1({position:context.profile.primary_position,seasonRecord:latest,fitGrade,scarcityScore,marketFactor:calibration.marketFactor,calibrationSample:calibration.sample});
     const payload={
       team_id:teamId,player_id:context.profile.id,season,model_version:model.modelVersion,
       fair_value:model.fairValue,expected_market:model.expectedMarket,market_low:model.marketLow,market_high:model.marketHigh,walk_price:model.walkPrice,
       projected_ppg:latest?.ppg??null,performance_score:model.performanceScore,role_scarcity_score:model.roleScarcityScore,
       reliability_score:model.reliabilityScore,team_fit_score:model.teamFitScore,source_confidence:latest?'medium':'low',
-      source_kind:'wildman_model',inputs:model.inputs,explanation:{formula:model.formula}
+      source_kind:'wildman_model',inputs:model.inputs,explanation:{formula:model.formula,calibration:{sample:calibration.sample,marketFactor:calibration.marketFactor,observedMedianRatio:calibration.observedMedianRatio??null,meanAbsoluteError:calibration.meanAbsoluteError}}
     };
     const {data,error}=await db().from('player_valuation_snapshots').insert(payload).select().single();
     if(error)throw error;
@@ -192,6 +228,7 @@
     canonicalByScoutingPlayer,
     contextForScoutingPlayer,
     valuationV1,
+    valuationCalibration,
     saveValuationV1,
     roleCompatibility,
     chemistryV1,
