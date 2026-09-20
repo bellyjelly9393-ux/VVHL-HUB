@@ -95,7 +95,7 @@
     if(!state.reviews.length){el.innerHTML=`<div class="vod-empty">No VOD reviews in this workspace yet.</div>`;return;}
     el.innerHTML=state.reviews.map(r=>{
       const segs=reviewSegments(r.id),done=segs.filter(s=>s.status==="complete").length;
-      return `<div class="vod-library-entry"><button class="vod-row${r.id===state.selectedReviewId?" active":""}" data-vod-id="${esc(r.id)}"><strong>${esc(r.title)}</strong><span>${esc(r.opponent_label||"No opponent label")}</span><small>${esc(String(r.game_type||"scouting").replaceAll("_"," "))} · ${done}/${segs.length} segments complete · ${r.game_date?new Date(r.game_date).toLocaleDateString():"No date"}</small></button><button type="button" class="small-btn" data-delete-vod="${esc(r.id)}" aria-label="Delete ${esc(r.title)}">Delete review</button></div>`;
+      return `<div class="vod-library-entry"><button class="vod-row${r.id===state.selectedReviewId?" active":""}" data-vod-id="${esc(r.id)}"><strong>${esc(r.title)}</strong><span>${esc(r.opponent_label||"No opponent label")}</span><small>${esc(String(r.intake_mode||"scout").toUpperCase())} · ${esc(String(r.game_type||"scouting").replaceAll("_"," "))} · ${done}/${segs.length} segments complete · ${r.game_date?new Date(r.game_date).toLocaleDateString():"No date"}</small></button><button type="button" class="small-btn" data-delete-vod="${esc(r.id)}" aria-label="Delete ${esc(r.title)}">Delete review</button></div>`;
     }).join("");
     el.querySelectorAll("[data-vod-id]").forEach(b=>b.addEventListener("click",()=>selectReview(b.dataset.vodId)));
     el.querySelectorAll("[data-delete-vod]").forEach(b=>b.addEventListener("click",()=>deleteReview(b.dataset.deleteVod)));
@@ -104,7 +104,7 @@
     const r=currentReview(),empty=$("vodEmpty"),detail=$("vodDetail");
     if(!r){empty.hidden=false;detail.hidden=true;return;}
     empty.hidden=true;detail.hidden=false;
-    $("vodDetailTeam").textContent=`${teamName()} · ${String(r.game_type||"review").replaceAll("_"," ")}`;
+    $("vodDetailTeam").textContent=`${teamName()} · ${String(r.intake_mode||"scout").toUpperCase()} · ${String(r.game_type||"review").replaceAll("_"," ")}`;
     $("vodDetailTitle").textContent=r.title;
     $("vodDetailMeta").textContent=`${r.opponent_label||"Opponent not labeled"} · ${r.game_date?new Date(r.game_date).toLocaleString():"No date"} · ${r.duration_seconds!=null?fmtTime(r.duration_seconds):"length not set"}`;
     const link=$("vodOpenLink"); link.href=r.vod_url||"#"; link.style.display=r.vod_url?"inline-flex":"none";
@@ -174,11 +174,12 @@
     if(!title) return setStatus("Give the VOD review a title first.","error");
     if($("newVodDuration").value.trim()&&duration==null) return setStatus("VOD length must look like 45:20 or 1:32:10.","error");
     const dateVal=$("newVodDate").value;
-    const payload={team_id:state.teamId,title,vod_url:url||null,source_provider:detectProvider(url),opponent_label:$("newVodOpponent").value.trim()||null,game_type:$("newVodType").value,game_date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),duration_seconds:duration,created_by:user?.id||null,status:"queued"};
+    const intakeMode=$("newVodIntakeMode")?.value||"scout";
+    const payload={team_id:state.teamId,title,vod_url:url||null,source_provider:detectProvider(url),opponent_label:$("newVodOpponent").value.trim()||null,game_type:$("newVodType").value,intake_mode:intakeMode,game_date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),duration_seconds:duration,created_by:user?.id||null,status:intakeMode==="archive"?"ready":"queued"};
     setStatus("Creating VOD review…"); const {data,error}=await db().from("vod_review_sessions").insert(payload).select().single();
     if(error)return setStatus(error.message,"error");
     state.selectedReviewId=data.id; state.selectedSegmentId=""; $("newVodTitle").value="";$("newVodOpponent").value="";$("newVodUrl").value="";$("newVodDuration").value="";
-    await loadData(); setStatus("VOD review created. Select it below and press Analyze Game to retrieve the saved recording. Upload and period times are optional fallbacks.","success");
+    await loadData(); setStatus(intakeMode==="scout"?"Scout review created. Analyze Game will retrieve the recording and run scouting intelligence.":intakeMode==="media"?"Media source created. It can feed broadcasts and postgame content without scouting analysis.":"Archive source saved. No analysis job will run unless you later change it to Scout.","success");
   }
 
   async function buildSegments(){
