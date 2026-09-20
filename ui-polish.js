@@ -113,6 +113,9 @@
     if(type){
       el.classList.add('wm-semantic-card','wm-card-'+type);
     }
+    if(/hitmen/.test(txt)) el.classList.add('wm-card-hitmen');
+    if(/priority one|priority two|high priority/.test(txt)) el.classList.add('wm-card-high-priority');
+    if(/featured|main broadcast|live now/.test(txt)) el.classList.add('wm-card-featured');
     const wordCount=(el.textContent||'').trim().split(/\s+/).length;
     if(wordCount<14) el.classList.add('wm-card-compact');
   }
