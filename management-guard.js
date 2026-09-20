@@ -16,7 +16,8 @@
   }
   ensurePresentationLayer();
 
-  const managementRoles = new Set(["owner", "gm", "agm"]);\n  const hitmenRoles = new Set(["owner", "gm", "agm", "scout"]);
+  const managementRoles = new Set(["owner", "gm", "agm"]);
+  const hitmenRoles = new Set(["owner", "gm", "agm", "scout"]);
   const HITMEN_TEAM_ID = "b0bcbdda-da9d-419d-8f61-b34937966d49";
 
   function hasManagementAccess(state) {
