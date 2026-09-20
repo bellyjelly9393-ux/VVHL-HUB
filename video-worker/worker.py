@@ -9,6 +9,7 @@ import sqlite3
 import subprocess
 import threading
 import time
+import random
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -43,7 +44,9 @@ WRITE_LOCK = threading.Lock()
 STOP = threading.Event()
 CHUNK = 120
 OVERLAP = 5
-FRAME_STEP = 6  # ~20 high-detail frames per two-minute chunk to stay inside API token-rate limits.
+FRAME_STEP = 6  # Normal first-pass sampling.
+AI_CHUNK_PAUSE = float(os.getenv('AI_CHUNK_PAUSE_SECONDS', '12'))
+AI_RATE_RETRY_LIMIT = int(os.getenv('AI_RATE_RETRY_LIMIT', '5'))
 
 
 class Problem(Exception):
@@ -299,12 +302,12 @@ def segments(periods, duration):
     return out
 
 
-def extract_frames(source, folder, start, end):
+def extract_frames(source, folder, start, end, frame_step=FRAME_STEP):
     folder.mkdir(exist_ok=True)
     command(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
              '-protocol_whitelist', 'file', '-ss', str(start), '-i', str(source),
              '-t', str(end-start), '-map', '0:v:0', '-an',
-             '-vf', f'fps=1/{FRAME_STEP},scale=1280:720:force_original_aspect_ratio=decrease',
+             '-vf', f'fps=1/{frame_step},scale=1280:720:force_original_aspect_ratio=decrease',
              '-frames:v', '60', '-q:v', '4', str(folder / '%04d.jpg')])
     frames = sorted(folder.glob('*.jpg'))
     if not frames:
@@ -312,7 +315,7 @@ def extract_frames(source, folder, start, end):
     return frames
 
 
-def analyze(frames, chunk, metadata):
+def analyze(frames, chunk, metadata, frame_step=FRAME_STEP):
     key, model = os.getenv('OPENAI_API_KEY'), os.getenv('OPENAI_MODEL')
     if not key or not model:
         raise Problem(503, 'AI connection is not configured.')
@@ -362,7 +365,7 @@ Return structured JSON. Every player evaluation and observation remains NEEDS HU
         'chunk': chunk, 'players': metadata.get('players', ''),
         'previous_chunk': metadata.get('previous_chunk')})}]
     for index, frame in enumerate(frames):
-        timestamp = min(chunk['end'], chunk['start'] + (index + .5) * FRAME_STEP)
+        timestamp = min(chunk['end'], chunk['start'] + (index + .5) * frame_step)
         content.extend([{'type': 'input_text', 'text': f'Approximate recording second: {timestamp}'},
                         {'type': 'input_image', 'detail': 'high',
                          'image_url': 'data:image/jpeg;base64,' + base64.b64encode(frame.read_bytes()).decode()}])
@@ -418,7 +421,7 @@ Return structured JSON. Every player evaluation and observation remains NEEDS HU
     request_payload = {
         'model': model, 'store': False,
         'input': [{'role': 'user', 'content': content}],
-        'max_output_tokens': 4800,
+        'max_output_tokens': 3200 if int(metadata.get('ai_rate_limit_retries', 0) or 0) else 4800,
         'text': {'format': {'type': 'json_schema', 'name': 'elite_hockey_review',
                             'strict': True, 'schema': schema}}
     }
@@ -597,6 +600,8 @@ def process(job_id):
     if not source.exists():
         raise Problem(410, 'Temporary recording expired. Upload the recording again.')
     result = job['result']
+    retry_count = int(job['metadata'].get('ai_rate_limit_retries', 0) or 0)
+    frame_step = min(12, FRAME_STEP + retry_count * 2)
     duration = probe(source)
     periods = job['metadata'].get('periods', [])
     period_mode = 'manual' if periods else None
@@ -622,7 +627,8 @@ def process(job_id):
         'period_note': ('Automatic P1/P2/P3 detection was not confident; analysis covers the full recording.'
                         if period_mode == 'full_game_fallback' else ''),
         'total_chunks': len(plan),
-        'frame_step_seconds': FRAME_STEP
+        'frame_step_seconds': frame_step,
+        'ai_rate_limit_retries': retry_count
     })
     result.setdefault('chunks', [])
     update(job_id, 'processing', result)
@@ -636,15 +642,18 @@ def process(job_id):
         frame_dir = directory / 'frames'
         shutil.rmtree(frame_dir, ignore_errors=True)
         try:
-            frames = extract_frames(source, frame_dir, chunk['start'], chunk['end'])
+            frames = extract_frames(source, frame_dir, chunk['start'], chunk['end'], frame_step)
             context = dict(job['metadata'])
             context['previous_chunk'] = result['chunks'][-1]['review'] if result['chunks'] else None
-            review = analyze(frames, chunk, context)
+            context['ai_rate_limit_retries'] = retry_count
+            review = analyze(frames, chunk, context, frame_step)
             # Exact duplicate evidence is removed. Near duplicates remain flagged for human review.
             seen = {(o['source'], round(o['timestamp']), o['note']) for c in result['chunks'] for o in c['review']['observations']}
             review['observations'] = [o for o in review['observations'] if (o['source'], round(o['timestamp']), o['note']) not in seen]
             result['chunks'].append({**chunk, 'review': review})
             update(job_id, 'processing', result)
+            if index + 1 < len(plan) and AI_CHUNK_PAUSE > 0:
+                STOP.wait(AI_CHUNK_PAUSE)
         finally:
             shutil.rmtree(frame_dir, ignore_errors=True)
     result.pop('plan', None)
@@ -672,6 +681,26 @@ def cleanup():
                 update(row['id'], 'expired', error='Temporary recording expired. Start a new review.')
 
 
+
+def schedule_rate_limit_retry(job_id, message):
+    job = get_job(job_id)
+    meta = dict(job['metadata'])
+    tries = int(meta.get('ai_rate_limit_retries', 0) or 0)
+    if tries >= AI_RATE_RETRY_LIMIT:
+        return None
+    tries += 1
+    meta['ai_rate_limit_retries'] = tries
+    base_delay = min(360, 30 * (2 ** (tries - 1)))
+    delay = min(420, base_delay + random.uniform(0, 15))
+    with connect() as db:
+        db.execute(
+            "UPDATE jobs SET metadata=?,status='queued',error=? WHERE id=?",
+            (json.dumps(meta),
+             f'OpenAI rate limit cooling down. Automatic retry {tries}/{AI_RATE_RETRY_LIMIT} in about {int(delay)} seconds.',
+             job_id)
+        )
+    return delay
+
 def work_loop():
     while not STOP.is_set():
         cleanup()
@@ -687,7 +716,14 @@ def work_loop():
             else:
                 process(row['id'])
         except Problem as exc:
-            update(row['id'], 'failed', error=exc.message)
+            if exc.status == 429 and ('rate limit' in exc.message.lower() or 'http 429' in exc.message.lower()):
+                delay = schedule_rate_limit_retry(row['id'], exc.message)
+                if delay is None:
+                    update(row['id'], 'failed', error='OpenAI rate limit persisted after automatic retries. Check API project limits or retry later.')
+                elif STOP.wait(delay):
+                    continue
+            else:
+                update(row['id'], 'failed', error=exc.message)
         except Exception:
             # Never persist signed URLs, tokens, or raw provider responses in errors.
             update(row['id'], 'failed', error='Processing or AI request failed. Check worker configuration and retry.')
