@@ -221,6 +221,30 @@
     box.querySelectorAll('button').forEach(b=>b.onclick=()=>{$('gmQuestion').value=b.textContent;$('gmAskForm').requestSubmit();});
   }
 
+  async function loadCalgaryLive(){
+    const status=$('gmImportStatus');
+    try{
+      status.textContent='Loading Calgary Hitmen games from ChelStats…';
+      status.className='gm-import-status';
+      const now=new Date();
+      const url='/api/chelstats-club?clubId=9495&matchType=gameType5&limit=50&year='+now.getUTCFullYear()+'&month='+(now.getUTCMonth()+1)+'&console=common-gen5';
+      const response=await fetch(url,{headers:{Accept:'application/json'}});
+      const payload=await response.json();
+      if(!response.ok) throw new Error(payload?.detail||payload?.error||('Request failed: '+response.status));
+      const players=parseChelStats(payload);
+      if(!players.length) throw new Error('ChelStats returned no valid player game rows.');
+      state.players=players; state.source='chelstats'; state.player=null; state.compare=null;
+      renderPlayer(); renderSearch(); $('gmChat').innerHTML=''; $('gmEvidence').innerHTML='';
+      const warnings=Array.isArray(payload.warnings)&&payload.warnings.length?' · '+payload.warnings.join(', '):'';
+      status.textContent='Loaded '+players.length+' players from '+payload.games.length+' Calgary game records'+warnings+'.';
+      status.className='gm-import-status success';
+      addAI('<b>Live Calgary ChelStats data loaded.</b> Search any player from the current game set. Totals are recomputed from individual game rows.');
+    }catch(err){
+      status.textContent=err.message||'Live load failed.';
+      status.className='gm-import-status error';
+    }
+  }
+
   function importChelStats(){
     const status=$('gmImportStatus');
     try{
@@ -242,6 +266,7 @@
 
   $('gmSearchBtn')?.addEventListener('click',renderSearch);
   $('gmPlayerSearch')?.addEventListener('input',renderSearch);
+  $('gmLoadCalgaryLive')?.addEventListener('click',loadCalgaryLive);
   $('gmImportChelStats')?.addEventListener('click',importChelStats);
   document.querySelectorAll('[data-question]').forEach(b=>b.addEventListener('click',()=>ask(b.dataset.question)));
   $('gmCompareBtn')?.addEventListener('click',()=>ask('compare'));
