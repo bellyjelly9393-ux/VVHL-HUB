@@ -54,12 +54,13 @@
             <label class="wide">Title<input id="newVodTitle" class="field" placeholder="Hitmen Scouting Game 1"></label>
             <label>Opponent / lobby<input id="newVodOpponent" class="field" placeholder="Opponent or lobby label"></label>
             <label>Game type<select id="newVodType" class="select-field"><option value="scouting">Scouting</option><option value="scrim">Scrim</option><option value="regular">Regular Season</option><option value="playoffs">Playoffs</option><option value="tournament">Tournament</option><option value="practice">Practice</option></select></label>
+            <label>Intake mode<select id="newVodIntakeMode" class="select-field"><option value="scout">Scout · full analysis</option><option value="media">Media · broadcast/postgame only</option><option value="archive">Archive · store source only</option></select></label>
             <label class="wide">Twitch / YouTube / VOD URL<input id="newVodUrl" class="field" type="url" placeholder="https://..."></label>
             <label>Game date<input id="newVodDate" class="field" type="datetime-local"></label>
             <label>Total VOD length<input id="newVodDuration" class="field mono" placeholder="1:34:20"></label>
           </div>
           <div class="vod-actions"><button id="createVod" class="small-btn primary" type="button">Create Review</button></div>
-          <div class="analysis-note">We store timestamps, not chopped video files. That keeps the database tiny and lets each period be analyzed as its own job. Actual video processing can later consume only the requested time window.</div>
+          <div class="analysis-note"><strong>Intake modes:</strong> Scout sends the recording through player/tactical analysis. Media keeps it available for broadcasts and postgame content without scout analysis. Archive stores the source without processing it. We store timestamps, not chopped video files.</div>
           <div class="section-divider"></div>
           <div class="eyebrow">REVIEW LIBRARY</div><h3>Games</h3>
           <div id="vodLibrary" class="vod-library"></div>
