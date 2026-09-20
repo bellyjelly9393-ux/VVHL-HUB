@@ -20,13 +20,6 @@ export default async function handler(req, res) {
     connected: false,
     webhookSecretConfigured: Boolean(process.env.MUX_WEBHOOK_SECRET || process.env.MUX_WEBHOOK_SIGNING_SECRET),
     environment: process.env.VERCEL_ENV || null,
-    environmentKeyDiagnostics: {
-      exact: Boolean(process.env.MUX_WEBHOOK_SECRET),
-      signingAlias: Boolean(process.env.MUX_WEBHOOK_SIGNING_SECRET),
-      lowercase: Boolean(process.env.mux_webhook_secret),
-      lowercaseTypoSectet: Boolean(process.env.mux_webhook_sectet),
-      uppercaseTypoSectet: Boolean(process.env.MUX_WEBHOOK_SECTET)
-    },
   };
 
   if (!auth) return res.status(200).json(result);
