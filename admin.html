@@ -1,211 +1,158 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="theme-color" content="#071018" />
-    <title>VVHL Admin Hub</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="stylesheet" href="hub.css" />
-  </head>
-  <body>
-    <div class="ice-glow ice-glow-a"></div>
-    <div class="ice-glow ice-glow-b"></div>
-    <header class="site-header">
-      <a class="brand" href="index.html"
-        ><img class="brand-logo" src="assets/brand/vvhl-logo.png" alt="" /><span
-          class="brand-copy"
-          >LEAGUE OPERATIONS<br /><b>ADMIN WORKSPACE</b></span
-        ></a
-      ><button
-        class="menu-toggle"
-        type="button"
-        aria-label="Open navigation"
-        aria-expanded="false"
-      >
-        ☰
-      </button>
-      <nav class="main-nav">
-        <a href="index.html">VVHL 4s</a><a href="vv6l.html">VV6L 6s</a
-        ><a href="finals.html">Finals</a><a href="media.html">Media</a
-        ><a href="scouting.html">Scouting</a><a href="gm.html">GM Hub</a
-        ><a href="admin.html">Admin</a>
-      </nav>
-    </header>
-    <main class="app-main">
-      <div class="section-shell">
-        <section class="page-hero">
-          <div class="eyebrow">VVHL LEAGUE OPERATIONS</div>
-          <h1>ADMIN HUB</h1>
-          <p>
-            Secure control room for accounts, team assignments, league content,
-            competition status and player data.
-          </p>
-          <div class="page-actions">
-            <a
-              class="btn btn-primary"
-              href="https://github.com/bellyjelly9393-ux/VVHL-HUB"
-              target="_blank"
-              rel="noopener"
-              >Open GitHub Source</a
-            ><a
-              class="btn btn-secondary"
-              href="https://vvhl-hub.vercel.app"
-              target="_blank"
-              rel="noopener"
-              >Open Live Site</a
-            >
-          </div>
-        </section>
-        <section id="accountPanel" class="panel account-panel">
-          <div>
-            <div class="eyebrow">SECURE LEAGUE ACCESS</div>
-            <h3>Loading account…</h3>
-          </div>
-        </section>
-        <div class="stat-strip">
-          <div class="stat-box accent">
-            <small>Championship</small><strong>SET</strong>
-          </div>
-          <div class="stat-box"><small>Finalists</small><strong>2</strong></div>
-          <div class="stat-box">
-            <small>Player DB</small><strong id="adminPlayerCount">0</strong>
-          </div>
-          <div class="stat-box">
-            <small>Site Source</small><strong>GitHub</strong>
-          </div>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#09070c">
+  <meta name="description" content="Private Wildman Hockey administrator console.">
+  <title>Admin Console | Wildman Hockey</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="wildman.css">
+  <link rel="stylesheet" href="management.css">
+  <link rel="stylesheet" href="operations.css">
+  <link rel="stylesheet" href="network-v2.css?v=20260920a">
+</head>
+<body class="wildman-site admin-protected wm-page-management">
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Wildman Hockey home">
+      <span class="wm-brand-mark">W</span>
+      <span class="brand-copy wm-brand-copy">WILDMAN HOCKEY<br><b>ADMINISTRATION</b></span>
+    </a>
+    <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+    <nav class="main-nav">
+      <a href="index.html">Public Site</a>
+      <a href="management.html">Management</a>
+      <a href="tournament-control.html">Tournament Ops</a>
+      <a href="scouting-lab.html">Player Intelligence</a>
+      <a href="vod-lab.html">VOD Lab</a>
+      <a class="active-nav" href="admin.html">Admin</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="wm-segment-header">
+      <div class="wm-segment-header-inner">
+        <span class="wm-segment-badge">PRIVATE · WILDMAN ADMINISTRATION</span>
+        <div class="eyebrow">SYSTEM CONTROL · ACCOUNTS · PERMISSIONS</div>
+        <h1>ADMIN<br>CONSOLE.</h1>
+        <p>The top-level Wildman control room for user accounts, roles, team access, tournament operations and the systems behind the public network.</p>
+      </div>
+    </section>
+
+    <section class="section-shell section-block management-login-shell">
+      <div class="section-heading">
+        <div><div class="eyebrow">SECURE ACCESS</div><h2>ADMIN AUTHENTICATION</h2></div>
+        <div id="adminAccessStatus" class="status-pill">PRIVATE · ADMIN ONLY</div>
+      </div>
+      <section id="accountPanel" class="panel account-panel">
+        <div><div class="eyebrow">WILDMAN ACCOUNT</div><h3>Loading account…</h3></div>
+      </section>
+      <div id="adminLockedMessage" class="wm-card" style="margin-top:16px">
+        <b>Admin sign-in required.</b>
+        <p>Only Wildman accounts with the Admin role can open this console.</p>
+      </div>
+    </section>
+
+    <div data-admin-content hidden>
+      <section class="section-shell section-block">
+        <div class="section-heading">
+          <div><div class="eyebrow">WILDMAN SYSTEM CONTROL</div><h2>ADMIN COMMAND CENTER</h2></div>
+          <div class="status-pill">AUTHORIZED · ADMIN</div>
         </div>
-        <section class="admin-grid">
-          <a class="admin-card clickable-card" href="finals.html"
-            ><div class="status-row">
-              <span class="status-dot gold"></span>CHAMPIONSHIP
-            </div>
-            <h3>Finals Manager</h3>
-            <p>
-              Big Dawgs vs Royal Ghosts. Open the public Finals Hub and
-              championship path.
-            </p>
-            <span class="small-btn primary">Open Finals →</span></a
-          >
-          <a class="admin-card clickable-card" href="scouting.html"
-            ><div class="status-row">
-              <span class="status-dot"></span>PLAYER DATA
-            </div>
+
+        <div class="status-board">
+          <div class="wm-stat"><div class="eyebrow">ACCESS</div><strong>ADMIN</strong><span>Top-level system role.</span></div>
+          <div class="wm-stat"><div class="eyebrow">ACCOUNTS</div><strong>LIVE</strong><span>Roles and team assignments.</span></div>
+          <div class="wm-stat"><div class="eyebrow">TOURNAMENT OPS</div><strong>READY</strong><span>Schedules, streams and results.</span></div>
+          <div class="wm-stat"><div class="eyebrow">NETWORK</div><strong>ONLINE</strong><span>Wildman public ecosystem.</span></div>
+        </div>
+
+        <div class="ops-grid" style="margin-top:18px">
+          <a class="ops-card" href="#accountManager">
+            <small>Accounts + Permissions</small>
+            <h3>User Administration</h3>
+            <p>Review Wildman accounts, change roles and assign authorized users to teams.</p>
+            <span class="ops-link">MANAGE ACCOUNTS →</span>
+          </a>
+          <a class="ops-card" href="tournament-control.html">
+            <small>Competition Operations</small>
+            <h3>Tournament Control</h3>
+            <p>Manage imported rosters, schedules, broadcasts, live scores and event operations.</p>
+            <span class="ops-link">OPEN TOURNAMENT OPS →</span>
+          </a>
+          <a class="ops-card" href="operator-assistant.html">
+            <small>Live Operations</small>
+            <h3>Operator Assistant</h3>
+            <p>Check series state, readiness, source health and game-night automation.</p>
+            <span class="ops-link">OPEN OPERATOR →</span>
+          </a>
+          <a class="ops-card" href="scouting-lab.html">
+            <small>Player Intelligence</small>
             <h3>Scouting Database</h3>
-            <p>
-              Season XI skaters and goalies, search tools, player profiles and
-              GM target actions.
-            </p>
-            <span class="small-btn primary">Open Scouting →</span></a
-          >
-          <a class="admin-card clickable-card" href="gm.html"
-            ><div class="status-row">
-              <span class="status-dot"></span>TEAM OPS
-            </div>
-            <h3>GM & Cap Tools</h3>
-            <p>
-              Manage player targets, bid ceilings and the $30 million roster
-              cap.
-            </p>
-            <span class="small-btn primary">Open GM Hub →</span></a
-          >
-          <a class="admin-card clickable-card" href="index.html#bracket"
-            ><div class="status-row">
-              <span class="status-dot"></span>COMPETITION
-            </div>
-            <h3>Playoff Bracket</h3>
-            <p>
-              Review the original Season XI playoff field and division path.
-            </p>
-            <span class="small-btn">View Bracket →</span></a
-          >
-          <a class="admin-card clickable-card" href="index.html#archive"
-            ><div class="status-row">
-              <span class="status-dot"></span>HISTORY
-            </div>
-            <h3>League Archive</h3>
-            <p>
-              Current entry point for season history, champions, rosters and
-              records.
-            </p>
-            <span class="small-btn">Open Archive →</span></a
-          >
-          <a
-            class="admin-card clickable-card"
-            href="https://vercel.com/chelmachine-vvhl/vvhl-hub"
-            target="_blank"
-            rel="noopener"
-            ><div class="status-row">
-              <span class="status-dot"></span>DEPLOYMENT
-            </div>
-            <h3>Vercel Project</h3>
-            <p>
-              Inspect production deployments for the new GitHub-backed VVHL Hub.
-            </p>
-            <span class="small-btn">Open Vercel →</span></a
-          >
+            <p>Open player intelligence, private notes, watchlists, scouting evidence and connected stats.</p>
+            <span class="ops-link">OPEN SCOUTING →</span>
+          </a>
+          <a class="ops-card" href="vod-lab.html">
+            <small>Video Intelligence</small>
+            <h3>VOD Pipeline</h3>
+            <p>Review game-film ingestion, period analysis, markers and full-game reports.</p>
+            <span class="ops-link">OPEN VOD LAB →</span>
+          </a>
+          <a class="ops-card wm-card-hitmen" href="hitmen-workspace.html">
+            <small>Calgary Hitmen · Private</small>
+            <h3>Hitmen Hockey Operations</h3>
+            <p>Enter the LGCHL Season 55 management workspace, scouting pool and War Room.</p>
+            <span class="ops-link">OPEN HITMEN →</span>
+          </a>
+          <a class="ops-card" href="wildman-media.html">
+            <small>Public Media</small>
+            <h3>Wildman Media</h3>
+            <p>Review the public broadcast, story and postgame presentation.</p>
+            <span class="ops-link">OPEN MEDIA →</span>
+          </a>
+          <a class="ops-card" href="management.html">
+            <small>Management Layer</small>
+            <h3>Management Home</h3>
+            <p>Return to the general private operations workspace used by authorized team staff.</p>
+            <span class="ops-link">OPEN MANAGEMENT →</span>
+          </a>
+        </div>
+      </section>
+
+      <section id="accountManager" class="section-shell section-block">
+        <div class="section-heading">
+          <div><div class="eyebrow">ROLE-BASED ACCESS CONTROL</div><h2>ACCOUNTS & TEAM ASSIGNMENTS</h2></div>
+          <a class="small-btn" href="signup.html">Open Signup Page</a>
+        </div>
+        <div id="accountList" class="panel account-list">
+          <div class="empty-state wm-loading">Loading Wildman accounts…</div>
+        </div>
+      </section>
+
+      <section class="section-shell section-block">
+        <div class="section-heading">
+          <div><div class="eyebrow">ADMIN NOTES</div><h2>PRIVATE OPERATIONS BOARD</h2></div>
+        </div>
+        <section class="panel">
+          <textarea id="adminNotes" class="text-input notes-box" placeholder="System changes, account issues, tournament notes, media tasks, future admin work…"></textarea>
+          <p class="section-note" style="margin-top:12px">These notes remain browser-local. Account roles and team assignments above use the connected backend.</p>
         </section>
-        <section class="section-block">
-          <div class="section-heading">
-            <div>
-              <div class="eyebrow">ADMIN NOTES</div>
-              <h2>OPERATIONS BOARD</h2>
-            </div>
-          </div>
-          <div class="gm-layout">
-            <div class="panel">
-              <h3>Current League State</h3>
-              <div class="summary-line">
-                <span>Season</span><strong>XI</strong>
-              </div>
-              <div class="summary-line">
-                <span>Stage</span><strong>Championship Final</strong>
-              </div>
-              <div class="summary-line">
-                <span>Surge Champion</span><strong>Big Dawgs</strong>
-              </div>
-              <div class="summary-line">
-                <span>Crunch Champion</span><strong>Royal Ghosts</strong>
-              </div>
-              <div class="summary-line">
-                <span>Production source</span><strong>VVHL-HUB / main</strong>
-              </div>
-            </div>
-            <div class="panel">
-              <h3>Private Planning Notes</h3>
-              <textarea
-                id="adminNotes"
-                class="text-input notes-box"
-                placeholder="Media changes, bracket updates, player corrections, future admin tasks…"
-              ></textarea>
-              <div class="notice" style="margin-top: 14px">
-                These notes save only in this browser. Secure league-wide admin
-                editing will be the next backend/auth layer.
-              </div>
-            </div>
-          </div>
-        </section>
-        <section id="accountManager" class="section-block" hidden>
-          <div class="section-heading">
-            <div>
-              <div class="eyebrow">ROLE-BASED ACCESS</div>
-              <h2>ACCOUNTS & TEAM ASSIGNMENTS</h2>
-            </div>
-          </div>
-          <div id="accountList" class="panel account-list"></div>
-        </section>
-      </div>
-    </main>
-    <footer>
-      <div class="section-shell footer-inner">
-        <div><b>VVHL ADMIN</b><span>League Operations Workspace</span></div>
-        <p>Season XI · 2026</p>
-      </div>
-    </footer>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
-    <script src="backend.js"></script>
-    <script src="player-data.js"></script>
-    <script src="script.js"></script>
-    <script src="admin.js"></script>
-  </body>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="section-shell footer-inner">
+      <div><b>WILDMAN ADMIN CONSOLE</b><span>Accounts · Permissions · Operations · Network Control</span></div>
+      <p>Admin access only</p>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+  <script src="backend.js"></script>
+  <script src="admin-guard.js"></script>
+  <script src="script.js"></script>
+  <script src="admin.js"></script>
+</body>
 </html>
