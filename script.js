@@ -17,6 +17,15 @@ if (document.body.classList.contains('wildman-site')) {
   finishStyles.href = 'pipeline-finish.css?v=20260916c';
   document.head.appendChild(finishStyles);
 
+  // Shared Wildman presentation system. This is cosmetic only and intentionally
+  // sits after legacy page styles so existing functionality can keep its markup.
+  if (!document.querySelector('link[href*="network-v2.css"]')) {
+    const presentationStyles = document.createElement('link');
+    presentationStyles.rel = 'stylesheet';
+    presentationStyles.href = 'network-v2.css?v=20260920a';
+    document.head.appendChild(presentationStyles);
+  }
+
   const heroImage = document.querySelector('.wm-visual-hero img');
   if (heroImage) {
     heroImage.decoding = 'async';
@@ -73,7 +82,7 @@ if (menuButton && nav) {
     s.dataset.wmHelper=src;
     document.body.appendChild(s);
   };
-  if(document.body.classList.contains('wildman-site')) load('ui-polish.js?v=20260916c');
+  if(document.body.classList.contains('wildman-site')) load('ui-polish.js?v=20260920a');
   if(page==='hitmen-workspace.html'||page==='hitmen') {
     load('hitmen-delete-controls.js?v=20260916');
     load('hitmen-vod-handoff.js?v=20260916');
