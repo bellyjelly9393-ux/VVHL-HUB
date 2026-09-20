@@ -15,6 +15,10 @@
   const playerById = (id) => byId(state.players, id);
   const eventById = (id) => byId(state.events, id);
   const eventBySlug = (slug) => state.events.find(e => e.slug === slug);
+  const isPrivateOperationsTeam = (team) => {
+    const haystack = lower(`${team?.name || ""} ${team?.slug || ""} ${team?.abbreviation || ""}`);
+    return haystack.includes("calgary hitmen") || haystack.includes("calgary-hitmen") || haystack === "hitmen" || haystack.includes(" hitmen ");
+  };
   const coreImages = {
     "therustyknot": "assets/wildman/rusty.webp",
     "williamson20": "assets/wildman/williamson20.webp",
@@ -290,14 +294,19 @@
     ]);
     const responses = {teams, players, teamPlayers, events, eventTeams, eventRosters, games, stats};
     Object.entries(responses).forEach(([name,res]) => { if (res.error) console.warn(`Esports network ${name}:`, res.error.message); });
-    state.teams = teams.data || [];
+    const rawTeams = teams.data || [];
+    const privateTeamIds = new Set(rawTeams.filter(isPrivateOperationsTeam).map(t => t.id));
+
+    // Calgary Hitmen hockey-operations data is private. Keep it out of every
+    // public directory, search result, roster surface, event listing and game page.
+    state.teams = rawTeams.filter(t => !privateTeamIds.has(t.id));
     state.players = players.data || [];
-    state.teamPlayers = teamPlayers.data || [];
+    state.teamPlayers = (teamPlayers.data || []).filter(r => !privateTeamIds.has(r.team_id));
     state.events = events.data || [];
-    state.eventTeams = eventTeams.data || [];
-    state.eventRosters = eventRosters.data || [];
-    state.games = games.data || [];
-    state.stats = stats.data || [];
+    state.eventTeams = (eventTeams.data || []).filter(r => !privateTeamIds.has(r.team_id));
+    state.eventRosters = (eventRosters.data || []).filter(r => !privateTeamIds.has(r.team_id));
+    state.games = (games.data || []).filter(g => !privateTeamIds.has(g.home_team_id) && !privateTeamIds.has(g.away_team_id));
+    state.stats = (stats.data || []).filter(s => !privateTeamIds.has(s.team_id));
     renderNetworkHub();
     renderPlayerDirectory();
     renderProSeries();
