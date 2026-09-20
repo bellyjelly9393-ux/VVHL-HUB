@@ -216,6 +216,10 @@
     dossier.src = 'hitmen-player-dossier.js';
     dossier.dataset.hitmenPlayerDossier = '1';
     document.body.appendChild(dossier);
+    const market = document.createElement('script');
+    market.src = 'hitmen-market-import.js';
+    market.dataset.hitmenMarketImport = '1';
+    document.body.appendChild(market);
   };
 
   let claimBusy = false;
