@@ -197,6 +197,88 @@
     const budgetMatch=q.match(/(?:under|below|max|less than)\s*\$?\s*(\d+(?:\.\d+)?)\s*m?/i);
     const budget=budgetMatch?Number(budgetMatch[1])*1000000:null;
     const tagMatch=q.match(/[A-Za-z0-9_\-|]{3,}/g)||[];
+
+    // Calgary-first path: when a live/focused market exists, answer from the current
+    // team market before falling back to the permanent all-player intelligence catalog.
+    if(teamId){
+      const focusResp=await db().from('team_scouting_pool')
+        .select('scouting_player_id,fit_grade,projected_role,target_bid,max_bid,market_price,market_status,market_source,market_updated_at,market_details,scouting_players(id,gamertag,primary_position,platform)')
+        .eq('team_id',teamId).eq('market_focus',true).range(0,999);
+      if(!focusResp.error&&(focusResp.data||[]).length){
+        const tierWeight={steal:8,strong:7,good:6,fair:5,league_min:5,range:4,prem:3,over:2,walk:1};
+        let focus=(focusResp.data||[]).map(r=>{
+          const p=r.scouting_players||{},md=r.market_details||{};
+          const marketPrice=Number.isFinite(Number(r.market_price))&&Number(r.market_price)>0?Number(r.market_price):null;
+          const modelValue=Number.isFinite(Number(md.model_value))&&Number(md.model_value)>0?Number(md.model_value):null;
+          const rank=Number.isFinite(Number(md.rank))?Number(md.rank):null;
+          const rankPool=Number.isFinite(Number(md.rank_pool))?Number(md.rank_pool):null;
+          const rankScore=rank!=null&&rankPool>0?Math.max(0,Math.min(100,(1-(rank-1)/rankPool)*100)):null;
+          const fit=Number.isFinite(Number(r.fit_grade))?Math.max(0,Math.min(100,Number(r.fit_grade)*10)):null;
+          const tier=String(md.market_tier||'').toLowerCase();
+          const sortScore=(tierWeight[tier]||0)*1000+(rankScore||0)*5+(fit||0);
+          return {
+            profile:{
+              id:'scouting:'+r.scouting_player_id,
+              gamertag:p.gamertag,
+              normalized_gamertag:norm(p.gamertag),
+              primary_position:p.primary_position,
+              platform:p.platform,
+              active:true,
+              source_kind:'chelscout_focus'
+            },
+            valuation:{
+              fair_value:modelValue,
+              expected_market:marketPrice,
+              market_low:null,market_high:null,
+              walk_price:r.max_bid!=null?Number(r.max_bid):null,
+              performance_score:rankScore,
+              reliability_score:null,
+              team_fit_score:fit,
+              source_kind:'chelscout_focus'
+            },
+            market:{
+              status:r.market_status,
+              source:r.market_source,
+              updated_at:r.market_updated_at,
+              tier:md.market_tier||null,
+              server:md.server||null,
+              role:md.role||r.projected_role||null,
+              reach_pct:md.reach_pct??null,
+              confidence:md.confidence||null,
+              ppg:md.ppg??null,
+              gp:md.gp??null,
+              latest_season:md.latest_season??null,
+              latest_league:md.latest_league||null,
+              projection:md.projection||null,
+              rank:md.rank??null,
+              rank_pool:md.rank_pool??null,
+              rank_group:md.rank_group||null,
+              last_price:md.last_price??null,
+              model_value:modelValue,
+              display_price:marketPrice
+            },
+            _sortScore:sortScore
+          };
+        });
+
+        if(pos)focus=focus.filter(x=>String(x.profile.primary_position||'').toUpperCase()===pos);
+        if(tagMatch.length&&!pos&&!budget){
+          const needles=tagMatch.map(norm).filter(x=>x.length>=3&&!['show','best','find','player','players','market','current','target','targets'].includes(x));
+          const exactish=focus.filter(x=>needles.some(n=>x.profile.normalized_gamertag.includes(n)));
+          if(exactish.length)focus=exactish;
+        }
+        if(budget!=null){
+          focus=focus.filter(x=>{
+            const known=x.valuation.expected_market??x.valuation.fair_value;
+            return known!=null&&Number(known)<=budget;
+          });
+        }
+        focus.sort((a,b)=>b._sortScore-a._sortScore||Number(a.valuation.expected_market??1e18)-Number(b.valuation.expected_market??1e18));
+        focus=focus.slice(0,limit).map(({_sortScore,...x})=>x);
+        return {question:q,recognized:{position:pos,budget,marketFocus:true,marketCount:(focusResp.data||[]).length},results:focus};
+      }
+    }
+
     let profileQuery=db().from('player_intelligence_profiles').select('*').eq('active',true).limit(Math.max(limit,100));
     if(pos)profileQuery=profileQuery.eq('primary_position',pos);
     const {data:profiles,error}=await profileQuery;
@@ -216,11 +298,11 @@
       vals=(r.data||[]).filter(v=>!seen.has(v.player_id)&&seen.add(v.player_id));
     }
     const byVal=new Map(vals.map(v=>[v.player_id,v]));
-    rows=rows.map(p=>({profile:p,valuation:byVal.get(p.id)||null}))
+    rows=rows.map(p=>({profile:p,valuation:byVal.get(p.id)||null,market:null}))
       .filter(x=>budget==null||x.valuation?.expected_market==null||Number(x.valuation.expected_market)<=budget)
       .sort((a,b)=>Number(b.valuation?.team_fit_score||0)-Number(a.valuation?.team_fit_score||0)||Number(b.valuation?.performance_score||0)-Number(a.valuation?.performance_score||0))
       .slice(0,limit);
-    return {question:q,recognized:{position:pos,budget},results:rows};
+    return {question:q,recognized:{position:pos,budget,marketFocus:false},results:rows};
   }
 
   window.WildmanPlayerIntelligence={
