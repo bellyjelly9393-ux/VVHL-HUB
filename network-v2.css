@@ -22,7 +22,7 @@
   --wm-info:#64c8ff;
   --wm-danger:#ff5b67;
   --wm-line:rgba(162,116,255,.22);
-  --wm-line-strong:rgba(183,147,255,.52);
+  --wm-line-strong:rgba(240,207,122,.52);
   --wm-panel:rgba(13,9,20,.92);
   --wm-panel-2:rgba(20,13,31,.9);
   --wm-shadow:0 24px 70px rgba(0,0,0,.42);
@@ -37,7 +37,7 @@
 body.wildman-site{
   color:#f6f4f8;
   background:
-    radial-gradient(circle at 12% 4%,rgba(117,64,216,.18),transparent 30%),
+    radial-gradient(circle at 12% 4%,rgba(215,169,66,.18),transparent 30%),
     radial-gradient(circle at 88% 18%,rgba(74,32,126,.14),transparent 27%),
     linear-gradient(180deg,#050208 0%,#09050f 42%,#050208 100%) !important;
   min-height:100vh;
@@ -80,7 +80,7 @@ body.hitmen-management{
 .wildman-site .site-header{
   min-height:72px;
   background:rgba(5,3,9,.88) !important;
-  border:1px solid rgba(164,116,255,.16) !important;
+  border:1px solid rgba(215,169,66,.16) !important;
   border-left:0 !important;
   border-right:0 !important;
   box-shadow:0 12px 42px rgba(0,0,0,.34);
@@ -94,7 +94,7 @@ body.hitmen-management{
   border-radius:11px;
   background:url("assets/wildman/logo.webp") center/cover no-repeat !important;
   border:1px solid rgba(193,163,255,.4) !important;
-  box-shadow:0 0 28px rgba(117,64,216,.24) !important;
+  box-shadow:0 0 28px rgba(215,169,66,.24) !important;
   color:transparent !important;
   font-size:0 !important;
 }
@@ -114,7 +114,7 @@ body.hitmen-management{
 .wildman-site .main-nav a:hover,
 .wildman-site .main-nav a.active-nav{
   color:#fff !important;
-  background:rgba(117,64,216,.09) !important;
+  background:rgba(215,169,66,.09) !important;
   box-shadow:inset 0 -2px var(--wm-purple-400) !important;
 }
 .wildman-site .main-nav a:hover{transform:translateY(-1px)}
@@ -125,20 +125,20 @@ body.hitmen-management{
   min-height:38px;
   padding:0 16px;
   border-radius:10px;
-  border:1px solid rgba(164,116,255,.48);
-  background:linear-gradient(180deg,rgba(117,64,216,.18),rgba(31,14,52,.18));
-  color:#efe8ff;
+  border:1px solid rgba(215,169,66,.48);
+  background:linear-gradient(180deg,rgba(215,169,66,.18),rgba(31,14,52,.18));
+  color:#fff4d5;
   text-decoration:none;
   text-transform:uppercase;
   font-size:9px;
   font-weight:900;
   letter-spacing:.1em;
-  box-shadow:0 0 24px rgba(117,64,216,.12);
+  box-shadow:0 0 24px rgba(215,169,66,.12);
 }
-.wm-join-btn:hover{border-color:var(--wm-purple-300);box-shadow:0 0 28px rgba(117,64,216,.22)}
+.wm-join-btn:hover{border-color:var(--wm-purple-300);box-shadow:0 0 28px rgba(215,169,66,.22)}
 .wildman-site .menu-toggle{
-  border-color:rgba(164,116,255,.34) !important;
-  color:#e7dcff !important;
+  border-color:rgba(215,169,66,.34) !important;
+  color:#f7e6bc !important;
   background:#0b0711 !important;
 }
 body.wm-theme-hitmen .site-header,
@@ -165,7 +165,7 @@ body.hitmen-management .main-nav a.active-nav{
   gap:10px;
   overflow:auto;
   padding:8px 10px;
-  border:1px solid rgba(164,116,255,.13);
+  border:1px solid rgba(215,169,66,.13);
   border-radius:11px;
   background:rgba(7,4,11,.72);
   scrollbar-width:none;
@@ -174,7 +174,7 @@ body.hitmen-management .main-nav a.active-nav{
 .wm-network-strip::-webkit-scrollbar{display:none}
 .wm-network-strip strong{font-size:8px;letter-spacing:.16em;color:var(--wm-purple-300);white-space:nowrap}
 .wm-network-strip a{font-size:9px;color:#aaa3af;white-space:nowrap;text-decoration:none}
-.wm-network-strip a:hover{color:#efe8ff}
+.wm-network-strip a:hover{color:#fff4d5}
 
 /* ---------- Type hierarchy ---------- */
 .wildman-site .eyebrow{
@@ -215,9 +215,9 @@ body.hitmen-management .main-nav a.active-nav{
   border-radius:var(--wm-radius-xl);
   background:
     linear-gradient(90deg,rgba(6,3,10,.98),rgba(9,5,15,.84) 52%,rgba(11,5,18,.6)),
-    radial-gradient(circle at 78% 36%,rgba(117,64,216,.26),transparent 36%),
+    radial-gradient(circle at 78% 36%,rgba(215,169,66,.26),transparent 36%),
     #08050d;
-  box-shadow:var(--wm-shadow),0 0 44px rgba(117,64,216,.06);
+  box-shadow:var(--wm-shadow),0 0 44px rgba(215,169,66,.06);
   isolation:isolate;
 }
 .wm-segment-header::before{
@@ -266,7 +266,7 @@ body.hitmen-management .main-nav a.active-nav{
   padding:7px 10px;
   border:1px solid rgba(166,123,255,.34);
   border-radius:999px;
-  background:rgba(117,64,216,.08);
+  background:rgba(215,169,66,.08);
   color:#d8c8ff;
   font-size:8px;
   font-weight:900;
@@ -286,9 +286,9 @@ body.hitmen-management .main-nav a.active-nav{
   border-radius:var(--wm-radius-xl) !important;
   background:
     linear-gradient(90deg,rgba(5,3,9,.985),rgba(8,4,13,.9) 52%,rgba(12,6,19,.78)),
-    radial-gradient(circle at 80% 38%,rgba(117,64,216,.24),transparent 34%),
-    radial-gradient(circle at 70% 64%,rgba(154,109,255,.08),transparent 30%) !important;
-  box-shadow:var(--wm-shadow),0 0 42px rgba(117,64,216,.06) !important;
+    radial-gradient(circle at 80% 38%,rgba(215,169,66,.24),transparent 34%),
+    radial-gradient(circle at 70% 64%,rgba(229,184,88,.08),transparent 30%) !important;
+  box-shadow:var(--wm-shadow),0 0 42px rgba(215,169,66,.06) !important;
 }
 .wildman-site .ops-hero{
   padding:70px clamp(24px,5vw,72px);
@@ -336,7 +336,7 @@ body.hitmen-management .main-nav a.active-nav{
   inset:0;
   pointer-events:none;
   background:
-    radial-gradient(circle at 78% 38%,rgba(117,64,216,.19),transparent 34%),
+    radial-gradient(circle at 78% 38%,rgba(215,169,66,.19),transparent 34%),
     linear-gradient(180deg,transparent 50%,rgba(4,2,8,.6));
 }
 .wildman-site .private-hero-content,
@@ -356,7 +356,7 @@ body.hitmen-management .main-nav a.active-nav{
   border:1px solid var(--wm-line) !important;
   border-radius:var(--wm-radius-xl) !important;
   background:#050208 !important;
-  box-shadow:var(--wm-shadow),0 0 45px rgba(117,64,216,.07) !important;
+  box-shadow:var(--wm-shadow),0 0 45px rgba(215,169,66,.07) !important;
   isolation:isolate;
 }
 .pro-hero-media{position:absolute;inset:0}
@@ -408,8 +408,8 @@ body.wm-page-team .pro-hero::after{
 }
 body.wm-page-tournament .pro-hero,
 body.wm-page-tournament .ops-hero{
-  --wm-line:rgba(183,147,255,.3);
-  box-shadow:var(--wm-shadow),0 0 48px rgba(117,64,216,.1),0 0 90px rgba(255,139,61,.04) !important;
+  --wm-line:rgba(240,207,122,.3);
+  box-shadow:var(--wm-shadow),0 0 48px rgba(215,169,66,.1),0 0 90px rgba(255,139,61,.04) !important;
 }
 body.wm-page-tournament .pro-hero::before,
 body.wm-page-tournament .ops-hero::after{
@@ -419,13 +419,13 @@ body.wm-page-tournament .ops-hero::after{
   pointer-events:none;
   background:
     radial-gradient(circle at 78% 22%,rgba(255,139,61,.08),transparent 24%),
-    radial-gradient(circle at 88% 62%,rgba(154,109,255,.14),transparent 30%);
+    radial-gradient(circle at 88% 62%,rgba(229,184,88,.14),transparent 30%);
 }
 body.wm-page-live .ops-hero{
   background:
     linear-gradient(90deg,rgba(5,3,9,.985),rgba(8,4,13,.88) 55%,rgba(28,7,16,.74)),
     radial-gradient(circle at 80% 38%,rgba(255,75,87,.09),transparent 28%),
-    radial-gradient(circle at 72% 55%,rgba(117,64,216,.24),transparent 33%) !important;
+    radial-gradient(circle at 72% 55%,rgba(215,169,66,.24),transparent 33%) !important;
 }
 body.wm-page-media .pro-hero{
   background:
@@ -460,7 +460,7 @@ body.wm-page-academy .academy-membership{
   background:
     linear-gradient(90deg,rgba(5,3,9,.985),rgba(8,5,14,.94) 48%,rgba(12,6,20,.66)),
     url("assets/wildman/academy.webp") 82% center/cover no-repeat;
-  box-shadow:var(--wm-shadow),0 0 44px rgba(117,64,216,.06);
+  box-shadow:var(--wm-shadow),0 0 44px rgba(215,169,66,.06);
 }
 body.wm-page-academy .academy-membership::after{
   content:"";
@@ -468,7 +468,7 @@ body.wm-page-academy .academy-membership::after{
   inset:0;
   pointer-events:none;
   background:
-    radial-gradient(circle at 78% 35%,rgba(117,64,216,.18),transparent 35%),
+    radial-gradient(circle at 78% 35%,rgba(215,169,66,.18),transparent 35%),
     linear-gradient(180deg,transparent 56%,rgba(5,2,8,.78));
 }
 body.wm-page-academy .academy-membership>*{position:relative;z-index:2}
@@ -488,9 +488,9 @@ body.wm-page-academy .academy-plans{margin-top:30px}
 .wildman-site .small-btn,
 .wildman-site .btn,
 .wildman-site button:not(.menu-toggle){
-  border-color:rgba(164,116,255,.34) !important;
-  background:linear-gradient(180deg,rgba(117,64,216,.11),rgba(15,8,24,.16)) !important;
-  color:#d9ccf7 !important;
+  border-color:rgba(215,169,66,.34) !important;
+  background:linear-gradient(180deg,rgba(215,169,66,.11),rgba(15,8,24,.16)) !important;
+  color:#ead9ad !important;
   border-radius:9px;
   transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,color .16s ease;
 }
@@ -498,20 +498,20 @@ body.wm-page-academy .academy-plans{margin-top:30px}
 .wildman-site .small-btn:hover,
 .wildman-site .btn:hover,
 .wildman-site button:not(.menu-toggle):hover{
-  border-color:rgba(195,166,255,.66) !important;
+  border-color:rgba(255,217,120,.66) !important;
   color:#fff !important;
-  box-shadow:0 0 24px rgba(117,64,216,.15);
+  box-shadow:0 0 24px rgba(215,169,66,.15);
   transform:translateY(-1px);
 }
 .wildman-site .btn-primary,
 .wildman-site .small-btn.primary,
 .wildman-site button.primary{
-  background:linear-gradient(135deg,#8f5cff,#5d2ca7) !important;
+  background:linear-gradient(135deg,#e1b65c,#9c6b22) !important;
   border-color:#b990ff !important;
   color:#fff !important;
-  box-shadow:0 10px 26px rgba(117,64,216,.24) !important;
+  box-shadow:0 10px 26px rgba(215,169,66,.24) !important;
 }
-.wildman-site .btn-secondary{border-color:rgba(164,116,255,.32) !important;color:#d9ccf7 !important}
+.wildman-site .btn-secondary{border-color:rgba(215,169,66,.32) !important;color:#ead9ad !important}
 
 /* ---------- Shared panels and cards ---------- */
 .wildman-site .wm-card,
@@ -556,8 +556,8 @@ body.wm-page-academy .academy-plans{margin-top:30px}
 .wildman-site .network-format-card:hover,
 .wildman-site .network-service[href]:hover{
   transform:translateY(-4px);
-  border-color:rgba(183,147,255,.5) !important;
-  box-shadow:0 24px 58px rgba(0,0,0,.38),0 0 28px rgba(117,64,216,.08);
+  border-color:rgba(240,207,122,.5) !important;
+  box-shadow:0 24px 58px rgba(0,0,0,.38),0 0 28px rgba(215,169,66,.08);
 }
 .wildman-site .ops-card,
 .wildman-site .wm-card,
@@ -585,14 +585,14 @@ body.wm-page-academy .academy-plans{margin-top:30px}
   place-items:center;
   pointer-events:none;
   opacity:.12;
-  color:#d9c5ff;
+  color:#d9b966;
   font:900 64px/1 "Barlow Condensed",sans-serif;
   transform:rotate(-7deg);
 }
 .wm-card-scouting{
   background:
     linear-gradient(145deg,rgba(18,11,28,.96),rgba(6,4,10,.985)),
-    repeating-linear-gradient(0deg,transparent 0 18px,rgba(154,109,255,.04) 19px 20px) !important;
+    repeating-linear-gradient(0deg,transparent 0 18px,rgba(229,184,88,.04) 19px 20px) !important;
 }
 .wm-card-scouting::after{content:"⌖"}
 .wm-card-vod::after{content:"▶"}
@@ -621,8 +621,8 @@ body.wm-page-academy .academy-plans{margin-top:30px}
   display:inline-flex;
   align-items:center;
   gap:6px;
-  border:1px solid rgba(164,116,255,.3) !important;
-  background:rgba(117,64,216,.07) !important;
+  border:1px solid rgba(215,169,66,.3) !important;
+  background:rgba(215,169,66,.07) !important;
   color:#d6c4ff !important;
   border-radius:999px;
 }
@@ -633,7 +633,7 @@ body.wm-page-academy .academy-plans{margin-top:30px}
 .wm-status-completed,.wm-status-scouted,.wm-status-signed,.wm-status-rostered{color:#79e6b3 !important;border-color:rgba(99,223,165,.3) !important;background:rgba(99,223,165,.07) !important}
 .wm-status-processing{color:#7dd3ff !important;border-color:rgba(100,200,255,.32) !important;background:rgba(100,200,255,.07) !important}
 .wm-status-target,.wm-status-high-priority{color:#ff8d98 !important;border-color:rgba(255,75,87,.36) !important;background:rgba(255,75,87,.08) !important}
-.wm-status-watchlist,.wm-status-available{color:#d8c4ff !important}
+.wm-status-watchlist,.wm-status-available{color:#efd18a !important}
 @keyframes wmLivePulse{0%,100%{opacity:.55;transform:scale(.85)}50%{opacity:1;transform:scale(1.12)}}
 
 /* ---------- Inputs, tables, data surfaces ---------- */
@@ -643,7 +643,7 @@ body.wm-page-academy .academy-plans{margin-top:30px}
 .wildman-site input,
 .wildman-site select,
 .wildman-site textarea{
-  border-color:rgba(164,116,255,.2);
+  border-color:rgba(215,169,66,.2);
   background:#0a0710;
   color:#f1edf5;
 }
@@ -654,7 +654,7 @@ body.wm-page-academy .academy-plans{margin-top:30px}
 .wildman-site select:focus,
 .wildman-site textarea:focus{
   border-color:var(--wm-purple-400);
-  box-shadow:0 0 0 3px rgba(117,64,216,.12);
+  box-shadow:0 0 0 3px rgba(215,169,66,.12);
   outline:none;
 }
 .wildman-site .wm-table-wrap,
@@ -666,17 +666,17 @@ body.wm-page-academy .academy-plans{margin-top:30px}
   box-shadow:0 18px 48px rgba(0,0,0,.28);
 }
 .wildman-site table{background:transparent !important}
-.wildman-site table thead{background:rgba(117,64,216,.07) !important}
+.wildman-site table thead{background:rgba(215,169,66,.07) !important}
 .wildman-site table th{
-  color:#ccb5ff !important;
+  color:#dabb76 !important;
   font-size:10px;
   letter-spacing:.1em;
   text-transform:uppercase;
 }
 .wildman-site table td,
-.wildman-site table th{border-color:rgba(164,116,255,.1) !important}
+.wildman-site table th{border-color:rgba(215,169,66,.1) !important}
 .wildman-site table tbody tr{transition:background .15s ease}
-.wildman-site table tbody tr:hover{background:rgba(117,64,216,.045)}
+.wildman-site table tbody tr:hover{background:rgba(215,169,66,.045)}
 
 /* ---------- Scouting / Player Intelligence ---------- */
 body.wm-page-intelligence .scout-command,
@@ -692,10 +692,10 @@ body.wm-page-intelligence .shot-analysis-shell::before{
   pointer-events:none;
   opacity:.22;
   background:
-    linear-gradient(90deg,transparent 49.7%,rgba(154,109,255,.22) 49.8% 50.2%,transparent 50.3%),
-    radial-gradient(circle at 50% 50%,transparent 0 18%,rgba(154,109,255,.16) 18.4% 18.8%,transparent 19.2%),
-    linear-gradient(rgba(154,109,255,.08) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(154,109,255,.07) 1px,transparent 1px);
+    linear-gradient(90deg,transparent 49.7%,rgba(229,184,88,.22) 49.8% 50.2%,transparent 50.3%),
+    radial-gradient(circle at 50% 50%,transparent 0 18%,rgba(229,184,88,.16) 18.4% 18.8%,transparent 19.2%),
+    linear-gradient(rgba(229,184,88,.08) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(229,184,88,.07) 1px,transparent 1px);
   background-size:auto,auto,30px 30px,30px 30px;
   mask-image:linear-gradient(180deg,#000,transparent);
 }
@@ -706,27 +706,27 @@ body.wm-page-intelligence .shot-analysis-shell::before{
 .wildman-site .chel-auto-panel,
 .wildman-site .shot-map-card,
 .wildman-site .shot-capture-card{
-  border-color:rgba(164,116,255,.22) !important;
+  border-color:rgba(215,169,66,.22) !important;
   background:
     radial-gradient(circle at 88% 12%,rgba(100,200,255,.045),transparent 24%),
     linear-gradient(145deg,rgba(15,10,23,.98),rgba(6,4,10,.995)) !important;
   box-shadow:var(--wm-soft-shadow);
 }
 .wildman-site .scout-kpi{
-  border-color:rgba(164,116,255,.18) !important;
+  border-color:rgba(215,169,66,.18) !important;
   background:linear-gradient(145deg,rgba(18,12,28,.94),rgba(7,4,11,.98)) !important;
 }
 .wildman-site .scout-kpi strong{color:#f4efff !important}
 .wildman-site .scout-player-status{
-  border-color:rgba(164,116,255,.32) !important;
-  color:#d6c1ff !important;
-  background:rgba(117,64,216,.08) !important;
+  border-color:rgba(215,169,66,.32) !important;
+  color:#efd18a !important;
+  background:rgba(215,169,66,.08) !important;
 }
 
 /* ---------- Academy ---------- */
 body.wm-page-academy{
   background:
-    radial-gradient(circle at 14% 5%,rgba(117,64,216,.16),transparent 28%),
+    radial-gradient(circle at 14% 5%,rgba(215,169,66,.16),transparent 28%),
     radial-gradient(circle at 88% 22%,rgba(100,200,255,.055),transparent 25%),
     linear-gradient(180deg,#050208,#09050f 46%,#050208) !important;
 }
@@ -742,7 +742,7 @@ body.wm-page-academy .academy-plan.premium::before{
   height:3px;
   background:linear-gradient(90deg,var(--wm-purple-500),var(--wm-purple-300));
 }
-body.wm-page-academy .academy-price{color:#d8c3ff !important}
+body.wm-page-academy .academy-price{color:#efd18a !important}
 body.wm-page-academy .academy-nav a{color:#cbb4ff !important}
 body.wm-page-academy .academy-paths>details,
 body.wm-page-academy .academy-paths>article{
@@ -755,7 +755,7 @@ body.wm-page-live .featured-broadcast{
   border-color:rgba(255,75,87,.22) !important;
   background:
     radial-gradient(circle at 78% 18%,rgba(255,75,87,.065),transparent 28%),
-    radial-gradient(circle at 18% 20%,rgba(117,64,216,.11),transparent 34%),
+    radial-gradient(circle at 18% 20%,rgba(215,169,66,.11),transparent 34%),
     linear-gradient(145deg,rgba(15,9,23,.97),rgba(5,3,9,.995)) !important;
 }
 body.wm-page-live .featured-broadcast::before{
@@ -780,14 +780,14 @@ body.wm-page-live .status-board{
 body.wm-page-tournament .wm-stat,
 body.wm-page-live .wm-stat{
   background:
-    radial-gradient(circle at 86% 18%,rgba(117,64,216,.08),transparent 34%),
+    radial-gradient(circle at 86% 18%,rgba(215,169,66,.08),transparent 34%),
     linear-gradient(145deg,rgba(16,10,24,.97),rgba(6,4,10,.99)) !important;
 }
 
 /* ---------- Media network ---------- */
 body.wm-page-media .media-feature-v2,
 body.wm-page-media .media-stack-v2>a{
-  border-color:rgba(164,116,255,.22) !important;
+  border-color:rgba(215,169,66,.22) !important;
   background:
     radial-gradient(circle at 76% 22%,rgba(100,200,255,.05),transparent 28%),
     linear-gradient(145deg,rgba(16,10,25,.97),rgba(6,4,10,.99)) !important;
@@ -808,7 +808,7 @@ body.wm-page-media .media-feature-v2::after{
   transform-origin:top right;
   letter-spacing:.04em;
 }
-body.wm-page-media .media-stack-v2>a:hover{border-color:rgba(183,147,255,.5) !important}
+body.wm-page-media .media-stack-v2>a:hover{border-color:rgba(240,207,122,.5) !important}
 
 /* ---------- Player profiles ---------- */
 body.wm-page-player .network-detail-shell,
@@ -822,7 +822,7 @@ body.wm-page-player .wm-player-grid:first-of-type{
   border:1px solid var(--wm-line);
   border-radius:var(--wm-radius-xl);
   background:
-    radial-gradient(circle at 78% 20%,rgba(117,64,216,.14),transparent 32%),
+    radial-gradient(circle at 78% 20%,rgba(215,169,66,.14),transparent 32%),
     linear-gradient(145deg,rgba(17,11,26,.97),rgba(6,4,10,.995));
   box-shadow:var(--wm-shadow);
 }
@@ -835,12 +835,12 @@ body.wm-page-player .network-player-profile h1{
 body.wm-page-player .profile-section{
   margin-top:20px;
   padding:24px;
-  border:1px solid rgba(164,116,255,.16);
+  border:1px solid rgba(215,169,66,.16);
   border-radius:18px;
   background:linear-gradient(145deg,rgba(14,9,21,.94),rgba(6,4,10,.98));
 }
 body.wm-page-player .wm-player-card{
-  border-color:rgba(164,116,255,.25) !important;
+  border-color:rgba(215,169,66,.25) !important;
 }
 body.wm-page-player .wm-player-card::after{
   background:linear-gradient(180deg,transparent 34%,rgba(4,2,8,.2) 58%,rgba(4,2,8,.985) 100%);
@@ -850,11 +850,11 @@ body.wm-page-player .wm-stat-grid{gap:12px}
 /* ---------- Management surfaces ---------- */
 body.wm-page-management:not(.wm-theme-hitmen) .management-login-shell:first-of-type,
 body.wm-page-management:not(.wm-theme-hitmen) .tourney-mode{
-  border-color:rgba(164,116,255,.2) !important;
+  border-color:rgba(215,169,66,.2) !important;
 }
 body.wm-page-management:not(.wm-theme-hitmen) .ops-card{
   background:
-    radial-gradient(circle at 90% 10%,rgba(117,64,216,.06),transparent 30%),
+    radial-gradient(circle at 90% 10%,rgba(215,169,66,.06),transparent 30%),
     linear-gradient(145deg,rgba(16,10,24,.97),rgba(6,4,10,.99)) !important;
 }
 
@@ -895,7 +895,7 @@ body.wm-theme-hitmen .hm-war-hero{box-shadow:0 34px 110px rgba(0,0,0,.62),0 0 52
   position:absolute;
   inset:0;
   transform:translateX(-100%);
-  background:linear-gradient(90deg,transparent,rgba(183,147,255,.08),transparent);
+  background:linear-gradient(90deg,transparent,rgba(240,207,122,.08),transparent);
   animation:wmShimmer 1.5s infinite;
 }
 @keyframes wmShimmer{to{transform:translateX(100%)}}
@@ -908,7 +908,7 @@ body.wm-page-team .wm-segment-header{--wm-segment-image:url("assets/wildman/meet
 
 /* ---------- Footer ---------- */
 .wildman-site footer{
-  border-top:1px solid rgba(164,116,255,.14) !important;
+  border-top:1px solid rgba(215,169,66,.14) !important;
   background:linear-gradient(180deg,#06030a,#020103) !important;
 }
 .wildman-site footer b{color:#f0eaff}
@@ -978,17 +978,17 @@ body.wildman-home{
   --wm-home-gold2:var(--wm-purple-300) !important;
   --wm-home-purple:var(--wm-purple-500) !important;
   background:
-    radial-gradient(circle at 82% 18%,rgba(117,64,216,.18),transparent 28%),
+    radial-gradient(circle at 82% 18%,rgba(215,169,66,.18),transparent 28%),
     radial-gradient(circle at 18% 10%,rgba(89,40,153,.11),transparent 24%),
     linear-gradient(180deg,#050208 0%,#09050f 48%,#050208 100%) !important;
 }
-.wildman-home .wm-home-header{border-bottom-color:rgba(164,116,255,.2) !important}
+.wildman-home .wm-home-header{border-bottom-color:rgba(215,169,66,.2) !important}
 .wildman-home .wm-home-header .main-nav a:hover,
-.wildman-home .wm-home-header .main-nav a.active-nav{color:#efe8ff !important}
+.wildman-home .wm-home-header .main-nav a.active-nav{color:#fff4d5 !important}
 .wildman-home .wm-home-header .main-nav a.active-nav{border-bottom-color:var(--wm-purple-400) !important}
 .wildman-home .wm-home-hero{
-  border-color:rgba(164,116,255,.28) !important;
-  box-shadow:0 36px 100px rgba(0,0,0,.62),0 0 54px rgba(117,64,216,.12) !important;
+  border-color:rgba(215,169,66,.28) !important;
+  box-shadow:0 36px 100px rgba(0,0,0,.62),0 0 54px rgba(215,169,66,.12) !important;
 }
 .wildman-home .wm-home-hero-media img{
   filter:saturate(.94) contrast(1.04) hue-rotate(6deg) !important;
@@ -1007,37 +1007,37 @@ body.wildman-home{
   filter:drop-shadow(0 5px 12px rgba(78,35,139,.46)) !important;
 }
 .wildman-home .wm-media-partner{
-  border-color:rgba(164,116,255,.3) !important;
+  border-color:rgba(215,169,66,.3) !important;
   background:rgba(11,6,17,.65) !important;
 }
 .wildman-home .wm-media-partner span,
 .wildman-home .wm-media-partner b{color:var(--wm-purple-300) !important}
 .wildman-home .wm-gold-btn{
   color:#fff !important;
-  background:linear-gradient(135deg,#8d5bff,#5d2ca7) !important;
+  background:linear-gradient(135deg,#8d5bff,#9c6b22) !important;
   border-color:#b990ff !important;
-  box-shadow:0 10px 26px rgba(117,64,216,.26),0 0 18px rgba(154,109,255,.12) !important;
+  box-shadow:0 10px 26px rgba(215,169,66,.26),0 0 18px rgba(229,184,88,.12) !important;
 }
 .wildman-home .wm-outline-btn{
   color:#f5f0ff !important;
-  border-color:rgba(164,116,255,.45) !important;
+  border-color:rgba(215,169,66,.45) !important;
   background:rgba(6,3,10,.52) !important;
 }
 .wildman-home .wm-home-stats strong{color:#d6c2ff !important}
 .wildman-home .wm-feature-card{
-  border-color:rgba(164,116,255,.2) !important;
+  border-color:rgba(215,169,66,.2) !important;
   background:
-    radial-gradient(circle at 90% 10%,rgba(117,64,216,.07),transparent 30%),
+    radial-gradient(circle at 90% 10%,rgba(215,169,66,.07),transparent 30%),
     linear-gradient(135deg,rgba(16,10,24,.97),rgba(6,4,10,.99)) !important;
 }
-.wildman-home .wm-feature-card:hover{border-color:rgba(183,147,255,.5) !important;box-shadow:0 20px 58px rgba(0,0,0,.42),0 0 24px rgba(117,64,216,.1) !important}
+.wildman-home .wm-feature-card:hover{border-color:rgba(240,207,122,.5) !important;box-shadow:0 20px 58px rgba(0,0,0,.42),0 0 24px rgba(215,169,66,.1) !important}
 .wildman-home .wm-feature-icon{
   background:linear-gradient(145deg,#ab80ff,#5b2ba1) !important;
   color:#fff !important;
-  box-shadow:0 10px 24px rgba(117,64,216,.22);
+  box-shadow:0 10px 24px rgba(215,169,66,.22);
 }
 .wildman-home .wm-feature-arrow{color:var(--wm-purple-300) !important}
-.wildman-home .wm-home-ticker{border-color:rgba(164,116,255,.14) !important;background:rgba(117,64,216,.025) !important}
+.wildman-home .wm-home-ticker{border-color:rgba(215,169,66,.14) !important;background:rgba(215,169,66,.025) !important}
 .wildman-home .eyebrow{color:var(--wm-purple-300) !important}
 
 /* ---------- Generated matchup mini-visuals ---------- */
@@ -1078,22 +1078,22 @@ body.wildman-home{
 .wm-section-data,.wm-section-media,.wm-section-competition,.wm-section-development{position:relative}
 .wm-section-data::before{
   background:
-    linear-gradient(90deg,transparent 49.7%,rgba(154,109,255,.2) 49.8% 50.2%,transparent 50.3%),
-    repeating-linear-gradient(0deg,transparent 0 20px,rgba(154,109,255,.12) 21px 22px);
+    linear-gradient(90deg,transparent 49.7%,rgba(229,184,88,.2) 49.8% 50.2%,transparent 50.3%),
+    repeating-linear-gradient(0deg,transparent 0 20px,rgba(229,184,88,.12) 21px 22px);
 }
 .wm-section-media::before{
   background:
     repeating-linear-gradient(90deg,transparent 0 12%,rgba(100,200,255,.11) 12.2% 12.5%,transparent 12.7% 25%),
-    linear-gradient(180deg,rgba(117,64,216,.12),transparent);
+    linear-gradient(180deg,rgba(215,169,66,.12),transparent);
 }
 .wm-section-competition::before{
   background:
     radial-gradient(circle at 50% 50%,transparent 0 23%,rgba(255,139,61,.13) 23.4% 23.9%,transparent 24.2%),
-    linear-gradient(90deg,transparent 49.7%,rgba(154,109,255,.16) 49.8% 50.2%,transparent 50.3%);
+    linear-gradient(90deg,transparent 49.7%,rgba(229,184,88,.16) 49.8% 50.2%,transparent 50.3%);
 }
 .wm-section-development::before{
   background:
-    linear-gradient(135deg,transparent 0 48%,rgba(154,109,255,.1) 49%,transparent 50%),
+    linear-gradient(135deg,transparent 0 48%,rgba(229,184,88,.1) 49%,transparent 50%),
     repeating-linear-gradient(90deg,transparent 0 18%,rgba(255,255,255,.04) 18.2% 18.4%,transparent 18.6% 36%);
 }
 
@@ -1117,26 +1117,26 @@ body.hitmen-tool-page .wm-semantic-card::after{color:#ff6d7d}
 .wildman-site:not(.wm-theme-hitmen) .network-format-card small,
 .wildman-site:not(.wm-theme-hitmen) .wm-player-meta small,
 .wildman-site:not(.wm-theme-hitmen) .network-kicker{
-  color:#c9b1ff !important;
+  color:#e0bd6f !important;
 }
 .wildman-site:not(.wm-theme-hitmen) .wm-captain-badge{
-  border-color:rgba(164,116,255,.3) !important;
-  background:rgba(117,64,216,.09) !important;
+  border-color:rgba(215,169,66,.3) !important;
+  background:rgba(215,169,66,.09) !important;
   color:#d7c5ff !important;
 }
 .wildman-site:not(.wm-theme-hitmen) .wm-stage{
-  border-color:rgba(164,116,255,.17) !important;
-  background:linear-gradient(145deg,rgba(117,64,216,.08),rgba(18,10,28,.5)) !important;
+  border-color:rgba(215,169,66,.17) !important;
+  background:linear-gradient(145deg,rgba(215,169,66,.08),rgba(18,10,28,.5)) !important;
   color:#eee8ff !important;
 }
-.wildman-site:not(.wm-theme-hitmen) .wm-table th{color:#cdb8ff !important}
+.wildman-site:not(.wm-theme-hitmen) .wm-table th{color:#dabb76 !important}
 .wildman-site:not(.wm-theme-hitmen) .ticker-track b{color:var(--wm-purple-400) !important}
 .wildman-site:not(.wm-theme-hitmen) .live-dot{
   background:#ff5c68 !important;
   box-shadow:0 0 15px rgba(255,75,87,.68) !important;
 }
 .wildman-site:not(.wm-theme-hitmen) .academy-plan>span,
-.wildman-site:not(.wm-theme-hitmen) .academy-coaches a{color:#c9b0ff !important}
+.wildman-site:not(.wm-theme-hitmen) .academy-coaches a{color:#e0bd6f !important}
 .wildman-site:not(.wm-theme-hitmen) .network-service[href]{
   display:block;
   color:inherit;
@@ -1170,8 +1170,8 @@ body.hitmen-tool-page .wm-semantic-card::after{color:#ff6d7d}
   box-shadow:var(--wm-soft-shadow),inset 3px 0 0 rgba(255,139,61,.7) !important;
 }
 .wm-card-featured{
-  border-color:rgba(183,147,255,.4) !important;
-  box-shadow:0 22px 58px rgba(0,0,0,.36),0 0 28px rgba(117,64,216,.08) !important;
+  border-color:rgba(240,207,122,.4) !important;
+  box-shadow:0 22px 58px rgba(0,0,0,.36),0 0 28px rgba(215,169,66,.08) !important;
 }
 
 
@@ -1189,7 +1189,7 @@ body.wm-page-network .ops-hero{
   background:
     linear-gradient(90deg,rgba(5,3,9,.985),rgba(8,4,14,.9) 50%,rgba(12,6,20,.72)),
     radial-gradient(circle at 82% 26%,rgba(100,200,255,.06),transparent 24%),
-    radial-gradient(circle at 72% 60%,rgba(117,64,216,.24),transparent 34%) !important;
+    radial-gradient(circle at 72% 60%,rgba(215,169,66,.24),transparent 34%) !important;
 }
 body.wm-page-network .ops-hero::after{
   content:"NETWORK · TEAMS · EVENTS · PLAYERS";
@@ -1211,8 +1211,8 @@ body.wm-page-network .ops-hero::after{
 }
 .wm-card-chemistry{
   background:
-    radial-gradient(circle at 76% 26%,rgba(154,109,255,.08) 0 4px,transparent 5px),
-    radial-gradient(circle at 88% 50%,rgba(154,109,255,.08) 0 4px,transparent 5px),
+    radial-gradient(circle at 76% 26%,rgba(229,184,88,.08) 0 4px,transparent 5px),
+    radial-gradient(circle at 88% 50%,rgba(229,184,88,.08) 0 4px,transparent 5px),
     linear-gradient(145deg,rgba(17,11,26,.96),rgba(6,4,10,.99)) !important;
 }
 .wm-card-value{
@@ -1224,7 +1224,7 @@ body.wm-page-network .ops-hero::after{
 .wm-card-tournament{
   background:
     radial-gradient(circle at 82% 16%,rgba(255,139,61,.065),transparent 28%),
-    radial-gradient(circle at 70% 64%,rgba(117,64,216,.08),transparent 32%),
+    radial-gradient(circle at 70% 64%,rgba(215,169,66,.08),transparent 32%),
     linear-gradient(145deg,rgba(18,10,24,.97),rgba(6,4,10,.99)) !important;
 }
 .wm-card-media{
@@ -1235,18 +1235,18 @@ body.wm-page-network .ops-hero::after{
 }
 .wm-card-management{
   background:
-    linear-gradient(135deg,transparent 0 47%,rgba(154,109,255,.025) 48%,transparent 49%),
-    radial-gradient(circle at 90% 12%,rgba(117,64,216,.055),transparent 30%),
+    linear-gradient(135deg,transparent 0 47%,rgba(229,184,88,.025) 48%,transparent 49%),
+    radial-gradient(circle at 90% 12%,rgba(215,169,66,.055),transparent 30%),
     linear-gradient(145deg,rgba(16,10,24,.97),rgba(6,4,10,.99)) !important;
 }
 .wm-card-roster{
   background:
-    radial-gradient(ellipse at 90% 28%,rgba(154,109,255,.055),transparent 26%),
+    radial-gradient(ellipse at 90% 28%,rgba(229,184,88,.055),transparent 26%),
     linear-gradient(145deg,rgba(17,11,26,.96),rgba(6,4,10,.99)) !important;
 }
 .wm-card-stats{
   background:
-    linear-gradient(90deg,transparent 0 74%,rgba(154,109,255,.025) 74% 78%,transparent 78% 82%,rgba(154,109,255,.045) 82% 86%,transparent 86% 90%,rgba(154,109,255,.07) 90% 94%,transparent 94%),
+    linear-gradient(90deg,transparent 0 74%,rgba(229,184,88,.025) 74% 78%,transparent 78% 82%,rgba(229,184,88,.045) 82% 86%,transparent 86% 90%,rgba(229,184,88,.07) 90% 94%,transparent 94%),
     linear-gradient(145deg,rgba(17,11,26,.96),rgba(6,4,10,.99)) !important;
 }
 
