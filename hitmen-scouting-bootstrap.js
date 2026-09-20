@@ -1,5 +1,6 @@
 (() => {
-  if (!/hitmen(?:-workspace\.html)?\/?$/i.test(location.pathname)) return;
+  const route=(location.pathname.replace(/\/+$/,'').split('/').pop()||'').toLowerCase();
+  if (!['hitmen','calgary','war-room','hitmen-workspace.html'].includes(route)) return;
 
   const addStyles = () => {
     if (document.querySelector('link[data-hitmen-scouting-css]')) return;
@@ -89,11 +90,11 @@
           <button class="active" type="button" data-hs-scope="focus">ChelScout Focus <span id="hsScopeFocus">0</span></button>
           <button type="button" data-hs-scope="experienced">Recent Experience <span id="hsScopeExperienced">0</span></button>
           <button type="button" data-hs-scope="bidable">Confirmed Bidable <span id="hsScopeBidable">0</span></button>
-          <button type="button" data-hs-scope="everyone">Everyone <span id="hsScopeEveryone">0</span></button>
+          <button type="button" data-hs-scope="archive">Archive <span id="hsScopeArchive">0</span></button>
           <button type="button" data-hs-scope="bargains">Bargains <span id="hsScopeBargains">0</span></button>
           <button type="button" data-hs-scope="snake">Snake list <span id="hsScopeSnake">0</span></button>
         </div>
-        <div class="hs-pool-key"><b>ChelScout Focus:</b> the current filtered S55 market imported from ChelScout. Historical Calgary records stay underneath, but this is the working scouting universe. <b>Confirmed Bidable</b> is reserved for a full live bid-board sync.</div>
+        <div class="hs-pool-key"><b>ChelScout Focus:</b> the 519-player working Season 55 market imported from ChelScout. Historical names are preserved under <b>Archive</b> and stay out of the active scouting board unless you deliberately open them. <b>Confirmed Bidable</b> is reserved for a full live bid-board sync.</div>
 
         <div class="hs-market-reach"><span>REACH</span><b>Could still be here</b><small>Price, role and Calgary fit are blended from your saved team plan plus imported scouting intelligence.</small></div>
 
