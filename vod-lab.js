@@ -222,13 +222,18 @@
     $("newVodDuration").value="";
     await loadData();
     setStatus(
-      intakeMode==="scout"
-        ?"Scout review created. Analyze Game will retrieve the recording and run scouting intelligence."
-        :intakeMode==="media"
-          ?"Media source created. It can feed broadcasts and postgame content without scouting analysis."
-          :"Archive source saved. No analysis job will run unless you later change it to Scout.",
+      intakeMode==="scout"&&provider==="twitch"
+        ?"Scout review created. Starting Twitch retrieval and scouting analysis now…"
+        :intakeMode==="scout"
+          ?"Scout review created. Analyze Game will retrieve the recording and run scouting intelligence."
+          :intakeMode==="media"
+            ?"Media source created. It can feed broadcasts and postgame content without scouting analysis."
+            :"Archive source saved. No analysis job will run unless you later change it to Scout.",
       "success"
     );
+    if(intakeMode==="scout"&&provider==="twitch"){
+      setTimeout(()=>document.getElementById("vodAnalyzeGame")?.click(),350);
+    }
   }
 
   async function buildSegments(){
