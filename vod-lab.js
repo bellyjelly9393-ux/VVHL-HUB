@@ -12,7 +12,7 @@
     try{
       const u=new URL(String(value||"").trim());
       if(u.protocol!=="https:"||!["twitch.tv","www.twitch.tv"].includes(u.hostname.toLowerCase())) return "";
-      const m=u.pathname.match(/^\\/(?:videos|v)\\/(\\d+)\\/?$/)||u.pathname.match(/^\\/[^/]+\\/v\\/(\\d+)\\/?$/);
+      const m=u.pathname.match(/^\/(?:videos|v)\/(\d+)\/?$/)||u.pathname.match(/^\/[^/]+\/v\/(\d+)\/?$/);
       return m?"https://www.twitch.tv/videos/"+m[1]:"";
     }catch{return "";}
   }
