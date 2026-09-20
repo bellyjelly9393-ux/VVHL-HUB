@@ -21,6 +21,7 @@
     'players.html':'players.html','esports-player.html':'players.html','player-rusty.html':'players.html','player-williamson20.html':'players.html','player-williamson88.html':'players.html','rosters.html':'players.html','season.html':'players.html',
     'academy.html':'academy.html',
     'signup.html':'signup.html',
+    'management.html':'management.html',
     'wildman-media.html':'wildman-media.html','media.html':'wildman-media.html'
   };
   const activePath = groups[path] || path;
@@ -34,6 +35,7 @@
     ['players.html','Players'],
     ['academy.html','Academy'],
     ['wildman-media.html','Media'],
+    ['management.html','Management'],
     ['signup.html','Join']
   ];
 
