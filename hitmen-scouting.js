@@ -174,7 +174,7 @@
   function hasFocusMarket(){return S.pool.some(r=>r.market_focus===true);}
   function hasLiveMarket(){return S.pool.some(r=>r.is_biddable!==null&&r.is_biddable!==undefined);}
   function scopeMatch(r,scope){
-    if(scope==='everyone')return true;
+    if(scope==='archive')return r.market_focus!==true;
     if(scope==='focus')return r.market_focus===true;
     if(scope==='experienced')return hasRecentExperience(r);
     if(scope==='bargains')return isBargain(r);
@@ -202,6 +202,7 @@
 
     const everybody=S.pool;
     const focus=everybody.filter(r=>r.market_focus===true);
+    const archive=everybody.filter(r=>r.market_focus!==true);
     const experienced=everybody.filter(hasRecentExperience);
     const bidable=everybody.filter(r=>scopeMatch(r,'bidable'));
     const bargains=everybody.filter(isBargain);
@@ -209,7 +210,7 @@
     if($('hsScopeFocus'))$('hsScopeFocus').textContent=focus.length.toLocaleString();
     if($('hsScopeExperienced'))$('hsScopeExperienced').textContent=experienced.length.toLocaleString();
     if($('hsScopeBidable'))$('hsScopeBidable').textContent=bidable.length.toLocaleString();
-    if($('hsScopeEveryone'))$('hsScopeEveryone').textContent=everybody.length.toLocaleString();
+    if($('hsScopeArchive'))$('hsScopeArchive').textContent=archive.length.toLocaleString();
     if($('hsScopeBargains'))$('hsScopeBargains').textContent=bargains.length.toLocaleString();
     if($('hsScopeSnake'))$('hsScopeSnake').textContent=snake.length.toLocaleString();
 
@@ -540,5 +541,10 @@
     $('hsNextPage')?.addEventListener('click',()=>{S.page++;renderPool();});
     $('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsChelScoutImport')?.addEventListener('click',importChelScout);$('hsChelScoutReportsImport')?.addEventListener('click',importChelScoutReports);document.querySelectorAll('[data-hs-quick]').forEach(b=>b.addEventListener('click',()=>quickTarget(b.dataset.hsQuick)));$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);
   }
-  bind();window.addEventListener('vvhl-auth-change',()=>setTimeout(load,0));if(state().user)setTimeout(load,200);
+  bind();
+  const requestedTab=new URLSearchParams(location.search).get('tab');
+  const initialTab=['pool','targets','reports','bids'].includes(requestedTab)?requestedTab:'pool';
+  activate(initialTab);
+  if(location.hash==='#hitmen-scouting')setTimeout(()=>document.getElementById('hitmen-scouting')?.scrollIntoView({block:'start'}),250);
+  window.addEventListener('vvhl-auth-change',()=>setTimeout(load,0));if(state().user)setTimeout(load,200);
 })();
