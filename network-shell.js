@@ -2,10 +2,10 @@
   const body = document.body;
   body?.classList.add('wm-ds','wm-theme-wildman');
 
-  if (!document.querySelector('link[href="network-v2.css"]')) {
+  if (!document.querySelector('link[href*="network-v2.css"]')) {
     const polish = document.createElement('link');
     polish.rel = 'stylesheet';
-    polish.href = 'network-v2.css';
+    polish.href = 'network-v2.css?v=20260920a';
     document.head.appendChild(polish);
   }
 
@@ -72,9 +72,9 @@
     a.addEventListener('click', e => e.preventDefault());
   });
 
-  if (!document.querySelector('script[src="ui-polish.js"]')) {
+  if (!document.querySelector('script[src*="ui-polish.js"]')) {
     const s=document.createElement('script');
-    s.src='ui-polish.js';
+    s.src='ui-polish.js?v=20260920a';
     s.async=false;
     document.body.appendChild(s);
   }
