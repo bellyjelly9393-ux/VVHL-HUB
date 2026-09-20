@@ -125,8 +125,10 @@ def retrieve(job_id):
     source.unlink(missing_ok=True)
     if worker.disk_used() + 150 * 1024**2 >= worker.MAX_STORAGE:
         raise worker.Problem(507, 'Temporary video storage is full. Try again after cleanup.')
-    args = ['streamlink', '--stream-timeout', '20', '--retry-streams', '0',
-            '--webbrowser-executable', '/usr/bin/chromium', '--webbrowser-headless']
+    # Start with Streamlink's normal Twitch resolver. Public VODs generally do
+    # not need Chromium/client-integrity at all, and forcing the browser-integrity
+    # path can make otherwise playable VODs fail.
+    args = ['streamlink', '--stream-timeout', '20', '--retry-streams', '0']
     twitch_token = read_twitch_auth()
     if twitch_token:
         args.append('--twitch-api-header=Authorization=OAuth ' + twitch_token)
