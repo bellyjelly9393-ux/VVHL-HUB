@@ -168,6 +168,13 @@
     if(!raw)return message('Paste the ChelScout response JSON first.','EMPTY');
     let parsed;
     try{parsed=JSON.parse(raw);}catch(e){return message('That response is not valid JSON. Copy the Response body, not the request headers.','ERROR');}
+    if(parsed&&typeof parsed==='object'&&!Array.isArray(parsed)&&parsed.uid&&Array.isArray(parsed.career)&&(parsed.fv_by_league||parsed.expect||parsed.dna)){
+      previewRows=[];
+      $('hsMarketApply').disabled=true;
+      $('hsMarketPreviewBox').className='hs-empty';
+      $('hsMarketPreviewBox').textContent='This is a single-player ChelScout scouting payload, not the bulk market board. It belongs in that player’s ChelScout Intelligence import.';
+      return message('Player report detected. Find the request that returns the filtered market/player list after “Show players”.','PLAYER REPORT');
+    }
     previewRows=collect(parsed,source);
     if(!previewRows.length)return message('I could not identify player rows in this response yet. Keep the JSON and send it to ChatGPT so the parser can be adapted to this exact ChelScout response.','NO PLAYERS');
 
