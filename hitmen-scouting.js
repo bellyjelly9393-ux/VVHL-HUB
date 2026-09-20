@@ -1,6 +1,6 @@
 (() => {
   const TEAM_ID='b0bcbdda-da9d-419d-8f61-b34937966d49';
-  const S={pool:[],reports:[],externalReports:[],preScout:[],autoReports:[],bids:[],intel:[],history:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'experienced',sort:'price_high'};
+  const S={pool:[],reports:[],externalReports:[],preScout:[],autoReports:[],bids:[],intel:[],history:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'focus',sort:'price_high'};
   const db=()=>window.VVHLBackend?.db;
   const state=()=>window.VVHLBackend?.state||{};
   const $=id=>document.getElementById(id);
@@ -22,7 +22,7 @@
     const all=[]; const batch=1000;
     for(let from=0;;from+=batch){
       const r=await db().from('team_scouting_pool')
-        .select('id,scouting_player_id,status,priority,fit_grade,projected_role,target_bid,max_bid,management_note,market_status,market_league,market_team,market_price,market_source,market_updated_at,is_biddable,updated_at,scouting_players(id,gamertag,platform,primary_position)')
+        .select('id,scouting_player_id,status,priority,fit_grade,projected_role,target_bid,max_bid,management_note,market_status,market_league,market_team,market_price,market_source,market_updated_at,is_biddable,market_focus,market_details,market_import_batch,market_scope,updated_at,scouting_players(id,gamertag,platform,primary_position)')
         .eq('team_id',TEAM_ID)
         .range(from,from+batch-1);
       if(r.error)return r;
@@ -65,7 +65,9 @@
       if(S.role==='admin')queries.push(db().from('team_access_invites').select('id,email,role,display_name,active,claimed_by,claimed_at,created_at').eq('team_id',TEAM_ID).order('created_at',{ascending:false}));
       const r=await Promise.all(queries);const err=r.find(x=>x.error)?.error;if(err)throw err;
       S.pool=r[0].data||[];S.reports=r[1].data||[];S.bids=r[2].data||[];S.intel=r[3].data||[];S.externalReports=r[4].data||[];S.preScout=r[5].data||[];S.autoReports=r[6].data||[];S.history=r[7].data||[];S.invites=r[8]?.data||[];
-      if(hasLiveMarket()&&S.scope==='experienced')S.scope='bidable';
+      if(hasFocusMarket())S.scope='focus';
+      else if(hasLiveMarket()&&S.scope==='focus')S.scope='bidable';
+      else if(S.scope==='focus')S.scope='experienced';
       render();
     }catch(e){console.error(e);msg('hsStatus',e.message||'Could not load scouting desk.');}
     finally{S.loading=false;}
@@ -73,7 +75,7 @@
 
   function render(){
     if($('hsRole'))$('hsRole').textContent=S.role==='admin'?'WILDMAN ADMIN':`HITMEN ${String(S.role).toUpperCase()}`;
-    if($('hsScouted'))$('hsScouted').textContent=S.pool.length;
+    if($('hsScouted'))$('hsScouted').textContent=(hasFocusMarket()?S.pool.filter(x=>x.market_focus===true).length:S.pool.length).toLocaleString();
     if($('hsPriority'))$('hsPriority').textContent=S.pool.filter(x=>x.status==='priority'||x.priority===1).length;
     if($('hsBids'))$('hsBids').textContent=S.pool.filter(x=>x.status==='bid_target').length+S.bids.filter(x=>['target','active_bid'].includes(x.status)).length;
     const totalReports=S.reports.length+S.externalReports.length+S.preScout.length+S.autoReports.length;
@@ -125,9 +127,9 @@
     return rows.slice().sort((a,b)=>Number(b.season||0)-Number(a.season||0))[0]||{};
   }
   function marketData(r){
-    const x=intelFor(r),ps=preScoutFor(r),ext=externalFor(r),pm=ps?.market_snapshot||{},raw=ext?.raw_payload||{};
-    const fair=pickNum(x?.fair_value_m,pm.fair_value_m,pm.fair_value,raw.fair_value_m,raw.fair_value);
-    const likely=pickNum(x?.likely_price_m,pm.likely_price_m,pm.expected_market_m,raw.likely_price_m,raw.expected_market_m,r.target_bid!=null?Number(r.target_bid)/1e6:null);
+    const x=intelFor(r),ps=preScoutFor(r),ext=externalFor(r),pm=ps?.market_snapshot||{},raw=ext?.raw_payload||{},md=r.market_details||{};
+    const fair=pickNum(x?.fair_value_m,md.model_value!=null?Number(md.model_value)/1e6:null,pm.fair_value_m,pm.fair_value,raw.fair_value_m,raw.fair_value);
+    const likely=pickNum(x?.likely_price_m,md.display_price!=null?Number(md.display_price)/1e6:null,r.market_price!=null?Number(r.market_price)/1e6:null,pm.likely_price_m,pm.expected_market_m,raw.likely_price_m,raw.expected_market_m,r.target_bid!=null?Number(r.target_bid)/1e6:null);
     const walk=pickNum(x?.walk_above_m,pm.walk_above_m,pm.walk_m,raw.walk_above_m,raw.walk_m,r.max_bid!=null?Number(r.max_bid)/1e6:null);
     return {x,ps,ext,fair,likely,walk};
   }
@@ -169,9 +171,11 @@
   function experienceLabel(r){
     return recentHistoryFor(r).slice(0,3).map(h=>`S${h.season} ${h.league}${h.team_name?` · ${h.team_name}`:''}${h.position?` (${h.position})`:''}`).join(' · ');
   }
-  function hasLiveMarket(){return S.pool.some(r=>r.market_updated_at||r.is_biddable!==null&&r.is_biddable!==undefined);}
+  function hasFocusMarket(){return S.pool.some(r=>r.market_focus===true);}
+  function hasLiveMarket(){return S.pool.some(r=>r.is_biddable!==null&&r.is_biddable!==undefined);}
   function scopeMatch(r,scope){
     if(scope==='everyone')return true;
+    if(scope==='focus')return r.market_focus===true;
     if(scope==='experienced')return hasRecentExperience(r);
     if(scope==='bargains')return isBargain(r);
     if(scope==='snake')return isSnake(r);
@@ -197,10 +201,12 @@
     const status=val('hsStatusFilter');
 
     const everybody=S.pool;
+    const focus=everybody.filter(r=>r.market_focus===true);
     const experienced=everybody.filter(hasRecentExperience);
     const bidable=everybody.filter(r=>scopeMatch(r,'bidable'));
     const bargains=everybody.filter(isBargain);
     const snake=everybody.filter(isSnake);
+    if($('hsScopeFocus'))$('hsScopeFocus').textContent=focus.length.toLocaleString();
     if($('hsScopeExperienced'))$('hsScopeExperienced').textContent=experienced.length.toLocaleString();
     if($('hsScopeBidable'))$('hsScopeBidable').textContent=bidable.length.toLocaleString();
     if($('hsScopeEveryone'))$('hsScopeEveryone').textContent=everybody.length.toLocaleString();
@@ -211,7 +217,8 @@
       const p=r.scouting_players||{};
       const x=intelFor(r);
       const historyText=experienceLabel(r);
-      const matchesText=!q||[p.gamertag,p.primary_position,p.platform,r.status,r.projected_role,x?.player_name,x?.role_chip,x?.role_band,x?.projected_rank,historyText].some(v=>String(v||'').toLowerCase().includes(q));
+      const md=r.market_details||{};
+      const matchesText=!q||[p.gamertag,p.primary_position,p.platform,r.status,r.projected_role,x?.player_name,x?.role_chip,x?.role_band,x?.projected_rank,historyText,md.server,md.role,md.market_tier,md.projection,md.aka].some(v=>String(v||'').toLowerCase().includes(q));
       const matchesPos=positionMatch(p.primary_position,pos);
       const matchesStatus=!status||r.status===status;
       return matchesText&&matchesPos&&matchesStatus&&scopeMatch(r,S.scope);
@@ -233,16 +240,20 @@
     box.innerHTML=shown.map(r=>{
       const p=r.scouting_players||{},current=r.status||'unscouted';
       const {x,ps,ext,fair,likely,walk}=marketData(r);
-      const tier=marketTier(fair,likely,walk);
+      const md=r.market_details||{};
+      const computedTier=marketTier(fair,likely,walk);
+      const importedTier=String(md.market_tier||'').toLowerCase();
+      const tier=importedTier?{key:importedTier==='league_min'?'good':importedTier,label:importedTier.replaceAll('_',' ')}:computedTier;
       const career=careerFor(r);
       const reports=reportCountFor(r);
-      const rank=x?.pool_rank!=null?(x.pool_n!=null?`#${x.pool_rank} / ${x.pool_n}`:`#${x.pool_rank}`):(x?.projected_rank||(ps?.market_snapshot?.impact_rank!=null?`#${ps.market_snapshot.impact_rank} / ${ps.market_snapshot.impact_pool||'—'}`:'—'));
-      const role=x?.role_chip||x?.role_band||ps?.market_snapshot?.role||ps?.archetype||r.projected_role||'Role unconfirmed';
+      const rank=x?.pool_rank!=null?(x.pool_n!=null?`#${x.pool_rank} / ${x.pool_n}`:`#${x.pool_rank}`):(md.rank!=null?`#${md.rank} / ${md.rank_pool||'—'} ${md.rank_group||''}`:(x?.projected_rank||(ps?.market_snapshot?.impact_rank!=null?`#${ps.market_snapshot.impact_rank} / ${ps.market_snapshot.impact_pool||'—'}`:'—')));
+      const role=x?.role_chip||x?.role_band||md.role||ps?.market_snapshot?.role||ps?.archetype||r.projected_role||'Role unconfirmed';
       const price=likely!=null?`${likely.toFixed(likely<10?2:1).replace(/\\.00$/,'')}M`:(r.target_bid!=null?`${(Number(r.target_bid)/1e6).toFixed(2)}M`:'—');
       const fairLabel=fair!=null?`${fair.toFixed(fair<10?2:1).replace(/\\.00$/,'')}M fair`:'No fair value';
-      const gp=career.gp??'—',pts=career.pts??career.points??'—',ppg=career.ppg??'—';
+      const gp=career.gp??md.gp??'—',pts=career.pts??career.points??'—',ppg=career.ppg??md.ppg??'—';
       const qb=(s,label)=>`<button type="button" class="hs-quick-btn ${current===s?'active':''}" data-hs-row-quick="${s}" data-hs-row-id="${r.id}">${label}</button>`;
-      const liveMarket=r.market_updated_at?('<span class="hs-tag">'+esc(r.is_biddable===true?'BIDDABLE':(r.market_status||'MARKET'))+'</span>'):'';
+      const focusTag=r.market_focus===true?('<span class="hs-tag">CHELSCOUT FOCUS'+(md.reach_pct!=null?' · '+esc(md.reach_pct)+'% REACH':'')+'</span>'):'';
+      const liveMarket=r.is_biddable===true?'<span class="hs-tag">CONFIRMED BIDABLE</span>':'';
       return `<article class="hs-player-card tier-${tier.key}" data-hs-player="${r.id}">
         <div class="hs-player-card-head">
           <button class="hs-player-name" type="button">${esc(p.gamertag||'Unknown')}</button>
@@ -252,7 +263,9 @@
         </div>
         <div class="hs-player-subline">
           <span>${esc(gp)} GP</span><span>${esc(pts)} PTS</span><span>${esc(ppg)} PPG</span>
-          <span>${esc(x?.confidence||x?.reliability||ps?.confidence||'SCOUTING OPEN')}</span>
+          <span>${esc(x?.confidence||x?.reliability||md.confidence||ps?.confidence||'SCOUTING OPEN')}</span>
+          ${md.server?'<span>'+esc(md.server)+' server</span>':''}
+          ${md.projection?'<span>↑ '+esc(md.projection)+'</span>':''}
         </div>
         ${hasRecentExperience(r)?`<div class="hs-player-history"><b>RECENT EXPERIENCE</b><span>${esc(experienceLabel(r))}</span></div>`:''}
         <div class="hs-player-rankline"><b>CHL · S55</b><span>${esc(rank)}</span><span>${reports} report${reports===1?'':'s'}</span><span>Fit ${r.fit_grade??'—'}</span></div>
@@ -261,7 +274,7 @@
           <div class="hs-card-market-bar"><i style="left:${marketPin(fair,likely,walk)}%"></i></div>
           <div class="hs-card-market-foot"><strong>${tier.label}</strong><span>${walk!=null?`walk ${walk.toFixed(walk<10?2:1)}M`:'Calgary plan'}</span></div>
         </div>
-        <div class="hs-player-actions"><span class="hs-tag">${esc(current.replaceAll('_',' '))}</span>${liveMarket}<div class="hs-quick-actions">${qb('bid_target','Target')}${qb('watch','Watch')}${qb('pass','Pass')}</div></div>
+        <div class="hs-player-actions"><span class="hs-tag">${esc(current.replaceAll('_',' '))}</span>${focusTag}${liveMarket}<div class="hs-quick-actions">${qb('bid_target','Target')}${qb('watch','Watch')}${qb('pass','Pass')}</div></div>
       </article>`;
     }).join('');
 
@@ -519,7 +532,7 @@
       resetPool();
     }));
     document.querySelectorAll('[data-hs-scope]').forEach(b=>b.addEventListener('click',()=>{
-      S.scope=b.dataset.hsScope||'bidable';
+      S.scope=b.dataset.hsScope||'focus';
       document.querySelectorAll('[data-hs-scope]').forEach(x=>x.classList.toggle('active',x===b));
       resetPool();
     }));
