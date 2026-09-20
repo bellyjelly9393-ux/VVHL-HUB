@@ -86,8 +86,8 @@
     const msg=document.getElementById('vodTwitchAuthMsg');
     try{
       const status=await workerFetch('/twitch-auth');
-      if(badge){badge.textContent=status.configured?'CONNECTED':'NOT CONNECTED';badge.dataset.tone=status.configured?'good':'warn';}
-      if(msg)msg.textContent=status.configured?'Authenticated VOD fallback is available.':'Public Twitch retrieval only.';
+      if(badge){badge.textContent=status.configured?'AUTH CONNECTED':'PUBLIC READY';badge.dataset.tone='good';}
+      if(msg)msg.textContent=status.configured?'Authenticated VOD fallback is available.':'Public Twitch VOD retrieval is enabled. Authentication is only needed if Twitch blocks a specific recording.';
       const clear=document.getElementById('vodClearTwitchAuth');if(clear)clear.disabled=!status.configured;
     }catch(e){
       if(badge)badge.textContent='UNAVAILABLE';
