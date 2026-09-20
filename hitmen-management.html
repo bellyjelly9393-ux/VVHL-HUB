@@ -1,143 +1,19 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#09070c" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="description" content="Restricted Calgary Hitmen management workspace for scouting and bidding." />
-  <title>Calgary Hitmen Management | Wildman Esports Hub</title>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="hub.css" />
-  <link rel="stylesheet" href="wildman.css" />
-  <link rel="stylesheet" href="hitmen-management.css" />
-<link rel="stylesheet" href="network-v2.css"></head>
-<body class="wildman-site hitmen-management">
-  <header class="site-header">
-    <a class="brand" href="hitmen-workspace.html"><span class="wm-brand-mark">H</span><span class="brand-copy wm-brand-copy">CALGARY HITMEN<br><b>WAR ROOM</b></span></a>
-    <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
-    <nav class="main-nav"><a href="hitmen-workspace.html">War Room</a><a href="hitmen-management.html?tab=pool">Scouting</a><a href="hitmen-management.html?tab=bids">Target Board</a><a href="hitmen-locker-room.html">Locker Room</a><a href="vod-lab.html?team=calgary-hitmen">Film Room</a><a href="hitmen-battle-plan.html">Battle Plan</a></nav>
-  </header>
-
-  <main class="hitmen-shell">
-    <section class="hitmen-hero">
-      <div class="hitmen-hero-card">
-        <div class="eyebrow">CALGARY HITMEN · PRIVATE MANAGEMENT</div>
-        <h1>FRONT OFFICE COMMAND</h1>
-        <p>The operational front office for Calgary management: scouting pool, shared reports, target priorities, bid ceilings and roster-building decisions in one private command center.</p>
-      </div>
-      <aside class="hitmen-hero-card hitmen-lock">
-        <b>Team-Scoped Access</b>
-        <span>Only approved Calgary Hitmen management accounts can read or change the data on this page.</span>
-        <small>Owner · GM · AGM · Wildman Admin</small>
-      </aside>
-    </section>
-
-    <section id="accountPanel" class="hitmen-auth-card"><div><div class="eyebrow">SECURE ACCESS</div><h3>Loading account…</h3></div></section>
-
-    <section id="accessGate" class="hitmen-gate" hidden>
-      <div class="hitmen-access-state"><strong>Account signed in, but Calgary management access is not active yet.</strong><br />Use the exact email approved by the Wildman admin. Once that email is assigned to Calgary, refresh this page and the workspace will unlock.</div>
-    </section>
-
-    <section id="hitmenWorkspace" class="hitmen-workspace" hidden>
-      <div class="hitmen-toolbar">
-        <div><div class="eyebrow">CALGARY HITMEN</div><h2 style="margin:4px 0 0">MANAGEMENT COMMAND CENTER</h2></div>
-        <div class="hitmen-role" id="roleBadge">Restricted</div>
-      </div>
-
-      <div class="hitmen-stats">
-        <div class="hitmen-stat"><small>Players Scouted</small><strong id="statScouted">0</strong></div>
-        <div class="hitmen-stat"><small>Priority Targets</small><strong id="statPriority">0</strong></div>
-        <div class="hitmen-stat"><small>Bid Targets</small><strong id="statBids">0</strong></div>
-        <div class="hitmen-stat"><small>Reports Logged</small><strong id="statReports">0</strong></div>
-      </div>
-
-      <div class="hitmen-tabs" role="tablist">
-        <button class="hitmen-tab active" data-tab="pool" type="button">Scouting Pool</button>
-        <button class="hitmen-tab" data-tab="reports" type="button">Scouting Reports</button>
-        <button class="hitmen-tab" data-tab="bids" type="button">Bidding Board</button>
-      </div>
-
-      <section class="hitmen-tab-panel active" data-panel="pool">
-        <div class="hitmen-grid">
-          <div class="hitmen-panel">
-            <div class="hitmen-panel-head"><h2>Scouting Pool</h2><input id="poolSearch" class="hm-field hm-search" type="search" placeholder="Search gamertag or position" /></div>
-            <div class="hm-table-wrap"><table class="hm-table"><thead><tr><th>Player</th><th>Pos</th><th>Status</th><th>Priority</th><th>Fit</th><th>Target</th><th>Max</th></tr></thead><tbody id="poolBody"></tbody></table></div>
-            <div id="poolEmpty" class="hm-empty" hidden>No Calgary scouting targets yet.</div>
-          </div>
-          <div class="hitmen-panel">
-            <div class="hitmen-panel-head"><h2>Add Player</h2><span class="hm-message" id="addPlayerMessage"></span></div>
-            <form id="addPlayerForm">
-              <div class="hitmen-form-grid">
-                <label><span class="hm-label">Gamertag</span><input id="newGamertag" class="hm-field" required /></label>
-                <label><span class="hm-label">Primary Position</span><select id="newPosition" class="hm-select"><option value="">Unknown</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option></select></label>
-                <label><span class="hm-label">Platform</span><select id="newPlatform" class="hm-select"><option value="">Unknown</option><option>Xbox</option><option>PlayStation</option><option>Crossplay</option></select></label>
-                <label><span class="hm-label">Initial Status</span><select id="newStatus" class="hm-select"><option value="scouted">Scouted</option><option value="watch">Watch</option><option value="priority">Priority</option><option value="bid_target">Bid Target</option></select></label>
-              </div>
-              <div class="hm-form-actions"><button class="hm-btn primary" type="submit">Add to Calgary Pool</button></div>
-            </form>
-
-            <div id="playerEditor" style="margin-top:24px" hidden>
-              <div class="hm-player-title"><div><span>SELECTED PLAYER</span><h3 id="selectedName">Player</h3><span id="selectedMeta"></span></div><button id="removeFromPool" class="hm-btn" type="button">Remove</button></div>
-              <form id="poolEditForm">
-                <div class="hitmen-form-grid">
-                  <label><span class="hm-label">Status</span><select id="editStatus" class="hm-select"><option value="scouted">Scouted</option><option value="watch">Watch</option><option value="priority">Priority</option><option value="bid_target">Bid Target</option><option value="pass">Pass</option><option value="signed">Signed</option><option value="lost">Lost</option></select></label>
-                  <label><span class="hm-label">Priority 1-5</span><input id="editPriority" class="hm-field" type="number" min="1" max="5" /></label>
-                  <label><span class="hm-label">Fit Grade 1-10</span><input id="editFit" class="hm-field" type="number" min="1" max="10" /></label>
-                  <label><span class="hm-label">Projected Role</span><input id="editRole" class="hm-field" placeholder="Top line C, RD, depth G…" /></label>
-                  <label><span class="hm-label">Target Bid</span><input id="editTargetBid" class="hm-field" type="number" min="0" step="250000" /></label>
-                  <label><span class="hm-label">Max Bid</span><input id="editMaxBid" class="hm-field" type="number" min="0" step="250000" /></label>
-                  <label class="wide"><span class="hm-label">Management Note</span><textarea id="editNote" class="hm-textarea" placeholder="Why we want him, lineup fit, availability, concerns…"></textarea></label>
-                </div>
-                <div class="hm-form-actions"><button class="hm-btn primary" type="submit">Save Player Plan</button><span id="poolEditMessage" class="hm-message"></span></div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="hitmen-tab-panel" data-panel="reports">
-        <div class="hitmen-grid">
-          <div class="hitmen-panel">
-            <div class="hitmen-panel-head"><h2>Write Report</h2><span id="reportMessage" class="hm-message"></span></div>
-            <form id="reportForm">
-              <div class="hitmen-form-grid">
-                <label class="wide"><span class="hm-label">Player</span><select id="reportPlayer" class="hm-select" required></select></label>
-                <label><span class="hm-label">Overall</span><input id="gradeOverall" class="hm-field" type="number" min="1" max="10" /></label>
-                <label><span class="hm-label">Offense</span><input id="gradeOffense" class="hm-field" type="number" min="1" max="10" /></label>
-                <label><span class="hm-label">Defense</span><input id="gradeDefense" class="hm-field" type="number" min="1" max="10" /></label>
-                <label><span class="hm-label">Hockey IQ</span><input id="gradeIQ" class="hm-field" type="number" min="1" max="10" /></label>
-                <label><span class="hm-label">Puck Movement</span><input id="gradePuck" class="hm-field" type="number" min="1" max="10" /></label>
-                <label><span class="hm-label">Positioning</span><input id="gradePositioning" class="hm-field" type="number" min="1" max="10" /></label>
-                <label><span class="hm-label">Communication</span><input id="gradeComms" class="hm-field" type="number" min="1" max="10" /></label>
-                <label><span class="hm-label">Consistency</span><input id="gradeConsistency" class="hm-field" type="number" min="1" max="10" /></label>
-                <label class="wide"><span class="hm-label">Recommendation</span><select id="reportRecommendation" class="hm-select"><option value="target">Target</option><option value="must_bid">Must Bid</option><option value="watch">Watch</option><option value="depth">Depth</option><option value="pass">Pass</option></select></label>
-                <label class="wide"><span class="hm-label">Strengths</span><textarea id="reportStrengths" class="hm-textarea"></textarea></label>
-                <label class="wide"><span class="hm-label">Concerns</span><textarea id="reportConcerns" class="hm-textarea"></textarea></label>
-                <label class="wide"><span class="hm-label">Projected Role</span><input id="reportRole" class="hm-field" /></label>
-                <label class="wide"><span class="hm-label">Full Notes</span><textarea id="reportNotes" class="hm-textarea"></textarea></label>
-              </div>
-              <div class="hm-form-actions"><button class="hm-btn primary" type="submit">Save Scouting Report</button></div>
-            </form>
-          </div>
-          <div class="hitmen-panel"><div class="hitmen-panel-head"><h2>Team Reports</h2></div><div id="reportList"></div><div id="reportEmpty" class="hm-empty" hidden>No scouting reports logged yet.</div></div>
-        </div>
-      </section>
-
-      <section class="hitmen-tab-panel" data-panel="bids">
-        <div class="hitmen-panel">
-          <div class="hitmen-panel-head"><h2>Bidding Board</h2><span class="hm-message">Shared Calgary plan</span></div>
-          <div class="hm-table-wrap"><table class="hm-table"><thead><tr><th>Player</th><th>Pos</th><th>Priority</th><th>Status</th><th>Target Price</th><th>Max Price</th><th>Plan</th></tr></thead><tbody id="bidBody"></tbody></table></div>
-          <div id="bidEmpty" class="hm-empty" hidden>No players are on the bidding board yet. Mark a player as Bid Target or save bid numbers from the scouting pool.</div>
-        </div>
-      </section>
-    </section>
-  </main>
-
-  <footer><div class="section-shell footer-inner"><div><b>WILDMAN ESPORTS HUB</b><span>Calgary Hitmen Restricted Management</span></div><p>Private scouting and bidding workspace</p></div></footer>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
-  <script src="backend.js"></script>
-  <script src="script.js"></script>
-  <script src="hitmen-management.js"></script>
-</body>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Calgary Hitmen Front Office</title>
+  <meta http-equiv="refresh" content="0;url=/calgary?tab=pool#hitmen-scouting">
+  <script>
+    (() => {
+      const tab=new URLSearchParams(location.search).get('tab');
+      const allowed=['pool','targets','reports','bids'];
+      const next=allowed.includes(tab)?tab:(tab==='bidding'?'bids':'pool');
+      location.replace('/calgary?tab='+encodeURIComponent(next)+'#hitmen-scouting');
+    })();
+  </script>
+</head>
+<body></body>
 </html>
