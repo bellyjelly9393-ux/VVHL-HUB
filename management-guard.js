@@ -25,7 +25,7 @@
     if (profileRole === "admin" || profileRole === "commissioner") return true;
 
     const page = (location.pathname.split("/").pop() || "").toLowerCase();
-    const hitmenPage = ["hitmen","hitmen-workspace.html","hitmen-management.html","hitmen-gm-ai.html","hitmen-locker-room.html","hitmen-battle-plan.html","hitmen-card-vault.html"].includes(page);
+    const hitmenPage = ["hitmen","calgary","war-room","hitmen-workspace.html","hitmen-management.html","hitmen-gm-ai.html","hitmen-locker-room.html","hitmen-battle-plan.html","hitmen-card-vault.html"].includes(page);
 
     return (state.memberships || []).some((membership) => {
       const role = String(membership.role || "").toLowerCase();
@@ -40,7 +40,7 @@
     const lockedMessage = document.getElementById("managementLockedMessage");
     const accessStatus = document.getElementById("managementAccessStatus");
     const page = (location.pathname.split("/").pop() || "").toLowerCase();
-    const hitmenPage = ["hitmen","hitmen-workspace.html","hitmen-management.html","hitmen-gm-ai.html","hitmen-locker-room.html","hitmen-battle-plan.html","hitmen-card-vault.html"].includes(page);
+    const hitmenPage = ["hitmen","calgary","war-room","hitmen-workspace.html","hitmen-management.html","hitmen-gm-ai.html","hitmen-locker-room.html","hitmen-battle-plan.html","hitmen-card-vault.html"].includes(page);
 
     protectedSections.forEach((section) => {
       section.hidden = !allowed;
@@ -79,6 +79,29 @@
     }
 
     document.body.classList.toggle("management-authorized", allowed);
+
+    const hitmenAllowed = Boolean(
+      state?.user && (
+        String(state.profile?.role || "").toLowerCase() === "admin" ||
+        String(state.profile?.role || "").toLowerCase() === "commissioner" ||
+        (state.memberships || []).some((m) =>
+          m.team_id === HITMEN_TEAM_ID &&
+          m.active !== false &&
+          managementRoles.has(String(m.role || "").toLowerCase())
+        )
+      )
+    );
+    document.querySelectorAll("[data-hitmen-only]").forEach((el) => {
+      el.hidden = !hitmenAllowed;
+    });
+
+    if (hitmenAllowed && document.querySelector(".main-nav") && !document.querySelector("[data-hitmen-nav-link]")) {
+      const link = document.createElement("a");
+      link.href = "/hitmen";
+      link.textContent = "Hitmen War Room";
+      link.dataset.hitmenNavLink = "1";
+      document.querySelector(".main-nav").appendChild(link);
+    }
 
     const isAdmin = Boolean(state?.user && state.profile?.role === "admin");
     document.querySelectorAll("[data-admin-only]").forEach((el) => {
