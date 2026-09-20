@@ -1108,3 +1108,38 @@ body.wm-theme-hitmen .wm-semantic-card::after,
 body.hitmen-war-room .wm-semantic-card::after,
 body.hitmen-management .wm-semantic-card::after,
 body.hitmen-tool-page .wm-semantic-card::after{color:#ff6d7d}
+
+
+/* ---------- Remove leftover gold-first styling from older components ---------- */
+.wildman-site:not(.wm-theme-hitmen) .ops-card small,
+.wildman-site:not(.wm-theme-hitmen) .wm-card small,
+.wildman-site:not(.wm-theme-hitmen) .network-team-card small,
+.wildman-site:not(.wm-theme-hitmen) .network-format-card small,
+.wildman-site:not(.wm-theme-hitmen) .wm-player-meta small,
+.wildman-site:not(.wm-theme-hitmen) .network-kicker{
+  color:#c9b1ff !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-captain-badge{
+  border-color:rgba(164,116,255,.3) !important;
+  background:rgba(117,64,216,.09) !important;
+  color:#d7c5ff !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-stage{
+  border-color:rgba(164,116,255,.17) !important;
+  background:linear-gradient(145deg,rgba(117,64,216,.08),rgba(18,10,28,.5)) !important;
+  color:#eee8ff !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-table th{color:#cdb8ff !important}
+.wildman-site:not(.wm-theme-hitmen) .ticker-track b{color:var(--wm-purple-400) !important}
+.wildman-site:not(.wm-theme-hitmen) .live-dot{
+  background:#ff5c68 !important;
+  box-shadow:0 0 15px rgba(255,75,87,.68) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .academy-plan>span,
+.wildman-site:not(.wm-theme-hitmen) .academy-coaches a{color:#c9b0ff !important}
+.wildman-site:not(.wm-theme-hitmen) .network-service[href]{
+  display:block;
+  color:inherit;
+  text-decoration:none;
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
