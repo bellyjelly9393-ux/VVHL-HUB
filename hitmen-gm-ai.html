@@ -40,7 +40,7 @@
         <h1>CALGARY GM AI</h1>
         <p>Evidence-first scouting and bidding help. Facts and calculations stay separate from AI interpretation.</p>
       </div>
-      <div class="gm-ai-status"><span class="dot"></span><b>MVP MODE</b><small>Mock data + deterministic hockey logic</small></div>
+      <div class="gm-ai-status"><span class="dot"></span><b>MVP MODE</b><small>ChelStats-ready + deterministic hockey logic</small></div>
     </section>
 
     <section class="section-shell gm-ai-grid">
@@ -53,6 +53,14 @@
             <button id="gmSearchBtn" class="small-btn primary" type="button">Load</button>
           </div>
           <div id="gmSearchResults" class="gm-search-results"></div>
+        </div>
+
+        <div class="gm-ai-panel">
+          <div class="eyebrow">CHELSTATS DATA IMPORT</div>
+          <p class="gm-source-note">Paste the JSON response containing <code>games</code>. The parser recomputes totals from individual game records instead of trusting summed percentage fields.</p>
+          <textarea id="gmChelStatsJson" class="field gm-json-input" placeholder='{"games":[...]}'></textarea>
+          <button id="gmImportChelStats" class="small-btn primary" type="button">Import Game Data</button>
+          <div id="gmImportStatus" class="gm-import-status">Using MVP sample data.</div>
         </div>
 
         <div class="gm-ai-panel">
