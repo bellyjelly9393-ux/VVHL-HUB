@@ -176,27 +176,39 @@
     const finals = S.games.filter((g) => g.status === "final" && (!S.eventId || g.event_id === S.eventId));
     const existing = new Map(S.mediaJobs.filter((x) => x.esports_game_id).map((x) => [x.esports_game_id, x]));
     const user = window.VVHLBackend?.state?.user;
-    const missing = finals.filter((g) => !existing.has(g.id));
-    if (!missing.length) return;
-    const payload = missing.map((game) => {
+    for (const game of finals) {
+      const job = existing.get(game.id);
       const pack = mediaPackage(game);
-      return {
-        event_id: game.event_id,
-        esports_game_id: game.id,
-        status: "ready",
-        website_publish_mode: "draft",
+      const packageData = {
         result_snapshot: pack.resultSnapshot,
         recap_draft: pack.recapDraft,
         article_title: pack.articleTitle,
         article_body: pack.articleBody,
         social_copy: pack.socialCopy,
         source_notes: pack.sourceNotes,
+        updated_at: new Date().toISOString()
+      };
+      if (job) {
+        if (!["published","review"].includes(job.status) && (!job.article_title || job.status === "queued")) {
+          const patch = { ...packageData, status: "ready" };
+          const { error } = await db.from("postgame_media_jobs").update(patch).eq("id", job.id);
+          if (error) console.warn("Postgame media automation", error);
+          else Object.assign(job, patch);
+        }
+        continue;
+      }
+      const payload = {
+        event_id: game.event_id,
+        esports_game_id: game.id,
+        status: "ready",
+        website_publish_mode: "draft",
+        ...packageData,
         created_by: user?.id || null
       };
-    });
-    const { data, error } = await db.from("postgame_media_jobs").insert(payload).select("*");
-    if (error) { console.warn("Postgame media automation", error); return; }
-    S.mediaJobs.unshift(...(data || []));
+      const { data, error } = await db.from("postgame_media_jobs").insert(payload).select("*").single();
+      if (error) console.warn("Postgame media automation", error);
+      else if (data) { S.mediaJobs.unshift(data); existing.set(game.id, data); }
+    }
   }
 
   async function syncMediaJobFromEditor(game, status) {
@@ -236,6 +248,34 @@
     root.innerHTML = `<div class="key-stat-grid"><div class="key-stat"><small>Final</small><strong>${esc(f.home?.name)} ${f.homeScore}-${f.awayScore} ${esc(f.away?.name)}</strong></div><div class="key-stat"><small>Shots tracked</small><strong>${f.homeStats.shots}-${f.awayStats.shots}</strong></div><div class="key-stat"><small>Takeaways</small><strong>${f.homeStats.takeaways}-${f.awayStats.takeaways}</strong></div><div class="key-stat"><small>Giveaways</small><strong>${f.homeStats.giveaways}-${f.awayStats.giveaways}</strong></div></div>${f.stars.length ? `<div class="three-stars" style="margin-top:12px">${f.stars.map((s, i) => `<div class="star-card"><span>${i + 1}${i === 0 ? "ST" : i === 1 ? "ND" : "RD"} STAR</span><strong>${esc(s.gamertag)}</strong><small>${esc(s.team)} · ${s.goals}G ${s.assists}A ${s.points}P</small></div>`).join("")}</div>` : '<div class="empty-state" style="margin-top:12px">Player stats are not loaded for this game yet.</div>'}`;
   }
 
+  function renderMediaAutomation(game) {
+    const anchor = $("reportFactsPreview");
+    if (!anchor) return;
+    let panel = $("postgameMediaAutomation");
+    if (!panel) {
+      panel = document.createElement("section");
+      panel.id = "postgameMediaAutomation";
+      panel.className = "report-card";
+      panel.style.marginTop = "16px";
+      anchor.insertAdjacentElement("afterend", panel);
+    }
+    const job = S.mediaJobs.find((x) => x.esports_game_id === game.id);
+    if (!job) {
+      panel.innerHTML = '<div class="eyebrow">POSTGAME MEDIA AUTOMATION</div><h3>Waiting for Final</h3><p>Once this game is Final, Wildman queues the recap/article/social package automatically.</p>';
+      return;
+    }
+    const social = job.social_copy?.short || "";
+    panel.innerHTML = '<div class="eyebrow">POSTGAME MEDIA AUTOMATION</div><h3>' + esc(String(job.status || "queued").toUpperCase()) + '</h3><p><b>Article:</b> ' + esc(job.article_title || "Queued from final result") + '</p>' + (social ? '<p><b>Social copy:</b> <span id="postgameSocialText">' + esc(social) + '</span></p><div class="report-actions"><button id="copyPostgameSocial" class="small-btn" type="button">Copy Social Copy</button></div>' : '<p>Social copy will populate when the verified result package is enriched.</p>');
+    $("copyPostgameSocial")?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(social);
+        message("reportSaveMessage", "Social copy copied.");
+      } catch {
+        message("reportSaveMessage", "Could not copy automatically. Select the social text manually.", true);
+      }
+    });
+  }
+
   function loadEditor() {
     const game = currentGame(); if (!game) return;
     const report = currentReport() || {};
@@ -250,6 +290,7 @@
     $("openPublicReportBtn").href = report.status === "published" ? `postgame.html?id=${encodeURIComponent(game.id)}` : "reports.html";
     S.lg = null; $("lgPreview").innerHTML = ""; $("importLgRowsBtn").disabled = true;
     renderFacts(game);
+    renderMediaAutomation(game);
     message("reportSaveMessage", report.status === "published" ? "Published report loaded for editing." : report.id ? "Draft loaded." : "No report saved yet.");
   }
 
