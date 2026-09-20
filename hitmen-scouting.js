@@ -10,7 +10,7 @@
   const money=v=>v==null?'—':'$'+Number(v).toLocaleString();
   const role=()=>{
     if(String(state().profile?.role||'').toLowerCase()==='admin')return'admin';
-    return (state().memberships||[]).find(m=>m.team_id===TEAM_ID&&m.active!==false&&['owner','gm','agm'].includes(String(m.role||'').toLowerCase()))?.role||null;
+    return (state().memberships||[]).find(m=>m.team_id===TEAM_ID&&m.active!==false&&['owner','gm','agm','scout'].includes(String(m.role||'').toLowerCase()))?.role||null;
   };
   function allowed(){S.role=role();return !!S.role;}
   function msg(id,text){if($(id))$(id).textContent=text||'';}
