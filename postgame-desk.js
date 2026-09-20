@@ -2,7 +2,7 @@
   const db = window.VVHLBackend?.db;
   if (!db) return;
 
-  const S = { events: [], teams: [], players: [], rosters: [], games: [], gameStats: [], reports: [], eventId: "", lg: null };
+  const S = { events: [], teams: [], players: [], rosters: [], games: [], gameStats: [], reports: [], mediaJobs: [], eventId: "", lg: null };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c]);
   const lower = (v) => String(v || "").toLowerCase();
@@ -25,7 +25,7 @@
   }
 
   async function loadData() {
-    const [events, teams, players, rosters, games, stats, reports] = await Promise.all([
+    const [events, teams, players, rosters, games, stats, reports, mediaJobs] = await Promise.all([
       db.from("esports_events").select("*").eq("active", true).order("starts_on"),
       db.from("esports_teams").select("*").eq("active", true).order("name"),
       db.from("esports_players").select("*").eq("active", true).order("gamertag"),
@@ -33,13 +33,15 @@
       db.from("esports_games").select("*").order("scheduled_at", { ascending: false }),
       db.from("esports_game_player_stats").select("*"),
       db.from("esports_game_reports").select("*"),
+      db.from("postgame_media_jobs").select("*").order("created_at", { ascending: false }),
     ]);
-    const err = [events, teams, players, rosters, games, stats, reports].find((x) => x.error)?.error;
+    const err = [events, teams, players, rosters, games, stats, reports, mediaJobs].find((x) => x.error)?.error;
     if (err) { console.error(err); return; }
     Object.assign(S, {
-      events: events.data || [], teams: teams.data || [], players: players.data || [], rosters: rosters.data || [], games: games.data || [], gameStats: stats.data || [], reports: reports.data || [],
+      events: events.data || [], teams: teams.data || [], players: players.data || [], rosters: rosters.data || [], games: games.data || [], gameStats: stats.data || [], reports: reports.data || [], mediaJobs: mediaJobs.data || [],
     });
     S.eventId = S.events.find((x) => x.slug === "road-to-pro-2026")?.id || S.events[0]?.id || "";
+    await syncMediaJobs();
     renderGames();
   }
 
@@ -129,6 +131,103 @@
       away: { team: f.away?.name, score: f.awayScore, ...f.awayStats },
     };
     return { headline, subheadline, analyst_report: analysis.join("\n\n"), turning_point: turningPoint, desk_title: deskTitle, desk_banter: desk, three_stars: f.stars, key_stats: keyStats };
+  }
+
+  function mediaPackage(game) {
+    const d = draftReport(game);
+    const f = factsFor(game);
+    const score = (f.home?.name || "Home") + " " + f.homeScore + "-" + f.awayScore + " " + (f.away?.name || "Away");
+    const articleBody = [
+      d.subheadline,
+      d.analyst_report,
+      d.turning_point ? "TURNING POINT\n" + d.turning_point : "",
+      d.desk_banter ? (d.desk_title || "THE LATE DESK") + "\n" + d.desk_banter : ""
+    ].filter(Boolean).join("\n\n");
+    return {
+      resultSnapshot: {
+        game_id: game.id,
+        event_id: game.event_id,
+        status: game.status,
+        scheduled_at: game.scheduled_at,
+        overtime: Boolean(game.overtime),
+        stage: game.stage || game.round_label || null,
+        home: { id: game.home_team_id, name: f.home?.name || null, score: f.homeScore, stats: f.homeStats },
+        away: { id: game.away_team_id, name: f.away?.name || null, score: f.awayScore, stats: f.awayStats },
+        three_stars: d.three_stars
+      },
+      recapDraft: d.subheadline,
+      articleTitle: d.headline,
+      articleBody,
+      socialCopy: {
+        short: d.headline + ". " + d.subheadline,
+        score,
+        three_stars: d.three_stars,
+        website_path: "postgame.html?id=" + game.id
+      },
+      sourceNotes: {
+        generator: "wildman-postgame-v1",
+        stats_loaded: gameStats(game.id).length > 0,
+        evidence: "Verified tournament result and currently loaded game stats. VOD evidence can be merged before publication."
+      }
+    };
+  }
+
+  async function syncMediaJobs() {
+    const finals = S.games.filter((g) => g.status === "final" && (!S.eventId || g.event_id === S.eventId));
+    const existing = new Map(S.mediaJobs.filter((x) => x.esports_game_id).map((x) => [x.esports_game_id, x]));
+    const user = window.VVHLBackend?.state?.user;
+    const missing = finals.filter((g) => !existing.has(g.id));
+    if (!missing.length) return;
+    const payload = missing.map((game) => {
+      const pack = mediaPackage(game);
+      return {
+        event_id: game.event_id,
+        esports_game_id: game.id,
+        status: "ready",
+        website_publish_mode: "draft",
+        result_snapshot: pack.resultSnapshot,
+        recap_draft: pack.recapDraft,
+        article_title: pack.articleTitle,
+        article_body: pack.articleBody,
+        social_copy: pack.socialCopy,
+        source_notes: pack.sourceNotes,
+        created_by: user?.id || null
+      };
+    });
+    const { data, error } = await db.from("postgame_media_jobs").insert(payload).select("*");
+    if (error) { console.warn("Postgame media automation", error); return; }
+    S.mediaJobs.unshift(...(data || []));
+  }
+
+  async function syncMediaJobFromEditor(game, status) {
+    const job = S.mediaJobs.find((x) => x.esports_game_id === game.id);
+    if (!job) return;
+    const draft = draftReport(game);
+    const published = status === "published";
+    const articleBody = [
+      $("reportSubheadline").value.trim(),
+      $("reportAnalyst").value.trim(),
+      $("reportTurningPoint").value.trim() ? "TURNING POINT\n" + $("reportTurningPoint").value.trim() : "",
+      $("reportDeskBanter").value.trim() ? ($("reportDeskTitle").value.trim() || "THE LATE DESK") + "\n" + $("reportDeskBanter").value.trim() : ""
+    ].filter(Boolean).join("\n\n");
+    const social = {
+      short: $("reportHeadline").value.trim() + ". " + ($("reportSubheadline").value.trim() || ""),
+      score: (teamById(game.home_team_id)?.name || "Home") + " " + num(game.home_score) + "-" + num(game.away_score) + " " + (teamById(game.away_team_id)?.name || "Away"),
+      three_stars: draft.three_stars,
+      website_path: "postgame.html?id=" + game.id
+    };
+    const patch = {
+      status: published ? "published" : "review",
+      recap_draft: $("reportSubheadline").value.trim() || null,
+      article_title: $("reportHeadline").value.trim(),
+      article_body: articleBody,
+      social_copy: social,
+      updated_at: new Date().toISOString(),
+      published_at: published ? (job.published_at || new Date().toISOString()) : job.published_at
+    };
+    const { error } = await db.from("postgame_media_jobs").update(patch).eq("id", job.id);
+    if (error) console.warn("Postgame media job update", error);
+    else Object.assign(job, patch);
   }
 
   function renderFacts(game) {
@@ -286,7 +385,8 @@
     };
     const res = await db.from("esports_game_reports").upsert(payload, { onConflict: "game_id" });
     if (res.error) return message("reportSaveMessage", res.error.message, true);
-    message("reportSaveMessage", status === "published" ? "Published. The report is now live on the public Postgame Reports page." : "Draft saved privately.");
+    await syncMediaJobFromEditor(game, status);
+    message("reportSaveMessage", status === "published" ? "Published. The report is now live on the public Postgame Reports page and the media job is closed as published." : "Draft saved privately. Article and social package updated.");
     await loadData();
   }
 
