@@ -269,6 +269,7 @@
         else{setStatus('AI period review finished. Importing results into VOD Lab…','good');await ingest(job,reviewId);}
       }
       else if(job.status==='failed'||job.status==='expired')setStatus(job.error||`Pipeline ${job.status}.`,'bad');
+      else if(job.status==='queued'&&/rate limit|cooling down/i.test(job.error||''))setStatus(job.error,'warn');
       else setStatus(`Pipeline: ${String(job.status).replaceAll('_',' ')}${job.result?.total_chunks?` · ${job.result.chunks?.length||0}/${job.result.total_chunks} chunks`:''}`,'good');
       if(done){clearInterval(pollTimer);pollTimer=null;}
       if(loud&&job.status==='ready_for_review')document.getElementById('refreshVod')?.click();
