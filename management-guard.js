@@ -1,15 +1,15 @@
 (() => {
   function ensurePresentationLayer(){
     document.body?.classList.add('wm-ds');
-    if(!document.querySelector('link[href="network-v2.css"]')){
+    if(!document.querySelector('link[href*="network-v2.css"]')){
       const link=document.createElement('link');
       link.rel='stylesheet';
-      link.href='network-v2.css';
+      link.href='network-v2.css?v=20260920a';
       document.head.appendChild(link);
     }
-    if(!document.querySelector('script[src="ui-polish.js"]')){
+    if(!document.querySelector('script[src*="ui-polish.js"]')){
       const s=document.createElement('script');
-      s.src='ui-polish.js';
+      s.src='ui-polish.js?v=20260920a';
       s.async=false;
       document.head.appendChild(s);
     }
