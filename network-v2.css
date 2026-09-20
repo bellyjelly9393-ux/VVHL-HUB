@@ -1272,3 +1272,369 @@ body.wm-page-network .ops-hero::after{
     box-shadow:8px 0 16px rgba(0,0,0,.16);
   }
 }
+
+
+/* =====================================================================
+   WILDMAN ORIGINAL PALETTE RESTORATION · 2026-09-20
+   Black / graphite / silver / gold with controlled crimson + ember.
+   ===================================================================== */
+:root{
+  --wm-purple-950:#050505;
+  --wm-purple-900:#080808;
+  --wm-purple-850:#0d0c0c;
+  --wm-purple-800:#141212;
+  --wm-purple-700:#2a1718;
+  --wm-purple-600:#71313a;
+  --wm-purple-500:#b62436;
+  --wm-purple-400:#d7a942;
+  --wm-purple-300:#f0cf7a;
+  --wm-gold:#d7a942;
+  --wm-gold-2:#ffd978;
+  --wm-crimson:#c91f32;
+  --wm-crimson-bright:#ef4055;
+  --wm-ember:#ff8b3d;
+  --wm-ice:#f3f3f4;
+  --wm-metal:#c9cbd0;
+  --wm-line:rgba(215,169,66,.22);
+  --wm-line-strong:rgba(255,217,120,.56);
+  --wm-panel:rgba(12,11,11,.94);
+  --wm-panel-2:rgba(18,15,15,.92);
+}
+
+body.wildman-site:not(.wm-theme-hitmen){
+  background:
+    radial-gradient(circle at 84% 10%,rgba(201,31,50,.08),transparent 24%),
+    radial-gradient(circle at 14% 7%,rgba(215,169,66,.08),transparent 24%),
+    linear-gradient(180deg,#020202 0%,#080808 46%,#020202 100%) !important;
+}
+body.wildman-site:not(.wm-theme-hitmen)::before{
+  background:
+    linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.01) 1px,transparent 1px),
+    radial-gradient(ellipse at 50% 100%,rgba(215,169,66,.045),transparent 42%) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .site-header{
+  background:rgba(3,3,4,.92) !important;
+  border-color:rgba(215,169,66,.19) !important;
+  box-shadow:0 12px 42px rgba(0,0,0,.38) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-brand-mark{
+  border-color:rgba(215,169,66,.4) !important;
+  box-shadow:0 0 28px rgba(215,169,66,.14) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-brand-copy b{color:#e7c56f !important}
+.wildman-site:not(.wm-theme-hitmen) .main-nav a:hover,
+.wildman-site:not(.wm-theme-hitmen) .main-nav a.active-nav{
+  color:#ffe29a !important;
+  background:rgba(215,169,66,.055) !important;
+  box-shadow:inset 0 -2px #d7a942 !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .menu-toggle{
+  border-color:rgba(215,169,66,.34) !important;
+  color:#f7e6bc !important;
+  background:#090807 !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-join-btn{
+  border-color:rgba(255,217,120,.54) !important;
+  background:linear-gradient(180deg,rgba(215,169,66,.18),rgba(47,33,11,.17)) !important;
+  color:#fff4d5 !important;
+  box-shadow:0 0 24px rgba(215,169,66,.12) !important;
+}
+
+.wildman-site:not(.wm-theme-hitmen) .wm-network-strip{
+  border-color:rgba(215,169,66,.14) !important;
+  background:rgba(6,6,6,.78) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-network-strip strong,
+.wildman-site:not(.wm-theme-hitmen) .eyebrow{
+  color:#d7b55e !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-network-strip a:hover{color:#ffe29a !important}
+
+.wildman-site:not(.wm-theme-hitmen) .wm-segment-header{
+  border-color:rgba(215,169,66,.24) !important;
+  background:
+    linear-gradient(90deg,rgba(4,4,4,.99),rgba(9,8,8,.88) 52%,rgba(16,8,9,.64)),
+    radial-gradient(circle at 80% 34%,rgba(201,31,50,.14),transparent 34%),
+    radial-gradient(circle at 66% 64%,rgba(255,139,61,.05),transparent 30%),
+    #050505 !important;
+  box-shadow:var(--wm-shadow),0 0 42px rgba(215,169,66,.055) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-segment-header::after{
+  background:
+    linear-gradient(90deg,#040404 0%,rgba(5,5,5,.95) 34%,rgba(7,6,6,.63) 64%,rgba(9,5,5,.22) 100%),
+    linear-gradient(180deg,transparent 55%,rgba(2,2,2,.78)) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-segment-badge{
+  border-color:rgba(215,169,66,.34) !important;
+  background:rgba(215,169,66,.07) !important;
+  color:#f0d18a !important;
+}
+
+.wildman-site:not(.wm-theme-hitmen) .ops-hero,
+.wildman-site:not(.wm-theme-hitmen) .wm-page-hero,
+.wildman-site:not(.wm-theme-hitmen) .private-hero,
+.wildman-site:not(.wm-theme-hitmen) .vod-hero{
+  border-color:rgba(215,169,66,.22) !important;
+  background:
+    linear-gradient(90deg,rgba(4,4,4,.99),rgba(8,7,7,.91) 52%,rgba(18,8,10,.72)),
+    radial-gradient(circle at 80% 38%,rgba(201,31,50,.13),transparent 34%),
+    radial-gradient(circle at 70% 64%,rgba(255,139,61,.04),transparent 30%) !important;
+  box-shadow:var(--wm-shadow),0 0 40px rgba(215,169,66,.045) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .ops-hero h1 span,
+.wildman-site:not(.wm-theme-hitmen) .wm-page-hero h1 span,
+.wildman-site:not(.wm-theme-hitmen) .private-hero h1 span,
+.wildman-site:not(.wm-theme-hitmen) .vod-hero h1 span,
+.wildman-site:not(.wm-theme-hitmen) .wm-green{
+  color:#e1b653 !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .private-hero{
+  background:
+    linear-gradient(90deg,rgba(4,4,4,.99),rgba(7,6,6,.92) 50%,rgba(16,8,9,.58)),
+    radial-gradient(circle at 78% 34%,rgba(201,31,50,.1),transparent 31%),
+    url("assets/wildman/scouting-lab.webp") center/cover no-repeat !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .private-hero::after{
+  background:
+    radial-gradient(circle at 78% 38%,rgba(201,31,50,.11),transparent 34%),
+    linear-gradient(180deg,transparent 50%,rgba(2,2,2,.64)) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .vod-hero{
+  background:
+    linear-gradient(90deg,rgba(4,4,4,.99),rgba(7,6,6,.92) 55%,rgba(16,8,9,.7)),
+    radial-gradient(circle at 80% 32%,rgba(201,31,50,.1),transparent 30%),
+    repeating-linear-gradient(90deg,transparent 0 7%,rgba(255,255,255,.014) 7.1% 7.2%,transparent 7.3% 14%) !important;
+}
+
+.wildman-site:not(.wm-theme-hitmen) .pro-hero{
+  border-color:rgba(215,169,66,.22) !important;
+  background:#030303 !important;
+  box-shadow:var(--wm-shadow),0 0 44px rgba(215,169,66,.05) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .pro-hero-media img{
+  filter:saturate(.96) contrast(1.04) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .pro-hero-shade{
+  background:
+    linear-gradient(90deg,#030303 0%,rgba(3,3,3,.96) 28%,rgba(6,5,5,.74) 47%,rgba(55,17,21,.17) 72%,rgba(3,3,3,.06) 100%),
+    linear-gradient(180deg,rgba(0,0,0,.04) 55%,rgba(2,2,2,.72)) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .pro-hero-copy h1 span{color:#e1b653 !important}
+
+.wildman-site:not(.wm-theme-hitmen) .hub-tabs a,
+.wildman-site:not(.wm-theme-hitmen) .small-btn,
+.wildman-site:not(.wm-theme-hitmen) .btn,
+.wildman-site:not(.wm-theme-hitmen) button:not(.menu-toggle){
+  border-color:rgba(215,169,66,.3) !important;
+  background:linear-gradient(180deg,rgba(215,169,66,.08),rgba(15,13,10,.16)) !important;
+  color:#ead9ad !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .hub-tabs a:hover,
+.wildman-site:not(.wm-theme-hitmen) .small-btn:hover,
+.wildman-site:not(.wm-theme-hitmen) .btn:hover,
+.wildman-site:not(.wm-theme-hitmen) button:not(.menu-toggle):hover{
+  border-color:rgba(255,217,120,.62) !important;
+  color:#fff !important;
+  box-shadow:0 0 22px rgba(215,169,66,.12) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .btn-primary,
+.wildman-site:not(.wm-theme-hitmen) .small-btn.primary,
+.wildman-site:not(.wm-theme-hitmen) button.primary{
+  background:linear-gradient(135deg,#e3bb61,#9b681d) !important;
+  border-color:#f2d37f !important;
+  color:#12100a !important;
+  box-shadow:0 10px 26px rgba(215,169,66,.2) !important;
+}
+
+.wildman-site:not(.wm-theme-hitmen) .wm-card,
+.wildman-site:not(.wm-theme-hitmen) .ops-card,
+.wildman-site:not(.wm-theme-hitmen) .network-team-card,
+.wildman-site:not(.wm-theme-hitmen) .network-service,
+.wildman-site:not(.wm-theme-hitmen) .network-format-card,
+.wildman-site:not(.wm-theme-hitmen) .wm-stat,
+.wildman-site:not(.wm-theme-hitmen) .panel,
+.wildman-site:not(.wm-theme-hitmen) .report-card,
+.wildman-site:not(.wm-theme-hitmen) .game-card,
+.wildman-site:not(.wm-theme-hitmen) .featured-broadcast,
+.wildman-site:not(.wm-theme-hitmen) .multi-picker,
+.wildman-site:not(.wm-theme-hitmen) .vod-panel,
+.wildman-site:not(.wm-theme-hitmen) .academy-plan,
+.wildman-site:not(.wm-theme-hitmen) .academy-paths>article,
+.wildman-site:not(.wm-theme-hitmen) .academy-paths>details,
+.wildman-site:not(.wm-theme-hitmen) .academy-coaches>article,
+.wildman-site:not(.wm-theme-hitmen) .academy-player-card,
+.wildman-site:not(.wm-theme-hitmen) .academy-challenge{
+  border-color:rgba(215,169,66,.18) !important;
+  background:
+    radial-gradient(circle at 90% 10%,rgba(201,31,50,.025),transparent 30%),
+    linear-gradient(145deg,rgba(15,14,13,.96),rgba(5,5,5,.99)) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-card:hover,
+.wildman-site:not(.wm-theme-hitmen) .ops-card:hover,
+.wildman-site:not(.wm-theme-hitmen) .network-team-card:hover,
+.wildman-site:not(.wm-theme-hitmen) .network-format-card:hover,
+.wildman-site:not(.wm-theme-hitmen) .network-service[href]:hover{
+  border-color:rgba(255,211,112,.46) !important;
+  box-shadow:0 24px 58px rgba(0,0,0,.4),0 0 24px rgba(215,169,66,.07) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .ops-link,
+.wildman-site:not(.wm-theme-hitmen) .wm-card b,
+.wildman-site:not(.wm-theme-hitmen) .network-team-card b,
+.wildman-site:not(.wm-theme-hitmen) .network-format-card b{
+  color:#e0bd6f !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-semantic-card::after{color:#d9b966 !important}
+.wildman-site:not(.wm-theme-hitmen) .wm-card-scouting{
+  background:
+    linear-gradient(145deg,rgba(16,15,13,.96),rgba(5,5,5,.99)),
+    repeating-linear-gradient(0deg,transparent 0 18px,rgba(215,169,66,.035) 19px 20px) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-card-live{
+  border-color:rgba(201,31,50,.31) !important;
+  background:
+    radial-gradient(circle at 92% 10%,rgba(201,31,50,.11),transparent 34%),
+    linear-gradient(145deg,rgba(20,10,11,.97),rgba(6,5,5,.99)) !important;
+}
+
+.wildman-site:not(.wm-theme-hitmen) .status-pill,
+.wildman-site:not(.wm-theme-hitmen) .live-refresh-note,
+body:not(.wm-theme-hitmen) .wm-status{
+  border-color:rgba(215,169,66,.28) !important;
+  background:rgba(215,169,66,.065) !important;
+  color:#efd18a !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .field,
+.wildman-site:not(.wm-theme-hitmen) .select-field,
+.wildman-site:not(.wm-theme-hitmen) .text-input,
+.wildman-site:not(.wm-theme-hitmen) input,
+.wildman-site:not(.wm-theme-hitmen) select,
+.wildman-site:not(.wm-theme-hitmen) textarea{
+  border-color:rgba(215,169,66,.18) !important;
+  background:#090807 !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .field:focus,
+.wildman-site:not(.wm-theme-hitmen) .select-field:focus,
+.wildman-site:not(.wm-theme-hitmen) .text-input:focus,
+.wildman-site:not(.wm-theme-hitmen) input:focus,
+.wildman-site:not(.wm-theme-hitmen) select:focus,
+.wildman-site:not(.wm-theme-hitmen) textarea:focus{
+  border-color:#d7a942 !important;
+  box-shadow:0 0 0 3px rgba(215,169,66,.11) !important;
+}
+.wildman-site:not(.wm-theme-hitmen) .wm-table-wrap,
+.wildman-site:not(.wm-theme-hitmen) .academy-table-wrap{
+  border-color:rgba(215,169,66,.18) !important;
+  background:#080707 !important;
+}
+.wildman-site:not(.wm-theme-hitmen) table thead{background:rgba(215,169,66,.055) !important}
+.wildman-site:not(.wm-theme-hitmen) table th{color:#dabb76 !important}
+.wildman-site:not(.wm-theme-hitmen) table td,
+.wildman-site:not(.wm-theme-hitmen) table th{border-color:rgba(215,169,66,.08) !important}
+.wildman-site:not(.wm-theme-hitmen) table tbody tr:hover{background:rgba(215,169,66,.035) !important}
+
+body.wm-page-academy:not(.wm-theme-hitmen) .academy-membership{
+  border-color:rgba(215,169,66,.22) !important;
+  background:
+    linear-gradient(90deg,rgba(4,4,4,.99),rgba(8,7,7,.94) 48%,rgba(16,8,9,.64)),
+    url("assets/wildman/academy.webp") 82% center/cover no-repeat !important;
+  box-shadow:var(--wm-shadow),0 0 42px rgba(215,169,66,.045) !important;
+}
+body.wm-page-academy:not(.wm-theme-hitmen) .academy-membership::after{
+  background:
+    radial-gradient(circle at 78% 35%,rgba(201,31,50,.1),transparent 35%),
+    linear-gradient(180deg,transparent 56%,rgba(2,2,2,.78)) !important;
+}
+body.wm-page-academy:not(.wm-theme-hitmen) .academy-plan.standard::before,
+body.wm-page-academy:not(.wm-theme-hitmen) .academy-plan.premium::before{
+  background:linear-gradient(90deg,#d7a942,#f3d37e) !important;
+}
+body.wm-page-academy:not(.wm-theme-hitmen) .academy-price{color:#efd18a !important}
+body.wm-page-academy:not(.wm-theme-hitmen) .academy-nav a{color:#dfbd6f !important}
+
+body.wm-page-live:not(.wm-theme-hitmen) .ops-hero{
+  background:
+    linear-gradient(90deg,rgba(4,4,4,.99),rgba(8,7,7,.9) 55%,rgba(26,7,9,.74)),
+    radial-gradient(circle at 80% 38%,rgba(201,31,50,.12),transparent 28%),
+    radial-gradient(circle at 72% 55%,rgba(255,139,61,.045),transparent 33%) !important;
+}
+body.wm-page-media:not(.wm-theme-hitmen) .pro-hero-shade{
+  background:
+    linear-gradient(90deg,#030303 0%,rgba(4,4,4,.95) 30%,rgba(8,6,6,.76) 50%,rgba(42,12,15,.18) 74%,rgba(3,3,3,.06) 100%),
+    repeating-linear-gradient(90deg,transparent 0 8%,rgba(255,255,255,.01) 8.1% 8.2%,transparent 8.3% 16%) !important;
+}
+body.wm-page-media:not(.wm-theme-hitmen) .media-feature-v2,
+body.wm-page-media:not(.wm-theme-hitmen) .media-stack-v2>a{
+  border-color:rgba(215,169,66,.18) !important;
+  background:
+    radial-gradient(circle at 76% 22%,rgba(201,31,50,.035),transparent 28%),
+    linear-gradient(145deg,rgba(15,14,13,.97),rgba(5,5,5,.99)) !important;
+}
+
+body.wm-page-player:not(.wm-theme-hitmen) .network-player-profile,
+body.wm-page-player:not(.wm-theme-hitmen) .wm-player-grid:first-of-type{
+  border-color:rgba(215,169,66,.2) !important;
+  background:
+    radial-gradient(circle at 78% 20%,rgba(201,31,50,.055),transparent 32%),
+    linear-gradient(145deg,rgba(15,14,13,.97),rgba(5,5,5,.995)) !important;
+}
+
+.wildman-home{
+  --wm-home-gold:#d7a942 !important;
+  --wm-home-gold2:#ffd978 !important;
+  --wm-home-purple:#7a242f !important;
+  background:
+    radial-gradient(circle at 82% 18%,rgba(201,31,50,.09),transparent 28%),
+    radial-gradient(circle at 18% 10%,rgba(215,169,66,.07),transparent 24%),
+    linear-gradient(180deg,#020202 0%,#080808 48%,#020202 100%) !important;
+}
+.wildman-home .wm-title-gold{
+  background:linear-gradient(180deg,#fff1b0 0%,#d49a2c 42%,#8c5a13 100%) !important;
+  -webkit-background-clip:text !important;
+  background-clip:text !important;
+  color:transparent !important;
+  filter:drop-shadow(0 5px 8px rgba(0,0,0,.5)) !important;
+}
+.wildman-home .wm-home-hero{
+  border-color:rgba(215,169,66,.24) !important;
+  box-shadow:0 36px 100px rgba(0,0,0,.62),0 0 48px rgba(215,169,66,.06) !important;
+}
+.wildman-home .wm-home-hero-overlay{
+  background:
+    linear-gradient(90deg,rgba(1,1,1,.99) 0%,rgba(2,2,2,.95) 20%,rgba(3,2,2,.77) 38%,rgba(35,8,10,.17) 58%,rgba(0,0,0,.03) 72%),
+    linear-gradient(180deg,rgba(0,0,0,.05) 48%,rgba(0,0,0,.48) 100%) !important;
+}
+.wildman-home .wm-gold-btn{
+  color:#111 !important;
+  background:linear-gradient(180deg,#ffe297,#d5a23f) !important;
+  border-color:#ffdf83 !important;
+  box-shadow:0 10px 26px rgba(215,169,66,.22),0 0 18px rgba(255,215,120,.14) !important;
+}
+.wildman-home .wm-outline-btn{
+  color:#f5f5f5 !important;
+  border-color:rgba(215,169,66,.55) !important;
+  background:rgba(0,0,0,.42) !important;
+}
+.wildman-home .wm-home-stats strong{color:#f5cf6b !important}
+.wildman-home .wm-feature-card{
+  border-color:rgba(215,169,66,.2) !important;
+  background:
+    radial-gradient(circle at 90% 10%,rgba(201,31,50,.025),transparent 30%),
+    linear-gradient(135deg,rgba(10,10,10,.96),rgba(17,15,12,.92)) !important;
+}
+.wildman-home .wm-feature-icon{
+  background:linear-gradient(145deg,#f6cf72,#9e681d) !important;
+  color:#090909 !important;
+  box-shadow:0 10px 24px rgba(215,169,66,.18) !important;
+}
+.wildman-home .wm-feature-arrow{color:#ffd978 !important}
+.wildman-home .wm-media-partner{
+  border-color:rgba(215,169,66,.3) !important;
+  background:rgba(5,5,5,.58) !important;
+}
+.wildman-home .wm-media-partner span,
+.wildman-home .wm-media-partner b{color:#ffcb57 !important}
+.wildman-home .eyebrow{color:#d7b55e !important}
+
+/* Public Wildman pages remain distinct from Calgary: gold leads, crimson intensifies.
+   Calgary itself keeps the dedicated black/crimson/silver operations treatment. */
