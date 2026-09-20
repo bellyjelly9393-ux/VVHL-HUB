@@ -37,3 +37,7 @@
 .gm-source-note{font-size:.82rem;color:#9e9093;margin-top:8px}
 @media(max-width:900px){.gm-ai-grid{grid-template-columns:1fr}.gm-ai-hero{align-items:start;flex-direction:column}.gm-ai-sidebar{grid-template-columns:1fr}.gm-evidence-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.gm-search-row,.gm-ask-row{flex-direction:column}.gm-player-card{align-items:flex-start;flex-direction:column}.gm-player-score{border-left:0;border-top:1px solid #352126;padding:12px 0 0;width:100%;text-align:left}.gm-evidence-grid{grid-template-columns:1fr}}
+.gm-json-input{width:100%;min-height:150px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.75rem;line-height:1.35}
+.gm-import-status{margin-top:10px;font-size:.82rem;color:#a99b9e}
+.gm-import-status.success{color:#9ed8aa}.gm-import-status.error{color:#ff9aa2}
+.gm-source-note code{color:#f3c7cc}
