@@ -188,7 +188,7 @@
         <div class="hs-form">
           <label><span class="hs-label">Login Email</span><input id="hsInviteEmail" class="hs-input" type="email" required></label>
           <label><span class="hs-label">Display Name / Gamertag</span><input id="hsInviteName" class="hs-input" placeholder="imonaplaine / ctbli"></label>
-          <label><span class="hs-label">Calgary Role</span><select id="hsInviteRole" class="hs-select"><option value="owner">Owner</option><option value="gm">GM</option><option value="agm">AGM</option></select></label>
+          <label><span class="hs-label">Calgary Role</span><select id="hsInviteRole" class="hs-select"><option value="owner">Owner</option><option value="gm">GM</option><option value="agm">AGM</option><option value="scout">Scout</option></select></label>
         </div>
         <div class="hs-actions"><button class="hs-btn primary" type="submit">Save Calgary Access</button></div>
       </form>
