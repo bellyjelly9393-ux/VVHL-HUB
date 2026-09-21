@@ -240,9 +240,9 @@
     if(existing?.length)return false;
     const {data:review,error:rerr}=await db().from('vod_review_sessions').select('team_id').eq('id',reviewId).maybeSingle();
     if(rerr)throw rerr;if(!review?.team_id)return false;
-    const payload=periods.map((p,i)=>({review_id:reviewId,team_id:review.team_id,segment_type:'period',segment_index:i+1,label:p.label||`Period ${i+1}`,start_seconds:Number(p.start),end_seconds:Number(p.end),status:'queued',confidence:'preliminary'}));
+    const payload=periods.map((p,i)=>({review_id:reviewId,team_id:review.team_id,segment_type:'period',segment_index:i+1,label:p.label||`Period ${i+1}`,start_seconds:Math.floor(Number(p.start)),end_seconds:Math.ceil(Number(p.end)),status:'queued',confidence:'preliminary'}));
     const {error}=await db().from('vod_review_segments').upsert(payload,{onConflict:'review_id,segment_type,segment_index'});if(error)throw error;
-    await db().from('vod_review_sessions').update({duration_seconds:Number(job.result?.duration)||null,overtime_count:0,updated_at:new Date().toISOString()}).eq('id',reviewId);
+    await db().from('vod_review_sessions').update({duration_seconds:Math.ceil(Number(job.result?.duration))||null,overtime_count:0,updated_at:new Date().toISOString()}).eq('id',reviewId);
     return true;
   }
 
@@ -265,10 +265,11 @@
       else if(job.status==='awaiting_ai')setStatus(job.result?.period_detection==='auto'?'Periods detected automatically ✓ Video is split and ready. AI scouting is the only remaining connection. No re-upload needed.':'Video validated and split into period-sized work. AI is not connected to Railway yet. No re-upload is needed once the AI connection is added.','warn');
       else if(job.status==='ready_for_review'){
         const review=await currentReview();
-        if(review?.status==='complete'||(review?.status==='reviewing'&&review?.full_game_summary))setStatus('Analysis is saved. Review the notes and game report below.','good');
+        if((review?.status==='complete'||review?.status==='reviewing')&&review?.full_game_summary&&review?.tactical_report&&review?.player_report&&review?.professional_writeup)setStatus('Analysis is saved. Review the notes and game report below.','good');
         else{setStatus('AI period review finished. Importing results into VOD Lab…','good');await ingest(job,reviewId);}
       }
       else if(job.status==='failed'||job.status==='expired')setStatus(job.error||`Pipeline ${job.status}.`,'bad');
+      else if(job.status==='processing'&&job.result?.stage==='writing_report')setStatus('Video evidence analyzed. Writing the full scouting report…','good');
       else if(job.status==='queued'&&/rate limit|cooling down/i.test(job.error||''))setStatus(job.error,'warn');
       else setStatus(`Pipeline: ${String(job.status).replaceAll('_',' ')}${job.result?.total_chunks?` · ${job.result.chunks?.length||0}/${job.result.total_chunks} chunks`:''}`,'good');
       if(done){clearInterval(pollTimer);pollTimer=null;}
@@ -277,7 +278,10 @@
   }
 
   async function ingest(job,reviewId){
-    const chunks=job?.result?.chunks||[]; if(!chunks.length)return;
+    const chunks=job?.result?.chunks||[];
+    if(!chunks.length)throw new Error('No analyzed video evidence was returned. Retry the analysis.');
+    const report=job?.result?.game_rollup||{};
+    if(!['summary','patterns','strengths','corrections','tactical_report','player_report','professional_writeup'].every(k=>typeof report[k]==='string'&&report[k].trim()))throw new Error('The final scouting report is incomplete. Press Analyze Game to retry the report using saved evidence. No new upload is needed unless the recording expired.');
     let {data:segments,error}=await db().from('vod_review_segments').select('*').eq('review_id',reviewId).order('start_seconds');
     if(error)throw error;
 
@@ -288,7 +292,7 @@
       const duration=Number(job?.result?.duration)||Math.max(...chunks.map(c=>Number(c.end)||0));
       const {data:created,error:cerr}=await db().from('vod_review_segments').insert({
         review_id:reviewId,team_id:review.team_id,segment_type:'custom',segment_index:1,label:'Full Game',
-        start_seconds:0,end_seconds:duration,status:'queued',confidence:'preliminary'
+        start_seconds:0,end_seconds:Math.ceil(duration),status:'queued',confidence:'preliminary'
       }).select('*').single();
       if(cerr)throw cerr;
       segments=[created];
@@ -331,15 +335,19 @@
         const category=String(o.category||'general').replaceAll('_',' ');
         const impact=o.impact?` · ${o.impact}`:'';
         const note=`[AI ${String(o.source||'gameplay').replaceAll('_',' ')} · ${category}${impact}] ${o.note}`;
-        const key=`${Math.round(Number(o.timestamp)||0)}|${note}`;
+        const rawTimestamp=Number(o.timestamp);
+        if(!Number.isFinite(rawTimestamp)||rawTimestamp<Number(seg.start_seconds)||rawTimestamp>Number(seg.end_seconds??Infinity))continue;
+        const timestamp=Math.round(rawTimestamp);
+        const key=`${timestamp}|${note}`;
         if(seen.has(key))continue; seen.add(key);
-        markers.push({review_id:reviewId,segment_id:seg.id,team_id:seg.team_id,timestamp_seconds:Number(o.timestamp)||0,category:'general',player_label:o.player||null,note,created_by:auth().user?.id||null});
+        markers.push({review_id:reviewId,segment_id:seg.id,team_id:seg.team_id,timestamp_seconds:timestamp,category:'general',player_label:o.player||null,note,created_by:auth().user?.id||null});
       }
     }
     if(markers.length){const {error:merr}=await db().from('vod_review_markers').insert(markers);if(merr)throw merr;}
 
     const rollup=job?.result?.game_rollup||{};
     const payload={
+      worker_result:job.result,
       full_game_summary:rollup.summary||summaries.join('\n\n')||null,
       recurring_patterns:rollup.patterns||null,
       strengths:rollup.strengths||null,
