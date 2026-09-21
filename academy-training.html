@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#09070c">
+  <meta name="description" content="Wildman Academy training intake for World of CHEL, HUT, goalie and team coaching.">
+  <title>Training Intake | Wildman Academy</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="wildman.css">
+  <link rel="stylesheet" href="management.css">
+  <link rel="stylesheet" href="academy-training.css">
+  <link rel="stylesheet" href="network-v2.css?v=20260920a">
+</head>
+<body class="wildman-site">
+  <header class="site-header"></header>
+  <main>
+    <section class="wm-segment-header" style="--wm-segment-image:url('assets/wildman/academy.webp')">
+      <div class="wm-segment-header-inner">
+        <span class="wm-segment-badge">WILDMAN ACADEMY</span>
+        <div class="eyebrow">TRAINING INTAKE</div>
+        <h1>BUILD YOUR<br>TRAINING PLAN.</h1>
+        <p>Tell us what you play, where you want to improve and what kind of coaching you are looking for. Package selection is an expression of interest until Academy payments open.</p>
+      </div>
+    </section>
+
+    <section class="section-shell section-block training-steps">
+      <div class="training-step"><b>1</b><span>Create Wildman ID</span></div>
+      <div class="training-step active"><b>2</b><span>Training Intake</span></div>
+      <div class="training-step"><b>3</b><span>Package Interest</span></div>
+      <div class="training-step"><b>4</b><span>Academy Review</span></div>
+    </section>
+
+    <section class="section-shell section-block" style="max-width:1050px">
+      <div class="section-heading">
+        <div><div class="eyebrow">YOUR ACCOUNT</div><h2>TRAINING PROFILE</h2></div>
+        <div class="status-pill">FREE TO SUBMIT</div>
+      </div>
+      <section id="accountPanel" class="panel account-panel">
+        <div><div class="eyebrow">WILDMAN ID</div><h3>Loading account…</h3></div>
+      </section>
+      <div id="trainingLocked" class="wm-card" style="margin-top:16px">
+        <b>Wildman account required.</b>
+        <p>Create or sign into your free Wildman ID first. Training package payments are not open yet.</p>
+        <a class="small-btn primary" href="signup.html">Create Wildman ID</a>
+      </div>
+    </section>
+
+    <section class="section-shell section-block" id="trainingFormSection" hidden>
+      <div class="section-heading">
+        <div><div class="eyebrow">STEP 2 + 3</div><h2>SIGN UP FOR TRAINING</h2></div>
+        <div class="status-pill">ACADEMY INTAKE</div>
+      </div>
+
+      <form id="trainingIntakeForm" class="training-form">
+        <div class="training-card">
+          <div class="eyebrow">PLAYER BASICS</div>
+          <div class="training-grid">
+            <label><span>Gamertag *</span><input class="field" id="trainingGamertag" maxlength="60" required></label>
+            <label><span>System *</span><select class="select-field" id="trainingPlatform" required>
+              <option value="">Choose system</option>
+              <option>Xbox Series X|S</option>
+              <option>PlayStation 5</option>
+              <option>Other</option>
+            </select></label>
+            <label><span>Primary position</span><select class="select-field" id="trainingPrimaryPosition">
+              <option value="">Choose position</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option><option>Multi-position</option>
+            </select></label>
+            <label><span>Secondary position</span><select class="select-field" id="trainingSecondaryPosition">
+              <option value="">None / not sure</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option><option>Multi-position</option>
+            </select></label>
+            <label><span>Experience level *</span><select class="select-field" id="trainingExperience" required>
+              <option value="">Choose level</option>
+              <option>New / Learning</option><option>Casual</option><option>Competitive</option><option>League Player</option><option>High-Level Competitive</option>
+            </select></label>
+            <label><span>Current team / league</span><input class="field" id="trainingLeague" maxlength="120" placeholder="LG, EASHL club, HUT rank, etc."></label>
+          </div>
+        </div>
+
+        <div class="training-card">
+          <div class="eyebrow">WHAT DO YOU WANT TO TRAIN?</div>
+          <div class="training-track-grid">
+            <label class="training-choice"><input type="radio" name="trainingTrack" value="World of CHEL" required><b>World of CHEL</b><span>6s, 4s, 3s, clubs, positioning and team play.</span></label>
+            <label class="training-choice"><input type="radio" name="trainingTrack" value="HUT / 1v1"><b>HUT / 1v1</b><span>Reads, rush offense, defense, game management and competitive 1v1.</span></label>
+            <label class="training-choice"><input type="radio" name="trainingTrack" value="Goalie Development"><b>Goalie Development</b><span>Tracking, depth, movement, reads and rebound control.</span></label>
+            <label class="training-choice"><input type="radio" name="trainingTrack" value="Team / 6s Coaching"><b>Team / 6s Coaching</b><span>Systems, breakouts, entries, special teams, chemistry and comms.</span></label>
+            <label class="training-choice"><input type="radio" name="trainingTrack" value="Not Sure Yet"><b>Not Sure Yet</b><span>Tell us your goals and we can place you in the right path.</span></label>
+          </div>
+          <label class="training-wide"><span>Mode / format</span><select class="select-field" id="trainingMode">
+            <option value="">Choose what fits best</option>
+            <option>6v6</option><option>4v4</option><option>3v3</option><option>EASHL Clubs</option><option>Drop-ins</option><option>HUT Champs</option><option>HUT Rivals</option><option>Online Versus / 1v1</option><option>Goalie</option><option>Other</option>
+          </select></label>
+        </div>
+
+        <div class="training-card">
+          <div class="eyebrow">COACHING FIT</div>
+          <div class="training-grid">
+            <label><span>Discord / preferred contact</span><input class="field" id="trainingDiscord" maxlength="100" placeholder="Optional"></label>
+            <label><span>Typical availability</span><input class="field" id="trainingAvailability" maxlength="200" placeholder="Example: Mon–Thu after 8 PM ET"></label>
+          </div>
+          <label class="training-wide"><span>What do you want to improve? *</span><textarea class="field training-textarea" id="trainingGoals" maxlength="1600" required placeholder="Tell us what you struggle with, what you want to learn, your competitive goals, or what you want a coach to look at."></textarea></label>
+        </div>
+
+        <div class="training-card">
+          <div class="eyebrow">PACKAGE INTEREST</div>
+          <p class="training-muted">Nothing is charged here. This helps Wildman understand the type of program you are interested in while checkout and subscriptions are still being built.</p>
+          <label class="training-wide"><span>Which option interests you most? *</span><select class="select-field" id="trainingPackage" required>
+            <option value="Undecided">Not sure yet — recommend one for me</option>
+            <option>Wildman Free</option>
+            <option>Wildman Standard</option>
+            <option>Wildman Premium</option>
+            <option>30-Minute Private Coaching</option>
+            <option>60-Minute Private Coaching</option>
+            <option>Full-Game VOD Breakdown</option>
+            <option>Position-Specific Session</option>
+            <option>Team / 6s Coaching</option>
+            <option>Four-Session Development Package</option>
+          </select></label>
+          <div class="training-package-note">
+            <b>Pre-launch only.</b>
+            <span>Submitting this form does not purchase, reserve, or charge for a package. Wildman will publish final booking and payment terms before paid enrollment opens.</span>
+          </div>
+        </div>
+
+        <div class="training-submit-row">
+          <button class="btn btn-primary" type="submit" id="trainingSubmit">Submit Training Intake</button>
+          <span id="trainingMessage" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <section id="myTrainingIntakes" class="training-card" style="margin-top:22px">
+        <div class="eyebrow">YOUR REQUESTS</div>
+        <div id="myTrainingIntakeList"><p class="training-muted">No training requests loaded yet.</p></div>
+      </section>
+    </section>
+  </main>
+
+  <footer><div class="section-shell footer-inner"><div><b>WILDMAN ACADEMY</b><span>Recruit · Develop · Compete</span></div><p>Training intake</p></div></footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+  <script src="backend.js"></script>
+  <script src="network-shell.js"></script>
+  <script src="script.js"></script>
+  <script src="academy-training.js"></script>
+</body>
+</html>
