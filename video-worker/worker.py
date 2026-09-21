@@ -315,6 +315,70 @@ def extract_frames(source, folder, start, end, frame_step=FRAME_STEP):
     return frames
 
 
+def request_ai(request_payload):
+    """Use the same bounded provider recovery for chunks and the final report."""
+    key = os.getenv('OPENAI_API_KEY')
+    if not key:
+        raise Problem(503, 'AI connection is not configured.')
+    request_payload = dict(request_payload)
+    result = None
+    for attempt in range(3):
+        try:
+            result = http_json(
+                'https://api.openai.com/v1/responses',
+                {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
+                request_payload
+            )
+            if result.get('status') == 'completed':
+                return result
+            reason = (result.get('incomplete_details') or {}).get('reason')
+            if reason == 'max_output_tokens' and attempt == 0:
+                request_payload['max_output_tokens'] = min(12000, int(request_payload.get('max_output_tokens', 4800)) * 2)
+                continue
+            raise Problem(502, 'AI output was incomplete. Completed analysis is saved; retry to continue.')
+        except urllib.error.HTTPError as exc:
+            code = ''
+            if exc.code == 429:
+                try:
+                    payload = json.loads(exc.read().decode('utf-8', 'ignore'))
+                    code = str((payload.get('error') or {}).get('code') or
+                               (payload.get('error') or {}).get('type') or '')
+                except Exception:
+                    pass
+                if code in ('insufficient_quota', 'billing_hard_limit_reached'):
+                    raise Problem(429, 'OpenAI API quota/billing is not available for this key. Add API billing/credits, then retry.')
+                if attempt < 2:
+                    try:
+                        retry_after = float(exc.headers.get('Retry-After', '0') or 0)
+                    except (TypeError, ValueError):
+                        retry_after = 0
+                    delay = min(75, max(20, retry_after, 30 * (attempt + 1)))
+                    if STOP.wait(delay):
+                        raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
+                    continue
+                if code in ('rate_limit_exceeded', 'tokens'):
+                    raise Problem(429, 'OpenAI API rate limit reached after automatic backoff. Retry later.')
+                raise Problem(429, 'OpenAI API returned HTTP 429 after automatic backoff. Check API usage limits.')
+            if exc.code in (401, 403):
+                raise Problem(502, 'AI review authorization failed. Check the OpenAI API key and model access.')
+            if exc.code == 404:
+                raise Problem(502, 'AI review model was not found. Check OPENAI_MODEL.')
+            if exc.code >= 500 and attempt < 2:
+                if STOP.wait(10 * (attempt + 1)):
+                    raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
+                continue
+            if exc.code == 400:
+                raise Problem(502, 'AI review request was rejected by the configured model (HTTP 400).')
+            raise Problem(502, f'AI review request failed with HTTP {exc.code}.')
+        except (urllib.error.URLError, TimeoutError):
+            if attempt < 2:
+                if STOP.wait(10 * (attempt + 1)):
+                    raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
+                continue
+            raise Problem(503, 'AI review service could not be reached after retries.')
+    raise Problem(502, 'AI output was incomplete. Completed analysis is saved; retry to continue.')
+
+
 def analyze(frames, chunk, metadata, frame_step=FRAME_STEP):
     key, model = os.getenv('OPENAI_API_KEY'), os.getenv('OPENAI_MODEL')
     if not key or not model:
@@ -425,56 +489,14 @@ Return structured JSON. Every player evaluation and observation remains NEEDS HU
         'text': {'format': {'type': 'json_schema', 'name': 'elite_hockey_review',
                             'strict': True, 'schema': schema}}
     }
-    result = None
-    for attempt in range(3):
-        try:
-            result = http_json(
-                'https://api.openai.com/v1/responses',
-                {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
-                request_payload
-            )
-            break
-        except urllib.error.HTTPError as exc:
-            code = ''
-            if exc.code == 429:
-                try:
-                    payload = json.loads(exc.read().decode('utf-8', 'ignore'))
-                    code = str((payload.get('error') or {}).get('code') or
-                               (payload.get('error') or {}).get('type') or '')
-                except Exception:
-                    pass
-                if code in ('insufficient_quota', 'billing_hard_limit_reached'):
-                    raise Problem(429, 'OpenAI API quota/billing is not available for this key. Add API billing/credits, then retry.')
-                if attempt < 2:
-                    try:
-                        retry_after = float(exc.headers.get('Retry-After', '0') or 0)
-                    except (TypeError, ValueError):
-                        retry_after = 0
-                    delay = min(75, max(20, retry_after, 30 * (attempt + 1)))
-                    if STOP.wait(delay):
-                        raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
-                    continue
-                if code in ('rate_limit_exceeded', 'tokens'):
-                    raise Problem(429, 'OpenAI API rate limit reached after automatic backoff. Retry later.')
-                raise Problem(429, 'OpenAI API returned HTTP 429 after automatic backoff. Check API usage limits.')
-            if exc.code in (401, 403):
-                raise Problem(502, 'AI review authorization failed. Check the OpenAI API key and model access.')
-            if exc.code == 404:
-                raise Problem(502, 'AI review model was not found. Check OPENAI_MODEL.')
-            if exc.code == 400:
-                raise Problem(502, 'AI review request was rejected by the configured model (HTTP 400).')
-            raise Problem(502, f'AI review request failed with HTTP {exc.code}.')
-        except urllib.error.URLError:
-            if attempt < 2:
-                if STOP.wait(10 * (attempt + 1)):
-                    raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
-                continue
-            raise Problem(503, 'AI review service could not be reached after retries.')
-    if result.get('status') != 'completed':
-        raise Problem(502, 'AI review was incomplete. Retry this review.')
+    result = request_ai(request_payload)
     text = ''.join(c.get('text', '') for item in result.get('output', []) for c in item.get('content', []) if c.get('type') == 'output_text')
-    parsed = json.loads(text)
-    if (not isinstance(parsed.get('summary'), str)
+    try:
+        parsed = json.loads(text)
+    except (TypeError, ValueError):
+        raise Problem(502, 'AI returned invalid JSON. Completed analysis is saved; retry to continue.')
+    if (not isinstance(parsed, dict)
+            or not isinstance(parsed.get('summary'), str)
             or not isinstance(parsed.get('tactical'), dict)
             or not isinstance(parsed.get('player_evaluations'), list)
             or not isinstance(parsed.get('observations'), list)
@@ -563,9 +585,7 @@ Use direct, confident hockey language without hype. If identity or evidence is u
             'professional_writeup': {'type': 'string'},
         }
     }
-    response = http_json(
-        'https://api.openai.com/v1/responses',
-        {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
+    response = request_ai(
         {
             'model': model,
             'store': False,
@@ -585,8 +605,11 @@ Use direct, confident hockey language without hype. If identity or evidence is u
         for part in item.get('content', [])
         if part.get('type') == 'output_text'
     )
-    parsed = json.loads(output_text)
-    if not all(isinstance(parsed.get(k), str) for k in (
+    try:
+        parsed = json.loads(output_text)
+    except (TypeError, ValueError):
+        raise Problem(502, 'AI returned invalid scouting report JSON. Retry to finish the report.')
+    if not isinstance(parsed, dict) or not all(isinstance(parsed.get(k), str) and parsed[k].strip() for k in (
         'summary', 'patterns', 'strengths', 'corrections',
         'tactical_report', 'player_report', 'professional_writeup'
     )):
@@ -604,9 +627,9 @@ def process(job_id):
     frame_step = min(12, FRAME_STEP + retry_count * 2)
     duration = probe(source)
     periods = job['metadata'].get('periods', [])
-    period_mode = 'manual' if periods else None
+    period_mode = result.get('period_detection', 'manual') if periods else None
     if not periods:
-        detected = detect_periods(source, duration)
+        detected = [] if result.get('period_detection') == 'full_game_fallback' else detect_periods(source, duration)
         if detected:
             periods = detected
             period_mode = 'auto'
@@ -623,6 +646,7 @@ def process(job_id):
     result.update({
         'duration': duration,
         'detected_periods': periods if period_mode == 'auto' else [],
+        'stage': 'analyzing_video',
         'period_detection': period_mode,
         'period_note': ('Automatic P1/P2/P3 detection was not confident; analysis covers the full recording.'
                         if period_mode == 'full_game_fallback' else ''),
@@ -657,16 +681,12 @@ def process(job_id):
         finally:
             shutil.rmtree(frame_dir, ignore_errors=True)
     result.pop('plan', None)
-    try:
-        result['game_rollup'] = build_rollup(result['chunks'])
-    except Exception:
-        # Chunk evidence is still valuable even if the second-pass rollup fails.
-        result['game_rollup'] = {
-            'summary': '\n\n'.join((c.get('review') or {}).get('summary', '') for c in result['chunks'] if (c.get('review') or {}).get('summary')),
-            'patterns': '',
-            'strengths': '',
-            'corrections': ''
-        }
+    # Persist chunk evidence before synthesis. A failed synthesis must remain
+    # retriable, not become a successful report with missing sections.
+    result['stage'] = 'writing_report'
+    update(job_id, 'processing', result)
+    result['game_rollup'] = build_rollup(result['chunks'])
+    result['stage'] = 'report_ready'
     update(job_id, 'ready_for_review', result)
 
 def cleanup():

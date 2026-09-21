@@ -98,6 +98,18 @@ def resolve(review, owner, create=False):
                     db.execute("UPDATE jobs SET metadata=?,status='retrieving',error='' WHERE id=?", (json.dumps(meta), row['id']))
                     db.commit()
                     job = worker.get_job(row['id'], owner)
+                rollup = job['result'].get('game_rollup') or {}
+                incomplete_report = job['status'] == 'ready_for_review' and not all(
+                    isinstance(rollup.get(k), str) and rollup[k].strip() for k in (
+                        'summary', 'patterns', 'strengths', 'corrections',
+                        'tactical_report', 'player_report', 'professional_writeup'))
+                if create and (job['status'] in ('failed', 'awaiting_ai') or incomplete_report) and (worker.ROOT / row['id'] / 'source.mp4').exists():
+                    # Analyze Game resumes saved chunk evidence and retries the report.
+                    # It must not just redisplay the same failed job indefinitely.
+                    meta.pop('ai_rate_limit_retries', None)
+                    db.execute("UPDATE jobs SET metadata=?,status='queued',error='' WHERE id=?", (json.dumps(meta), row['id']))
+                    db.commit()
+                    job = worker.get_job(row['id'], owner)
                 return job
         capture = review.get('_capture') or {}
         if capture.get('status') in ('armed', 'queued', 'capturing', 'captured', 'processing'):

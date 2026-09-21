@@ -58,6 +58,31 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(retried['id'], job['id'])
         self.assertEqual(retried['status'], 'retrieving')
 
+    def test_analyze_resumes_failed_saved_recording_without_reupload(self):
+        job = replay.resolve(self.review, 'owner', True)
+        folder = worker.ROOT / job['id']
+        folder.mkdir()
+        (folder / 'source.mp4').write_bytes(b'saved recording')
+        evidence = {'chunks': [{'review': {'summary': 'Completed chunk'}}]}
+        worker.update(job['id'], 'failed', evidence, 'Report failed')
+        self.assertEqual(replay.resolve(self.review, 'owner')['status'], 'failed')
+        resumed = replay.resolve(self.review, 'owner', True)
+        self.assertEqual(resumed['id'], job['id'])
+        self.assertEqual(resumed['status'], 'queued')
+        self.assertEqual(resumed['result'], evidence)
+        self.assertEqual(resumed['error'], '')
+
+    def test_analyze_repairs_legacy_ready_job_with_missing_report(self):
+        job = replay.resolve(self.review, 'owner', True)
+        folder = worker.ROOT / job['id']
+        folder.mkdir()
+        (folder / 'source.mp4').write_bytes(b'saved recording')
+        evidence = {'chunks': [{'review': {'summary': 'Evidence'}}], 'game_rollup': {'summary': 'Partial'}}
+        worker.update(job['id'], 'ready_for_review', evidence)
+        resumed = replay.resolve(self.review, 'owner', True)
+        self.assertEqual(resumed['status'], 'queued')
+        self.assertEqual(resumed['result']['chunks'], evidence['chunks'])
+
     def test_rls_empty_result_is_denied(self):
         with patch.dict('os.environ', {'SUPABASE_URL': 'https://example.supabase.co', 'SUPABASE_PUBLISHABLE_KEY': 'public'}), patch.object(worker, 'http_json', return_value=[]):
             with self.assertRaises(worker.Problem) as error:
