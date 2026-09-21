@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#09070c">
+  <meta name="description" content="Private Wildman Academy trainee intake review.">
+  <title>Academy Trainees | Wildman Management</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="wildman.css">
+  <link rel="stylesheet" href="management.css">
+  <link rel="stylesheet" href="academy-training.css">
+  <link rel="stylesheet" href="network-v2.css?v=20260920a">
+</head>
+<body class="wildman-site management-protected">
+<header class="site-header">
+  <a class="brand" href="index.html"><span class="wm-brand-mark">W</span><span class="brand-copy wm-brand-copy">WILDMAN HOCKEY<br><b>ESPORTS NETWORK</b></span></a>
+  <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <nav class="main-nav"><a href="management.html">Management</a><a href="academy.html">Academy</a><a href="academy-trainees.html">Trainees</a></nav>
+</header>
+<main>
+  <section class="section-shell section-block management-login-shell">
+    <div class="section-heading"><div><div class="eyebrow">PRIVATE · WILDMAN ACADEMY</div><h2>TRAINEE INTAKE</h2></div><div id="managementAccessStatus" class="status-pill">PRIVATE · MANAGEMENT ONLY</div></div>
+    <section id="accountPanel" class="panel account-panel"><div><div class="eyebrow">SECURE ACCESS</div><h3>Loading account…</h3></div></section>
+    <div id="managementLockedMessage" class="wm-card" style="margin-top:16px"><b>Management sign-in required.</b></div>
+  </section>
+
+  <section class="section-shell section-block" data-management-content hidden>
+    <div id="traineeAdminStatus" class="academy-notice">Checking Academy intake permissions…</div>
+    <div id="traineeAdminContent" hidden>
+      <div class="section-heading">
+        <div><div class="eyebrow">ACADEMY PIPELINE</div><h2>TRAINING SIGN-UPS</h2></div>
+        <button class="small-btn" id="refreshTrainees" type="button">Refresh</button>
+      </div>
+      <div class="status-board" id="traineeStats"></div>
+      <div class="training-card" style="margin-top:18px">
+        <div class="training-grid">
+          <label><span>Filter status</span><select class="select-field" id="traineeStatusFilter"><option value="">All statuses</option><option>submitted</option><option>reviewing</option><option>contacted</option><option>accepted</option><option>closed</option></select></label>
+          <label><span>Filter path</span><select class="select-field" id="traineeTrackFilter"><option value="">All training paths</option><option>World of CHEL</option><option>HUT / 1v1</option><option>Goalie Development</option><option>Team / 6s Coaching</option><option>Not Sure Yet</option></select></label>
+        </div>
+      </div>
+      <div id="traineeList" style="margin-top:18px"></div>
+    </div>
+  </section>
+</main>
+<footer><div class="section-shell footer-inner"><div><b>WILDMAN ACADEMY MANAGEMENT</b><span>Private trainee intake</span></div><p>Authorized access only</p></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js"></script>
+<script src="management-guard.js"></script>
+<script src="script.js"></script>
+<script src="academy-trainees.js"></script>
+</body>
+</html>
