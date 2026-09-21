@@ -19,7 +19,7 @@
     'events.html':'pro-series.html','event-format.html':'pro-series.html','pro-series.html':'pro-series.html','caps-gaming.html':'pro-series.html',
     'game-center.html':'game-center.html','multiview.html':'game-center.html','vod-center.html':'game-center.html','reports.html':'game-center.html','game.html':'game-center.html','live-game.html':'game-center.html','postgame.html':'game-center.html',
     'players.html':'players.html','esports-player.html':'players.html','player-rusty.html':'players.html','player-williamson20.html':'players.html','player-williamson88.html':'players.html','rosters.html':'players.html','season.html':'players.html',
-    'academy.html':'academy.html',
+    'academy.html':'academy.html','academy-training.html':'academy.html',
     'signup.html':'signup.html',
     'management.html':'management.html',
     'wildman-media.html':'wildman-media.html','media.html':'wildman-media.html'
