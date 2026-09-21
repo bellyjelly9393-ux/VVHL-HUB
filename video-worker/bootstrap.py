@@ -15,6 +15,10 @@ class Handler(worker.Handler):
         if path == '/health' and self.command == 'GET':
             return self.reply(200, {
                 'status': 'ok',
+                'reviewVersion': worker.REVIEW_VERSION,
+                'revision': os.getenv('RAILWAY_GIT_COMMIT_SHA', 'unknown'),
+                'frameStepSeconds': worker.FRAME_STEP,
+                'retentionHours': worker.RETENTION / 3600,
                 'aiConfigured': bool(os.getenv('OPENAI_API_KEY') and os.getenv('OPENAI_MODEL')),
                 'maxUploadBytes': worker.MAX_UPLOAD,
                 'liveIngestion': live_pipeline.configured(),

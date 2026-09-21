@@ -96,25 +96,18 @@
     const stage = [game.stage, game.round_label].filter(Boolean).join(" · ") || "tournament play";
     const ot = game.overtime ? " in overtime" : "";
     const verb = f.margin >= 4 ? "powers past" : f.margin === 1 ? "edges" : "defeats";
-    const headline = `${f.winner?.name || "Winner"} ${verb} ${f.loser?.name || "Opponent"}, ${f.winnerScore}-${f.loserScore}${game.overtime ? " in OT" : ""}`;
-    const subheadline = `${stage}: ${f.winner?.name || "The winner"} turns the matchup into a ${f.winnerScore}-${f.loserScore} final${ot}.`;
+    const headline = game.status !== "final" || f.margin === 0 ? `${f.home?.name || "Home"} vs ${f.away?.name || "Away"} — result unverified` : `${f.winner?.name || "Winner"} ${verb} ${f.loser?.name || "Opponent"}, ${f.winnerScore}-${f.loserScore}${game.overtime ? " in OT" : ""}`;
+    const subheadline = game.status !== "final" || f.margin === 0 ? `${stage}: verify the result before publishing.` : `${stage}: ${f.winner?.name || "The winner"} turns the matchup into a ${f.winnerScore}-${f.loserScore} final${ot}.`;
 
     const winnerAgg = f.winner?.id === f.home?.id ? f.homeStats : f.awayStats;
     const loserAgg = f.winner?.id === f.home?.id ? f.awayStats : f.homeStats;
-    const analysis = [];
-    analysis.push(`${f.winner?.name || "The winning side"} came away with a ${f.winnerScore}-${f.loserScore} win over ${f.loser?.name || "the opposition"}${ot}, getting the result that mattered in ${stage}. The final margin tells part of the story, but the more useful read is how the game was managed once the pressure rose.`);
-    if (winnerAgg.shots || loserAgg.shots) analysis.push(`The tracked shot totals finished ${winnerAgg.shots}-${loserAgg.shots} in favor of ${f.winner?.name || "the winner"}. ${winnerAgg.shots > loserAgg.shots ? "That territorial pressure gave the winning side more repeat opportunities instead of asking its finishing to be perfect." : "The winner did not need the larger shot count; the difference was conversion and execution when chances arrived."}`);
-    if (winnerAgg.takeaways || loserAgg.takeaways || winnerAgg.giveaways || loserAgg.giveaways) analysis.push(`Puck management also mattered. ${f.winner?.name || "The winner"} recorded ${winnerAgg.takeaways} takeaways against ${winnerAgg.giveaways} giveaways, while ${f.loser?.name || "the opponent"} finished at ${loserAgg.takeaways} takeaways and ${loserAgg.giveaways} giveaways. Those exchanges are often where an esports game tilts before the scoreboard fully reflects it.`);
-    if (winnerAgg.hits || loserAgg.hits) analysis.push(`Physically, the teams combined for ${winnerAgg.hits + loserAgg.hits} tracked hits. The important piece was not simply contact volume, but whether pressure forced rushed exits, loose pucks and second possessions.`);
-    if (f.stars[0]) analysis.push(`${f.stars[0].gamertag} supplied the clearest individual impact in the tracked line with ${f.stars[0].goals} goal${f.stars[0].goals === 1 ? "" : "s"} and ${f.stars[0].assists} assist${f.stars[0].assists === 1 ? "" : "s"} for ${f.stars[0].points} point${f.stars[0].points === 1 ? "" : "s"}. That production gave ${f.stars[0].team} a reliable focal point when the game needed a play.`);
-    if (!gameStats(game.id).length) analysis.push(`The detailed player stat line has not been loaded yet, so this draft intentionally stays with the verified score and game context. Once the LG/public box score is synced, the report can tighten around shot share, puck-management numbers and individual matchups.`);
-
-    let turningPoint;
-    if (game.overtime) turningPoint = `The turning point was surviving regulation with the game still level and then making the first decisive play in overtime. In a one-chance environment, patience mattered more than forcing offense that was not there.`;
-    else if (f.loserScore === 0) turningPoint = `${f.winner?.name || "The winner"} never allowed the game to open into a trade of chances. Protecting the middle and keeping the opponent off the board removed any realistic comeback window.`;
-    else if (f.margin === 1) turningPoint = `This stayed a one-goal game, so the turning point was not one giant swing as much as the final clean sequence. ${f.winner?.name || "The winner"} handled the late-game possession battle without giving the tying chance back.`;
-    else if (f.margin >= 4) turningPoint = `Separation came when ${f.winner?.name || "the winner"} converted its pressure into consecutive scoreboard damage. Once the game moved beyond one-possession range, ${f.loser?.name || "the opponent"} had to chase, and the ice opened even further.`;
-    else turningPoint = `${f.winner?.name || "The winner"} created enough separation to force ${f.loser?.name || "the opponent"} out of its preferred game. From there, protecting the lead became more important than chasing another highlight.`;
+    const analysis = [game.status === 'final' && f.margin > 0
+      ? `${f.winner?.name || 'Winner'} defeated ${f.loser?.name || 'Opponent'} ${f.winnerScore}-${f.loserScore}${ot} in ${stage}.`
+      : `${f.home?.name || 'Home'} ${f.homeScore}–${f.awayScore} ${f.away?.name || 'Away'}. Result requires verification.`];
+    if (winnerAgg.shots || loserAgg.shots) analysis.push(`Loaded player shot totals: ${f.winner?.name || 'Team'} ${winnerAgg.shots}; ${f.loser?.name || 'Opponent'} ${loserAgg.shots}. These totals depend on the completeness of the imported player rows and do not establish shot quality or territorial control.`);
+    if (f.stars[0]) analysis.push(`The automated box-score ranking places ${f.stars[0].gamertag} first with ${f.stars[0].goals} goals and ${f.stars[0].assists} assists. This is a statistical ranking, not a film-based assessment of overall impact.`);
+    analysis.push('Tactical causes, player decisions and repeatable tendencies require the video scouting report. The score and box score alone do not establish them.');
+    const turningPoint = 'Not established from the available box score. Add a timestamped, reviewed gameplay sequence.';
 
     let deskTitle = "THE LATE DESK: THE SCOREBOARD HAS SPOKEN";
     let desk;
@@ -159,6 +152,7 @@
     if (!game) return message("reportGenerateMessage", "Choose a game first.", true);
     if (game.status !== "final") message("reportGenerateMessage", "This game is not marked Final yet. Drafting anyway, but verify the score before publishing.", true);
     else message("reportGenerateMessage", "Draft generated from the current score and loaded player stats.");
+    if ($("reportAnalyst").value.trim() && !window.confirm("Replace the current report with a stats-only draft? Your video analysis and edits in this editor will be replaced.")) return;
     const draft = draftReport(game);
     $("reportHeadline").value = draft.headline; $("reportSubheadline").value = draft.subheadline; $("reportAnalyst").value = draft.analyst_report;
     $("reportTurningPoint").value = draft.turning_point; $("reportDeskTitle").value = draft.desk_title; $("reportDeskBanter").value = draft.desk_banter;

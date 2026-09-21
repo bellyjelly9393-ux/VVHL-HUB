@@ -1,4 +1,5 @@
 (() => {
+  const report = window.VideoReviewReport;
   const gameSelect = document.getElementById('reportGameSelect');
   if (!gameSelect) return;
   const section = document.createElement('section');
@@ -10,18 +11,20 @@
     <p id="vrStatus" class="video-review-status" role="status" aria-live="polite">Checking video service…</p>
     <div class="video-review-grid">
       <div><label for="vrReplay">Replay link (optional)</label><input id="vrReplay" class="field" type="url" placeholder="https://www.twitch.tv/videos/…">
-      <small>Reference link only. Live stream ingestion is not connected yet.</small>
+      <small>This upload uses your recording; the replay link provides evidence links.</small>
       <label for="vrFile">MP4 or MOV recording</label><input id="vrFile" class="field" type="file" accept="video/mp4,video/quicktime,.mp4,.mov">
       <small id="vrLimit">Recordings are temporary; reports stay available.</small>
       <label for="vrPlayers">Players to look for (optional)</label><input id="vrPlayers" class="field" maxlength="2000" placeholder="Gamertags and positions">
+      <label for="vrFormat">Game format</label><select id="vrFormat" class="select-field"><option value="unknown">Not specified</option><option value="6s">6s</option><option value="4s">4s / three skaters + goalie</option><option value="3s">3s</option><option value="HUT">HUT</option></select>
+      <label for="vrOffset">Recording begins in the original replay at</label><input id="vrOffset" class="field" value="0:00" placeholder="00:00"><small>For a trimmed recording, enter its start time in the full Twitch replay so evidence links match.</small>
       <label>Period ranges in recording time</label><small>Use mm:ss or hh:mm:ss. Leave all ranges blank to review the full recording.</small>
       ${[1,2,3].map(n => `<div class="period-row"><input class="field vr-label" value="Period ${n}" aria-label="Period ${n} label"><input class="field vr-start" placeholder="Start 00:00" aria-label="Period ${n} start"><input class="field vr-end" placeholder="End 10:00" aria-label="Period ${n} end"></div>`).join('')}
       <div class="report-actions"><button id="vrStart" class="small-btn primary" disabled>Upload and review</button></div>
       <progress id="vrProgress" max="100" value="0" hidden aria-label="Review progress"></progress></div>
       <div><video id="vrPlayer" controls preload="metadata" hidden></video>
-      <p>First-pass review samples one frame every two seconds. Fast plays can be missed. Notes and screen readings need a coach’s review before becoming stats.</p>
+      <p>The scout reviews sampled footage, then checks selected gameplay sequences more closely. Reports show the actual coverage. Player identities and hockey reads still need your review.</p>
       <label for="vrHistory">Your previous reviews</label><select id="vrHistory" class="select-field"><option value="">Select a review</option></select>
-      <div class="report-actions"><button id="vrRefresh" class="small-btn" disabled>Refresh reviews</button><button id="vrRetry" class="small-btn" hidden>Retry unfinished review</button><button id="vrImport" class="small-btn" hidden>Add notes to report draft</button></div>
+      <div class="report-actions"><button id="vrRefresh" class="small-btn" disabled>Refresh reviews</button><button id="vrRetry" class="small-btn" hidden>Retry unfinished review</button><button id="vrReanalyze" class="small-btn" hidden>Run fresh scouting review</button><button id="vrImport" class="small-btn" hidden>Add complete scouting report</button></div>
       <p id="vrImportStatus" role="status"></p></div>
     </div><div id="vrResults"></div>`;
   const editor = document.getElementById('reportHeadline')?.closest('section');
@@ -47,32 +50,26 @@
     if (!response.ok) throw new Error(data.error || 'Video service unavailable.');
     return data;
   }
-  function replayLink(url, seconds) {
-    try {
-      const u = new URL(url);
-      if (u.protocol !== 'https:') return '';
-      if (['www.twitch.tv','twitch.tv'].includes(u.hostname) && /^\/videos\/\d+$/.test(u.pathname)) u.searchParams.set('t',`${Math.floor(seconds)}s`);
-      else if (['www.youtube.com','youtube.com','youtu.be'].includes(u.hostname)) u.searchParams.set('t',String(Math.floor(seconds)));
-      else return '';
-      return u.href;
-    } catch { return ''; }
-  }
   function render(job) {
     current = job;
     const chunks = job.result.chunks || [];
-    status(`${labels[job.status] || job.status}${job.error ? ': '+job.error : ''}`);
+    const stage = {preparing_video:'Preparing recording', checking_sequences:'Checking gameplay sequences', writing_report:'Writing scouting report'}[job.result.stage];
+    status(`${job.status === 'processing' && stage ? stage : labels[job.status] || job.status}${job.error ? ': '+job.error : ''}`);
     $('vrProgress').hidden = false;
-    $('vrProgress').value = job.result.total_chunks ? 100*chunks.length/job.result.total_chunks : 0;
+    $('vrProgress').value = job.result.total_chunks ? (report.complete(job) ? 100 : Math.min(90, 90*chunks.length/job.result.total_chunks)) : 0;
     $('vrRetry').hidden = !['failed','awaiting_ai'].includes(job.status);
-    $('vrImport').hidden = !chunks.length;
-    $('vrResults').innerHTML = `<p>${chunks.length} / ${job.result.total_chunks || '—'} sections reviewed · ${esc(job.metadata.title)}</p>` + chunks.map(c => `<details open><summary>${esc(c.label)} · ${clock(c.start)}–${clock(c.end)}</summary><p>${esc(c.review.summary)}</p><ul>${c.review.observations.map(o => {
-      const link = replayLink(job.metadata.vod_url,o.timestamp);
+    $('vrImport').hidden = !report.complete(job);
+    $('vrReanalyze').hidden = !['ready_for_review','failed','awaiting_ai'].includes(job.status);
+    const rollup = job.result.game_rollup || {};
+    const fullReport = report.sections.filter(([key]) => rollup[key]).map(([key,title]) => `<details open><summary>${esc(title)}</summary><p class="vr-prose">${esc(rollup[key])}</p></details>`).join('');
+    $('vrResults').innerHTML = `<p>${esc(report.coverage(job))}</p>${fullReport}<p>${chunks.length} / ${job.result.total_chunks || '—'} sections reviewed · ${esc(job.metadata.title)}</p>` + chunks.map(c => `<details open><summary>${esc(c.label)} · ${clock(c.start)}–${clock(c.end)}</summary><p>${esc(c.review.summary)}</p><ul>${c.review.observations.map(o => {
+      const link = report.replayLink(job.metadata.vod_url,o.timestamp,job.metadata.vod_offset_seconds);
       return `<li><span class="evidence-time">${link ? `<a href="${esc(link)}" target="_blank" rel="noopener">${clock(o.timestamp)}</a>` : clock(o.timestamp)}</span> · ${esc(o.source.replaceAll('_',' '))} · Needs review${o.player ? ' · '+esc(o.player) : ''}<br>${esc(o.note)}</li>`;
-    }).join('')}</ul>${c.review.uncertainties.length ? '<p><b>Uncertainties:</b> '+esc(c.review.uncertainties.join(' '))+'</p>' : ''}</details>`).join('');
+    }).join('')}</ul>${Object.entries(c.review.tactical || {}).map(([k,v]) => `<p><b>${esc(k.replaceAll('_',' '))}:</b> ${esc(v)}</p>`).join('')}${(c.review.player_evaluations || []).map(p => `<p class="vr-prose"><b>${esc(p.player)} · ${esc(p.confidence)} confidence</b><br>${esc(p.strengths)}<br>Concerns: ${esc(p.concerns)}<br>Coach note: ${esc(p.coach_note)}<br>Evidence: ${(p.evidence_timestamps || []).map(clock).join(', ')}</p>`).join('')}${c.sequence_review ? `<details><summary>Closer gameplay review · ${clock(c.sequence_review.start)}–${clock(c.sequence_review.end)}</summary><p class="vr-prose">${esc(report.evidenceText(c.sequence_review))}</p></details>` : ''}${c.review.uncertainties.length ? '<p><b>Uncertainties:</b> '+esc(c.review.uncertainties.join(' '))+'</p>' : ''}</details>`).join('');
     clearTimeout(timer);
-    if (['queued','processing','uploading'].includes(job.status)) timer = setTimeout(() => loadJob(job.id).catch(e => status(e.message)), 4000);
+    if (['queued','processing','uploading','retrieving'].includes(job.status)) timer = setTimeout(() => loadJob(job.id).catch(e => status(e.message)), 4000);
   }
-  async function loadJob(id) { const job = await api('/jobs/'+id); if (window.VVHLBackend.state.user?.id === userId) render(job); }
+  async function loadJob(id) { const expectedUser = userId; const job = await api('/jobs/'+id); if (expectedUser && expectedUser === userId && window.VVHLBackend.state.user?.id === expectedUser) render(job); }
   async function history() {
     const data = await api('/jobs');
     $('vrHistory').innerHTML = '<option value="">Select a review</option>' + data.jobs.map(j => `<option value="${esc(j.id)}">${esc(j.metadata.title || 'Game film')} · ${esc(labels[j.status] || j.status)}</option>`).join('');
@@ -113,7 +110,7 @@
       });
       let previous=0;
       for(const p of periods){if(p.start<previous||p.end<=p.start)throw new Error('Period ranges must be ordered and must not overlap.');previous=p.end;}
-      const job=await api('/jobs',{method:'POST',body:JSON.stringify({game_id:gameSelect.value,title:gameSelect.selectedOptions[0].text, vod_url:$('vrReplay').value.trim(),players:$('vrPlayers').value,periods})});
+      const job=await api('/jobs',{method:'POST',body:JSON.stringify({game_id:gameSelect.value,title:gameSelect.selectedOptions[0].text, vod_url:$('vrReplay').value.trim(),players:$('vrPlayers').value,game_format:$('vrFormat').value,vod_offset_seconds:parseTime($('vrOffset').value.trim() || '0'),periods})});
       $('vrProgress').hidden=false;
       await upload(job.id,file); await loadJob(job.id); await history();
     } catch(e){status(e.message);} finally {busy=false;$('vrStart').disabled=!base;}
@@ -121,14 +118,17 @@
   $('vrHistory').onchange=()=>{if($('vrHistory').value)loadJob($('vrHistory').value).catch(e=>status(e.message));};
   $('vrRefresh').onclick=()=>history().catch(e=>status(e.message));
   $('vrRetry').onclick=async()=>{try{render(await api('/jobs/'+current.id+'/retry',{method:'POST',body:'{}'}));}catch(e){status(e.message);}};
+  $('vrReanalyze').onclick=async()=>{
+    if(!current || !window.confirm('Run a new AI review of the saved recording? This uses API credits and replaces the worker’s previous analysis. Your saved draft is kept.'))return;
+    try{render(await api('/jobs/'+current.id+'/reanalyze',{method:'POST',body:'{}'}));}catch(e){status(e.message);}
+  };
   $('vrImport').onclick=()=>{
-    if(current.metadata.game_id!==gameSelect.value){$('vrImportStatus').textContent='Select the matching game above before importing these notes.';return;}
-    const marker=`[Video review ${current.id}]`;
-    if($('reportSourceNotes').value.includes(marker)){$('vrImportStatus').textContent='This review is already in the draft.';return;}
-    const text=current.result.chunks.map(c=>`${c.label} (${clock(c.start)}–${clock(c.end)})\n${c.review.summary}\n${c.review.observations.map(o=>`${clock(o.timestamp)} [${o.source}; needs review] ${o.player?o.player+': ':''}${o.note}`).join('\n')}\nUncertainties: ${c.review.uncertainties.join(' ')}`).join('\n\n');
-    $('reportAnalyst').value += '\n\nVIDEO REVIEW — PROVISIONAL\n'+text;
-    $('reportSourceNotes').value += '\n'+marker+' Sampled footage at 2-second intervals; timestamps approximate; no official stats changed. '+current.metadata.vod_url;
-    $('vrImportStatus').textContent='Notes added to the editor. Review them, then use Save Draft below.';
+    if(!report.complete(current)){$('vrImportStatus').textContent='Wait for the complete scouting report.';return;}
+    if(current.metadata.game_id!==gameSelect.value){$('vrImportStatus').textContent='Select the matching game above before importing.';return;}
+    $('reportAnalyst').value = report.replaceBlock($('reportAnalyst').value,current.id,report.reportText(current));
+    $('reportSourceNotes').value = report.replaceBlock($('reportSourceNotes').value,current.id,report.coverage(current)+' Recording timestamps; replay offset '+clock(Number(current.metadata.vod_offset_seconds || 0))+'. No official stats changed. '+current.metadata.vod_url);
+    if(!$('reportHeadline').value.trim())$('reportHeadline').value=current.metadata.title+' — Scouting report';
+    $('vrImportStatus').textContent='Complete report added. Review it, then Save Draft. Re-importing updates this report’s marked section.';
   };
   async function initialize() {
     if(!window.VVHLManagementGuard?.hasAccess(window.VVHLBackend?.state))return;
@@ -144,14 +144,14 @@
       base=url.href.replace(/\/$/,'');
       const health=await fetch(base+'/health').then(r=>{if(!r.ok)throw new Error('Video service unavailable.');return r.json();});
       maxUpload=health.maxUploadBytes;
-      $('vrLimit').textContent=`Maximum ${Math.floor(maxUpload/1024**2)} MB per recording. Temporary footage expires after 24 hours by default.`;
+      $('vrLimit').textContent=`Maximum ${Math.floor(maxUpload/1024**2)} MB per recording. Temporary footage expires after ${health.retentionHours || 24} hours.`;
       await history();$('vrStart').disabled=false;$('vrRefresh').disabled=false;
       status(health.aiConfigured?'Ready for a recorded-game review.':'Video processing is connected. AI analysis still needs its API connection.');
     }catch(e){base='';status(e.message);}
   }
   window.addEventListener('vvhl-auth-change',()=>{
     if(!window.VVHLBackend.state.user || window.VVHLBackend.state.user.id!==userId){
-      clearTimeout(timer);current=null;base='';userId='';$('vrResults').textContent='';$('vrHistory').innerHTML='<option value="">Select a review</option>';$('vrStart').disabled=true;
+      clearTimeout(timer);current=null;base='';userId='';$('vrResults').textContent='';$('vrHistory').innerHTML='<option value="">Select a review</option>';$('vrStart').disabled=true;$('vrRefresh').disabled=true;$('vrImport').hidden=true;$('vrRetry').hidden=true;$('vrReanalyze').hidden=true;
     }
     initialize();
   });

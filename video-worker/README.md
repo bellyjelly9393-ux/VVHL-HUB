@@ -1,89 +1,74 @@
-# Wildman Video Review — first implementation
+# Wildman video scouting worker
 
-This adds a private Video Review panel to the existing Postgame Desk, with a local
-recording preview, period markers, job history, progress, timestamped observations,
-and an explicit import into the existing report editor. Import never writes player
-stats or publishes reports. The existing Twitch/YouTube players are preserved.
+The website and the persistent Python worker are separate deployments. A green
+Vercel deployment does not mean Railway has deployed the same Git commit.
+`GET /health` exposes `revision`, `reviewVersion`, actual upload cap, retention,
+and configuration presence; it does not prove API billing or model access.
 
-## What runs now
+## Current review flow
 
-- Python 3.12 standard library and FFmpeg; no pip dependencies.
-- Authenticated MP4/MOV upload streamed to disk (700 MiB default cap).
-- SQLite job persistence; one processing thread; restart resumes completed chunks.
-- 120-second analysis windows with five seconds of overlap, bounded by period ranges.
-- Sparse review: one JPEG every two seconds, up to 60 frames per window at 720p.
-- OpenAI Responses API adapter, requiring an image-input model with structured outputs.
-- Per-chunk summaries, timestamped observations, screenshot source classification,
-  uncertainty notes and recorded API token usage. Reads visible intermission screens
-  opportunistically; exact extraction accuracy has NOT been established on EA footage.
-- Original recording retained for 24 hours by default. Transient JPEGs removed after
-  each request. Reports remain in SQLite on the persistent disk. No duplicate MP4 clips.
-- Global disk budget (1,800 MiB), one upload at a time, three pending jobs at most.
+1. Management signs into Postgame Desk, selects a game and uploads MP4/MOV directly
+   to the HTTPS worker. Optional format, gamertags, period ranges and replay offset
+   provide context. Blank ranges use best-effort OCR, then full-recording fallback.
+2. FFmpeg validates the recording (maximum two hours and 4K). The worker reviews
+   overlapping 120-second sections at a six-second frame interval. Rate-limit retries
+   may increase overview spacing to 12 seconds; each chunk records its actual spacing.
+3. For each chunk containing gameplay observations, a separate pass reviews at most
+   one eight-second sequence at two frames/second. This pass does not receive the
+   first-pass verdict. It can contradict it. It is still sampled vision, not puck tracking.
+4. A synthesis pass writes seven report sections, using only supplied evidence and
+   the hockey rubric in `hockey_review.py`. Uncertain identity, missing evidence,
+   sparse motion and single-play observations must remain explicit. Game format
+   matters; 4s should not be judged as a five-skater system.
+5. Postgame Desk displays the full report and evidence. Only completed reports can
+   be imported. Re-import replaces that report's bounded generated block while
+   preserving surrounding notes. Save Draft persists it privately; publishing is separate.
 
-## Activation requirements
+Chunk evidence and closer passes are saved before synthesis. Retry resumes completed
+work. Fresh scouting review explicitly clears old worker analysis and uses API credits;
+existing saved website drafts remain unchanged. Legacy unbounded imports are preserved
+rather than guessing where a user's own edits end.
 
-1. Run this container on a host supporting a long-running process, HTTPS, and a
-   persistent volume mounted at `/data`. Use **one instance / one process**. This
-   worker is not a Vercel request function. Back up `/data/jobs.sqlite` (SQLite online
-   backup or stop the service first) to preserve reports; retain ownership restrictions.
-2. Set environment variables from `.env.example` in the host's secret settings.
-   `VIDEO_REVIEW_USER_IDS` is a comma-separated list of explicitly approved Supabase
-   Auth account UUIDs. JWTs are validated against `/auth/v1/user` on every private request;
-   a valid login alone is insufficient. No service-role database key is needed.
-3. Set `OPENAI_API_KEY` and `OPENAI_MODEL` server-side. The model must support images,
-   Responses API, and strict JSON schema. API billing is separate from this chat.
-   Leave unset to validate uploaded recordings without claiming analysis occurred.
-   Configure API project spend limits before processing long recordings.
-4. Set `ALLOWED_ORIGINS` to the exact production site origin (and any intended preview).
-   Set `VIDEO_WORKER_URL=https://your-worker-host` in the existing Vercel project.
-   This public URL is exposed by `/api/video-review-config`; secrets are never exposed.
-5. Keep reverse-proxy upload limits/timeouts compatible with the upload cap. Apply
-   connection/rate limits at the proxy. Run behind TLS; do not expose port 8080 directly.
-6. Sign in to Postgame Desk with an approved management account. Choose a game,
-   upload one period, check evidence accuracy, and import the results into a draft.
+## Deployment
 
-The container does not load `.env` by itself. Example from the repository root:
+- Railway service: `wildman-video-worker`, branch `feature/video-review-worker`, root
+  `/video-worker`, Dockerfile build, one instance, persistent `/data` volume.
+- Required: `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `OPENAI_API_KEY`, `OPENAI_MODEL`.
+  The model must support image input, Responses API and strict JSON schema.
+- Auth validates the Supabase user on private requests. Explicit approved UUIDs in
+  `VIDEO_REVIEW_USER_IDS`, admin/commissioner profiles or active owner/GM/AGM memberships
+  can access the worker. Individual jobs remain creator-only.
+- `ALLOWED_ORIGINS`: exact trusted website origins. The two named Wildman PR previews
+  are included explicitly; do not replace this with a wildcard. Preflight and actual
+  responses use the same acceptance rule.
+- `/api/video-review-config` defaults to the existing public Railway service URL.
+  `VIDEO_WORKER_URL` overrides it; an explicit empty value disables the connection.
+  This URL is public configuration, not a credential.
+- Check the actual cap using `/health` (the existing service was configured for
+  200 MiB). Code defaults are 700 MiB upload, 1800 MiB disk and 24-hour media retention.
+  Reports persist in SQLite. Back up `/data/jobs.sqlite`; monitor volume capacity.
+- Keep proxy limits compatible with uploads. Configure API spend limits independently
+  of this app. Never expose keys in frontend code.
 
-```sh
-docker build -t wildman-video-review video-worker
-docker run --env-file video-worker/.env -p 8080:8080 -v wildman-video-data:/data wildman-video-review
-```
-
-Configure volume permissions for the container's `worker` user when using a bind mount.
-
-## Current boundaries
-
-- Pasted Twitch/YouTube URLs are replay references, **not video ingestion**. Upload is
-  required. No arbitrary URL downloads, cookie extraction or browser-login bypass.
-- Continuous live/HLS ingestion is not implemented. Add a tested broadcaster-owned
-  feed adapter after deciding on the source platform and worker host.
-- Sparse screenshots are not continuous video understanding. No reliable puck tracking,
-  fast-pass reconstruction, exhaustive shot counts, audio analysis or player attribution
-  is promised. A higher-frame-rate second pass is not implemented yet.
-- The model compares visible stats and notes but does not authoritatively reconcile
-  all shots/events. Exact duplicates are removed; near duplicates require review.
-- Supplied player names are context only. No automatic player-profile or official-stat
-  writes. Evidence goes to the selected game's existing report draft.
-- Ready reports are section-by-section evidence bundles, not a separate AI-written
-  whole-game synthesis. Existing postgame editing/publishing supplies the final write-up.
-- Job access is creator-only. Sharing reviews across management accounts is future work.
-- Upload retries require a new job; completed processing chunks are resumable.
-- Report growth counts toward disk budget; archive reports and monitor capacity over time.
-- Worker hosting, production credentials, live footage QA and paid API calls are not
-  provisioned by committing this code. Missing configuration is visible in the UI.
+Twitch replay retrieval exists via `/reviews/{id}/analyze`, using a saved review and
+its authenticated access check. Mobile `/channel/v/ID` links normalize to `/videos/ID`.
+Twitch may reject retrieval; local MP4 upload avoids that dependency. Postgame Desk's
+replay field is a reference for its uploaded file, not a download command. For a
+trimmed file, enter the original replay offset to keep evidence links accurate.
+Live capture is a separate queue integration in `live_pipeline.py` requiring
+`WORKER_QUEUE_SECRET` and the existing database RPCs. Neither mode is a substitute for
+checking a real game's footage and report.
 
 ## Verification
 
 ```sh
-cd video-worker
-python -m unittest -v
+python -m unittest discover -s video-worker -v
+node --test test-video-review-report.cjs
+node --check video-review.js
 ```
 
-Tests use generated video and a clearly mocked analyzer: real FFmpeg extraction,
-period boundaries, interrupted-processing resume, access rejection, and expiry.
-They do not demonstrate hockey-analysis accuracy or a working paid API connection.
-
-References: https://ffmpeg.org/ffmpeg-filters.html,
-https://developers.openai.com/api/docs/guides/images-vision,
-https://developers.openai.com/api/docs/guides/structured-outputs,
-https://supabase.com/docs/reference/javascript/auth-getuser.
+Tests cover real generated video extraction, HTTP upload/CORS/creator isolation,
+resumable evidence and synthesis, bounded closer passes, report import completeness,
+re-import preservation and replay offsets. AI responses are mocked. Real hockey
+accuracy and authenticated production upload/save/reload require a real recording
+and a management account; never describe these tests as proving that accuracy.

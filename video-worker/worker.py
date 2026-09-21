@@ -15,12 +15,17 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 from uuid import UUID, uuid4
+from hockey_review import HOCKEY_RUBRIC, REVIEW_VERSION, sequence_window
 
 ROOT = Path(os.getenv('DATA_DIR', str(Path(__file__).parent / 'data')))
 MAX_UPLOAD = int(os.getenv('MAX_UPLOAD_MB', '700')) * 1024**2
 MAX_STORAGE = int(os.getenv('MAX_STORAGE_MB', '1800')) * 1024**2
 RETENTION = int(os.getenv('MEDIA_RETENTION_HOURS', '24')) * 3600
-ORIGINS = set(filter(None, os.getenv('ALLOWED_ORIGINS', '').split(',')))
+ORIGINS = {x.strip() for x in os.getenv('ALLOWED_ORIGINS', '').split(',') if x.strip()}
+ORIGINS.update({
+    'https://wildmanhockey-esportshub-git-featur-bd9939-eliteserieschelmedia.vercel.app',
+    'https://wildman-esportshub-git-feature-vide-d65c1d-eliteserieschelmedia.vercel.app',
+})
 USERS = set(filter(None, os.getenv('VIDEO_REVIEW_USER_IDS', '').split(',')))
 
 def origin_allowed(origin):
@@ -425,9 +430,12 @@ Distinguish repeated tendencies from one-off sequences and explicitly record unc
 
 Return structured JSON. Every player evaluation and observation remains NEEDS HUMAN REVIEW.
 '''
-    content = [{'type': 'input_text', 'text': prompt + '\nContext: ' + json.dumps({
+    content = [{'type': 'input_text', 'text': prompt + HOCKEY_RUBRIC + '\nContext: ' + json.dumps({
         'chunk': chunk, 'players': metadata.get('players', ''),
-        'previous_chunk': metadata.get('previous_chunk')})}]
+        'previous_chunk': metadata.get('previous_chunk'),
+        'game_format': metadata.get('game_format', 'unknown'),
+        'sampling_seconds': frame_step,
+        'review_pass': metadata.get('review_pass', 'overview')})}]
     for index, frame in enumerate(frames):
         timestamp = min(chunk['end'], chunk['start'] + (index + .5) * frame_step)
         content.extend([{'type': 'input_text', 'text': f'Approximate recording second: {timestamp}'},
@@ -512,6 +520,17 @@ Return structured JSON. Every player evaluation and observation remains NEEDS HU
             t for t in player.get('evidence_timestamps', [])
             if chunk['start'] <= t <= chunk['end']
         ]
+    supported_players = []
+    for player in parsed['player_evaluations']:
+        identity = str(player.get('player') or '').strip().casefold()
+        evidence = [o for o in parsed['observations'] if o.get('source') == 'gameplay'
+                    and str(o.get('player') or '').strip().casefold() == identity]
+        times = player.get('evidence_timestamps', [])
+        if identity and times and any(abs(t - o['timestamp']) <= frame_step for t in times for o in evidence):
+            supported_players.append(player)
+        else:
+            parsed['uncertainties'].append('Player evaluation omitted: identity-linked gameplay evidence was insufficient.')
+    parsed['player_evaluations'] = supported_players
     parsed['usage'] = result.get('usage', {})
     return parsed
 
@@ -543,6 +562,8 @@ def build_rollup(chunks):
             'player_evaluations': (review.get('player_evaluations') or [])[:12],
             'observations': (review.get('observations') or [])[:20],
             'uncertainties': (review.get('uncertainties') or [])[:10],
+            'frame_step_seconds': chunk.get('frame_step_seconds'),
+            'sequence_review': chunk.get('sequence_review'),
         })
 
     prompt = '''You are producing the second-pass report for a professional hockey scouting department
@@ -590,7 +611,13 @@ Use direct, confident hockey language without hype. If identity or evidence is u
             'model': model,
             'store': False,
             'input': [{'role': 'user', 'content': [
-                {'type': 'input_text', 'text': prompt + '\n\nReviewed evidence:\n' + json.dumps(evidence)}
+                {'type': 'input_text', 'text': prompt + HOCKEY_RUBRIC + '''
+Include [mm:ss] evidence references in tactical and player reports and corrections.
+A sequence_review is a closer look at the SAME play, not an independent repetition.
+If it contradicts the sparse overview, retract the overview claim and explain uncertainty.
+Report the scope as reviewed recording/ranges, never a complete game unless established.
+Any section without evidence must explicitly say insufficient evidence, never filler.
+''' + '\n\nReviewed evidence:\n' + json.dumps(evidence)}
             ]}],
             'max_output_tokens': 5000,
             'text': {'format': {'type': 'json_schema', 'name': 'elite_game_scouting_rollup',
@@ -625,6 +652,8 @@ def process(job_id):
     result = job['result']
     retry_count = int(job['metadata'].get('ai_rate_limit_retries', 0) or 0)
     frame_step = min(12, FRAME_STEP + retry_count * 2)
+    result['stage'] = 'preparing_video'
+    update(job_id, 'processing', result)
     duration = probe(source)
     periods = job['metadata'].get('periods', [])
     period_mode = result.get('period_detection', 'manual') if periods else None
@@ -652,7 +681,8 @@ def process(job_id):
                         if period_mode == 'full_game_fallback' else ''),
         'total_chunks': len(plan),
         'frame_step_seconds': frame_step,
-        'ai_rate_limit_retries': retry_count
+        'ai_rate_limit_retries': retry_count,
+        'review_version': REVIEW_VERSION
     })
     result.setdefault('chunks', [])
     update(job_id, 'processing', result)
@@ -674,12 +704,36 @@ def process(job_id):
             # Exact duplicate evidence is removed. Near duplicates remain flagged for human review.
             seen = {(o['source'], round(o['timestamp']), o['note']) for c in result['chunks'] for o in c['review']['observations']}
             review['observations'] = [o for o in review['observations'] if (o['source'], round(o['timestamp']), o['note']) not in seen]
-            result['chunks'].append({**chunk, 'review': review})
+            result['chunks'].append({**chunk, 'review': review, 'frame_step_seconds': frame_step,
+                                     'review_version': REVIEW_VERSION})
             update(job_id, 'processing', result)
             if index + 1 < len(plan) and AI_CHUNK_PAUSE > 0:
                 STOP.wait(AI_CHUNK_PAUSE)
         finally:
             shutil.rmtree(frame_dir, ignore_errors=True)
+    # Persist each closer look separately, so a synthesis retry does not pay for it again.
+    result['stage'] = 'checking_sequences'
+    update(job_id, 'processing', result)
+    for saved in result['chunks']:
+        if saved.get('sequence_checked'):
+            continue
+        window = sequence_window(saved['review'], saved)
+        if window:
+            frame_dir = directory / 'sequence-frames'
+            shutil.rmtree(frame_dir, ignore_errors=True)
+            try:
+                frames = extract_frames(source, frame_dir, window['start'], window['end'], .5)
+                context = {**job['metadata'], 'review_pass': 'closer gameplay sequence',
+                           'ai_rate_limit_retries': retry_count}
+                # Do not feed the first-pass verdict back to this pass: reduce anchoring.
+                detail = analyze(frames, window, context, .5)
+                saved['sequence_review'] = {**window, 'frame_step_seconds': .5, 'review': detail}
+            finally:
+                shutil.rmtree(frame_dir, ignore_errors=True)
+        saved['sequence_checked'] = True
+        update(job_id, 'processing', result)
+        if window and AI_CHUNK_PAUSE > 0:
+            STOP.wait(AI_CHUNK_PAUSE)
     result.pop('plan', None)
     # Persist chunk evidence before synthesis. A failed synthesis must remain
     # retriable, not become a successful report with missing sections.
@@ -757,7 +811,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(data).encode()
         self.send_response(status)
         origin = self.headers.get('Origin')
-        if origin in ORIGINS:
+        if origin and origin_allowed(origin):
             self.send_header('Access-Control-Allow-Origin', origin)
             self.send_header('Vary', 'Origin')
         self.send_header('Cache-Control', 'no-store')
@@ -767,7 +821,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_OPTIONS(self):
-        if not origin_allowed(self.headers.get('Origin')):
+        if not self.headers.get('Origin') or not origin_allowed(self.headers.get('Origin')):
             return self.reply(403, {'error': 'Origin not allowed'})
         self.send_response(204)
         self.send_header('Access-Control-Allow-Origin', self.headers['Origin'])
@@ -800,7 +854,10 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path.rstrip('/')
         if path == '/health' and self.command == 'GET':
             return self.reply(200, {'status': 'ok', 'aiConfigured': bool(os.getenv('OPENAI_API_KEY') and os.getenv('OPENAI_MODEL')),
-                                    'maxUploadBytes': MAX_UPLOAD, 'liveIngestion': False})
+                                    'maxUploadBytes': MAX_UPLOAD, 'liveIngestion': False,
+                                    'reviewVersion': REVIEW_VERSION,
+                                    'frameStepSeconds': FRAME_STEP,
+                                    'retentionHours': RETENTION / 3600})
         origin = self.headers.get('Origin')
         if origin and not origin_allowed(origin):
             raise Problem(403, 'Origin not allowed')
@@ -831,9 +888,16 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(200, {'jobs': [get_job(r['id'], owner) for r in rows]})
         if path == '/jobs' and self.command == 'POST':
             data = self.body()
-            metadata = {k: str(data.get(k, ''))[:2000] for k in ['game_id', 'title', 'vod_url', 'players']}
+            metadata = {k: str(data.get(k, ''))[:2000] for k in ['game_id', 'title', 'vod_url', 'players', 'game_format']}
             if metadata['vod_url'] and urlsplit(metadata['vod_url']).scheme != 'https':
                 raise Problem(400, 'Use an HTTPS replay link.')
+            try:
+                offset = float(data.get('vod_offset_seconds', 0))
+                if not math.isfinite(offset) or not 0 <= offset <= 86400:
+                    raise ValueError()
+            except (TypeError, ValueError):
+                raise Problem(400, 'Replay offset must be between 0 and 86400 seconds.')
+            metadata['vod_offset_seconds'] = offset
             periods = data.get('periods', [])
             if not isinstance(periods, list) or len(periods) > 12:
                 raise Problem(400, 'Use at most 12 period ranges.')
@@ -909,6 +973,10 @@ class Handler(BaseHTTPRequestHandler):
                     raise Problem(409, 'Only failed or AI-waiting reviews can be retried.')
                 if not (directory / 'source.mp4').exists():
                     raise Problem(410, 'Recording expired. Start a new review.')
+                meta = dict(job['metadata'])
+                meta.pop('ai_rate_limit_retries', None)
+                with connect() as db:
+                    db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
                 update(job_id, 'queued')
             return self.reply(202, get_job(job_id, owner))
         if parts[2:] == ['reanalyze'] and self.command == 'POST':
@@ -920,6 +988,10 @@ class Handler(BaseHTTPRequestHandler):
                     raise Problem(410, 'Recording expired. Start a new review.')
                 # Preserve the recording and metadata, but clear old AI evidence so the
                 # upgraded scout performs a genuine fresh pass rather than reusing old chunks.
+                meta = dict(job['metadata'])
+                meta.pop('ai_rate_limit_retries', None)
+                with connect() as db:
+                    db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
                 update(job_id, 'queued', result={}, error='')
             return self.reply(202, get_job(job_id, owner))
         raise Problem(404, 'Not found')
