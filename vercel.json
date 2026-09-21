@@ -1,6 +1,18 @@
 {
   "rewrites": [
     {
+      "source": "/academy-trainees",
+      "destination": "/academy-trainees.html"
+    },
+    {
+      "source": "/academy-training",
+      "destination": "/academy-training.html"
+    },
+    {
+      "source": "/training",
+      "destination": "/academy-training.html"
+    },
+    {
       "source": "/calgary",
       "destination": "/hitmen-workspace.html"
     },
