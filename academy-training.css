@@ -1,0 +1,17 @@
+.training-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.training-step{display:flex;align-items:center;gap:10px;border:1px solid #40364a;background:#100d14;border-radius:12px;padding:14px;color:#a99daf}
+.training-step b{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#21192a;color:#fff}
+.training-step.active{border-color:#d8ad55;color:#fff}.training-step.active b{background:#d8ad55;color:#111}
+.training-form{display:grid;gap:20px}.training-card{border:1px solid #51445c;background:linear-gradient(145deg,#17111d,#0b090e);border-radius:18px;padding:24px}
+.training-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.training-grid label,.training-wide{display:grid;gap:8px}.training-grid label>span,.training-wide>span{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#c9bdcf}
+.training-track-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:16px 0}
+.training-choice{position:relative;display:grid;gap:7px;border:1px solid #4d4256;border-radius:14px;padding:18px;cursor:pointer;background:#0e0b12}
+.training-choice:has(input:checked){border-color:#d8ad55;background:linear-gradient(145deg,rgba(216,173,85,.16),#0e0b12)}
+.training-choice input{position:absolute;right:16px;top:16px}.training-choice b{font-size:18px}.training-choice span,.training-muted{color:#bdb2c4;line-height:1.5}
+.training-textarea{min-height:150px;resize:vertical}.training-package-note{display:flex;gap:10px;margin-top:16px;padding:14px;border-left:3px solid #d8ad55;background:#18131d}.training-package-note span{color:#c9bdcf}
+.training-submit-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.training-submit-row #trainingMessage{color:#d8c79f}
+.training-request{display:grid;grid-template-columns:1.4fr 1.4fr .8fr .8fr;gap:14px;align-items:center;border-top:1px solid #3b3342;padding:14px 0}.training-request:first-child{border-top:0}
+.training-request>div{display:grid;gap:3px}.training-request small{color:#8f8398;text-transform:uppercase;letter-spacing:.07em}.training-status{text-transform:capitalize}
+@media(max-width:800px){.training-steps{grid-template-columns:1fr 1fr}.training-grid,.training-track-grid{grid-template-columns:1fr}.training-request{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.training-steps,.training-request{grid-template-columns:1fr}}
