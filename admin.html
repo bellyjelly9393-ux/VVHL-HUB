@@ -83,10 +83,10 @@
         </section>
 
         <div class="ops-grid" style="margin-top:18px">
-          <a class="ops-card" href="#accountManager">
-            <small>Accounts + Permissions</small>
+          <a class="ops-card" data-primary-admin-only hidden href="#accountManager">
+            <small>Primary Owner Only</small>
             <h3>User Administration</h3>
-            <p>Review Wildman accounts, change roles and assign authorized users to teams.</p>
+            <p>Review Wildman accounts, change roles, assign team access and set temporary passwords.</p>
             <span class="ops-link">MANAGE ACCOUNTS →</span>
           </a>
           <a class="ops-card" href="tournament-control.html">
@@ -140,7 +140,7 @@
         </div>
       </section>
 
-      <section id="accountManager" class="section-shell section-block">
+      <section id="accountManager" class="section-shell section-block" data-primary-admin-only hidden>
         <div class="section-heading">
           <div><div class="eyebrow">ROLE-BASED ACCESS CONTROL</div><h2>ACCOUNTS & TEAM ASSIGNMENTS</h2></div>
           <a class="small-btn" href="signup.html">Open Signup Page</a>
