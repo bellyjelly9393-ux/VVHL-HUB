@@ -15,7 +15,14 @@
   function allowed(){S.role=role();return !!S.role;}
   function canBidWrite(){return ['admin','owner','gm','agm'].includes(String(S.role||role()||'').toLowerCase());}
   function msg(id,text){if($(id))$(id).textContent=text||'';}
-  function activate(name){document.querySelectorAll('[data-hs-tab]').forEach(x=>x.classList.toggle('active',x.dataset.hsTab===name));document.querySelectorAll('[data-hs-pane]').forEach(x=>x.classList.toggle('active',x.dataset.hsPane===name));}
+  function activate(name){
+    document.querySelectorAll('[data-hs-tab]').forEach(x=>x.classList.toggle('active',x.dataset.hsTab===name));
+    document.querySelectorAll('[data-hs-pane]').forEach(x=>x.classList.toggle('active',x.dataset.hsPane===name));
+    if($('hsSectionSelect'))$('hsSectionSelect').value=name;
+    const url=new URL(location.href);
+    url.searchParams.set('tab',name);
+    history.replaceState(null,'',url.pathname+url.search+url.hash);
+  }
   function scheduleSharedReload(){
     clearTimeout(S.reloadTimer);
     S.reloadTimer=setTimeout(()=>{if(state().user&&!S.loading)load();},350);
@@ -634,6 +641,7 @@
 
   function bind(){
     document.querySelectorAll('[data-hs-tab]').forEach(b=>b.onclick=()=>activate(b.dataset.hsTab));
+    $('hsSectionSelect')?.addEventListener('change',e=>activate(e.target.value));
     const resetPool=()=>{S.page=1;renderPool();};
     $('hsSearch')?.addEventListener('input',resetPool);
     $('hsPositionFilter')?.addEventListener('change',resetPool);
