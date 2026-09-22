@@ -127,17 +127,41 @@
       const intel=S.intel.find(x=>x.scouting_player_id===r.scouting_player_id);
       const reportCount=S.reports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+S.externalReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+S.autoReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length;
       const badge=r.status==='bid_target'?'BID':r.status==='priority'?'PRIORITY':'WATCH';
-      return `<button type="button" class="hs-target-card" data-hs-target="${r.id}">
-        <span class="hs-target-copy"><strong>${esc(p.gamertag||'Unknown')}</strong><small>${esc(p.primary_position||'—')} · ${esc(p.platform||'Platform unconfirmed')}</small><span><b>${esc(badge)}</b> · Fit ${r.fit_grade??'—'} · P${r.priority??'—'} · ${reportCount} report${reportCount===1?'':'s'}</span></span>
-        <span class="hs-target-meta"><b>${intel?mval(intel.fair_value_m):money(r.target_bid)}</b><small>${intel?'Fair value':'Target'}</small></span>
-      </button>`;
+      return `<article class="hs-target-card">
+        <button type="button" class="hs-target-open" data-hs-target="${r.id}">
+          <span class="hs-target-copy"><strong>${esc(p.gamertag||'Unknown')}</strong><small>${esc(p.primary_position||'—')} · ${esc(p.platform||'Platform unconfirmed')}</small><span><b>${esc(badge)}</b> · Fit ${r.fit_grade??'—'} · P${r.priority??'—'} · ${reportCount} report${reportCount===1?'':'s'}</span></span>
+          <span class="hs-target-meta"><b>${intel?mval(intel.fair_value_m):money(r.target_bid)}</b><small>${intel?'Fair value':'Target'}</small></span>
+        </button>
+        ${canBidWrite()?`<button type="button" class="hs-mini-remove" data-hs-remove-target="${r.id}" title="Remove from target board" aria-label="Remove ${esc(p.gamertag||'player')} from target board">×</button>`:''}
+      </article>`;
     };
     [['hsTargetBidLane','hsTargetBidCount','bid'],['hsTargetPriorityLane','hsTargetPriorityCount','priority'],['hsTargetWatchLane','hsTargetWatchCount','watch']].forEach(([boxId,countId,key])=>{
       const box=$(boxId);if(!box)return;
       box.innerHTML=lanes[key].map(card).join('')||'<div class="hs-lane-empty">None</div>';
       if($(countId))$(countId).textContent=lanes[key].length;
       box.querySelectorAll('[data-hs-target]').forEach(b=>b.onclick=()=>{activate('pool');select(b.dataset.hsTarget);setTimeout(()=>$('hsEditor')?.scrollIntoView({behavior:'smooth',block:'start'}),50);});
+      box.querySelectorAll('[data-hs-remove-target]').forEach(b=>b.onclick=e=>{e.stopPropagation();removeFromTargetBoard(b.dataset.hsRemoveTarget);});
     });
+  }
+
+  async function removeFromTargetBoard(id){
+    if(!canBidWrite())return;
+    const p=S.pool.find(x=>x.id===id);if(!p)return;
+    const name=p.scouting_players?.gamertag||'this player';
+    if(!confirm(`Remove ${name} from the target board? They will stay in the scouting market.`))return;
+    const bid=S.bids.find(x=>x.scouting_player_id===p.scouting_player_id);
+    if(bid){
+      const del=await db().from('team_bid_board').delete().eq('id',bid.id);
+      if(del.error){msg('hsStatus',del.error.message);return;}
+    }
+    const upd=await db().from('team_scouting_pool').update({
+      status:'scouted',priority:null,target_bid:null,max_bid:null,updated_by:state().user.id,updated_at:new Date().toISOString()
+    }).eq('id',p.id);
+    if(upd.error){msg('hsStatus',upd.error.message);return;}
+    S.bids=S.bids.filter(x=>x.scouting_player_id!==p.scouting_player_id);
+    p.status='scouted';p.priority=null;p.target_bid=null;p.max_bid=null;
+    render();
+    msg('hsStatus',`${name} removed from target board ✓`);
   }
 
   function intelFor(r){return S.intel.find(x=>x.scouting_player_id===r.scouting_player_id)||null;}
