@@ -23,3 +23,9 @@
 .hm-status-line{color:#a99da0;font-size:11px}
 @media(max-width:1000px){.hm-locker-toolbar{grid-template-columns:1fr 1fr}.hm-budget-strip{grid-template-columns:repeat(3,1fr)}.hm-line-builder-grid{grid-template-columns:1fr 1fr}.hm-avail-row{grid-template-columns:1fr 1fr}.hm-avail-player{grid-column:1/-1}}
 @media(max-width:640px){.hm-locker-toolbar,.hm-line-builder-grid,.hm-budget-strip{grid-template-columns:1fr}.hm-slot-money{grid-template-columns:1fr 1fr}.hm-saved-card{grid-template-columns:1fr}.hm-saved-actions{justify-content:flex-start}.hm-avail-row{grid-template-columns:1fr}.hm-avail-player{grid-column:auto}}
+
+.hm-bidding-market-bar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:10px 0 14px;padding:12px 14px;border:1px solid rgba(239,197,95,.22);border-radius:12px;background:linear-gradient(90deg,rgba(94,70,22,.16),rgba(215,25,45,.05))}
+.hm-bidding-market-bar[hidden]{display:none}
+.hm-bidding-market-bar span{display:grid;gap:3px}.hm-bidding-market-bar b{color:#f0d58d;font-size:9px;letter-spacing:.09em}.hm-bidding-market-bar small{color:#8f8587;font-size:9px}
+.hm-slot-card select[data-player-select]{font-size:10px;font-weight:800}
+.hm-slot-card select[data-player-select] option,.hm-slot-card select[data-player-select] optgroup{background:#090607;color:#fff}
