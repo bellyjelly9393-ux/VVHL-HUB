@@ -176,9 +176,24 @@
 
     <div class="hs-pane" data-hs-pane="bids">
       <section class="hs-card">
-        <div class="hs-card-head"><h3>Calgary Bidding Board</h3><span class="hs-msg">Shared target and ceiling plan</span></div>
+        <div class="hs-card-head">
+          <div><h3>Calgary Bidding Board</h3><span class="hs-msg">Live shared target + ceiling plan for Owner, GM and AGM</span></div>
+          <a class="hs-btn primary" href="hitmen-locker-room.html?mode=bidding">Open Bidding Lineup Simulator →</a>
+        </div>
+        <p class="hs-msg">Anything management adds here is saved to Calgary's shared team board. The other management accounts will see the same target, price ceiling and plan without keeping separate browser lists.</p>
+        <form id="hsBidAddForm" style="margin:14px 0 18px">
+          <div class="hs-form">
+            <label><span class="hs-label">Gamertag</span><input id="hsBidGamertag" class="hs-input" required placeholder="Player gamertag"></label>
+            <label><span class="hs-label">Position</span><select id="hsBidPosition" class="hs-select"><option value="">Unknown</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option></select></label>
+            <label><span class="hs-label">Priority 1-5</span><input id="hsBidPriority" class="hs-input" type="number" min="1" max="5" value="2"></label>
+            <label><span class="hs-label">Target Price</span><input id="hsBidTarget" class="hs-input" type="number" min="0" step="250000" placeholder="2500000"></label>
+            <label><span class="hs-label">Max Price</span><input id="hsBidMax" class="hs-input" type="number" min="0" step="250000" placeholder="3500000"></label>
+            <label><span class="hs-label">Role / Plan</span><input id="hsBidPlan" class="hs-input" placeholder="1C, top-pair LD, value G…"></label>
+          </div>
+          <div class="hs-actions"><button class="hs-btn primary" type="submit">Add to Shared Bidding Board</button><span id="hsBidAddMsg" class="hs-msg"></span></div>
+        </form>
         <div class="hs-table-wrap"><table class="hs-table"><thead><tr><th>Player</th><th>Pos</th><th>Priority</th><th>Status</th><th>Target Price</th><th>Max Price</th><th>Role / Plan</th><th>Remove</th></tr></thead><tbody id="hsBidBody"></tbody></table></div>
-        <div id="hsBidEmpty" class="hs-empty" hidden>No bid targets yet. Add bid numbers to a player in the Scouting Pool.</div>
+        <div id="hsBidEmpty" class="hs-empty" hidden>No bid targets yet. Add someone above or send a scouting target to the board.</div>
       </section>
     </div>
 
