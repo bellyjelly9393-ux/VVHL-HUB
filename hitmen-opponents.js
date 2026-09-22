@@ -46,22 +46,36 @@ function renderLatestStats(name){
  const hist=S.snapshots.filter(x=>x.opponent_name===name).sort((a,b)=>new Date(b.as_of)-new Date(a.as_of)).slice(0,6);E('hoiSnapshotHistory').innerHTML=hist.map(x=>'<div class="hoi-snapshot"><b>'+esc(new Date(x.as_of).toLocaleDateString())+'</b> · '+esc((x.wins??0)+'-'+(x.losses??0)+(x.ot_losses!=null?'-'+x.ot_losses:''))+' · GF '+esc(x.goals_for??'—')+' / GA '+esc(x.goals_against??'—')+(x.notes?'<br>'+esc(x.notes):'')+'</div>').join('');
 }
 function renderMeetings(name){
- const box=E('hoiMeetings'),rows=meetings(name);box.innerHTML=rows.map((g,i)=>'<details class="hoi-meeting"><summary><span>'+esc(fmt(g.scheduled_at))+'</span><strong>Meeting '+(i+1)+' of '+rows.length+'</strong><b>'+(g.status==='final'?result(g)+' '+g.calgary_score+'-'+g.opponent_score:'UPCOMING')+'</b></summary><div class="hoi-game-edit" data-game="'+g.id+'"><label>Calgary score<input data-field="calgary_score" type="number" min="0" value="'+esc(g.calgary_score??'')+'"></label><label>Opponent score<input data-field="opponent_score" type="number" min="0" value="'+esc(g.opponent_score??'')+'"></label><label>Status<select data-field="status"><option value="scheduled" '+(g.status==='scheduled'?'selected':'')+'>Scheduled</option><option value="final" '+(g.status==='final'?'selected':'')+'>Final</option><option value="postponed" '+(g.status==='postponed'?'selected':'')+'>Postponed</option><option value="cancelled" '+(g.status==='cancelled'?'selected':'')+'>Cancelled</option></select></label><label>OT loss?<select data-field="overtime"><option value="false" '+(!g.overtime?'selected':'')+'>No</option><option value="true" '+(g.overtime?'selected':'')+'>Yes</option></select></label><div class="wide hoi-game-stats">
-<h4>Game Stats</h4>
-<div class="hoi-game-stat-grid">
-<label>CGY Shots<input data-stat-side="team" data-stat="shots" type="number" min="0" value="${esc((g.team_stats||{}).shots??'')}"></label>
-<label>OPP Shots<input data-stat-side="opponent" data-stat="shots" type="number" min="0" value="${esc((g.opponent_stats||{}).shots??'')}"></label>
-<label>CGY TOA<input data-stat-side="team" data-stat="toa" placeholder="6:42" value="${esc((g.team_stats||{}).toa??'')}"></label>
-<label>OPP TOA<input data-stat-side="opponent" data-stat="toa" placeholder="5:18" value="${esc((g.opponent_stats||{}).toa??'')}"></label>
-<label>CGY Passing %<input data-stat-side="team" data-stat="passing_pct" type="number" step=".1" value="${esc((g.team_stats||{}).passing_pct??'')}"></label>
-<label>OPP Passing %<input data-stat-side="opponent" data-stat="passing_pct" type="number" step=".1" value="${esc((g.opponent_stats||{}).passing_pct??'')}"></label>
-<label>CGY Faceoff %<input data-stat-side="team" data-stat="faceoff_pct" type="number" step=".1" value="${esc((g.team_stats||{}).faceoff_pct??'')}"></label>
-<label>OPP Faceoff %<input data-stat-side="opponent" data-stat="faceoff_pct" type="number" step=".1" value="${esc((g.opponent_stats||{}).faceoff_pct??'')}"></label>
-<label>CGY Power Play<input data-stat-side="team" data-stat="power_play" placeholder="1/3" value="${esc((g.team_stats||{}).power_play??'')}"></label>
-<label>OPP Power Play<input data-stat-side="opponent" data-stat="power_play" placeholder="0/2" value="${esc((g.opponent_stats||{}).power_play??'')}"></label>
-<label>CGY PIM<input data-stat-side="team" data-stat="pim" type="number" min="0" value="${esc((g.team_stats||{}).pim??'')}"></label>
-<label>OPP PIM<input data-stat-side="opponent" data-stat="pim" type="number" min="0" value="${esc((g.opponent_stats||{}).pim??'')}"></label>
-</div></div><label class="wide">What Calgary did well<textarea data-field="what_worked">'+esc(g.what_worked||'')+'</textarea></label><label class="wide">What hurt Calgary / what failed<textarea data-field="what_failed">'+esc(g.what_failed||'')+'</textarea></label><label class="wide">Opponent takeaways for the rematch<textarea data-field="opponent_takeaways">'+esc(g.opponent_takeaways||'')+'</textarea></label><label class="wide">Matchup notes<textarea data-field="matchup_notes">'+esc(g.matchup_notes||'')+'</textarea></label><button class="hm-save" data-save-game="'+g.id+'" '+(writable()?'':'disabled')+'>Save Game Record</button><span class="hm-save-note">'+gameVodCount(g)+' linked VOD'+(gameVodCount(g)===1?'':'s')+'</span></div></details>').join('');
+ const box=E('hoiMeetings'),rows=meetings(name);
+ box.innerHTML=rows.map((g,i)=>{
+   const ts=g.team_stats||{},os=g.opponent_stats||{};
+   return `<details class="hoi-meeting"><summary><span>${esc(fmt(g.scheduled_at))}</span><strong>Meeting ${i+1} of ${rows.length}</strong><b>${g.status==='final'?result(g)+' '+g.calgary_score+'-'+g.opponent_score:'UPCOMING'}</b></summary>
+   <div class="hoi-game-edit" data-game="${g.id}">
+   <label>Calgary score<input data-field="calgary_score" type="number" min="0" value="${esc(g.calgary_score??'')}"></label>
+   <label>Opponent score<input data-field="opponent_score" type="number" min="0" value="${esc(g.opponent_score??'')}"></label>
+   <label>Status<select data-field="status"><option value="scheduled" ${g.status==='scheduled'?'selected':''}>Scheduled</option><option value="final" ${g.status==='final'?'selected':''}>Final</option><option value="postponed" ${g.status==='postponed'?'selected':''}>Postponed</option><option value="cancelled" ${g.status==='cancelled'?'selected':''}>Cancelled</option></select></label>
+   <label>OT loss?<select data-field="overtime"><option value="false" ${!g.overtime?'selected':''}>No</option><option value="true" ${g.overtime?'selected':''}>Yes</option></select></label>
+   <div class="wide hoi-game-stats"><h4>Game Stats</h4><div class="hoi-game-stat-grid">
+     <label>CGY Shots<input data-stat-side="team" data-stat="shots" type="number" min="0" value="${esc(ts.shots??'')}"></label>
+     <label>OPP Shots<input data-stat-side="opponent" data-stat="shots" type="number" min="0" value="${esc(os.shots??'')}"></label>
+     <label>CGY TOA<input data-stat-side="team" data-stat="toa" placeholder="6:42" value="${esc(ts.toa??'')}"></label>
+     <label>OPP TOA<input data-stat-side="opponent" data-stat="toa" placeholder="5:18" value="${esc(os.toa??'')}"></label>
+     <label>CGY Passing %<input data-stat-side="team" data-stat="passing_pct" type="number" step=".1" value="${esc(ts.passing_pct??'')}"></label>
+     <label>OPP Passing %<input data-stat-side="opponent" data-stat="passing_pct" type="number" step=".1" value="${esc(os.passing_pct??'')}"></label>
+     <label>CGY Faceoff %<input data-stat-side="team" data-stat="faceoff_pct" type="number" step=".1" value="${esc(ts.faceoff_pct??'')}"></label>
+     <label>OPP Faceoff %<input data-stat-side="opponent" data-stat="faceoff_pct" type="number" step=".1" value="${esc(os.faceoff_pct??'')}"></label>
+     <label>CGY Power Play<input data-stat-side="team" data-stat="power_play" placeholder="1/3" value="${esc(ts.power_play??'')}"></label>
+     <label>OPP Power Play<input data-stat-side="opponent" data-stat="power_play" placeholder="0/2" value="${esc(os.power_play??'')}"></label>
+     <label>CGY PIM<input data-stat-side="team" data-stat="pim" type="number" min="0" value="${esc(ts.pim??'')}"></label>
+     <label>OPP PIM<input data-stat-side="opponent" data-stat="pim" type="number" min="0" value="${esc(os.pim??'')}"></label>
+   </div></div>
+   <label class="wide">What Calgary did well<textarea data-field="what_worked">${esc(g.what_worked||'')}</textarea></label>
+   <label class="wide">What hurt Calgary / what failed<textarea data-field="what_failed">${esc(g.what_failed||'')}</textarea></label>
+   <label class="wide">Opponent takeaways for the rematch<textarea data-field="opponent_takeaways">${esc(g.opponent_takeaways||'')}</textarea></label>
+   <label class="wide">Matchup notes<textarea data-field="matchup_notes">${esc(g.matchup_notes||'')}</textarea></label>
+   <button class="hm-save" data-save-game="${g.id}" ${writable()?'':'disabled'}>Save Game Record</button><span class="hm-save-note">${gameVodCount(g)} linked VOD${gameVodCount(g)===1?'':'s'}</span>
+   </div></details>`;
+ }).join('');
  box.querySelectorAll('[data-save-game]').forEach(b=>b.onclick=()=>saveGame(b.dataset.saveGame));
 }
 function renderVods(name){
