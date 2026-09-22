@@ -152,3 +152,15 @@ body.hs-dossier-open{overflow:hidden}
 .hs-mini-remove:hover{background:rgba(248,113,113,.16);border-color:rgba(248,113,113,.52);color:#fff}
 .hs-bid-actions .hs-remove-bid:before{content:"× ";font-weight:1000}
 @media(max-width:620px){.hs-target-open{padding-right:40px}.hs-mini-remove{width:28px;height:28px}}
+
+/* Compact Scouting HQ section selector */
+.hs-section-switcher{display:flex;justify-content:flex-end;align-items:flex-end;gap:10px;margin:12px 0 14px}
+.hs-section-switcher label{display:grid;gap:5px;min-width:min(280px,70vw)}
+.hs-section-switcher label>span{color:#8f848e;font-size:8px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.hs-section-switcher .hs-select{min-height:40px;background:#171016;border-color:rgba(255,255,255,.09)}
+.hs-section-switcher .status-pill{margin-bottom:2px}
+@media(max-width:620px){
+  .hs-section-switcher{justify-content:space-between;align-items:flex-end}
+  .hs-section-switcher label{min-width:0;flex:1}
+  .hs-section-switcher .status-pill{font-size:8px;white-space:nowrap}
+}
