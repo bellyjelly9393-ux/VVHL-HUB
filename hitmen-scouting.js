@@ -111,21 +111,31 @@
   }
 
   function renderTargets(){
-    const box=$('hsTargetBoard');if(!box)return;
     const rows=targetRows();
+    const lanes={
+      bid:rows.filter(r=>r.status==='bid_target'),
+      priority:rows.filter(r=>r.status!=='bid_target'&&(r.status==='priority'||Number(r.priority||9)<=2)),
+      watch:rows.filter(r=>r.status==='watch'&&Number(r.priority||9)>2)
+    };
+    const used=new Set([...lanes.bid,...lanes.priority,...lanes.watch].map(r=>r.id));
+    rows.filter(r=>!used.has(r.id)).forEach(r=>lanes.watch.push(r));
     if($('hsTargetEmpty'))$('hsTargetEmpty').hidden=rows.length!==0;
-    box.innerHTML=rows.map(r=>{
+    const card=r=>{
       const p=r.scouting_players||{};
       const intel=S.intel.find(x=>x.scouting_player_id===r.scouting_player_id);
       const reportCount=S.reports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+S.externalReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length+S.autoReports.filter(x=>x.scouting_player_id===r.scouting_player_id).length;
-      const badge=r.status==='bid_target'?'BID TARGET':r.status==='priority'?'PRIORITY':'WATCH';
+      const badge=r.status==='bid_target'?'BID':r.status==='priority'?'PRIORITY':'WATCH';
       return `<button type="button" class="hs-target-card" data-hs-target="${r.id}">
-        <span class="hs-target-jersey">🏒</span>
-        <span class="hs-target-copy"><strong>${esc(p.gamertag||'Unknown')}</strong><small>${esc(p.primary_position||'—')} · ${esc(p.platform||'Platform unconfirmed')}</small><span><b>${esc(badge)}</b> · Fit ${r.fit_grade??'—'} · Priority ${r.priority??'—'}</span></span>
-        <span class="hs-target-meta"><small>${reportCount} reports</small><b>${intel?mval(intel.fair_value_m):money(r.target_bid)}</b><small>${intel?'ChelScout FV':'Target'}</small></span>
+        <span class="hs-target-copy"><strong>${esc(p.gamertag||'Unknown')}</strong><small>${esc(p.primary_position||'—')} · ${esc(p.platform||'Platform unconfirmed')}</small><span><b>${esc(badge)}</b> · Fit ${r.fit_grade??'—'} · P${r.priority??'—'} · ${reportCount} report${reportCount===1?'':'s'}</span></span>
+        <span class="hs-target-meta"><b>${intel?mval(intel.fair_value_m):money(r.target_bid)}</b><small>${intel?'Fair value':'Target'}</small></span>
       </button>`;
-    }).join('');
-    box.querySelectorAll('[data-hs-target]').forEach(b=>b.onclick=()=>{activate('pool');select(b.dataset.hsTarget);setTimeout(()=>$('hsEditor')?.scrollIntoView({behavior:'smooth',block:'start'}),50);});
+    };
+    [['hsTargetBidLane','hsTargetBidCount','bid'],['hsTargetPriorityLane','hsTargetPriorityCount','priority'],['hsTargetWatchLane','hsTargetWatchCount','watch']].forEach(([boxId,countId,key])=>{
+      const box=$(boxId);if(!box)return;
+      box.innerHTML=lanes[key].map(card).join('')||'<div class="hs-lane-empty">None</div>';
+      if($(countId))$(countId).textContent=lanes[key].length;
+      box.querySelectorAll('[data-hs-target]').forEach(b=>b.onclick=()=>{activate('pool');select(b.dataset.hsTarget);setTimeout(()=>$('hsEditor')?.scrollIntoView({behavior:'smooth',block:'start'}),50);});
+    });
   }
 
   function intelFor(r){return S.intel.find(x=>x.scouting_player_id===r.scouting_player_id)||null;}
@@ -539,22 +549,35 @@
   function renderBids(){
     if(!$('hsBidBody'))return;
     const map=new Map(S.bids.map(b=>[b.scouting_player_id,b]));
-    const rows=S.pool.filter(p=>p.status==='bid_target'||p.target_bid!=null||p.max_bid!=null||map.has(p.scouting_player_id));
+    const rows=S.pool.filter(p=>p.status==='bid_target'||p.target_bid!=null||p.max_bid!=null||map.has(p.scouting_player_id))
+      .sort((a,b)=>(Number(map.get(a.scouting_player_id)?.priority??a.priority??9)-Number(map.get(b.scouting_player_id)?.priority??b.priority??9))||String(a.scouting_players?.gamertag||'').localeCompare(String(b.scouting_players?.gamertag||'')));
+    const targetTotal=rows.reduce((sum,p)=>sum+Number(map.get(p.scouting_player_id)?.target_price??p.target_bid??0),0);
+    const maxTotal=rows.reduce((sum,p)=>sum+Number(map.get(p.scouting_player_id)?.max_price??p.max_bid??0),0);
+    if($('hsBidBoardCount'))$('hsBidBoardCount').textContent=rows.length;
+    if($('hsBidTargetTotal'))$('hsBidTargetTotal').textContent=money(targetTotal);
+    if($('hsBidMaxTotal'))$('hsBidMaxTotal').textContent=money(maxTotal);
     $('hsBidBody').innerHTML=rows.map(p=>{
       const b=map.get(p.scouting_player_id)||{},sp=p.scouting_players||{};
-      return `<tr>
-        <td><b>${esc(sp.gamertag||'Unknown')}</b></td>
-        <td>${esc(sp.primary_position||'—')}</td>
-        <td>${b.priority??p.priority??'—'}</td>
-        <td><span class="hs-tag">${esc((b.status||p.status||'watch').replaceAll('_',' '))}</span></td>
-        <td>${money(b.target_price??p.target_bid)}</td>
-        <td>${money(b.max_price??p.max_bid)}</td>
-        <td>${esc(b.plan||p.projected_role||'—')}</td>
-        <td><button type="button" class="hs-btn hs-remove-bid" data-hs-remove-bid="${p.scouting_player_id}">Remove</button></td>
-      </tr>`;
+      const status=(b.status||p.status||'watch').replaceAll('_',' ');
+      return `<article class="hs-bid-card">
+        <div class="hs-bid-card-top">
+          <div><strong>${esc(sp.gamertag||'Unknown')}</strong><small>${esc(sp.primary_position||'—')} · Priority ${b.priority??p.priority??'—'}</small></div>
+          <span class="hs-tag">${esc(status)}</span>
+        </div>
+        <div class="hs-bid-money">
+          <div><small>Target</small><b>${money(b.target_price??p.target_bid)}</b></div>
+          <div><small>Max</small><b>${money(b.max_price??p.max_bid)}</b></div>
+        </div>
+        <div class="hs-bid-plan"><small>ROLE / PLAN</small><span>${esc(b.plan||p.projected_role||'No role set')}</span></div>
+        <div class="hs-bid-actions">
+          <button type="button" class="hs-btn" data-hs-open-player="${p.id}">Open Player</button>
+          <button type="button" class="hs-btn hs-remove-bid" data-hs-remove-bid="${p.scouting_player_id}">Remove</button>
+        </div>
+      </article>`;
     }).join('');
     if($('hsBidEmpty'))$('hsBidEmpty').hidden=rows.length!==0;
     document.querySelectorAll('[data-hs-remove-bid]').forEach(btn=>btn.onclick=()=>removeFromBidBoard(btn.dataset.hsRemoveBid));
+    document.querySelectorAll('[data-hs-open-player]').forEach(btn=>btn.onclick=()=>{activate('pool');select(btn.dataset.hsOpenPlayer);setTimeout(()=>$('hsEditor')?.scrollIntoView({behavior:'smooth',block:'start'}),50);});
   }
 
   async function removeFromBidBoard(pid){
