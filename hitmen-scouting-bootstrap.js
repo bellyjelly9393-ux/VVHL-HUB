@@ -24,12 +24,16 @@
       <div class="hs-kpi"><small>Bid Targets</small><strong id="hsBids">0</strong></div>
       <div class="hs-kpi"><small>Reports Logged</small><strong id="hsReports">0</strong></div>
     </div>
-    <div class="hs-tabs">
-      <button class="hs-tab active" data-hs-tab="pool" type="button">Player Market</button>
-      <button class="hs-tab" data-hs-tab="targets" type="button">Target Board</button>
-      <button class="hs-tab" data-hs-tab="reports" type="button">Reports</button>
-      <button class="hs-tab" data-hs-tab="bids" type="button">Bidding</button>
-      <span id="hsRole" class="status-pill" style="margin-left:auto">PRIVATE</span>
+    <div class="hs-section-switcher">
+      <label><span>Scouting Section</span>
+        <select id="hsSectionSelect" class="hs-select">
+          <option value="pool">Player Market</option>
+          <option value="targets">Target Board</option>
+          <option value="reports">Reports</option>
+          <option value="bids">Bidding Board</option>
+        </select>
+      </label>
+      <span id="hsRole" class="status-pill">PRIVATE</span>
     </div>
 
     <div class="hs-pane" data-hs-pane="targets">
@@ -54,7 +58,7 @@
         </div>
         <div id="hsTargetEmpty" class="hs-empty" hidden>No targets yet. Mark players Watch, Priority or Bid Target from their profile.</div>
       </section>
-      <details class="hs-card hs-utility-drawer">
+      <details class="hs-card hs-utility-drawer" hidden aria-hidden="true">
         <summary><span><b>ChelScout Sync Tools</b><small>Open only when you need to import a player report</small></span><span id="hsChelSyncBadge" class="hs-tag">READY</span></summary>
         <div class="hs-utility-body">
           <p class="hs-msg">Sync a ChelScout player report you legitimately opened into the matching Calgary profile without sending ChelScout cookies or passwords to Wildman.</p>
