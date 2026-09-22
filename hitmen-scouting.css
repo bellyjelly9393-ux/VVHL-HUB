@@ -109,3 +109,36 @@ body.hs-dossier-open{overflow:hidden}
 .hs-player-history span{color:#d8d1df}
 .hs-remove-bid{min-height:30px;padding:0 9px;border-color:rgba(248,113,113,.28);color:#fecaca}
 .hs-remove-bid:hover{background:rgba(248,113,113,.10);border-color:rgba(248,113,113,.48)}
+
+
+/* Organized Scouting HQ boards */
+.hs-board-card{padding:18px}
+.hs-board-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}
+.hs-board-head h3{font-size:32px}.hs-board-head p{margin:7px 0 0;max-width:680px}
+.hs-target-lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.hs-target-lane{min-width:0;border:1px solid rgba(255,255,255,.07);border-radius:15px;background:rgba(8,6,9,.56);overflow:hidden}
+.hs-target-lane.bid{border-color:rgba(74,222,128,.22)}.hs-target-lane.priority{border-color:rgba(239,197,95,.24)}.hs-target-lane.watch{border-color:rgba(96,165,250,.18)}
+.hs-lane-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 13px;border-bottom:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.025)}
+.hs-lane-head span{display:grid;gap:2px}.hs-lane-head b{font-size:11px;letter-spacing:.08em}.hs-lane-head small{color:#817780;font-size:9px}.hs-lane-head strong{font:900 25px/1 "Barlow Condensed",sans-serif;color:#f4d279}
+.hs-target-stack{display:grid;gap:7px;padding:8px}
+.hs-target-stack .hs-target-card{grid-template-columns:minmax(0,1fr) auto;padding:11px;border-radius:11px;background:linear-gradient(180deg,rgba(31,16,22,.9),rgba(13,9,12,.98))}
+.hs-target-stack .hs-target-copy strong{font-size:13px}.hs-target-stack .hs-target-copy small,.hs-target-stack .hs-target-copy span{font-size:9px}
+.hs-target-stack .hs-target-meta b{font-size:17px}.hs-target-stack .hs-target-meta small{font-size:8px}
+.hs-lane-empty{padding:22px 10px;text-align:center;color:#6f6770;font-size:10px}
+.hs-utility-drawer{margin-top:12px;padding:0;overflow:hidden}.hs-utility-drawer>summary,.hs-bid-add-drawer>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;padding:13px 15px}
+.hs-utility-drawer>summary::-webkit-details-marker,.hs-bid-add-drawer>summary::-webkit-details-marker{display:none}.hs-utility-drawer>summary span:first-child,.hs-bid-add-drawer>summary span:first-child{display:grid;gap:2px}.hs-utility-drawer>summary small,.hs-bid-add-drawer>summary small{color:#817780;font-size:9px;font-weight:600}
+.hs-utility-body{padding:0 15px 15px;border-top:1px solid rgba(255,255,255,.05)}
+
+.hs-bid-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0}
+.hs-bid-summary>div{padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:12px;background:rgba(255,255,255,.025)}
+.hs-bid-summary small{display:block;color:#8b8189;font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.hs-bid-summary strong{display:block;margin-top:4px;font:900 26px/1 "Barlow Condensed",sans-serif}
+.hs-bid-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.hs-bid-card{padding:13px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:linear-gradient(180deg,rgba(33,15,21,.94),rgba(13,9,12,.98))}
+.hs-bid-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.hs-bid-card-top>div{min-width:0;display:grid;gap:2px}.hs-bid-card-top strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hs-bid-card-top small{color:#8f858e;font-size:9px}
+.hs-bid-money{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.hs-bid-money>div{padding:9px;border-radius:10px;background:rgba(255,255,255,.025)}.hs-bid-money small,.hs-bid-plan small{display:block;color:#7f747d;font-size:8px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.hs-bid-money b{display:block;margin-top:3px;font:900 21px/1 "Barlow Condensed",sans-serif;color:#f0d58d}
+.hs-bid-plan{min-height:42px}.hs-bid-plan span{display:block;margin-top:4px;color:#cfc5cc;font-size:10px;line-height:1.35}
+.hs-bid-actions{display:flex;gap:7px;margin-top:10px}.hs-bid-actions .hs-btn{min-height:34px;padding:0 10px;font-size:10px}.hs-bid-actions .hs-remove-bid{margin-left:auto;color:#f2a4ad;border-color:rgba(248,113,113,.26)}
+.hs-bid-add-drawer{margin-top:14px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.02);overflow:hidden}.hs-bid-add-drawer form{padding:0 14px 14px;border-top:1px solid rgba(255,255,255,.05)}
+
+@media(max-width:900px){.hs-target-lanes{grid-template-columns:1fr}.hs-bid-grid{grid-template-columns:1fr}.hs-board-head{flex-direction:column}.hs-board-head .hs-btn{width:auto}}
+@media(max-width:620px){.hs-bid-summary{grid-template-columns:1fr}.hs-target-stack .hs-target-card{grid-template-columns:minmax(0,1fr) auto}.hs-target-stack .hs-target-meta{grid-column:auto;text-align:right;display:grid}.hs-bid-actions{flex-wrap:wrap}.hs-bid-actions .hs-remove-bid{margin-left:0}}
