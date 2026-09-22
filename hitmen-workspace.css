@@ -77,3 +77,26 @@ body.hitmen-war-room{
   .session-game{grid-template-columns:1fr 1fr}.session-game>span:first-child{grid-column:1/-1}.session-game .small-btn{width:100%}
   .hm-war-footerline strong{font-size:8px;letter-spacing:.16em}
 }
+
+/* Compact War Room navigation */
+.hm-section-nav{display:flex!important;align-items:center;gap:10px}
+.hm-section-menu{position:relative}
+.hm-section-menu>summary{list-style:none;cursor:pointer;display:flex;align-items:center;min-height:36px;padding:0 12px;border:1px solid rgba(215,25,45,.32);border-radius:10px;background:rgba(215,25,45,.06);color:#f5e9ea;font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}
+.hm-section-menu>summary::-webkit-details-marker{display:none}
+.hm-section-menu[open]{z-index:80}
+.hm-section-menu-panel{position:absolute;right:0;top:44px;width:min(360px,82vw);display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px;border:1px solid rgba(215,25,45,.32);border-radius:14px;background:rgba(9,4,5,.99);box-shadow:0 24px 70px rgba(0,0,0,.65)}
+.hm-section-menu-panel a{display:grid;gap:3px;padding:11px;border:1px solid rgba(255,255,255,.06);border-radius:10px;background:rgba(255,255,255,.018);color:#fff;text-decoration:none}
+.hm-section-menu-panel a:hover{border-color:rgba(255,64,82,.4);background:rgba(215,25,45,.07)}
+.hm-section-menu-panel b{font-size:11px}
+.hm-section-menu-panel small{color:#887d7f;font-size:9px;line-height:1.35}
+.hm-people-grid{grid-template-columns:1fr}
+.hm-duplicate-links[hidden],.hm-command-deck[hidden]{display:none!important}
+
+@media(max-width:760px){
+  .hm-section-nav{margin-left:auto}
+  .hm-section-nav>a.active-nav{display:none}
+  .hm-section-menu-panel{position:fixed;right:12px;left:12px;top:72px;width:auto;grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+  .hm-section-menu-panel{grid-template-columns:1fr}
+}
