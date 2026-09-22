@@ -14,8 +14,8 @@
   const markup = `
   <section id="hitmen-scouting" class="hs-desk" data-hitmen-scouting hidden>
     <div class="hs-header">
-      <div><div class="eyebrow">SEASON 55 · PRIVATE TEAM INTELLIGENCE</div><h2>SCOUTING + BIDDING DESK</h2></div>
-      <p>One shared Calgary board for every player you scout, every report management writes, and every bid ceiling you want ready before bidding opens.</p>
+      <div><div class="eyebrow">SEASON 55 · PRIVATE TEAM INTELLIGENCE</div><h2>SCOUTING HQ</h2></div>
+      <p>Player scouting lives here: market search, targets, reports, ChelScout intel and bidding. Video scouting stays separate in the VOD Scouting room so this page does not turn into the digital equivalent of a junk drawer.</p>
     </div>
     <div id="hsStatus" class="hitmen-status">Loading Calgary scouting desk…</div>
     <div class="hs-kpis">
@@ -25,10 +25,10 @@
       <div class="hs-kpi"><small>Reports Logged</small><strong id="hsReports">0</strong></div>
     </div>
     <div class="hs-tabs">
-      <button class="hs-tab active" data-hs-tab="pool" type="button">Scouting Market</button>
-      <button class="hs-tab" data-hs-tab="targets" type="button">★ Targets</button>
-      <button class="hs-tab" data-hs-tab="reports" type="button">Scouting Reports</button>
-      <button class="hs-tab" data-hs-tab="bids" type="button">Bidding Board</button>
+      <button class="hs-tab active" data-hs-tab="pool" type="button">Player Market</button>
+      <button class="hs-tab" data-hs-tab="targets" type="button">Target Board</button>
+      <button class="hs-tab" data-hs-tab="reports" type="button">Reports</button>
+      <button class="hs-tab" data-hs-tab="bids" type="button">Bidding</button>
       <span id="hsRole" class="status-pill" style="margin-left:auto">PRIVATE</span>
     </div>
 
