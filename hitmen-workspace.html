@@ -19,13 +19,23 @@
 <header class="site-header hitmen-private-header">
   <a class="brand" href="hitmen-workspace.html"><span class="hm-brand-skull">H</span><span class="brand-copy">CALGARY HITMEN<br><b>LGCHL SEASON 55</b></span></a>
   <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
-  <nav class="main-nav">
+  <nav class="main-nav hm-section-nav">
     <a class="active-nav" href="hitmen-workspace.html">War Room</a>
-    <a href="/calgary?tab=pool#hitmen-scouting">Scouting HQ</a>
-    <a href="hitmen-locker-room.html">Lineups</a>
-    <a href="vod-lab.html?team=calgary-hitmen">VOD Scouting</a>\n    <a href="hitmen-opponents.html">Opponents</a>
-    <a href="hitmen-gm-ai.html">GM MVP AI</a>
-    <a href="hitmen-battle-plan.html">Battle Plan</a>
+    <details class="hm-section-menu">
+      <summary>Sections ▾</summary>
+      <div class="hm-section-menu-panel">
+        <a href="/calgary?tab=pool#hitmen-scouting"><b>Scouting</b><small>Player market & dossiers</small></a>
+        <a href="/calgary?tab=targets#hitmen-scouting"><b>Targets</b><small>Watch, priority & bid targets</small></a>
+        <a href="/calgary?tab=bids#hitmen-scouting"><b>Bidding</b><small>Shared bid board</small></a>
+        <a href="hitmen-locker-room.html?mode=bidding"><b>Lineups</b><small>Roster & cap simulator</small></a>
+        <a href="vod-lab.html?team=calgary-hitmen"><b>VOD Scouting</b><small>Film review & evidence</small></a>
+        <a href="hitmen-opponents.html"><b>Opponents</b><small>Season matchup intelligence</small></a>
+        <a href="hitmen-gm-ai.html"><b>GM MVP AI</b><small>Ask, compare & shortlist</small></a>
+        <a href="hitmen-battle-plan.html"><b>Battle Plan</b><small>Matchup assignments</small></a>
+        <a href="#hitmen-live-session"><b>Game Night</b><small>Live series controls</small></a>
+        <a href="hitmen-card-vault.html"><b>Card Vault</b><small>Players & team history</small></a>
+      </div>
+    </details>
   </nav>
   <a class="hm-private-pill" href="management.html">Private Management</a>
 </header>
@@ -49,7 +59,7 @@
       </div>
     </section>
 
-    <section class="section-shell hm-command-deck" aria-label="Calgary Hitmen command stations">
+    <section class="section-shell hm-command-deck" aria-label="Calgary Hitmen command stations" hidden>
       <a class="hm-command-card" href="/calgary?tab=pool#hitmen-scouting"><span class="hm-command-icon">◉</span><small>PLAYER INTELLIGENCE</small><h3>Scouting HQ</h3><p>One place for the player market, target board, reports, ChelScout intel and the shared bidding board.</p></a>
       <a class="hm-command-card" href="hitmen-locker-room.html"><span class="hm-command-icon">♟</span><small>ROSTER + CAP</small><h3>Lineup Builder</h3><p>Build lines, test bidding combinations, track cost and save shared roster plans.</p></a>
       <a class="hm-command-card" href="vod-lab.html?team=calgary-hitmen"><span class="hm-command-icon">▶</span><small>SEPARATE VIDEO WORKFLOW</small><h3>VOD Scouting</h3><p>Period-by-period film review, markers, player evidence and game scouting reports.</p></a>
@@ -102,7 +112,7 @@
           </div>
         </section>
 
-        <section class="hitmen-panel">
+        <section class="hitmen-panel hm-duplicate-links" hidden aria-hidden="true">
           <div class="eyebrow">QUICK LINKS</div><h3>Move Through The War Room</h3>
           <div class="hm-quick-links">
             <a href="/calgary?tab=pool#hitmen-scouting">Scouting HQ <span>→</span></a>
