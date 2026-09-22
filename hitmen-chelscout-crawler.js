@@ -31,6 +31,8 @@
 
   function inject(){
     if(!isAdmin())return;
+    const params=new URLSearchParams(location.search);
+    if(params.get('adminTools')!=='chelscout')return;
     const root=document.querySelector('[data-hitmen-scouting]');
     if(!root||document.getElementById('hsLeagueCrawler'))return;
     const card=document.createElement('section');
