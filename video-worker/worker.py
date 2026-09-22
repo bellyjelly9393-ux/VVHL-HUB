@@ -23,6 +23,9 @@ MAX_STORAGE = int(os.getenv('MAX_STORAGE_MB', '1800')) * 1024**2
 RETENTION = int(os.getenv('MEDIA_RETENTION_HOURS', '24')) * 3600
 ORIGINS = {x.strip() for x in os.getenv('ALLOWED_ORIGINS', '').split(',') if x.strip()}
 ORIGINS.update({
+    'https://wildmanhockey-elitechelmedia.app',
+    'https://wildmanhockey-esportshub.vercel.app',
+    'https://vvhl-hub-psi.vercel.app',
     'https://wildmanhockey-esportshub-git-featur-bd9939-eliteserieschelmedia.vercel.app',
     'https://wildman-esportshub-git-feature-vide-d65c1d-eliteserieschelmedia.vercel.app',
 })
