@@ -86,8 +86,8 @@
     const msg=document.getElementById('vodTwitchAuthMsg');
     try{
       const status=await workerFetch('/twitch-auth');
-      if(badge){badge.textContent=status.configured?'AUTH CONNECTED':'PUBLIC READY';badge.dataset.tone='good';}
-      if(msg)msg.textContent=status.configured?'Authenticated VOD fallback is available.':'Public Twitch VOD retrieval is enabled. Authentication is only needed if Twitch blocks a specific recording.';
+      if(badge){badge.textContent=status.configured?'AUTH CONNECTED':'PUBLIC ONLY';badge.dataset.tone=status.configured?'good':'warn';}
+      if(msg)msg.textContent=status.configured?'Authenticated VOD fallback is available.':'Public Twitch retrieval will be tried first. If Twitch blocks this VOD, connect authenticated retrieval below.';
       const clear=document.getElementById('vodClearTwitchAuth');if(clear)clear.disabled=!status.configured;
     }catch(e){
       if(badge)badge.textContent='UNAVAILABLE';
@@ -142,7 +142,18 @@
       if(selectedReviewId()!==review.id)return;
       if(!job)throw new Error('No recording found.');
       beginPoll(job.id,review.id);
-    }catch(e){setStatus(e.message||'Could not retrieve recording.','bad');}
+    }catch(e){
+      const msg=e.message||'Could not retrieve recording.';
+      setStatus(msg,'bad');
+      if(/twitch.*(blocked|authenticated|authentication)|anonymous replay playback/i.test(msg)){
+        const details=document.getElementById('vodTwitchConnect');
+        const badge=document.getElementById('vodTwitchAuthBadge');
+        const authMsg=document.getElementById('vodTwitchAuthMsg');
+        if(details)details.open=true;
+        if(badge){badge.textContent='AUTH REQUIRED';badge.dataset.tone='bad';}
+        if(authMsg)authMsg.textContent='This VOD was rejected by Twitch public playback. Connect Twitch Retrieval here, then press Analyze Game again.';
+      }
+    }
     finally{busy=false;button.disabled=false;}
   }
 
@@ -189,12 +200,19 @@
         const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/periods`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({periods:periods.map(p=>({label:p.label,start:p.start,end:p.end}))})});
         await db().from('vod_review_sessions').update({worker_status:job.status,worker_updated_at:new Date().toISOString()}).eq('id',review.id);
         setStatus('Manual period correction accepted. Reusing the uploaded video now.','good');
+        beginPoll(review.worker_job_id,review.id);
+      }else if(review.worker_status==='failed'&&String(review.source_provider||'').toLowerCase()==='twitch'){
+        setStatus('Retrying Twitch retrieval using the saved replay link…','good');
+        const {job}=await workerFetch(`/reviews/${encodeURIComponent(review.id)}/analyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+        if(!job)throw new Error('No recording found.');
+        await db().from('vod_review_sessions').update({worker_job_id:job.id,worker_status:job.status,worker_updated_at:new Date().toISOString()}).eq('id',review.id);
+        beginPoll(job.id,review.id);
       }else{
         const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/retry`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
         await db().from('vod_review_sessions').update({worker_status:job.status,worker_updated_at:new Date().toISOString()}).eq('id',review.id);
         setStatus('Retry queued. The original uploaded recording is being reused.','good');
+        beginPoll(review.worker_job_id,review.id);
       }
-      beginPoll(review.worker_job_id,review.id);
     }catch(e){setStatus(e.message||'Retry is not available yet.','bad');}
   }
 
@@ -268,7 +286,16 @@
         if(review?.status==='complete'||(review?.status==='reviewing'&&review?.full_game_summary))setStatus('Analysis is saved. Review the notes and game report below.','good');
         else{setStatus('AI period review finished. Importing results into VOD Lab…','good');await ingest(job,reviewId);}
       }
-      else if(job.status==='failed'||job.status==='expired')setStatus(job.error||`Pipeline ${job.status}.`,'bad');
+      else if(job.status==='failed'||job.status==='expired'){
+        const msg=job.error||`Pipeline ${job.status}.`;
+        setStatus(msg,'bad');
+        if(/twitch.*(blocked|authenticated|authentication)|anonymous replay playback/i.test(msg)){
+          const details=document.getElementById('vodTwitchConnect');
+          const badge=document.getElementById('vodTwitchAuthBadge');
+          if(details)details.open=true;
+          if(badge){badge.textContent='AUTH REQUIRED';badge.dataset.tone='bad';}
+        }
+      }
       else if(job.status==='queued'&&/rate limit|cooling down/i.test(job.error||''))setStatus(job.error,'warn');
       else setStatus(`Pipeline: ${String(job.status).replaceAll('_',' ')}${job.result?.total_chunks?` · ${job.result.chunks?.length||0}/${job.result.total_chunks} chunks`:''}`,'good');
       if(done){clearInterval(pollTimer);pollTimer=null;}
