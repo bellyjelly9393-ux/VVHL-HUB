@@ -1,6 +1,6 @@
 (() => {
   const TEAM_ID='b0bcbdda-da9d-419d-8f61-b34937966d49';
-  const S={pool:[],reports:[],externalReports:[],preScout:[],autoReports:[],bids:[],intel:[],history:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'focus',sort:'price_high',realtime:null,reloadTimer:null};
+  const S={pool:[],reports:[],externalReports:[],preScout:[],autoReports:[],bids:[],intel:[],history:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'focus',sort:'price_high',realtime:null,reloadTimer:null,poller:null};
   const db=()=>window.VVHLBackend?.db;
   const state=()=>window.VVHLBackend?.state||{};
   const $=id=>document.getElementById(id);
@@ -21,11 +21,13 @@
     S.reloadTimer=setTimeout(()=>{if(state().user&&!S.loading)load();},350);
   }
   function ensureRealtime(){
-    if(S.realtime||!db()?.channel)return;
-    S.realtime=db().channel('hitmen-shared-management-'+TEAM_ID)
-      .on('postgres_changes',{event:'*',schema:'public',table:'team_bid_board',filter:`team_id=eq.${TEAM_ID}`},scheduleSharedReload)
-      .on('postgres_changes',{event:'*',schema:'public',table:'team_scouting_pool',filter:`team_id=eq.${TEAM_ID}`},scheduleSharedReload)
-      .subscribe();
+    if(!S.realtime&&db()?.channel){
+      S.realtime=db().channel('hitmen-shared-management-'+TEAM_ID)
+        .on('postgres_changes',{event:'*',schema:'public',table:'team_bid_board',filter:`team_id=eq.${TEAM_ID}`},scheduleSharedReload)
+        .on('postgres_changes',{event:'*',schema:'public',table:'team_scouting_pool',filter:`team_id=eq.${TEAM_ID}`},scheduleSharedReload)
+        .subscribe();
+    }
+    if(!S.poller)S.poller=setInterval(()=>{if(document.visibilityState==='visible'&&state().user&&!S.loading)load();},30000);
   }
 
   async function claimInvite(){if(!state().user)return;try{await db().rpc('claim_my_team_invite');}catch(e){console.warn(e);}}
@@ -90,7 +92,7 @@
     if($('hsRole'))$('hsRole').textContent=S.role==='admin'?'WILDMAN ADMIN':`HITMEN ${String(S.role).toUpperCase()}`;
     if($('hsScouted'))$('hsScouted').textContent=(hasFocusMarket()?S.pool.filter(x=>x.market_focus===true).length:S.pool.length).toLocaleString();
     if($('hsPriority'))$('hsPriority').textContent=S.pool.filter(x=>x.status==='priority'||x.priority===1).length;
-    if($('hsBids'))$('hsBids').textContent=S.pool.filter(x=>x.status==='bid_target').length+S.bids.filter(x=>['target','active_bid'].includes(x.status)).length;
+    if($('hsBids'))$('hsBids').textContent=new Set([...S.pool.filter(x=>x.status==='bid_target').map(x=>x.scouting_player_id),...S.bids.filter(x=>['target','active_bid'].includes(x.status)).map(x=>x.scouting_player_id)]).size;
     const totalReports=S.reports.length+S.externalReports.length+S.preScout.length+S.autoReports.length;
     if($('hsReports'))$('hsReports').textContent=totalReports;
     if($('hitmenReportCount'))$('hitmenReportCount').textContent=totalReports;
