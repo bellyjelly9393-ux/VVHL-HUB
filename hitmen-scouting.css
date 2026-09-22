@@ -142,3 +142,13 @@ body.hs-dossier-open{overflow:hidden}
 
 @media(max-width:900px){.hs-target-lanes{grid-template-columns:1fr}.hs-bid-grid{grid-template-columns:1fr}.hs-board-head{flex-direction:column}.hs-board-head .hs-btn{width:auto}}
 @media(max-width:620px){.hs-bid-summary{grid-template-columns:1fr}.hs-target-stack .hs-target-card{grid-template-columns:minmax(0,1fr) auto}.hs-target-stack .hs-target-meta{grid-column:auto;text-align:right;display:grid}.hs-bid-actions{flex-wrap:wrap}.hs-bid-actions .hs-remove-bid{margin-left:0}}
+
+
+/* Quick remove controls for target + bidding boards */
+.hs-target-stack .hs-target-card{position:relative;display:block;padding:0;overflow:hidden}
+.hs-target-open{appearance:none;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;padding:11px 38px 11px 11px;border:0;background:transparent;color:#fff;cursor:pointer}
+.hs-target-open:hover{background:rgba(255,255,255,.025)}
+.hs-mini-remove{position:absolute;top:8px;right:8px;width:25px;height:25px;border-radius:8px;border:1px solid rgba(248,113,113,.28);background:rgba(248,113,113,.07);color:#fca5a5;font-size:17px;font-weight:900;line-height:1;cursor:pointer}
+.hs-mini-remove:hover{background:rgba(248,113,113,.16);border-color:rgba(248,113,113,.52);color:#fff}
+.hs-bid-actions .hs-remove-bid:before{content:"× ";font-weight:1000}
+@media(max-width:620px){.hs-target-open{padding-right:40px}.hs-mini-remove{width:28px;height:28px}}
