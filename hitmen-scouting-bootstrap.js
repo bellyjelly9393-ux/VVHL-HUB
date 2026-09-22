@@ -33,20 +33,38 @@
     </div>
 
     <div class="hs-pane" data-hs-pane="targets">
-      <section class="hs-card">
-        <div class="hs-card-head"><div><div class="eyebrow">CALGARY SHORTLIST</div><h3>Target Wishlist</h3></div><span class="hs-msg">Click a player to open the full scouting profile</span></div>
-        <div id="hsTargetBoard" class="hs-target-board"></div>
+      <section class="hs-card hs-board-card">
+        <div class="hs-board-head">
+          <div><div class="eyebrow">CALGARY SHORTLIST</div><h3>Target Board</h3><p class="hs-msg">Three clean lanes: players you are bidding on, priority options, and the watch list. Tap a player for the full dossier.</p></div>
+          <a class="hs-btn" href="/calgary?tab=bids#hitmen-scouting">Open Bidding Board →</a>
+        </div>
+        <div class="hs-target-lanes">
+          <section class="hs-target-lane bid">
+            <div class="hs-lane-head"><span><b>BID TARGETS</b><small>Ready for bidding night</small></span><strong id="hsTargetBidCount">0</strong></div>
+            <div id="hsTargetBidLane" class="hs-target-stack"></div>
+          </section>
+          <section class="hs-target-lane priority">
+            <div class="hs-lane-head"><span><b>PRIORITY</b><small>Next players up</small></span><strong id="hsTargetPriorityCount">0</strong></div>
+            <div id="hsTargetPriorityLane" class="hs-target-stack"></div>
+          </section>
+          <section class="hs-target-lane watch">
+            <div class="hs-lane-head"><span><b>WATCH LIST</b><small>Keep an eye on them</small></span><strong id="hsTargetWatchCount">0</strong></div>
+            <div id="hsTargetWatchLane" class="hs-target-stack"></div>
+          </section>
+        </div>
         <div id="hsTargetEmpty" class="hs-empty" hidden>No targets yet. Mark players Watch, Priority or Bid Target from their profile.</div>
       </section>
-      <section class="hs-card" style="margin-top:14px">
-        <div class="hs-card-head"><div><div class="eyebrow">ONE-CLICK EXTERNAL SYNC</div><h3>ChelScout → Wildman</h3></div><span id="hsChelSyncBadge" class="hs-tag">READY</span></div>
-        <p class="hs-msg">Sync a ChelScout player report you legitimately opened into the matching Calgary profile without sending ChelScout cookies or passwords to Wildman.</p>
-        <div class="hs-actions">
-          <button id="hsCopyChelSync" class="hs-btn primary" type="button">Copy “Send to Wildman” Bookmark</button>
-          <a class="hs-btn" href="https://chelscout.net/scout/player" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">Open ChelScout Player Scout ↗</a>
+      <details class="hs-card hs-utility-drawer">
+        <summary><span><b>ChelScout Sync Tools</b><small>Open only when you need to import a player report</small></span><span id="hsChelSyncBadge" class="hs-tag">READY</span></summary>
+        <div class="hs-utility-body">
+          <p class="hs-msg">Sync a ChelScout player report you legitimately opened into the matching Calgary profile without sending ChelScout cookies or passwords to Wildman.</p>
+          <div class="hs-actions">
+            <button id="hsCopyChelSync" class="hs-btn primary" type="button">Copy “Send to Wildman” Bookmark</button>
+            <a class="hs-btn" href="https://chelscout.net/scout/player" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">Open ChelScout Player Scout ↗</a>
+          </div>
+          <div id="hsChelSyncMsg" class="hs-msg" style="margin-top:9px">Save the copied JavaScript as a browser bookmark URL once. On an exact ChelScout player report, tap that bookmark to send the report here.</div>
         </div>
-        <div id="hsChelSyncMsg" class="hs-msg" style="margin-top:9px">Save the copied JavaScript as a browser bookmark URL once. On an exact ChelScout player report, tap that bookmark to send the report here.</div>
-      </section>
+      </details>
     </div>
 
         <div class="hs-pane active" data-hs-pane="pool">
@@ -175,25 +193,32 @@
     </div>
 
     <div class="hs-pane" data-hs-pane="bids">
-      <section class="hs-card">
-        <div class="hs-card-head">
-          <div><h3>Calgary Bidding Board</h3><span class="hs-msg">Live shared target + ceiling plan for Owner, GM and AGM</span></div>
-          <a class="hs-btn primary" href="hitmen-locker-room.html?mode=bidding">Open Bidding Lineup Simulator →</a>
+      <section class="hs-card hs-board-card">
+        <div class="hs-board-head">
+          <div><div class="eyebrow">BIDDING NIGHT COMMAND</div><h3>Calgary Bidding Board</h3><p class="hs-msg">The shared management list. Keep the board focused on who Calgary may actually bid on, the target number, and the walk-away ceiling.</p></div>
+          <a class="hs-btn primary" href="hitmen-locker-room.html?mode=bidding">Open Lineup Simulator →</a>
         </div>
-        <p class="hs-msg">Anything management adds here is saved to Calgary's shared team board. The other management accounts will see the same target, price ceiling and plan without keeping separate browser lists.</p>
-        <form id="hsBidAddForm" style="margin:14px 0 18px">
-          <div class="hs-form">
-            <label><span class="hs-label">Gamertag</span><input id="hsBidGamertag" class="hs-input" required placeholder="Player gamertag"></label>
-            <label><span class="hs-label">Position</span><select id="hsBidPosition" class="hs-select"><option value="">Unknown</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option></select></label>
-            <label><span class="hs-label">Priority 1-5</span><input id="hsBidPriority" class="hs-input" type="number" min="1" max="5" value="2"></label>
-            <label><span class="hs-label">Target Price</span><input id="hsBidTarget" class="hs-input" type="number" min="0" step="250000" placeholder="2500000"></label>
-            <label><span class="hs-label">Max Price</span><input id="hsBidMax" class="hs-input" type="number" min="0" step="250000" placeholder="3500000"></label>
-            <label><span class="hs-label">Role / Plan</span><input id="hsBidPlan" class="hs-input" placeholder="1C, top-pair LD, value G…"></label>
-          </div>
-          <div class="hs-actions"><button class="hs-btn primary" type="submit">Add to Shared Bidding Board</button><span id="hsBidAddMsg" class="hs-msg"></span></div>
-        </form>
-        <div class="hs-table-wrap"><table class="hs-table"><thead><tr><th>Player</th><th>Pos</th><th>Priority</th><th>Status</th><th>Target Price</th><th>Max Price</th><th>Role / Plan</th><th>Remove</th></tr></thead><tbody id="hsBidBody"></tbody></table></div>
-        <div id="hsBidEmpty" class="hs-empty" hidden>No bid targets yet. Add someone above or send a scouting target to the board.</div>
+        <div class="hs-bid-summary">
+          <div><small>Players</small><strong id="hsBidBoardCount">0</strong></div>
+          <div><small>Target Spend</small><strong id="hsBidTargetTotal">$0</strong></div>
+          <div><small>Max Exposure</small><strong id="hsBidMaxTotal">$0</strong></div>
+        </div>
+        <div id="hsBidBody" class="hs-bid-grid"></div>
+        <div id="hsBidEmpty" class="hs-empty" hidden>No bid targets yet. Add someone below or send a scouting target to the board.</div>
+        <details class="hs-bid-add-drawer">
+          <summary><span><b>+ Add Player to Bidding Board</b><small>Quick manual add for bidding night</small></span></summary>
+          <form id="hsBidAddForm">
+            <div class="hs-form">
+              <label><span class="hs-label">Gamertag</span><input id="hsBidGamertag" class="hs-input" required placeholder="Player gamertag"></label>
+              <label><span class="hs-label">Position</span><select id="hsBidPosition" class="hs-select"><option value="">Unknown</option><option>LW</option><option>C</option><option>RW</option><option>LD</option><option>RD</option><option>G</option></select></label>
+              <label><span class="hs-label">Priority 1-5</span><input id="hsBidPriority" class="hs-input" type="number" min="1" max="5" value="2"></label>
+              <label><span class="hs-label">Target Price</span><input id="hsBidTarget" class="hs-input" type="number" min="0" step="250000" placeholder="2500000"></label>
+              <label><span class="hs-label">Max Price</span><input id="hsBidMax" class="hs-input" type="number" min="0" step="250000" placeholder="3500000"></label>
+              <label><span class="hs-label">Role / Plan</span><input id="hsBidPlan" class="hs-input" placeholder="1C, top-pair LD, value G…"></label>
+            </div>
+            <div class="hs-actions"><button class="hs-btn primary" type="submit">Add to Shared Board</button><span id="hsBidAddMsg" class="hs-msg"></span></div>
+          </form>
+        </details>
       </section>
     </div>
 
