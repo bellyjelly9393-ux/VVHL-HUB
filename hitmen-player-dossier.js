@@ -256,7 +256,7 @@
       </section>
 
       <section class="hsd-section"><h3>SCOUTING REPORTS</h3>
-        <div class="hsd-report-stack">${d.external.map(r=>reportCard(r,'CHELSCOUT')).join('')}${d.reports.map(r=>reportCard(r,'CALGARY MANAGEMENT')).join('')||'<div class="hsd-empty">No reports saved yet.</div>'}</div>
+        <div class="hsd-report-stack">${d.external.map(r=>reportCard(r,'IMPORTED SCOUTING')).join('')}${d.reports.map(r=>reportCard(r,'CALGARY MANAGEMENT')).join('')||'<div class="hsd-empty">No reports saved yet.</div>'}</div>
       </section>
 
       <section class="hsd-section"><h3>CHEMISTRY ENGINE</h3>
