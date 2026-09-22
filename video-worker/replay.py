@@ -140,24 +140,43 @@ def retrieve(job_id):
     # Start with Streamlink's normal Twitch resolver. Public VODs generally do
     # not need Chromium/client-integrity at all, and forcing the browser-integrity
     # path can make otherwise playable VODs fail.
-    args = ['streamlink', '--stream-timeout', '20', '--retry-streams', '0']
     twitch_token = read_twitch_auth()
-    if twitch_token:
-        args.append('--twitch-api-header=Authorization=OAuth ' + twitch_token)
-    args.extend(['-o', str(source), url, '480p,360p,best'])
-    # Keep Streamlink diagnostics local to the job so we can classify Twitch failures
-    # without ever exposing auth headers or storing tokens in application logs.
     diagnostic = folder / 'streamlink-error.log'
-    with diagnostic.open('wb') as err:
-        proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=err)
-    deadline = time.monotonic() + 1800
-    try:
+
+    def launch_streamlink(force_integrity=False):
+        source.unlink(missing_ok=True)
+        args = ['streamlink', '--stream-timeout', '20', '--retry-streams', '0']
+        if twitch_token:
+            args.append('--twitch-api-header=Authorization=OAuth ' + twitch_token)
+        if force_integrity:
+            args.extend(['--twitch-force-client-integrity', '--twitch-purge-client-integrity'])
+        args.extend(['-o', str(source), url, '480p,360p,best'])
+        with diagnostic.open('wb') as err:
+            return subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=err)
+
+    def wait_for_streamlink(proc):
+        deadline = time.monotonic() + 1800
         while proc.poll() is None:
             size = source.stat().st_size if source.exists() else 0
             if size > worker.MAX_UPLOAD or worker.disk_used() + size + 150 * 1024**2 > worker.MAX_STORAGE:
                 raise worker.Problem(413, 'Replay exceeds the video storage limit. Use a game-sized recording instead.')
             if time.monotonic() > deadline or worker.STOP.wait(1):
                 raise worker.Problem(504, 'Replay retrieval timed out. Try Analyze Game again or upload the recording.')
+
+    proc = launch_streamlink(False)
+    try:
+        wait_for_streamlink(proc)
+
+        # Some Twitch VODs reject even authenticated playback until Streamlink obtains
+        # a fresh browser/client-integrity token. Chromium is included in the worker
+        # image, so make one clean retry that explicitly forces and purges integrity.
+        if (proc.returncode or not source.exists() or not source.stat().st_size) and twitch_token:
+            if proc.poll() is None:
+                proc.terminate()
+                proc.wait(timeout=5)
+            proc = launch_streamlink(True)
+            wait_for_streamlink(proc)
+
         if proc.returncode or not source.exists() or not source.stat().st_size:
             detail = ''
             try:
@@ -165,12 +184,12 @@ def retrieve(job_id):
             except OSError:
                 pass
             if any(term in detail for term in ('client-integrity', 'client integrity', 'webbrowser', 'chromium')):
-                raise worker.Problem(422, 'Twitch requires a browser integrity check for this VOD and the automatic check did not complete. Retry once; if it persists, authenticated Twitch playback is required.')
+                raise worker.Problem(422, 'Twitch browser integrity verification failed for this VOD. The worker tried both authenticated playback and a fresh Chromium integrity check.')
             if any(term in detail for term in ('subscriber', 'authentication', 'unauthorized', 'forbidden', '403', 'restricted')):
-                raise worker.Problem(422, 'Twitch requires authenticated playback for this VOD. Connect Twitch Retrieval in VOD Lab, then Analyze Game again.')
+                raise worker.Problem(422, 'Twitch rejected authenticated playback for this VOD. Refresh the Twitch auth-token connection and try again.')
             if not twitch_token:
                 raise worker.Problem(422, 'Twitch blocked anonymous replay playback. Connect Twitch Retrieval in VOD Lab, then Analyze Game again.')
-            raise worker.Problem(422, 'Twitch still did not provide a playable replay with the connected session. Refresh the Twitch connection or upload the recording.')
+            raise worker.Problem(422, 'Twitch still did not provide a playable replay after authenticated playback and a fresh browser integrity check. Use the local recording fallback for this VOD.')
         if source.stat().st_size > worker.MAX_UPLOAD:
             raise worker.Problem(413, 'Replay exceeds the video size limit.')
         worker.probe(source)
