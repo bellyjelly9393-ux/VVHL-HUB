@@ -1,3 +1,4 @@
+const WILDMAN_PRIMARY_ADMIN_ID = "86ff218f-c551-49bb-83b2-d75d5f70d4cb";
 const adminData = Array.isArray(window.VVHL_PLAYERS) ? window.VVHL_PLAYERS : [];
 const count = document.getElementById("adminPlayerCount");
 if (count) count.textContent = adminData.length;
@@ -20,8 +21,12 @@ const safe = (value) =>
 async function renderAccountManager() {
   const { db, state } = window.VVHLBackend;
   const section = document.getElementById("accountManager");
-  if (!state.user || state.profile?.role !== "admin") {
-    section.hidden = true;
+  const primaryAdmin = state.user?.id === WILDMAN_PRIMARY_ADMIN_ID && state.profile?.role === "admin";
+  document.querySelectorAll("[data-primary-admin-only]").forEach((el) => {
+    el.hidden = !primaryAdmin;
+  });
+  if (!primaryAdmin) {
+    if (section) section.hidden = true;
     return;
   }
   section.hidden = false;
@@ -38,7 +43,7 @@ async function renderAccountManager() {
   }
   const roleOptions = ["player", "scout", "agm", "gm", "owner", "admin"];
   document.getElementById("accountList").innerHTML =
-    `<p class="section-note">Assign each management account a role and team. Changes take effect after refresh.</p>${(
+    `<p class="section-note"><strong>Primary owner only.</strong> Assign management roles, team access and temporary passwords here. This section is hidden from every other management account.</p>${(
       profiles || []
     )
       .map((p) => {
