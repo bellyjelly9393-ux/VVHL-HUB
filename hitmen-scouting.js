@@ -314,7 +314,7 @@
       const fairLabel=fair!=null?`${fair.toFixed(fair<10?2:1).replace(/\\.00$/,'')}M fair`:'No fair value';
       const gp=career.gp??md.gp??'—',pts=career.pts??career.points??'—',ppg=career.ppg??md.ppg??'—';
       const qb=(s,label)=>`<button type="button" class="hs-quick-btn ${current===s?'active':''}" data-hs-row-quick="${s}" data-hs-row-id="${r.id}">${label}</button>`;
-      const focusTag=r.market_focus===true?('<span class="hs-tag">CHELSCOUT FOCUS'+(md.reach_pct!=null?' · '+esc(md.reach_pct)+'% REACH':'')+'</span>'):'';
+      const focusTag=r.market_focus===true?('<span class="hs-tag">ACTIVE POOL'+(md.reach_pct!=null?' · '+esc(md.reach_pct)+'% REACH':'')+'</span>'):'';
       const liveMarket=r.is_biddable===true?'<span class="hs-tag">CONFIRMED BIDABLE</span>':'';
       return `<article class="hs-player-card tier-${tier.key}" data-hs-player="${r.id}">
         <div class="hs-player-card-head">
@@ -382,7 +382,7 @@
   function renderIntel(pid){
     const box=$('hsIntelView');if(!box)return;
     const x=S.intel.find(i=>i.scouting_player_id===pid);
-    if(!x){box.className='hs-empty';box.innerHTML='No ChelScout intelligence imported for this player yet.';if($('hsIntelMeta'))$('hsIntelMeta').textContent='';return;}
+    if(!x){box.className='hs-empty';box.innerHTML='No market intelligence available for this player yet.';if($('hsIntelMeta'))$('hsIntelMeta').textContent='';return;}
     box.className='';
     if($('hsIntelMeta'))$('hsIntelMeta').textContent=`UID ${x.chelscout_uid} · S${x.season||'—'} · imported ${new Date(x.imported_at).toLocaleString()}`;
     const risks=Array.isArray(x.risks)?x.risks:[];
@@ -409,7 +409,7 @@
     msg('hsChelScoutMsg','Importing…');
     const q=await db().from('team_chelscout_intel').upsert(payload,{onConflict:'team_id,chelscout_uid,season'}).select('id').single();
     if(q.error){msg('hsChelScoutMsg',q.error.message);return;}
-    msg('hsChelScoutMsg','ChelScout intelligence imported ✓');$('hsChelScoutJson').value='';await load();select(r.id);
+    msg('hsChelScoutMsg','Market intelligence imported ✓');$('hsChelScoutJson').value='';await load();select(r.id);
   }
 
   function textish(v){
