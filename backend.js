@@ -5,6 +5,20 @@ const vvhlDb = window.supabase.createClient(
   VVHL_SUPABASE_KEY,
 );
 
+// Never let auth emails point at disposable Vercel preview deployments.
+// Production auth should always return to the permanent Wildman domain.
+const VVHL_AUTH_ORIGIN = "https://wildmanhockey-elitechelmedia.app";
+function vvhlAuthRedirectUrl() {
+  const host = String(location.hostname || "").toLowerCase();
+  const isLocal = host === "localhost" || host === "127.0.0.1";
+  const origin = isLocal ? location.origin : VVHL_AUTH_ORIGIN;
+  const path =
+    location.pathname && location.pathname !== "/"
+      ? location.pathname
+      : "/management.html";
+  return `${origin}${path}`;
+}
+
 const backendState = {
   user: null,
   profile: null,
@@ -113,7 +127,11 @@ async function authenticate(mode) {
   message.textContent = "Working…";
   const result =
     mode === "signup"
-      ? await vvhlDb.auth.signUp({ email, password })
+      ? await vvhlDb.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: vvhlAuthRedirectUrl() },
+        })
       : await vvhlDb.auth.signInWithPassword({ email, password });
   message.textContent = result.error
     ? result.error.message
@@ -135,13 +153,13 @@ async function sendMagicLink() {
   const { error } = await vvhlDb.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${location.origin}${location.pathname}`,
+      emailRedirectTo: vvhlAuthRedirectUrl(),
       shouldCreateUser: true,
     },
   });
   message.textContent = error
     ? error.message
-    : "Sign-in link sent. Check your inbox and spam folder.";
+    : "Sign-in link sent. It will return to the permanent Wildman site.";
 }
 
 async function resetPassword() {
@@ -153,7 +171,7 @@ async function resetPassword() {
   }
   message.textContent = "Sending reset link…";
   const { error } = await vvhlDb.auth.resetPasswordForEmail(email, {
-    redirectTo: `${location.origin}${location.pathname}`,
+    redirectTo: vvhlAuthRedirectUrl(),
   });
   message.textContent = error
     ? error.message
