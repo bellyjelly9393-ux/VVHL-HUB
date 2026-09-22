@@ -15,11 +15,11 @@
   <section id="hitmen-scouting" class="hs-desk" data-hitmen-scouting hidden>
     <div class="hs-header">
       <div><div class="eyebrow">SEASON 55 · PRIVATE TEAM INTELLIGENCE</div><h2>SCOUTING HQ</h2></div>
-      <p>Player scouting lives here: market search, targets, reports, ChelScout intel and bidding. Video scouting stays separate in the VOD Scouting room so this page does not turn into the digital equivalent of a junk drawer.</p>
+      <p>Player scouting lives here: market search, targets, reports, player intelligence and bidding. Video scouting stays separate in the VOD Scouting room so this page does not turn into the digital equivalent of a junk drawer.</p>
     </div>
     <div id="hsStatus" class="hitmen-status">Loading Calgary scouting desk…</div>
     <div class="hs-kpis">
-      <div class="hs-kpi"><small>ChelScout Focus</small><strong id="hsScouted">0</strong></div>
+      <div class="hs-kpi"><small>Active Market</small><strong id="hsScouted">0</strong></div>
       <div class="hs-kpi"><small>Priority Targets</small><strong id="hsPriority">0</strong></div>
       <div class="hs-kpi"><small>Bid Targets</small><strong id="hsBids">0</strong></div>
       <div class="hs-kpi"><small>Reports Logged</small><strong id="hsReports">0</strong></div>
@@ -109,14 +109,14 @@
         </div>
 
         <div class="hs-market-scopes">
-          <button class="active" type="button" data-hs-scope="focus">ChelScout Focus <span id="hsScopeFocus">0</span></button>
+          <button class="active" type="button" data-hs-scope="focus">Active Pool <span id="hsScopeFocus">0</span></button>
           <button type="button" data-hs-scope="experienced">Recent Experience <span id="hsScopeExperienced">0</span></button>
           <button type="button" data-hs-scope="bidable">Confirmed Bidable <span id="hsScopeBidable">0</span></button>
           <button type="button" data-hs-scope="archive">Archive <span id="hsScopeArchive">0</span></button>
           <button type="button" data-hs-scope="bargains">Bargains <span id="hsScopeBargains">0</span></button>
           <button type="button" data-hs-scope="snake">Snake list <span id="hsScopeSnake">0</span></button>
         </div>
-        <div class="hs-pool-key"><b>ChelScout Focus:</b> the 519-player working Season 55 market imported from ChelScout. Historical names are preserved under <b>Archive</b> and stay out of the active scouting board unless you deliberately open them. <b>Confirmed Bidable</b> is reserved for a full live bid-board sync.</div>
+        <div class="hs-pool-key"><b>Active Pool:</b> the working Season 55 scouting market. Historical names stay under <b>Archive</b> and remain out of the active board unless you deliberately open them. <b>Confirmed Bidable</b> is reserved for verified live-market availability.</div>
 
         <div class="hs-market-reach"><span>REACH</span><b>Could still be here</b><small>Price, role and Calgary fit are blended from your saved team plan plus imported scouting intelligence.</small></div>
 
@@ -155,11 +155,11 @@
               <div class="hs-actions"><button class="hs-btn primary" type="submit">Save Player Plan</button><span id="hsEditMsg" class="hs-msg"></span></div>
             </form>
             <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1)">
-              <div class="hs-card-head"><h3>ChelScout Intelligence</h3><span id="hsIntelMeta" class="hs-msg"></span></div>
-              <div id="hsIntelView" class="hs-empty" style="text-align:left">No ChelScout intelligence imported for this player yet.</div>
-              <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">Import ChelScout GM Hub JSON</summary><p class="hs-msg">Paste the JSON response from your authorized ChelScout GM Hub scout request. It stays private to Calgary management.</p><textarea id="hsChelScoutJson" class="hs-textarea" style="min-height:150px" placeholder='{"availability":...,"career":[...],"dna":...}'></textarea><div class="hs-actions"><button id="hsChelScoutImport" class="hs-btn primary" type="button">Import ChelScout Intel</button><span id="hsChelScoutMsg" class="hs-msg"></span></div></details>
+              <div class="hs-card-head"><h3>Market Intelligence</h3><span id="hsIntelMeta" class="hs-msg"></span></div>
+              <div id="hsIntelView" class="hs-empty" style="text-align:left">No market intelligence available for this player yet.</div>
+              <details style="margin-top:12px" hidden aria-hidden="true"><summary style="cursor:pointer;font-weight:700">Import External Scout JSON</summary><p class="hs-msg">Paste the JSON response from your authorized ChelScout GM Hub scout request. It stays private to Calgary management.</p><textarea id="hsChelScoutJson" class="hs-textarea" style="min-height:150px" placeholder='{"availability":...,"career":[...],"dna":...}'></textarea><div class="hs-actions"><button id="hsChelScoutImport" class="hs-btn primary" type="button">Import Intelligence</button><span id="hsChelScoutMsg" class="hs-msg"></span></div></details>
               <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">
-                <div class="hs-card-head"><h3>ChelScout Reports</h3><span id="hsExternalReportMeta" class="hs-msg"></span></div><div id="hsExternalReports" class="hs-reports"></div><div id="hsExternalReportEmpty" class="hs-empty">No ChelScout reports imported for this player yet.</div>
+                <div class="hs-card-head"><h3>Imported Reports</h3><span id="hsExternalReportMeta" class="hs-msg"></span></div><div id="hsExternalReports" class="hs-reports"></div><div id="hsExternalReportEmpty" class="hs-empty">No imported scouting reports for this player yet.</div>
                 <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">Import ChelScout reports JSON</summary><p class="hs-msg">Paste the report response from your authorized ChelScout session. Arrays, reports, or data payloads are accepted. Your ChelScout login cookie is never stored.</p><textarea id="hsChelScoutReportsJson" class="hs-textarea" style="min-height:150px" placeholder='{"reports":[...]}'></textarea><div class="hs-actions"><button id="hsChelScoutReportsImport" class="hs-btn primary" type="button">Import Reports</button><span id="hsChelScoutReportsMsg" class="hs-msg"></span></div></details>
               </div>
             </div>
