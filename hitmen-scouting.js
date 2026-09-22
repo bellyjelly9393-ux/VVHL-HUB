@@ -1,6 +1,6 @@
 (() => {
   const TEAM_ID='b0bcbdda-da9d-419d-8f61-b34937966d49';
-  const S={pool:[],reports:[],externalReports:[],preScout:[],autoReports:[],bids:[],intel:[],history:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'focus',sort:'price_high'};
+  const S={pool:[],reports:[],externalReports:[],preScout:[],autoReports:[],bids:[],intel:[],history:[],invites:[],selected:null,role:null,loading:false,page:1,pageSize:100,scope:'focus',sort:'price_high',realtime:null,reloadTimer:null};
   const db=()=>window.VVHLBackend?.db;
   const state=()=>window.VVHLBackend?.state||{};
   const $=id=>document.getElementById(id);
@@ -13,8 +13,20 @@
     return (state().memberships||[]).find(m=>m.team_id===TEAM_ID&&m.active!==false&&['owner','gm','agm','scout'].includes(String(m.role||'').toLowerCase()))?.role||null;
   };
   function allowed(){S.role=role();return !!S.role;}
+  function canBidWrite(){return ['admin','owner','gm','agm'].includes(String(S.role||role()||'').toLowerCase());}
   function msg(id,text){if($(id))$(id).textContent=text||'';}
   function activate(name){document.querySelectorAll('[data-hs-tab]').forEach(x=>x.classList.toggle('active',x.dataset.hsTab===name));document.querySelectorAll('[data-hs-pane]').forEach(x=>x.classList.toggle('active',x.dataset.hsPane===name));}
+  function scheduleSharedReload(){
+    clearTimeout(S.reloadTimer);
+    S.reloadTimer=setTimeout(()=>{if(state().user&&!S.loading)load();},350);
+  }
+  function ensureRealtime(){
+    if(S.realtime||!db()?.channel)return;
+    S.realtime=db().channel('hitmen-shared-management-'+TEAM_ID)
+      .on('postgres_changes',{event:'*',schema:'public',table:'team_bid_board',filter:`team_id=eq.${TEAM_ID}`},scheduleSharedReload)
+      .on('postgres_changes',{event:'*',schema:'public',table:'team_scouting_pool',filter:`team_id=eq.${TEAM_ID}`},scheduleSharedReload)
+      .subscribe();
+  }
 
   async function claimInvite(){if(!state().user)return;try{await db().rpc('claim_my_team_invite');}catch(e){console.warn(e);}}
 
@@ -69,6 +81,7 @@
       else if(hasLiveMarket()&&S.scope==='focus')S.scope='bidable';
       else if(S.scope==='focus')S.scope='experienced';
       render();
+      ensureRealtime();
     }catch(e){console.error(e);msg('hsStatus',e.message||'Could not load scouting desk.');}
     finally{S.loading=false;}
   }
@@ -82,6 +95,11 @@
     if($('hsReports'))$('hsReports').textContent=totalReports;
     if($('hitmenReportCount'))$('hitmenReportCount').textContent=totalReports;
     renderTargets();renderPool();renderReportSelect();renderReports();renderBids();renderInvites();
+    if($('hsBidAddForm')){
+      const writable=canBidWrite();
+      $('hsBidAddForm').querySelectorAll('input,select,button').forEach(el=>el.disabled=!writable);
+      if(!writable)msg('hsBidAddMsg','Bidding changes are read-only for this role.');
+    }
   }
 
   function targetRows(){
@@ -461,6 +479,52 @@
     return existing?db().from('team_bid_board').update(data).eq('id',existing.id):db().from('team_bid_board').insert({...data,team_id:TEAM_ID,scouting_player_id:pid});
   }
 
+  async function addBidPlayer(e){
+    e.preventDefault();
+    if(!canBidWrite()){msg('hsBidAddMsg','Owner, GM or AGM access is required to change the bidding board.');return;}
+    const tag=val('hsBidGamertag').trim();if(!tag)return;
+    const uid=state().user?.id;if(!uid)return;
+    const position=val('hsBidPosition')||null,priority=n(val('hsBidPriority')),target=n(val('hsBidTarget')),max=n(val('hsBidMax')),plan=val('hsBidPlan').trim()||null;
+    msg('hsBidAddMsg','Adding to shared board…');
+    try{
+      let q=await db().from('scouting_players').select('id,gamertag,platform,primary_position').ilike('gamertag',tag).limit(1);
+      if(q.error)throw q.error;
+      let player=q.data?.[0];
+      if(!player){
+        q=await db().from('scouting_players').insert({gamertag:tag,primary_position:position,is_returning_player:false,scouting_status:'scouted'}).select('id,gamertag,platform,primary_position').single();
+        if(q.error)throw q.error;player=q.data;
+      }else if(position&&!player.primary_position){
+        const posUpdate=await db().from('scouting_players').update({primary_position:position}).eq('id',player.id);
+        if(posUpdate.error)throw posUpdate.error;
+      }
+
+      let pool=S.pool.find(x=>x.scouting_player_id===player.id);
+      const poolPayload={status:'bid_target',priority,target_bid:target,max_bid:max,projected_role:plan,updated_by:uid,updated_at:new Date().toISOString()};
+      if(pool){
+        q=await db().from('team_scouting_pool').update(poolPayload).eq('id',pool.id);
+      }else{
+        q=await db().from('team_scouting_pool').insert({...poolPayload,team_id:TEAM_ID,scouting_player_id:player.id,added_by:uid});
+      }
+      if(q.error)throw q.error;
+
+      const existingBid=S.bids.find(x=>x.scouting_player_id===player.id);
+      const bidPayload={target_price:target,max_price:max,priority,status:'target',plan,note:null,updated_by:uid,updated_at:new Date().toISOString()};
+      q=existingBid
+        ?await db().from('team_bid_board').update(bidPayload).eq('id',existingBid.id)
+        :await db().from('team_bid_board').insert({...bidPayload,team_id:TEAM_ID,scouting_player_id:player.id});
+      if(q.error)throw q.error;
+
+      e.target.reset();
+      if($('hsBidPriority'))$('hsBidPriority').value='2';
+      msg('hsBidAddMsg',`${player.gamertag||tag} added to the shared bidding board ✓`);
+      await load();
+      activate('bids');
+    }catch(err){
+      console.error(err);
+      msg('hsBidAddMsg',err.message||'Could not add this player to the bidding board.');
+    }
+  }
+
   async function removePlayer(){
     if(!S.selected||!confirm('Remove this player from the Calgary scouting pool?'))return;const r=S.pool.find(x=>x.id===S.selected);const del=await db().from('team_scouting_pool').delete().eq('id',S.selected);if(del.error){msg('hsEditMsg',del.error.message);return;}const b=S.bids.find(x=>x.scouting_player_id===r.scouting_player_id);if(b)await db().from('team_bid_board').delete().eq('id',b.id);S.selected=null;$('hsEditor').hidden=true;await load();
   }
@@ -539,7 +603,7 @@
     }));
     $('hsPrevPage')?.addEventListener('click',()=>{if(S.page>1){S.page--;renderPool();}});
     $('hsNextPage')?.addEventListener('click',()=>{S.page++;renderPool();});
-    $('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsChelScoutImport')?.addEventListener('click',importChelScout);$('hsChelScoutReportsImport')?.addEventListener('click',importChelScoutReports);document.querySelectorAll('[data-hs-quick]').forEach(b=>b.addEventListener('click',()=>quickTarget(b.dataset.hsQuick)));$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);
+    $('hsAddForm')?.addEventListener('submit',addPlayer);$('hsEditForm')?.addEventListener('submit',savePlayer);$('hsRemove')?.addEventListener('click',removePlayer);$('hsChelScoutImport')?.addEventListener('click',importChelScout);$('hsChelScoutReportsImport')?.addEventListener('click',importChelScoutReports);document.querySelectorAll('[data-hs-quick]').forEach(b=>b.addEventListener('click',()=>quickTarget(b.dataset.hsQuick)));$('hsReportForm')?.addEventListener('submit',saveReport);$('hsInviteForm')?.addEventListener('submit',saveInvite);$('hsBidAddForm')?.addEventListener('submit',addBidPlayer);
   }
   bind();
   const requestedTab=new URLSearchParams(location.search).get('tab');
