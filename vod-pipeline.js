@@ -372,6 +372,15 @@
   }
 
   let lastSelectedReviewId='';
+  let autoAnalyzeStarted=false;
+  function maybeAutoAnalyze(id){
+    const url=new URL(location.href);
+    if(autoAnalyzeStarted||!id||url.searchParams.get('analyze')!=='1')return;
+    autoAnalyzeStarted=true;
+    url.searchParams.delete('analyze');
+    history.replaceState(null,'',url);
+    setTimeout(()=>document.getElementById('vodAnalyzeGame')?.click(),500);
+  }
   const observer=new MutationObserver(()=>{
     install();
     const id=selectedReviewId();
@@ -381,6 +390,7 @@
       document.getElementById('manualPeriodBuilder')?.removeAttribute('open');
       setStatus('Press Analyze Game to retrieve the saved recording.');
       syncStoredStatus();
+      maybeAutoAnalyze(id);
     }
   });
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});});
