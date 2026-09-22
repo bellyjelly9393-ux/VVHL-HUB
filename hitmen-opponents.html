@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>Opponent Intelligence | Calgary Hitmen</title>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="management.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-war-tools.css"><link rel="stylesheet" href="hitmen-opponents.css">
+</head>
+<body class="wildman-site management-protected hitmen-tool-page">
+<header class="site-header hitmen-tool-header">
+<a class="brand" href="hitmen-workspace.html"><span class="wm-brand-mark">H</span><span class="brand-copy">CALGARY HITMEN<br><b>WAR ROOM</b></span></a>
+<button class="menu-toggle" type="button" aria-label="Open navigation">☰</button>
+<nav class="main-nav"><a href="hitmen-workspace.html">War Room</a><a href="/calgary?tab=pool#hitmen-scouting">Scouting HQ</a><a href="hitmen-locker-room.html">Lineups</a><a href="vod-lab.html?team=calgary-hitmen">VOD Scouting</a><a class="active-nav" href="hitmen-opponents.html">Opponents</a><a href="hitmen-battle-plan.html">Battle Plan</a></nav>
+</header>
+<main>
+<section class="section-shell section-block management-login-shell"><div class="section-heading"><div><div class="eyebrow">PRIVATE · CALGARY HITMEN</div><h2>OPPONENT INTELLIGENCE ACCESS</h2></div><div id="managementAccessStatus" class="status-pill">PRIVATE</div></div><section id="accountPanel" class="panel account-panel"></section><div id="managementLockedMessage" class="wm-card"><b>Management sign-in required.</b></div></section>
+
+<div data-management-content hidden>
+<section class="section-shell hm-tool-hero">
+<div class="eyebrow">LGCHL SEASON 55 · FULL-SEASON SCOUTING</div><h1>OPPONENT<br><span>INTELLIGENCE.</span></h1>
+<p>One memory for the entire season. Track every scheduled opponent, repeated meetings, results, statistical trends and VOD evidence so each rematch starts with what Calgary already learned.</p>
+<div class="hm-tool-tabs"><a href="hitmen-workspace.html">← War Room</a><a href="/calgary?tab=pool#hitmen-scouting">Player Scouting</a><a href="vod-lab.html?team=calgary-hitmen">VOD Scouting</a><a href="hitmen-battle-plan.html">Battle Plan</a></div>
+<div class="hoi-kpis"><div><small>Season Games</small><strong id="hoiGameCount">0</strong></div><div><small>Opponents</small><strong id="hoiOpponentCount">0</strong></div><div><small>Repeat Opponents</small><strong id="hoiRepeatCount">0</strong></div><div><small>Completed</small><strong id="hoiFinalCount">0</strong></div><div><small>VOD Evidence</small><strong id="hoiVodCount">0</strong></div></div>
+</section>
+
+<section class="section-shell section-block hoi-layout">
+<aside class="hoi-sidebar">
+<div class="hoi-panel"><div class="eyebrow">SEASON 55</div><h2>Opponent Board</h2><input id="hoiSearch" class="hoi-input" type="search" placeholder="Search opponent"><div class="hoi-filter-row"><button class="active" data-hoi-filter="all">All</button><button data-hoi-filter="repeat">Repeat</button><button data-hoi-filter="upcoming">Upcoming</button><button data-hoi-filter="played">Played</button></div><div id="hoiOpponents" class="hoi-opponents"></div></div>
+</aside>
+
+<div class="hoi-main">
+<article class="hoi-panel">
+<div class="hoi-panel-head"><div><div class="eyebrow">FULL SCHEDULE</div><h2>66-Game Tracker</h2></div><span id="hoiScheduleStatus" class="hoi-muted">Season 55 loaded</span></div>
+<div id="hoiSchedule" class="hoi-schedule"></div>
+</article>
+
+<article id="hoiDetail" class="hoi-panel" hidden>
+<div class="hoi-panel-head"><div><div class="eyebrow">OPPONENT FILE</div><h2 id="hoiOpponentName">Opponent</h2><p id="hoiOpponentMeta" class="hoi-muted"></p></div><a id="hoiBattleLink" class="hm-save" href="hitmen-battle-plan.html">Build Battle Plan</a></div>
+<div class="hoi-rollup" id="hoiRollup"></div>
+
+<div class="hoi-detail-grid">
+<section><h3>Season Scouting Report</h3><div class="hoi-form">
+<label class="wide">Scouting summary<textarea id="hoiSummary"></textarea></label>
+<label>Strengths<textarea id="hoiStrengths"></textarea></label><label>Weaknesses<textarea id="hoiWeaknesses"></textarea></label>
+<label>Tendencies<textarea id="hoiTendencies"></textarea></label><label>Danger players<textarea id="hoiDanger"></textarea></label>
+<label>Lineup / personnel notes<textarea id="hoiLineupNotes"></textarea></label><label>Matchup plan<textarea id="hoiMatchupPlan"></textarea></label>
+<label class="wide">Management notes<textarea id="hoiManagementNotes"></textarea></label>
+<label>Confidence<select id="hoiConfidence"><option value="">Unrated</option><option value="1">1 · Early read</option><option value="2">2</option><option value="3">3 · Useful</option><option value="4">4</option><option value="5">5 · Strong evidence</option></select></label>
+</div><button id="hoiSaveOpponent" class="hm-save" data-write-only type="button">Save Opponent Report</button><span id="hoiDetailStatus" class="hm-save-note"></span></section>
+
+<section><h3>Latest Statistical Snapshot</h3><div id="hoiLatestStats" class="hoi-latest-stats"></div>
+<details class="hoi-add-stats"><summary>Add / update stats snapshot</summary><div class="hoi-stat-form">
+<input id="hsGp" type="number" min="0" placeholder="GP"><input id="hsW" type="number" min="0" placeholder="W"><input id="hsL" type="number" min="0" placeholder="L"><input id="hsOtl" type="number" min="0" placeholder="OTL">
+<input id="hsGf" type="number" min="0" placeholder="GF"><input id="hsGa" type="number" min="0" placeholder="GA"><input id="hsShots" type="number" step=".1" placeholder="Shots/G"><input id="hsShotsA" type="number" step=".1" placeholder="Shots Against/G">
+<input id="hsFo" type="number" step=".1" placeholder="FO%"><input id="hsPp" type="number" step=".1" placeholder="PP%"><input id="hsPk" type="number" step=".1" placeholder="PK%">
+<input id="hsSource" class="wide" type="url" placeholder="Stats source URL"><textarea id="hsNotes" class="wide" placeholder="Context, roster changes, stat notes"></textarea>
+</div><button id="hoiSaveSnapshot" class="hm-save" data-write-only type="button">Save Stats Snapshot</button></details><div id="hoiSnapshotHistory" class="hoi-snapshot-history"></div></section>
+</div>
+
+<section class="hoi-subsection"><div class="hoi-panel-head"><div><div class="eyebrow">HEAD-TO-HEAD</div><h3>Calgary Meetings</h3></div></div><div id="hoiMeetings"></div></section>
+<section class="hoi-subsection"><div class="hoi-panel-head"><div><div class="eyebrow">VIDEO EVIDENCE</div><h3>Opponent VODs</h3></div><a class="hm-save" href="vod-lab.html?team=calgary-hitmen">Open VOD Lab</a></div><div id="hoiVods"></div></section>
+</article>
+</div>
+</section>
+</div>
+</main>
+<footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN OPPONENT INTELLIGENCE</b><span>Schedule · statistics · head-to-head · VOD evidence · rematch memory</span></div><p>Private management</p></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="backend.js"></script><script src="management-guard.js"></script><script src="script.js"></script><script src="hitmen-opponents.js"></script>
+</body></html>
