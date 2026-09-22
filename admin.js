@@ -45,7 +45,7 @@ async function renderAccountManager() {
         const membership = (memberships || []).find(
           (m) => m.user_id === p.id && m.active,
         );
-        return `<div class="account-row"><div><b>${safe(p.display_name || "Unnamed account")}</b><small>${safe(p.discord_handle || "No Discord handle")}</small></div><select class="select-field" data-profile-role="${p.id}">${roleOptions.map((r) => `<option ${r === p.role ? "selected" : ""}>${r}</option>`).join("")}</select><select class="select-field" data-profile-team="${p.id}"><option value="">No team</option>${state.teams.map((t) => `<option value="${t.id}" ${membership?.team_id === t.id ? "selected" : ""}>${safe(t.name)}</option>`).join("")}</select><span class="account-save" id="save-${p.id}"></span></div>`;
+        return `<div class="account-row"><div><b>${safe(p.display_name || "Unnamed account")}</b><small>${safe(p.discord_handle || "No Discord handle")}</small></div><select class="select-field" data-profile-role="${p.id}">${roleOptions.map((r) => `<option ${r === p.role ? "selected" : ""}>${r}</option>`).join("")}</select><select class="select-field" data-profile-team="${p.id}"><option value="">No team</option>${state.teams.map((t) => `<option value="${t.id}" ${membership?.team_id === t.id ? "selected" : ""}>${safe(t.name)}</option>`).join("")}</select><button class="small-btn" type="button" data-temp-password="${p.id}" data-temp-name="${safe(p.display_name || "this user")}">Set Temp Password</button><span class="account-save" id="save-${p.id}"></span></div>`;
       })
       .join("")}`;
   document
@@ -58,7 +58,61 @@ async function renderAccountManager() {
     .forEach((el) =>
       el.addEventListener("change", () => saveAccount(el.dataset.profileTeam)),
     );
+  document
+    .querySelectorAll("[data-temp-password]")
+    .forEach((el) =>
+      el.addEventListener("click", () =>
+        setTemporaryPassword(el.dataset.tempPassword, el.dataset.tempName),
+      ),
+    );
 }
+
+function makeTemporaryPassword() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint32Array(14);
+  crypto.getRandomValues(bytes);
+  return "W7" + Array.from(bytes, (n) => chars[n % chars.length]).join("");
+}
+
+async function setTemporaryPassword(userId, displayName) {
+  const { db } = window.VVHLBackend;
+  const suggested = makeTemporaryPassword();
+  const password = window.prompt(
+    `Set a temporary password for ${displayName || "this user"}.\n\nGive this password to them privately. They can sign in immediately with email + password.\n\nTemporary password:`,
+    suggested,
+  );
+  if (password === null) return;
+  if (password.length < 10) {
+    window.alert("Use at least 10 characters for the temporary password.");
+    return;
+  }
+
+  const status = document.getElementById(`save-${userId}`);
+  if (status) status.textContent = "Setting password…";
+
+  const { data, error } = await db.functions.invoke("admin-set-user-password", {
+    body: { userId, password },
+  });
+
+  const problem = error || data?.error;
+  if (problem) {
+    if (status) status.textContent = problem.message || String(problem);
+    return;
+  }
+
+  if (status) status.textContent = "Temp password set ✓";
+  try {
+    await navigator.clipboard.writeText(password);
+    window.alert(
+      `Temporary password set for ${displayName || "the user"}.\n\n${password}\n\nIt has also been copied to your clipboard. Send it privately. Their existing roles and team access were not changed.`,
+    );
+  } catch {
+    window.alert(
+      `Temporary password set for ${displayName || "the user"}.\n\n${password}\n\nSend it privately. Their existing roles and team access were not changed.`,
+    );
+  }
+}
+
 async function saveAccount(userId) {
   const { db } = window.VVHLBackend,
     role = document.querySelector(`[data-profile-role="${userId}"]`).value,
