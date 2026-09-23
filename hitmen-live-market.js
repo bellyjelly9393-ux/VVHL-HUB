@@ -363,6 +363,7 @@
       score,
       source_updated_at:p.market_updated_at||null,
       details:{
+        ...m,
         off_auction:p.is_biddable===false,
         fallback_pool:true,
         role:{chip:m.role||p.projected_role||null},
