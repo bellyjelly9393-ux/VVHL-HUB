@@ -179,7 +179,7 @@
 
   async function sync(manual=false){
     if(M.busy||!canWrite()||!db()||!auth().user)return;
-    M.busy=true;$('hlmSync')&&($('hlmSync').disabled=true);msg('Checking ChelScout live bid board…');
+    M.busy=true;$('hlmSync')&&($('hlmSync').disabled=true);msg('Checking live bid board…');
     try{
       const res=await fetch('/api/hitmen-live-market',{cache:'no-store',headers:{accept:'application/json'}});
       const body=await res.json();
