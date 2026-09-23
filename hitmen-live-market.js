@@ -94,24 +94,30 @@
     if(r.market_status==='echl_signed'||r.market_status==='chl_signed')return {label:'SIGNED',value:r.contracted_amount};
     return {label:'CHL MODEL',value:r.likely_price};
   }
+  function isEligible(r){
+    return !['echl_signed','chl_signed'].includes(r.market_status)
+      && r.details?.off_auction!==true
+      && !Number(r.contracted_league_id||0);
+  }
   function matchFilter(r){
     if(M.search&&!String(r.player_name||'').toLowerCase().includes(M.search))return false;
     if(M.filter==='all')return true;
+    if(M.filter==='eligible')return isEligible(r);
     if(M.filter==='echl_live')return r.market_status==='echl_live_bid';
     if(M.filter==='just_fell')return r.market_status==='just_fell_to_chl'||M.events.some(e=>e.source_uid===r.source_uid&&e.event_type==='fell_to_chl');
     if(M.filter==='chl_live')return r.market_status==='chl_live_bid';
-    if(M.filter==='signed')return ['echl_signed','chl_signed'].includes(r.market_status);
+    if(M.filter==='signed')return !isEligible(r);
     return ['echl_live_bid','possible_chl_fall','echl_history_unsigned','just_fell_to_chl'].includes(r.market_status);
   }
 
   function render(){
     if(!$('hsLiveMarket'))return;
+    const eligible=M.rows.filter(isEligible).length;
     const echl=M.rows.filter(r=>r.market_status==='echl_live_bid').length;
-    const fall=M.rows.filter(r=>['echl_live_bid','possible_chl_fall','echl_history_unsigned','just_fell_to_chl'].includes(r.market_status)).length;
     const just=new Set(M.events.filter(e=>e.event_type==='fell_to_chl').map(e=>e.source_uid)).size;
     const chl=M.rows.filter(r=>r.market_status==='chl_live_bid').length;
+    $('hlmEligible').textContent=eligible.toLocaleString();
     $('hlmEchlLive').textContent=echl;
-    $('hlmFall').textContent=fall;
     $('hlmJustFell').textContent=just;
     $('hlmChlLive').textContent=chl;
     $('hlmBadge').textContent=M.meta?.auction_ran?'CHL AUCTION LIVE':'PRE-CHL WATCH';
@@ -149,7 +155,7 @@
         ${echlBid!=null?`<div class="hlm-bidline">Current ECHL bid <b>${money(echlBid)}</b></div>`:''}
         <div class="hlm-actions">
           <button type="button" class="hs-btn" data-hlm-open="${esc(r.player_name)}">Open in Scouting</button>
-          ${canWrite()&&!['echl_signed','chl_signed'].includes(r.market_status)?`<button type="button" class="hs-btn" data-hlm-watch="${r.source_uid}">Watch</button><button type="button" class="hs-btn primary" data-hlm-bid="${r.source_uid}">Add to Bidding</button>`:''}
+          ${canWrite()&&isEligible(r)?`<button type="button" class="hs-btn" data-hlm-watch="${r.source_uid}">Watch</button><button type="button" class="hs-btn primary" data-hlm-bid="${r.source_uid}">Add to Bidding</button>`:''}
         </div>
       </article>`;
     }).join('');
