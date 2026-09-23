@@ -254,45 +254,91 @@
     }
   }
 
+  async function ensurePlayerInScouting(r,status='scouted'){
+    const now=new Date().toISOString();
+    let q=await db().from('scouting_players').select('id,gamertag,primary_position,platform').ilike('gamertag',r.player_name).limit(5);
+    if(q.error)throw q.error;
+    let player=(q.data||[]).find(x=>String(x.gamertag).trim().toLowerCase()===String(r.player_name).trim().toLowerCase())||q.data?.[0];
+    if(!player){
+      q=await db().from('scouting_players').insert({
+        gamertag:r.player_name,
+        primary_position:r.position||null,
+        platform:r.console||null,
+        is_returning_player:false,
+        scouting_status:'scouted'
+      }).select('id,gamertag,primary_position,platform').single();
+      if(q.error)throw q.error;
+      player=q.data;
+    }else{
+      const patch={};
+      if(r.position&&!player.primary_position)patch.primary_position=r.position;
+      if(r.console&&!player.platform)patch.platform=r.console;
+      if(Object.keys(patch).length){
+        const upd=await db().from('scouting_players').update({...patch,updated_at:now}).eq('id',player.id);
+        if(upd.error)throw upd.error;
+      }
+    }
+
+    q=await db().from('team_scouting_pool')
+      .select('id,status,priority')
+      .eq('team_id',TEAM_ID)
+      .eq('scouting_player_id',player.id)
+      .maybeSingle();
+    if(q.error)throw q.error;
+
+    const existing=q.data||null;
+    const keepStatus=existing?.status&&existing.status!=='unscouted'?existing.status:status;
+    const poolPayload={
+      status:status==='bid_target'?'bid_target':keepStatus,
+      projected_role:roleText(r),
+      market_status:r.market_status,
+      market_league:r.bid_league_id===84?'ECHL':(r.market_status==='chl_live_bid'?'CHL':null),
+      market_team:r.contracted_team||null,
+      market_price:r.live_chl_bid||r.bid_amount||r.contracted_amount||null,
+      market_source:'live-market',
+      market_updated_at:r.source_updated_at||now,
+      is_biddable:isEligible(r),
+      market_details:r.details||{},
+      updated_by:auth().user.id,
+      updated_at:now
+    };
+
+    if(existing){
+      const upd=await db().from('team_scouting_pool').update(poolPayload).eq('id',existing.id).select('id').single();
+      if(upd.error)throw upd.error;
+      return {player,poolId:upd.data.id};
+    }
+    const ins=await db().from('team_scouting_pool').insert({
+      ...poolPayload,
+      team_id:TEAM_ID,
+      scouting_player_id:player.id,
+      added_by:auth().user.id
+    }).select('id').single();
+    if(ins.error)throw ins.error;
+    return {player,poolId:ins.data.id};
+  }
+
   async function addToCalgary(uid,toBid,button){
     if(!canWrite())return;
     const r=M.rows.find(x=>Number(x.source_uid)===Number(uid));if(!r)return;
     button.disabled=true;
     try{
-      let q=await db().from('scouting_players').select('id,gamertag,primary_position,platform').ilike('gamertag',r.player_name).limit(3);
-      if(q.error)throw q.error;
-      let player=(q.data||[]).find(x=>String(x.gamertag).trim().toLowerCase()===String(r.player_name).trim().toLowerCase())||q.data?.[0];
-      if(!player){
-        q=await db().from('scouting_players').insert({gamertag:r.player_name,primary_position:r.position||null,platform:r.console||null,is_returning_player:false,scouting_status:'scouted'}).select('id,gamertag').single();
-        if(q.error)throw q.error;player=q.data;
-      }
-      q=await db().from('team_scouting_pool').select('id,status').eq('team_id',TEAM_ID).eq('scouting_player_id',player.id).maybeSingle();
-      if(q.error)throw q.error;
-      const now=new Date().toISOString();
-      const poolPayload={
-        status:toBid?'bid_target':'watch',
-        projected_role:roleText(r),
-        management_note:toBid?'Added from ECHL → CHL live market watch':'Watching from ECHL → CHL live market',
-        market_status:r.market_status,
-        market_league:r.bid_league_id===84?'ECHL':(r.market_status==='chl_live_bid'?'CHL':null),
-        market_team:r.contracted_team||null,
-        market_price:r.live_chl_bid||r.bid_amount||r.contracted_amount||null,
-        market_source:'chelscout-live',
-        market_updated_at:r.source_updated_at||now,
-        is_biddable:isEligible(r),
-        market_details:r.details||{},
-        updated_by:auth().user.id,
-        updated_at:now
-      };
-      if(q.data){
-        const upd=await db().from('team_scouting_pool').update(poolPayload).eq('id',q.data.id);if(upd.error)throw upd.error;
-      }else{
-        const ins=await db().from('team_scouting_pool').insert({...poolPayload,team_id:TEAM_ID,scouting_player_id:player.id,added_by:auth().user.id});if(ins.error)throw ins.error;
-      }
+      const ensured=await ensurePlayerInScouting(r,toBid?'bid_target':'watch');
       if(toBid){
-        q=await db().from('team_bid_board').select('id').eq('team_id',TEAM_ID).eq('scouting_player_id',player.id).maybeSingle();if(q.error)throw q.error;
-        const bidPayload={status:'target',priority:2,plan:roleText(r),note:'ECHL → CHL live market watch',updated_by:auth().user.id,updated_at:now};
-        const save=q.data?await db().from('team_bid_board').update(bidPayload).eq('id',q.data.id):await db().from('team_bid_board').insert({...bidPayload,team_id:TEAM_ID,scouting_player_id:player.id});
+        let q=await db().from('team_bid_board').select('id').eq('team_id',TEAM_ID).eq('scouting_player_id',ensured.player.id).maybeSingle();
+        if(q.error)throw q.error;
+        const now=new Date().toISOString();
+        const bidPayload={
+          status:'target',
+          priority:2,
+          plan:roleText(r),
+          note:'Added from live player market',
+          updated_by:auth().user.id,
+          updated_at:now
+        };
+        const save=q.data
+          ?await db().from('team_bid_board').update(bidPayload).eq('id',q.data.id)
+          :await db().from('team_bid_board').insert({...bidPayload,team_id:TEAM_ID,scouting_player_id:ensured.player.id});
         if(save.error)throw save.error;
       }
       button.textContent=toBid?'Added ✓':'Watching ✓';
@@ -302,11 +348,22 @@
     }
   }
 
-  function openPlayer(name){
-    const section=$('hsSectionSelect');
-    if(section){section.value='pool';section.dispatchEvent(new Event('change',{bubbles:true}));}
-    const s=$('hsSearch');if(s){s.value=name;s.dispatchEvent(new Event('input',{bubbles:true}));}
-    setTimeout(()=>$('hitmen-scouting')?.scrollIntoView({behavior:'smooth',block:'start'}),50);
+  async function openPlayer(name){
+    const r=M.rows.find(x=>String(x.player_name||'').toLowerCase()===String(name||'').toLowerCase());
+    if(!r)return;
+    msg('Opening full player dossier…');
+    try{
+      const ensured=await ensurePlayerInScouting(r,'scouted');
+      if(window.HitmenDossier?.open){
+        await window.HitmenDossier.open(ensured.poolId);
+      }else{
+        const section=$('hsSectionSelect');
+        if(section){section.value='pool';section.dispatchEvent(new Event('change',{bubbles:true}));}
+        const s=$('hsSearch');if(s){s.value=name;s.dispatchEvent(new Event('input',{bubbles:true}));}
+      }
+      window.dispatchEvent(new CustomEvent('vvhl-auth-change',{detail:auth()}));
+      msg('');
+    }catch(e){msg(e.message||'Could not open this player profile.');}
   }
 
   function start(){
