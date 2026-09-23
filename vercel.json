@@ -76,5 +76,10 @@
       "source": "/esports-hub",
       "destination": "/esports-hub.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/chelscout-deepthink.js": {
+      "maxDuration": 120
+    }
+  }
 }
