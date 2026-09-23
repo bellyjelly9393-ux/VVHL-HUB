@@ -444,7 +444,7 @@
         ${focus.length?`<p><b>Verify:</b> ${focus.map(esc).join(' · ')}</p>`:''}
       </article>`;
     }).join('');
-    const externalHtml=external.map(r=>`<article class="hs-report external"><div class="hs-card-head"><div><b>${esc(r.report_title||r.report_type||'ChelScout report')}</b><br><small>${esc(r.author_label||'ChelScout')} · ${new Date(r.imported_at).toLocaleString()}</small></div><span class="hs-tag">CHELSCOUT</span></div>
+    const externalHtml=external.map(r=>`<article class="hs-report external"><div class="hs-card-head"><div><b>${esc((r.report_title||r.report_type||'Imported scouting report').replace(/ChelScout/gi,'Imported'))}</b><br><small>Imported scouting · ${new Date(r.imported_at).toLocaleString()}</small></div><span class="hs-tag">IMPORTED</span></div>
       ${r.recommendation?`<p><b>Recommendation:</b> ${esc(r.recommendation)}</p>`:''}
       ${r.summary?`<p>${esc(r.summary)}</p>`:''}
       ${r.strengths?`<p><b>Strengths:</b> ${esc(r.strengths)}</p>`:''}
