@@ -664,7 +664,7 @@
   }
   bind();
   const requestedTab=new URLSearchParams(location.search).get('tab');
-  const initialTab=['pool','targets','reports','bids'].includes(requestedTab)?requestedTab:'pool';
+  const initialTab=['pool','live','targets','reports','bids'].includes(requestedTab)?requestedTab:'pool';
   activate(initialTab);
   if(location.hash==='#hitmen-scouting')setTimeout(()=>document.getElementById('hitmen-scouting')?.scrollIntoView({block:'start'}),250);
   window.addEventListener('vvhl-auth-change',()=>setTimeout(load,0));if(state().user)setTimeout(load,200);
