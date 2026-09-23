@@ -206,18 +206,18 @@
   }
 
   function build(d){
-    const p=d.pool.scouting_players||{},x=d.intel||{},ps=d.preScout||{},raw=x.raw_payload||{},ext=latest(d.external),own=latest(d.reports),ni=d.normalized||{},profile=ni.profile||{},normVal=normalizedValuation(d);
+    const p=d.pool.scouting_players||{},x=d.intel||{},ps=d.preScout||{},raw=x.raw_payload||{},live=d.pool.market_details||{},ext=latest(d.external),own=latest(d.reports),ni=d.normalized||{},profile=ni.profile||{},normVal=normalizedValuation(d);
     const rawReport=ext?.raw_payload||{};
     const confidence=first(x.confidence,x.reliability,rawReport.confidence,raw.confidence,ps.confidence);
-    const role=first(d.pool.projected_role,x.role_chip,x.role_band,rawReport.meta,raw.role?.chip,raw.role?.band,ps.archetype);
-    const pos=first(p.primary_position,x.played_position,x.signed_position,rawReport.position);
+    const role=first(d.pool.projected_role,x.role_chip,x.role_band,rawReport.meta,raw.role?.chip,raw.role?.band,live?.role?.view?.chip,live?.role?.chip,live?.role?.band,ps.archetype);
+    const pos=first(p.primary_position,x.played_position,x.signed_position,rawReport.position,live?.pos);
     const pm=ps.market_snapshot||{};
     const model=marketModel(d),fair=model.fair,likely=model.likely,walk=model.walk;
-    const read=first(ext?.summary,rawReport.summary,x.onice_read,arr(x.notes)[0],ps.summary,own?.notes);
+    const read=first(ext?.summary,rawReport.summary,x.onice_read,arr(x.notes)[0],ps.summary,own?.notes,live?.price?.likely_basis);
     const bottom=first(ext?.recommendation,rawReport.bottom_line,own?.recommendation);
     const narrative=first(rawReport.narrative,ext?.summary,ps.summary,own?.notes);
     const career=dossierCareer(d),last=career[0]||{};
-    const onice=first(x.onice_read,raw.onice?.read,pm.possession_per_game?`${pm.possession_per_game} possession/game`:'');
+    const onice=first(x.onice_read,raw.onice?.read,pm.possession_per_game?`${pm.possession_per_game} possession/game`:'',live?.last?.record);
     const poolRank=x.pool_rank!=null?x.pool_rank:(pm.impact_rank??null),poolN=x.pool_n!=null?x.pool_n:(pm.impact_pool??null);
     const names=arr(raw.name_history).map(v=>typeof v==='string'?v:v.name).filter(Boolean);
     const spokes=arr(x.dna?.spokes).length?x.dna.spokes:arr(raw.dna?.spokes);
@@ -241,6 +241,8 @@
         <button data-hsd-status="pass" type="button">Don’t target</button>
       </div>
       <label class="hsd-note"><span>PRIVATE MANAGEMENT NOTE · SAVES AS YOU TYPE</span><textarea id="hsdNote" placeholder="Fit, chemistry, availability, bidding plan, concerns…">${esc(d.pool.management_note||'')}</textarea><small id="hsdNoteStatus"></small></label>
+
+      <section class="hsd-section hsd-live-market">${liveMarketHtml(d)}</section>
 
       <section class="hsd-read">
         <small>THE READ</small>
