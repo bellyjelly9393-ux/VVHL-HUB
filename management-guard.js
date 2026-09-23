@@ -97,13 +97,18 @@
       el.hidden = !hitmenAllowed;
     });
 
-    if (hitmenAllowed && document.querySelector(".main-nav") && !document.querySelector("[data-hitmen-nav-link]")) {
+    const nav = document.querySelector(".main-nav");
+    const navAlreadyHasHitmen = Boolean(
+      nav?.querySelector('a[href="/hitmen"],a[href="hitmen-workspace.html"],a[href="/calgary"],a[href="calgary"]')
+    );
+    if (hitmenAllowed && !hitmenPage && nav && !navAlreadyHasHitmen && !document.querySelector("[data-hitmen-nav-link]")) {
       const link = document.createElement("a");
       link.href = "/hitmen";
       link.textContent = "Hitmen War Room";
       link.dataset.hitmenNavLink = "1";
-      document.querySelector(".main-nav").appendChild(link);
+      nav.appendChild(link);
     }
+    if (hitmenPage) document.querySelector("[data-hitmen-nav-link]")?.remove();
 
     const isAdmin = Boolean(state?.user && state.profile?.role === "admin");
     document.querySelectorAll("[data-admin-only]").forEach((el) => {
