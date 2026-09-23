@@ -5,7 +5,7 @@
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=v=>v==null?'—':'$'+Number(v).toLocaleString();
-  const M={rows:[],events:[],meta:null,filter:'eligible',position:'',sort:'score',search:'',busy:false,timer:null,dbTimer:null};
+  const M={rows:[],events:[],meta:null,filter:'eligible',position:'',sort:'score',search:'',page:1,pageSize:100,busy:false,timer:null,dbTimer:null};
 
   function role(){
     if(String(auth().profile?.role||'').toLowerCase()==='admin')return'admin';
@@ -70,6 +70,7 @@
       <div id="hlmStatus" class="hs-msg"></div>
       <div id="hlmRows" class="hlm-grid"></div>
       <div id="hlmEmpty" class="hs-empty" hidden>No players match this market lane.</div>
+      <div class="hlm-paging"><span id="hlmPageMeta">Page 1</span><div><button id="hlmPrev" class="hs-btn" type="button">Previous</button><button id="hlmNext" class="hs-btn" type="button">Next</button></div></div>
       <details class="hlm-feed">
         <summary><span><b>Market Change Feed</b><small>ECHL bid movement, fall-throughs and CHL bid changes</small></span><strong id="hlmEventCount">0</strong></summary>
         <div id="hlmEvents"></div>
@@ -77,10 +78,12 @@
     `;
     pane.insertBefore(section,pane.firstChild);
     $('hlmSync').onclick=()=>sync(true);
-    $('hlmSearch').oninput=e=>{M.search=e.target.value.trim().toLowerCase();renderRows();};
-    $('hlmSort').onchange=e=>{M.sort=e.target.value||'score';renderRows();};
-    section.querySelectorAll('[data-hlm-filter]').forEach(b=>b.onclick=()=>{M.filter=b.dataset.hlmFilter;section.querySelectorAll('.hlm-filters [data-hlm-filter]').forEach(x=>x.classList.toggle('active',x.dataset.hlmFilter===M.filter));renderRows();});
-    section.querySelectorAll('[data-hlm-position]').forEach(b=>b.onclick=()=>{M.position=b.dataset.hlmPosition||'';section.querySelectorAll('[data-hlm-position]').forEach(x=>x.classList.toggle('active',x===b));renderRows();});
+    $('hlmSearch').oninput=e=>{M.search=e.target.value.trim().toLowerCase();M.page=1;renderRows();};
+    $('hlmSort').onchange=e=>{M.sort=e.target.value||'score';M.page=1;renderRows();};
+    section.querySelectorAll('[data-hlm-filter]').forEach(b=>b.onclick=()=>{M.filter=b.dataset.hlmFilter;M.page=1;section.querySelectorAll('.hlm-filters [data-hlm-filter]').forEach(x=>x.classList.toggle('active',x.dataset.hlmFilter===M.filter));renderRows();});
+    section.querySelectorAll('[data-hlm-position]').forEach(b=>b.onclick=()=>{M.position=b.dataset.hlmPosition||'';M.page=1;section.querySelectorAll('[data-hlm-position]').forEach(x=>x.classList.toggle('active',x===b));renderRows();});
+    $('hlmPrev').onclick=()=>{if(M.page>1){M.page--;renderRows();}};
+    $('hlmNext').onclick=()=>{M.page++;renderRows();};
     return true;
   }
 
@@ -169,7 +172,10 @@
       const rank=s=>s==='just_fell_to_chl'?0:s==='echl_live_bid'?1:s==='chl_live_bid'?2:s==='possible_chl_fall'?3:s==='echl_history_unsigned'?4:5;
       return rank(a.market_status)-rank(b.market_status)||Number(b.score||0)-Number(a.score||0)||String(a.player_name).localeCompare(String(b.player_name));
     });
-    const shown=rows.slice(0,160);
+    const pages=Math.max(1,Math.ceil(rows.length/M.pageSize));
+    if(M.page>pages)M.page=pages;
+    const start=(M.page-1)*M.pageSize;
+    const shown=rows.slice(start,start+M.pageSize);
     box.innerHTML=shown.map(r=>{
       const cash=currentMoney(r);
       const evt=M.events.find(e=>e.source_uid===r.source_uid&&e.event_type==='fell_to_chl');
@@ -195,7 +201,10 @@
       </article>`;
     }).join('');
     $('hlmEmpty').hidden=shown.length!==0;
-    msg(shown.length<rows.length?`Showing first ${shown.length} of ${rows.length} players in this lane.`:`${rows.length} player${rows.length===1?'':'s'} in this lane.`);
+    if($('hlmPageMeta'))$('hlmPageMeta').textContent=`${rows.length.toLocaleString()} players · Page ${M.page} of ${pages}`;
+    if($('hlmPrev'))$('hlmPrev').disabled=M.page<=1;
+    if($('hlmNext'))$('hlmNext').disabled=M.page>=pages;
+    msg(rows.length?`Showing ${start+1}–${start+shown.length} of ${rows.length.toLocaleString()} matching players.`:'No matching players.');
     box.querySelectorAll('[data-hlm-open]').forEach(b=>b.onclick=()=>openPlayer(b.dataset.hlmOpen));
     box.querySelectorAll('[data-hlm-watch]').forEach(b=>b.onclick=()=>addToCalgary(Number(b.dataset.hlmWatch),false,b));
     box.querySelectorAll('[data-hlm-bid]').forEach(b=>b.onclick=()=>addToCalgary(Number(b.dataset.hlmBid),true,b));
