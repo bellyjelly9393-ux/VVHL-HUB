@@ -5,7 +5,7 @@
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=v=>v==null?'—':'$'+Number(v).toLocaleString();
-  const M={rows:[],events:[],meta:null,filter:'fall',search:'',busy:false,timer:null,dbTimer:null};
+  const M={rows:[],events:[],meta:null,filter:'eligible',search:'',busy:false,timer:null,dbTimer:null};
 
   function role(){
     if(String(auth().profile?.role||'').toLowerCase()==='admin')return'admin';
@@ -28,25 +28,26 @@
     section.className='hs-card hlm-shell';
     section.innerHTML=`
       <div class="hlm-head">
-        <div><div class="eyebrow">ECHL → CHL MARKET WATCH</div><h3>Live Fall Board</h3><p class="hs-msg">Track ECHL bids now, flag players who fall through, and roll straight into tomorrow's CHL bidding board.</p></div>
+        <div><div class="eyebrow">FULL LIVE PLAYER MARKET</div><h3>Live Bidding Board</h3><p class="hs-msg">Search every player still eligible to be bid on, watch live ECHL movement, and add any player directly to Calgary's shared bidding board.</p></div>
         <div class="hlm-sync"><span id="hlmBadge" class="hs-tag">LOADING</span><button id="hlmSync" class="hs-btn primary" type="button">Refresh Live Market</button></div>
       </div>
       <div class="hlm-meta"><span id="hlmUpdated">No snapshot yet</span><span id="hlmRev"></span><span>Auto-check: 2 min while open</span></div>
       <div class="hlm-kpis">
+        <button type="button" data-hlm-filter="eligible"><small>ELIGIBLE PLAYERS</small><strong id="hlmEligible">0</strong></button>
         <button type="button" data-hlm-filter="echl_live"><small>ECHL LIVE BIDS</small><strong id="hlmEchlLive">0</strong></button>
-        <button type="button" data-hlm-filter="fall"><small>POSSIBLE / FALLING</small><strong id="hlmFall">0</strong></button>
         <button type="button" data-hlm-filter="just_fell"><small>JUST FELL TO CHL</small><strong id="hlmJustFell">0</strong></button>
         <button type="button" data-hlm-filter="chl_live"><small>CHL LIVE BIDS</small><strong id="hlmChlLive">0</strong></button>
       </div>
       <div class="hlm-controls">
-        <input id="hlmSearch" class="hs-input" type="search" placeholder="Search live market player">
+        <input id="hlmSearch" class="hs-input" type="search" placeholder="Search every eligible player by gamertag">
         <div class="hlm-filters">
-          <button class="active" data-hlm-filter="fall" type="button">ECHL → CHL Watch</button>
+          <button class="active" data-hlm-filter="eligible" type="button">All Eligible</button>
+          <button data-hlm-filter="fall" type="button">Fall Watch</button>
           <button data-hlm-filter="echl_live" type="button">ECHL Live</button>
           <button data-hlm-filter="just_fell" type="button">Just Fell</button>
           <button data-hlm-filter="chl_live" type="button">CHL Live</button>
-          <button data-hlm-filter="signed" type="button">Signed</button>
-          <button data-hlm-filter="all" type="button">All</button>
+          <button data-hlm-filter="signed" type="button">Signed / Unavailable</button>
+          <button data-hlm-filter="all" type="button">All Source Rows</button>
         </div>
       </div>
       <div id="hlmStatus" class="hs-msg"></div>
