@@ -5,7 +5,7 @@
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=v=>v==null?'—':'$'+Number(v).toLocaleString();
-  const M={rows:[],events:[],meta:null,filter:'eligible',position:'',sort:'score',search:'',page:1,pageSize:100,busy:false,timer:null,dbTimer:null,serverBlocked:false,bridgeBound:false};
+  const M={rows:[],events:[],meta:null,filter:'eligible',position:'',sort:'score',search:'',page:1,pageSize:100,busy:false,timer:null,dbTimer:null,serverBlocked:true,bridgeBound:false};
 
   function role(){
     if(String(auth().profile?.role||'').toLowerCase()==='admin')return'admin';
@@ -29,7 +29,7 @@
     section.innerHTML=`
       <div class="hlm-head">
         <div><div class="eyebrow">FULL LIVE PLAYER MARKET</div><h3>Live Bidding Board</h3><p class="hs-msg">Search every player still eligible to be bid on, watch live ECHL movement, and add any player directly to Calgary's shared bidding board.</p></div>
-        <div class="hlm-sync"><span id="hlmBadge" class="hs-tag">LOADING</span><button id="hlmSync" class="hs-btn primary" type="button">Refresh Live Market</button></div>
+        <div class="hlm-sync"><span id="hlmBadge" class="hs-tag">LOADING</span><button id="hlmSync" class="hs-btn primary" type="button">Connect Live Source</button></div>
       </div>
       <div class="hlm-meta"><span id="hlmUpdated">No snapshot yet</span><span id="hlmRev"></span><span>Auto-check: 1 min while connected</span></div>
       <details class="hlm-bridge">
@@ -87,7 +87,7 @@
       </details>
     `;
     pane.insertBefore(section,pane.firstChild);
-    $('hlmSync').onclick=()=>sync(true);
+    $('hlmSync').onclick=()=>openBridge();
     $('hlmSearch').oninput=e=>{M.search=e.target.value.trim().toLowerCase();M.page=1;renderRows();};
     $('hlmSort').onchange=e=>{M.sort=e.target.value||'score';M.page=1;renderRows();};
     section.querySelectorAll('[data-hlm-filter]').forEach(b=>b.onclick=()=>{M.filter=b.dataset.hlmFilter;M.page=1;section.querySelectorAll('.hlm-filters [data-hlm-filter]').forEach(x=>x.classList.toggle('active',x.dataset.hlmFilter===M.filter));renderRows();});
@@ -109,6 +109,12 @@
   function bridgeMsg(text,badge){
     if($('hlmBridgeMsg'))$('hlmBridgeMsg').textContent=text||'';
     if($('hlmBridgeBadge')&&badge)$('hlmBridgeBadge').textContent=badge;
+  }
+  function openBridge(){
+    const d=document.querySelector('.hlm-bridge');
+    if(d)d.open=true;
+    bridgeMsg('Direct server refresh is blocked by the source. Use your authorized market tab once to start the live bridge; Wildman keeps the full stored market loaded while you connect.','BRIDGE NEEDED');
+    d?.scrollIntoView({behavior:'smooth',block:'center'});
   }
   function liveBridgeBookmarklet(){
     function runner(){
@@ -403,6 +409,11 @@
   }
 
   async function sync(manual=false){
+    if(M.serverBlocked){
+      openBridge();
+      msg('Live source needs the browser bridge. Your stored player market is still available below.');
+      return;
+    }
     if(M.busy||!canWrite()||!db()||!auth().user)return;
     M.busy=true;$('hlmSync')&&($('hlmSync').disabled=true);msg('Checking live bid board…');
     try{
@@ -411,7 +422,9 @@
       if(!res.ok){
         if(Number(body.upstream_status||0)===403){
           M.serverBlocked=true;
-          bridgeMsg('The source blocks server-to-server refreshes. Start the Live Source Bridge once in your authorized market tab for true one-minute updates.','BRIDGE NEEDED');
+          openBridge();
+          msg('The source blocks direct server refreshes. Connect the Live Source Bridge below. Your existing market data was kept.');
+          return;
         }
         throw new Error(body.error||'Live market source failed.');
       }
@@ -561,7 +574,7 @@
   function start(){
     if(!inject())return;
     load().then(()=>{
-      if(canWrite()&&(!M.meta||Date.now()-new Date(M.meta.synced_at||0).getTime()>90000))sync(false);
+      if(M.serverBlocked&&canWrite()) bridgeMsg('Stored market loaded. Connect your authorized market tab for true live bid and eligibility updates.','BRIDGE READY');
     });
     if(!M.timer)M.timer=setInterval(()=>{if(document.visibilityState==='visible'&&canWrite()&&!M.serverBlocked)sync(false);},60000);
     if(!M.dbTimer)M.dbTimer=setInterval(()=>{if(document.visibilityState==='visible')load();},30000);
