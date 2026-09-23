@@ -388,7 +388,7 @@
     load().then(()=>{
       if(canWrite()&&(!M.meta||Date.now()-new Date(M.meta.synced_at||0).getTime()>90000))sync(false);
     });
-    if(!M.timer)M.timer=setInterval(()=>{if(document.visibilityState==='visible'&&canWrite())sync(false);},120000);
+    if(!M.timer)M.timer=setInterval(()=>{if(document.visibilityState==='visible'&&canWrite())sync(false);},60000);
     if(!M.dbTimer)M.dbTimer=setInterval(()=>{if(document.visibilityState==='visible')load();},30000);
   }
 
