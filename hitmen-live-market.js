@@ -48,6 +48,8 @@
         </select>
         <div class="hlm-filters">
           <button class="active" data-hlm-filter="eligible" type="button">All Eligible</button>
+          <button data-hlm-filter="top_pool" type="button">Top Pool</button>
+          <button data-hlm-filter="value" type="button">Value</button>
           <button data-hlm-filter="fall" type="button">Fall Watch</button>
           <button data-hlm-filter="echl_live" type="button">ECHL Live</button>
           <button data-hlm-filter="just_fell" type="button">Just Fell</button>
@@ -136,6 +138,11 @@
     if(M.search&&!String(r.player_name||'').toLowerCase().includes(M.search))return false;
     if(M.filter==='all')return true;
     if(M.filter==='eligible')return isEligible(r);
+    if(M.filter==='top_pool')return isEligible(r)&&r.details?.price?.top_of_pool===true;
+    if(M.filter==='value'){
+      const current=Number(r.live_chl_bid||r.bid_amount||0),likely=Number(r.likely_price||0);
+      return isEligible(r)&&likely>0&&(current===0||current<=likely*0.85);
+    }
     if(M.filter==='echl_live')return r.market_status==='echl_live_bid';
     if(M.filter==='just_fell')return r.market_status==='just_fell_to_chl'||M.events.some(e=>e.source_uid===r.source_uid&&e.event_type==='fell_to_chl');
     if(M.filter==='chl_live')return r.market_status==='chl_live_bid';
