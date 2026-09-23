@@ -41,7 +41,7 @@
         </div>
       </details>
       <div class="hlm-kpis">
-        <button type="button" data-hlm-filter="eligible"><small>ELIGIBLE PLAYERS</small><strong id="hlmEligible">0</strong></button>
+        <button type="button" data-hlm-filter="eligible"><small>MARKET PLAYERS</small><strong id="hlmEligible">0</strong></button>
         <button type="button" data-hlm-filter="echl_live"><small>ECHL LIVE BIDS</small><strong id="hlmEchlLive">0</strong></button>
         <button type="button" data-hlm-filter="just_fell"><small>JUST FELL TO CHL</small><strong id="hlmJustFell">0</strong></button>
         <button type="button" data-hlm-filter="chl_live"><small>CHL LIVE BIDS</small><strong id="hlmChlLive">0</strong></button>
@@ -190,6 +190,7 @@
       signed_other:'SIGNED / UNAVAILABLE',
       off_auction:'OFF AUCTION',
       available:'AVAILABLE',
+      available_unconfirmed:'MARKET POOL',
       watch:'AVAILABLE'
     })[s]||String(s||'WATCH').replaceAll('_',' ').toUpperCase();
   }
@@ -211,7 +212,7 @@
     return {label:'CHL MODEL',value:r.likely_price};
   }
   function isEligible(r){
-    return !['echl_signed','chl_signed'].includes(r.market_status)
+    return !['echl_signed','chl_signed','signed_other','off_auction'].includes(r.market_status)
       && r.details?.off_auction!==true
       && !Number(r.contracted_league_id||0);
   }
@@ -406,7 +407,13 @@
     try{
       const res=await fetch('/api/hitmen-live-market',{cache:'no-store',headers:{accept:'application/json'}});
       const body=await res.json();
-      if(!res.ok)throw new Error(body.error||'Live market source failed.');
+      if(!res.ok){
+        if(Number(body.upstream_status||0)===403){
+          M.serverBlocked=true;
+          bridgeMsg('The source blocks server-to-server refreshes. Start the Live Source Bridge once in your authorized market tab for true one-minute updates.','BRIDGE NEEDED');
+        }
+        throw new Error(body.error||'Live market source failed.');
+      }
       const rpc=await db().rpc('apply_hitmen_live_market_snapshot',{
         p_team_id:TEAM_ID,
         p_board_rev:body.board_rev||null,
@@ -547,7 +554,7 @@
     load().then(()=>{
       if(canWrite()&&(!M.meta||Date.now()-new Date(M.meta.synced_at||0).getTime()>90000))sync(false);
     });
-    if(!M.timer)M.timer=setInterval(()=>{if(document.visibilityState==='visible'&&canWrite())sync(false);},60000);
+    if(!M.timer)M.timer=setInterval(()=>{if(document.visibilityState==='visible'&&canWrite()&&!M.serverBlocked)sync(false);},60000);
     if(!M.dbTimer)M.dbTimer=setInterval(()=>{if(document.visibilityState==='visible')load();},30000);
   }
 
