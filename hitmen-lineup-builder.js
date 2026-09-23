@@ -26,7 +26,7 @@
     var expected=target!=null?target:(likely!=null?likely:fair);
     var cost=liveChl!=null?liveChl:(market!=null?market:expected);
     var max=norm(b.max_price!=null?b.max_price:r.max_bid);if(max==null)max=mil(i.walk_above_m);if(max==null)max=cost;
-    var src=liveChl!=null?'LIVE CHL bid':market!=null?'Latest Calgary market price':target!=null?'Calgary target bid':likely!=null?'ChelScout likely price':fair!=null?'ChelScout fair value':'No price model';
+    var src=liveChl!=null?'LIVE CHL bid':market!=null?'Latest Calgary market price':target!=null?'Calgary target bid':likely!=null?'Wildman likely price':fair!=null?'Wildman fair value':'No price model';
     var echl=live&&live.market_status==='echl_live_bid'?norm(live.bid_amount):null;
     return {kind:'scout',id:null,scout:r.scouting_player_id,name:p.gamertag||'Unknown target',pos:p.primary_position||'',cost:cost,max:max,expected:expected,current:liveChl!=null?liveChl:market,echl:echl,source:src,marketStatus:live?live.market_status:(r.market_status||'watch'),priority:b.priority!=null?b.priority:r.priority}
   }
@@ -98,15 +98,11 @@
   async function syncMarket(manual){
     if(S.marketBusy||!writable()||!DB()||(E('lineupType')||{}).value!=='bidding')return;
     S.marketBusy=true;var btn=E('refreshBiddingMarket');if(btn)btn.disabled=true;
-    if(manual)msg('Refreshing live bidding market…');
     try{
-      var res=await fetch('/api/hitmen-live-market',{cache:'no-store',headers:{accept:'application/json'}}),body=await res.json();
-      if(!res.ok)throw new Error(body.error||'Live market refresh failed.');
-      var r=await DB().rpc('apply_hitmen_live_market_snapshot',{p_team_id:TEAM,p_board_rev:body.board_rev||null,p_source_updated_at:body.bids_updated||new Date().toISOString(),p_auction_ran:body.auction_ran===true,p_row_total:Number(body.row_total||0),p_rows:body.rows||[]});
-      if(r.error)throw r.error;
+      if(manual)msg('Refreshing Wildman market snapshot…');
       await load();
-      if(manual)msg(r.data&&r.data.changed===false?'Market checked. No new bidding revision yet.':'Live bidding prices refreshed.');
-    }catch(e){console.error(e);if(manual)msg((e.message||'Could not refresh live market.')+' Existing prices were kept.',true)}
+      if(manual)msg('Stored live-market snapshot refreshed. Use the Live Source Bridge in Scouting HQ for new external bid updates.');
+    }catch(e){console.error(e);if(manual)msg((e.message||'Could not refresh stored market.')+' Existing prices were kept.',true)}
     finally{S.marketBusy=false;if(btn)btn.disabled=false}
   }
   async function load(){if(S.loading||!ST().user||!DB())return;S.loading=true;S.role=role();if(!S.role){S.loading=false;return}msg('Loading shared Calgary lineup board…');try{var q=await Promise.all([DB().from('roster_entries').select('player_id,cap_hit,players(id,gamertag,primary_position,secondary_position,platform)').eq('team_id',TEAM),
