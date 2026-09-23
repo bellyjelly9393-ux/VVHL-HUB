@@ -92,7 +92,7 @@
       .on('postgres_changes',{event:'*',schema:'public',table:'roster_entries',filter:'team_id=eq.'+TEAM},scheduleRealtimeLoad)
       .on('postgres_changes',{event:'*',schema:'public',table:'player_availability',filter:'team_id=eq.'+TEAM},scheduleRealtimeLoad).subscribe();
     if(!S.poller)S.poller=setInterval(function(){if(document.visibilityState==='visible'&&ST().user&&!S.loading)load()},30000);
-    if(!S.marketTimer)S.marketTimer=setInterval(function(){if(document.visibilityState==='visible'&&(E('lineupType')||{}).value==='bidding'&&writable())syncMarket(false)},120000)
+    if(!S.marketTimer)S.marketTimer=setInterval(function(){if(document.visibilityState==='visible'&&(E('lineupType')||{}).value==='bidding'&&writable())syncMarket(false)},60000)
   }
   function updateMarketStamp(){var b=E('biddingPickerBar'),s=E('currentMarketStamp');if(b)b.hidden=(E('lineupType')||{}).value!=='bidding';if(s)s.textContent=S.liveMeta&&S.liveMeta.source_updated_at?'Market source: '+new Date(S.liveMeta.source_updated_at).toLocaleString():'Market source: waiting for first sync'}
   async function syncMarket(manual){
