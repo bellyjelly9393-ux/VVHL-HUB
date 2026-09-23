@@ -117,7 +117,12 @@
       <div class="hsd-rank-row"><span>REACH</span><b>${esc(reach)}</b></div>
       <div class="hsd-rank-row"><span>PROJECTED PRICE</span><b>${likely!=null?moneyM(likely):'—'}</b></div>
       <div class="hsd-rank-row"><span>LIKELY BAND</span><b>${band.length>=2?moneyM(band[0])+' – '+moneyM(band[1]):'—'}</b></div>
-      <div class="hsd-rank-row"><span>MARKET SCORE</span><b>${esc(m?.score??'—')}</b></div>
+      <div class="hsd-rank-row"><span>MARKET SCORE</span><b>${esc(m?.score??m?.rank??'—')}</b></div>
+      ${m?.rank_pool!=null?`<div class="hsd-rank-row"><span>POOL RANK</span><b>${esc((m.rank!=null?m.rank+' / ':'')+m.rank_pool)}</b></div>`:''}
+      ${m?.market_tier?`<div class="hsd-rank-row"><span>MARKET TIER</span><b>${esc(m.market_tier)}</b></div>`:''}
+      ${m?.projection?`<div class="hsd-rank-row"><span>PROJECTION</span><b>${esc(m.projection)}</b></div>`:''}
+      ${m?.last_price!=null?`<div class="hsd-rank-row"><span>LAST PRICE</span><b>${money(m.last_price)}</b></div>`:''}
+      ${m?.server?`<div class="hsd-rank-row"><span>SERVER</span><b>${esc(m.server)}</b></div>`:''}
       <div class="hsd-rank-row"><span>LAST SAMPLE</span><b>${esc([last?.ppg!=null?last.ppg+' PPG':'',last?.gp!=null?last.gp+' GP':'',last?.pts!=null?last.pts+' PTS':'',last?.sv!=null?last.sv+' SV%':'',last?.gaa!=null?last.gaa+' GAA':''].filter(Boolean).join(' · ')||'—')}</b></div>
       ${tags.length?`<div class="hsd-style-tags">${tags.map(t=>'<span>'+esc(t)+'</span>').join('')}</div>`:''}`;
   }
