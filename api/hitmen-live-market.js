@@ -66,16 +66,13 @@ function sanitizeRow(r){
   };
 }
 
-function relevant(r){
-  const bidLeague=Number(r?.bid_elsewhere?.league_id||0);
+function validMarketRow(r){
+  return Boolean(numberOrNull(r?.uid) && r?.name);
+}
+
+function isEligibleRow(r){
   const contractLeague=Number(r?.contracted?.league_id||0);
-  const live=numberOrNull(r?.price?.live_bid_M);
-  return bidLeague===84
-    || contractLeague===84
-    || contractLeague===39
-    || live!==null
-    || r?.reach==='could_fall'
-    || (Number(r?.last_league||0)===84 && !contractLeague);
+  return !contractLeague && r?.off_auction!==true;
 }
 
 export default async function handler(req,res){
@@ -97,16 +94,18 @@ export default async function handler(req,res){
     if(!upstream.ok||!body||!Array.isArray(body.rows)){
       return res.status(upstream.status||502).json({error:'ChelScout live bid board is not available to the server right now.',upstream_status:upstream.status});
     }
-    const rows=body.rows.filter(relevant).map(sanitizeRow).filter(r=>r.uid&&r.name);
+    const rows=body.rows.map(sanitizeRow).filter(validMarketRow);
+    const eligibleRows=rows.filter(isEligibleRow).length;
     res.setHeader('Cache-Control','s-maxage=60, stale-while-revalidate=120');
     return res.status(200).json({
       auction_ran:body.auction_ran===true,
       bids_updated:body.bids_updated||null,
-      board_rev:body.board_rev||null,
+      board_rev:body.board_rev||body.bids_updated||null,
       league:body.league||'LGCHL',
       league_id:numberOrNull(body.league_id),
       row_total:numberOrNull(body.row_total)||body.rows.length,
       watch_rows:rows.length,
+      eligible_rows:eligibleRows,
       rows
     });
   }catch(error){
