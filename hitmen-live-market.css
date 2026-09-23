@@ -11,3 +11,9 @@
 .hlm-feed{margin-top:14px;border:1px solid rgba(255,255,255,.07);border-radius:12px;overflow:hidden;background:rgba(255,255,255,.015)}.hlm-feed>summary{list-style:none;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;cursor:pointer}.hlm-feed>summary::-webkit-details-marker{display:none}.hlm-feed>summary span{display:grid;gap:2px}.hlm-feed>summary small{color:#7e747c;font-size:8px}.hlm-feed>summary strong{font:900 22px/1 "Barlow Condensed",sans-serif;color:#efcf79}.hlm-event{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-top:1px solid rgba(255,255,255,.05)}.hlm-event span{display:flex;gap:8px;align-items:center}.hlm-event span b{color:#e6bd65;font-size:8px;letter-spacing:.07em}.hlm-event span strong{font-size:10px}.hlm-event small{color:#716970;font-size:8px}
 @media(max-width:900px){.hlm-kpis{grid-template-columns:repeat(2,1fr)}.hlm-controls{grid-template-columns:1fr}.hlm-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.hlm-head{flex-direction:column}.hlm-sync{justify-content:flex-start}.hlm-kpis{grid-template-columns:1fr 1fr}.hlm-card{padding:10px}.hlm-price-row b{font-size:17px}}
+
+.hlm-controls{grid-template-columns:minmax(240px,.75fr) minmax(190px,.35fr) 1fr}
+.hlm-position-filters{display:flex;gap:6px;overflow:auto;margin:8px 0 12px;scrollbar-width:none}
+.hlm-position-filters::-webkit-scrollbar{display:none}
+.hlm-position-filters button{appearance:none;min-width:38px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:#130d12;color:#aaa0a8;padding:7px 9px;font-size:9px;font-weight:900;cursor:pointer}
+.hlm-position-filters button.active{border-color:rgba(239,68,68,.45);background:rgba(153,27,45,.25);color:#fff}
