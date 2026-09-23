@@ -5,7 +5,7 @@
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=v=>v==null?'—':'$'+Number(v).toLocaleString();
-  const M={rows:[],events:[],meta:null,filter:'eligible',search:'',busy:false,timer:null,dbTimer:null};
+  const M={rows:[],events:[],meta:null,filter:'eligible',position:'',sort:'score',search:'',busy:false,timer:null,dbTimer:null};
 
   function role(){
     if(String(auth().profile?.role||'').toLowerCase()==='admin')return'admin';
@@ -21,7 +21,7 @@
   function inject(){
     addCss();
     if($('hsLiveMarket'))return true;
-    const pane=document.querySelector('[data-hs-pane="bids"]');
+    const pane=document.querySelector('[data-hs-pane="live"]');
     if(!pane)return false;
     const section=document.createElement('section');
     section.id='hsLiveMarket';
@@ -40,6 +40,12 @@
       </div>
       <div class="hlm-controls">
         <input id="hlmSearch" class="hs-input" type="search" placeholder="Search every eligible player by gamertag">
+        <select id="hlmSort" class="hs-select" aria-label="Sort live market">
+          <option value="score">Best market score</option>
+          <option value="price_high">Projected price: high to low</option>
+          <option value="price_low">Projected price: low to high</option>
+          <option value="name">Player name</option>
+        </select>
         <div class="hlm-filters">
           <button class="active" data-hlm-filter="eligible" type="button">All Eligible</button>
           <button data-hlm-filter="fall" type="button">Fall Watch</button>
@@ -49,6 +55,17 @@
           <button data-hlm-filter="signed" type="button">Signed / Unavailable</button>
           <button data-hlm-filter="all" type="button">All Source Rows</button>
         </div>
+      </div>
+      <div class="hlm-position-filters" aria-label="Live market positions">
+        <button class="active" type="button" data-hlm-position="">ALL</button>
+        <button type="button" data-hlm-position="F">F</button>
+        <button type="button" data-hlm-position="D">D</button>
+        <button type="button" data-hlm-position="LW">LW</button>
+        <button type="button" data-hlm-position="C">C</button>
+        <button type="button" data-hlm-position="RW">RW</button>
+        <button type="button" data-hlm-position="LD">LD</button>
+        <button type="button" data-hlm-position="RD">RD</button>
+        <button type="button" data-hlm-position="G">G</button>
       </div>
       <div id="hlmStatus" class="hs-msg"></div>
       <div id="hlmRows" class="hlm-grid"></div>
@@ -61,7 +78,9 @@
     pane.insertBefore(section,pane.firstChild);
     $('hlmSync').onclick=()=>sync(true);
     $('hlmSearch').oninput=e=>{M.search=e.target.value.trim().toLowerCase();renderRows();};
+    $('hlmSort').onchange=e=>{M.sort=e.target.value||'score';renderRows();};
     section.querySelectorAll('[data-hlm-filter]').forEach(b=>b.onclick=()=>{M.filter=b.dataset.hlmFilter;section.querySelectorAll('.hlm-filters [data-hlm-filter]').forEach(x=>x.classList.toggle('active',x.dataset.hlmFilter===M.filter));renderRows();});
+    section.querySelectorAll('[data-hlm-position]').forEach(b=>b.onclick=()=>{M.position=b.dataset.hlmPosition||'';section.querySelectorAll('[data-hlm-position]').forEach(x=>x.classList.toggle('active',x===b));renderRows();});
     return true;
   }
 
@@ -99,7 +118,15 @@
       && r.details?.off_auction!==true
       && !Number(r.contracted_league_id||0);
   }
+  function matchPosition(r){
+    const p=String(r.position||'').toUpperCase();
+    if(!M.position)return true;
+    if(M.position==='F')return ['LW','C','RW','F'].includes(p);
+    if(M.position==='D')return ['LD','RD','D'].includes(p);
+    return p===M.position;
+  }
   function matchFilter(r){
+    if(!matchPosition(r))return false;
     if(M.search&&!String(r.player_name||'').toLowerCase().includes(M.search))return false;
     if(M.filter==='all')return true;
     if(M.filter==='eligible')return isEligible(r);
@@ -133,6 +160,9 @@
     const box=$('hlmRows');if(!box)return;
     let rows=M.rows.filter(matchFilter);
     rows.sort((a,b)=>{
+      if(M.sort==='name')return String(a.player_name).localeCompare(String(b.player_name));
+      if(M.sort==='price_high')return Number(b.likely_price||b.bid_amount||0)-Number(a.likely_price||a.bid_amount||0)||String(a.player_name).localeCompare(String(b.player_name));
+      if(M.sort==='price_low')return Number(a.likely_price||a.bid_amount||Number.MAX_SAFE_INTEGER)-Number(b.likely_price||b.bid_amount||Number.MAX_SAFE_INTEGER)||String(a.player_name).localeCompare(String(b.player_name));
       const rank=s=>s==='just_fell_to_chl'?0:s==='echl_live_bid'?1:s==='chl_live_bid'?2:s==='possible_chl_fall'?3:s==='echl_history_unsigned'?4:5;
       return rank(a.market_status)-rank(b.market_status)||Number(b.score||0)-Number(a.score||0)||String(a.player_name).localeCompare(String(b.player_name));
     });
@@ -249,7 +279,7 @@
         market_price:r.live_chl_bid||r.bid_amount||r.contracted_amount||null,
         market_source:'chelscout-live',
         market_updated_at:r.source_updated_at||now,
-        is_biddable:!['echl_signed','chl_signed'].includes(r.market_status),
+        is_biddable:isEligible(r),
         market_details:r.details||{},
         updated_by:auth().user.id,
         updated_at:now
@@ -273,7 +303,8 @@
   }
 
   function openPlayer(name){
-    document.querySelector('[data-hs-tab="pool"]')?.click();
+    const section=$('hsSectionSelect');
+    if(section){section.value='pool';section.dispatchEvent(new Event('change',{bubbles:true}));}
     const s=$('hsSearch');if(s){s.value=name;s.dispatchEvent(new Event('input',{bubbles:true}));}
     setTimeout(()=>$('hitmen-scouting')?.scrollIntoView({behavior:'smooth',block:'start'}),50);
   }
