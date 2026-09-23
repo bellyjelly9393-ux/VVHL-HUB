@@ -143,9 +143,11 @@
     const event = eventBySlug("road-to-pro-2026");
     if (!event) return;
     const status = document.getElementById("proSeriesStatus");
-    if (status) status.textContent = event.status === "upcoming" ? "Awaiting official field" : event.status.toUpperCase();
     const eventTeams = state.eventTeams.filter(x => x.event_id === event.id);
     const eventRosters = state.eventRosters.filter(x => x.event_id === event.id && x.active !== false);
+    if (status) status.textContent = event.status === "upcoming"
+      ? (eventTeams.length > 1 ? "FIELD LOADED" : "AWAITING FIELD")
+      : event.status.toUpperCase();
     const eventGames = state.games.filter(x => x.event_id === event.id);
     const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
     set("proTeamCount", eventTeams.length);
