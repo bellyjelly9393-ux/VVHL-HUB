@@ -301,9 +301,12 @@
     if(q.error)throw q.error;
 
     const existing=q.data||null;
-    const keepStatus=existing?.status&&existing.status!=='unscouted'?existing.status:status;
+    const resolvedStatus=status==='scouted'
+      ?(existing?.status&&existing.status!=='unscouted'?existing.status:'scouted')
+      :status;
     const poolPayload={
-      status:status==='bid_target'?'bid_target':keepStatus,
+      status:resolvedStatus,
+      priority:status==='bid_target'?(existing?.priority??2):existing?.priority,
       projected_role:roleText(r),
       market_status:r.market_status,
       market_league:r.bid_league_id===84?'ECHL':(r.market_status==='chl_live_bid'?'CHL':null),
