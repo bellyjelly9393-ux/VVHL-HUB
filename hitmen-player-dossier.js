@@ -78,12 +78,39 @@
   }
 
   function marketModel(d){
-    const x=d?.intel||{},ps=d?.preScout||{},ext=latest(d?.external),raw=ext?.raw_payload||{},pm=ps?.market_snapshot||{};
+    const x=d?.intel||{},ps=d?.preScout||{},ext=latest(d?.external),raw=ext?.raw_payload||{},pm=ps?.market_snapshot||{},live=d?.pool?.market_details||{};
     return {
       fair:num(x.fair_value_m,raw.fair_value_m,raw.fair_value,pm.fair_value_m,pm.fair_value),
-      likely:num(x.likely_price_m,raw.likely_price_m,raw.expected_market_m,pm.likely_price_m,pm.expected_market_m),
+      likely:num(x.likely_price_m,raw.likely_price_m,raw.expected_market_m,pm.likely_price_m,pm.expected_market_m,live?.price?.likely_M),
       walk:num(x.walk_above_m,raw.walk_above_m,raw.walk_m,pm.walk_above_m,pm.walk_m)
     };
+  }
+
+  function liveMarketHtml(d){
+    const m=d?.pool?.market_details||{};
+    if(!Object.keys(m).length)return '<div class="hsd-empty">No live market snapshot attached to this player yet.</div>';
+    const status=String(d.pool.market_status||'available').replaceAll('_',' ').toUpperCase();
+    const role=first(m?.role?.view?.chip,m?.role?.chip,m?.role?.band,d.pool.projected_role,'Role not set');
+    const bidLeague=Number(m?.bid_elsewhere?.league_id||0);
+    const currentBid=bidLeague?num(m?.bid_elsewhere?.M):null;
+    const likely=num(m?.price?.likely_M);
+    const band=arr(m?.price?.likely_band_M);
+    const last=m?.last||{};
+    const tags=arr(m?.tags).slice(0,10);
+    const reach=first(m?.reach,'—').replaceAll('_',' ');
+    const current=d.pool.market_price!=null?money(d.pool.market_price):(currentBid!=null?moneyM(currentBid):'—');
+    return `<div class="hsd-brandline">LIVE PLAYER MARKET</div>
+      <div class="hsd-facts">
+        <div><small>STATUS</small><b>${esc(status)}</b></div>
+        <div><small>CURRENT MARKET</small><b>${esc(current)}</b></div>
+        <div><small>ROLE</small><b>${esc(role)}</b></div>
+      </div>
+      <div class="hsd-rank-row"><span>REACH</span><b>${esc(reach)}</b></div>
+      <div class="hsd-rank-row"><span>PROJECTED PRICE</span><b>${likely!=null?moneyM(likely):'—'}</b></div>
+      <div class="hsd-rank-row"><span>LIKELY BAND</span><b>${band.length>=2?moneyM(band[0])+' – '+moneyM(band[1]):'—'}</b></div>
+      <div class="hsd-rank-row"><span>MARKET SCORE</span><b>${esc(m?.score??'—')}</b></div>
+      <div class="hsd-rank-row"><span>LAST SAMPLE</span><b>${esc([last?.ppg!=null?last.ppg+' PPG':'',last?.gp!=null?last.gp+' GP':'',last?.pts!=null?last.pts+' PTS':'',last?.sv!=null?last.sv+' SV%':'',last?.gaa!=null?last.gaa+' GAA':''].filter(Boolean).join(' · ')||'—')}</b></div>
+      ${tags.length?`<div class="hsd-style-tags">${tags.map(t=>'<span>'+esc(t)+'</span>').join('')}</div>`:''}`;
   }
 
   function radar(spokes){
