@@ -93,13 +93,16 @@
       chl_live_bid:'CHL LIVE BID',
       echl_signed:'WON IN ECHL',
       chl_signed:'SIGNED IN CHL',
-      watch:'WATCH'
+      signed_other:'SIGNED / UNAVAILABLE',
+      off_auction:'OFF AUCTION',
+      available:'AVAILABLE',
+      watch:'AVAILABLE'
     })[s]||String(s||'WATCH').replaceAll('_',' ').toUpperCase();
   }
   function statusClass(s){
     if(s==='just_fell_to_chl')return'fall';
     if(s==='echl_live_bid'||s==='chl_live_bid')return'live';
-    if(s==='echl_signed'||s==='chl_signed')return'signed';
+    if(['echl_signed','chl_signed','signed_other','off_auction'].includes(s))return'signed';
     if(s==='possible_chl_fall'||s==='echl_history_unsigned')return'possible';
     return'';
   }
@@ -181,10 +184,12 @@
           <div><small>MODEL</small><b>${money(r.likely_price)}</b></div>
           <div><small>SCORE</small><b>${r.score??'—'}</b></div>
         </div>
-        <div class="hlm-role"><b>${esc(roleText(r))}</b>${r.contracted_team?`<span>${esc(r.contracted_team)}</span>`:''}${evt?'<span class="hlm-fell-note">ECHL bid cleared without an ECHL contract</span>':''}</div>
+        <div class="hlm-role"><b>${esc(roleText(r))}</b><span>${esc(String(r.reach||'market').replaceAll('_',' '))}</span>${r.contracted_team?`<span>${esc(r.contracted_team)}</span>`:''}${evt?'<span class="hlm-fell-note">ECHL bid cleared without an ECHL contract</span>':''}</div>
+        ${Array.isArray(r.details?.price?.likely_band_M)&&r.details.price.likely_band_M.length>=2?`<div class="hlm-bidline">Projected band <b>${money(Number(r.details.price.likely_band_M[0])*1000000)} – ${money(Number(r.details.price.likely_band_M[1])*1000000)}</b></div>`:''}
+        ${r.details?.last?`<div class="hlm-bidline">Last sample <b>${esc([r.details.last.ppg!=null?r.details.last.ppg+' PPG':'',r.details.last.gp!=null?r.details.last.gp+' GP':'',r.details.last.pts!=null?r.details.last.pts+' PTS':'',r.details.last.sv!=null?r.details.last.sv+' SV%':'',r.details.last.gaa!=null?r.details.last.gaa+' GAA':''].filter(Boolean).join(' · ')||'—')}</b></div>`:''}
         ${echlBid!=null?`<div class="hlm-bidline">Current ECHL bid <b>${money(echlBid)}</b></div>`:''}
         <div class="hlm-actions">
-          <button type="button" class="hs-btn" data-hlm-open="${esc(r.player_name)}">Open in Scouting</button>
+          <button type="button" class="hs-btn" data-hlm-open="${esc(r.player_name)}">Open Full Profile</button>
           ${canWrite()&&isEligible(r)?`<button type="button" class="hs-btn" data-hlm-watch="${r.source_uid}">Watch</button><button type="button" class="hs-btn primary" data-hlm-bid="${r.source_uid}">Add to Bidding</button>`:''}
         </div>
       </article>`;
