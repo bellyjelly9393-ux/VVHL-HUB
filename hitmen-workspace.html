@@ -60,7 +60,7 @@
     </section>
 
     <section class="section-shell hm-command-deck" aria-label="Calgary Hitmen command stations" hidden>
-      <a class="hm-command-card" href="/calgary?tab=pool#hitmen-scouting"><span class="hm-command-icon">◉</span><small>PLAYER INTELLIGENCE</small><h3>Scouting HQ</h3><p>One place for the player market, target board, reports, ChelScout intel and the shared bidding board.</p></a>
+      <a class="hm-command-card" href="/calgary?tab=pool#hitmen-scouting"><span class="hm-command-icon">◉</span><small>PLAYER INTELLIGENCE</small><h3>Scouting HQ</h3><p>One place for the player market, target board, reports, market intelligence and the shared bidding board.</p></a>
       <a class="hm-command-card" href="hitmen-locker-room.html"><span class="hm-command-icon">♟</span><small>ROSTER + CAP</small><h3>Lineup Builder</h3><p>Build lines, test bidding combinations, track cost and save shared roster plans.</p></a>
       <a class="hm-command-card" href="vod-lab.html?team=calgary-hitmen"><span class="hm-command-icon">▶</span><small>SEPARATE VIDEO WORKFLOW</small><h3>VOD Scouting</h3><p>Period-by-period film review, markers, player evidence and game scouting reports.</p></a>
       <a class="hm-command-card" href="hitmen-gm-ai.html"><span class="hm-command-icon">AI</span><small>ASK · COMPARE · DECIDE</small><h3>GM MVP AI</h3><p>Database-first roster questions, player values, fit and target shortlists.</p></a>
@@ -99,30 +99,11 @@
     </section>
 
     <section class="section-shell hitmen-shell">
-      <div id="hitmenStatus" class="hitmen-status">Loading Calgary Hitmen War Room…</div>
-
-      <div class="hitmen-grid hm-people-grid">
-        <section class="hitmen-panel">
-          <div class="eyebrow">FRONT OFFICE COMMAND</div><h3>Management Group</h3>
-          <div id="hitmenPlayerList" class="hitmen-player-list"></div>
-          <div class="private-note">Owner, GM and AGM management access stays private and team-scoped.</div>
-          <div style="display:none" aria-hidden="true">
-            <input id="hitmenSearch" type="search"><select id="hitmenPosition"><option value="all">All</option></select>
-            <input id="newHitmenGamertag"><select id="newHitmenPosition"><option value="center">C</option></select><select id="newHitmenPlatform"><option value="xbox">Xbox</option></select><button id="addHitmenPlayer" type="button">Add</button>
-          </div>
-        </section>
-
-        <section class="hitmen-panel hm-duplicate-links" hidden aria-hidden="true">
-          <div class="eyebrow">QUICK LINKS</div><h3>Move Through The War Room</h3>
-          <div class="hm-quick-links">
-            <a href="/calgary?tab=pool#hitmen-scouting">Scouting HQ <span>→</span></a>
-            <a href="/calgary?tab=bids#hitmen-scouting">Shared Bidding Board <span>→</span></a>
-            <a href="hitmen-locker-room.html?mode=bidding">Bidding Lineup Simulator <span>→</span></a>
-            <a href="vod-lab.html?team=calgary-hitmen">VOD Scouting <span>→</span></a>
-            <a href="hitmen-gm-ai.html">GM MVP AI <span>→</span></a>
-            <a href="hitmen-opponents.html">Opponent Tracker <span>→</span></a>\n            <a href="hitmen-battle-plan.html">Battle Plan <span>→</span></a>
-          </div>
-        </section>
+      <div id="hitmenStatus" class="hitmen-status" hidden aria-live="polite">Loading Calgary Hitmen War Room…</div>
+      <div style="display:none" aria-hidden="true">
+        <div id="hitmenPlayerList"></div>
+        <input id="hitmenSearch" type="search"><select id="hitmenPosition"><option value="all">All</option></select>
+        <input id="newHitmenGamertag"><select id="newHitmenPosition"><option value="center">C</option></select><select id="newHitmenPlatform"><option value="xbox">Xbox</option></select><button id="addHitmenPlayer" type="button">Add</button>
       </div>
 
       <div style="display:none" aria-hidden="true">
@@ -167,10 +148,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
 <script src="backend.js"></script>
-<script src="management-guard.js"></script>
+<script src="management-guard.js?v=20260922-cleanup"></script>
 <script src="wildman-player-intelligence.js"></script>
-<script src="hitmen-scouting-bootstrap.js"></script>
-<script src="hitmen-chelscout-crawler.js"></script>\n<script src="hitmen-live-market.js"></script>
+<script src="hitmen-scouting-bootstrap.js?v=20260922-cleanup"></script>
+ <script src="hitmen-live-market.js"></script>
 <script src="script.js"></script>
 <script src="hitmen-workspace.js"></script>
 <script src="hitmen-game-center-sync.js"></script>
