@@ -436,9 +436,17 @@
 
   async function ensurePlayerInScouting(r,status='scouted'){
     const now=new Date().toISOString();
-    let q=await db().from('scouting_players').select('id,gamertag,primary_position,platform').ilike('gamertag',r.player_name).limit(5);
-    if(q.error)throw q.error;
-    let player=(q.data||[]).find(x=>String(x.gamertag).trim().toLowerCase()===String(r.player_name).trim().toLowerCase())||q.data?.[0];
+    let q,player=null;
+    if(r.scouting_player_id){
+      q=await db().from('scouting_players').select('id,gamertag,primary_position,platform').eq('id',r.scouting_player_id).maybeSingle();
+      if(q.error)throw q.error;
+      player=q.data||null;
+    }
+    if(!player){
+      q=await db().from('scouting_players').select('id,gamertag,primary_position,platform').ilike('gamertag',r.player_name).limit(5);
+      if(q.error)throw q.error;
+      player=(q.data||[]).find(x=>String(x.gamertag).trim().toLowerCase()===String(r.player_name).trim().toLowerCase())||q.data?.[0]||null;
+    }
     if(!player){
       q=await db().from('scouting_players').insert({
         gamertag:r.player_name,
