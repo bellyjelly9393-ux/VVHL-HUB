@@ -70,11 +70,20 @@
     if(preRows.length)return preRows;
     const externalRows=arr(latest(d?.external)?.raw_payload?.career);
     if(externalRows.length)return externalRows;
-    return arr(d?.history).map(h=>({
+    const historyRows=arr(d?.history).map(h=>({
       season:h.season,league:h.league,team:h.team_name,pos:h.position,
       gp:h.games_played,g:h.goals,a:h.assists,pts:h.points,ppg:h.ppg,plus_minus:h.plus_minus,
       ...(h.stats||{})
     }));
+    if(historyRows.length)return historyRows;
+    const live=d?.pool?.market_details||{},last=live?.last||{};
+    if(Object.keys(last).length)return [{
+      season:live.last_season||'—',
+      league:Number(live.last_league)===84?'ECHL':Number(live.last_league)===39?'CHL':'LG',
+      pos:live.pos||d?.pool?.scouting_players?.primary_position||'—',
+      gp:last.gp,pts:last.pts,ppg:last.ppg,plus_minus:last.plus_minus,sv:last.sv,gaa:last.gaa
+    }];
+    return [];
   }
 
   function marketModel(d){
@@ -179,7 +188,7 @@
 
   async function fetchData(poolId){
     const pool=await db().from('team_scouting_pool')
-      .select('id,scouting_player_id,status,priority,fit_grade,projected_role,target_bid,max_bid,management_note,updated_at,scouting_players(id,gamertag,platform,primary_position)')
+      .select('id,scouting_player_id,status,priority,fit_grade,projected_role,target_bid,max_bid,management_note,market_status,market_league,market_team,market_price,market_source,market_updated_at,is_biddable,market_details,updated_at,scouting_players(id,gamertag,platform,primary_position)')
       .eq('team_id',TEAM_ID).eq('id',poolId).single();
     if(pool.error)throw pool.error;
     const pid=pool.data.scouting_player_id;
