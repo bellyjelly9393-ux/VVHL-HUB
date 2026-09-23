@@ -17,3 +17,8 @@
 .hlm-position-filters::-webkit-scrollbar{display:none}
 .hlm-position-filters button{appearance:none;min-width:38px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:#130d12;color:#aaa0a8;padding:7px 9px;font-size:9px;font-weight:900;cursor:pointer}
 .hlm-position-filters button.active{border-color:rgba(239,68,68,.45);background:rgba(153,27,45,.25);color:#fff}
+
+.hlm-paging{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06);color:#8b8189;font-size:9px;font-weight:800}
+.hlm-paging>div{display:flex;gap:6px}
+.hlm-paging .hs-btn{min-height:32px;padding:0 10px;font-size:9px}
+@media(max-width:600px){.hlm-paging{align-items:flex-start;flex-direction:column}}
