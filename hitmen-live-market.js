@@ -5,7 +5,7 @@
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=v=>v==null?'—':'$'+Number(v).toLocaleString();
-  const M={rows:[],events:[],meta:null,filter:'eligible',position:'',sort:'score',search:'',page:1,pageSize:100,busy:false,timer:null,dbTimer:null};
+  const M={rows:[],events:[],meta:null,filter:'eligible',position:'',sort:'score',search:'',page:1,pageSize:100,busy:false,timer:null,dbTimer:null,serverBlocked:false,bridgeBound:false};
 
   function role(){
     if(String(auth().profile?.role||'').toLowerCase()==='admin')return'admin';
@@ -31,7 +31,15 @@
         <div><div class="eyebrow">FULL LIVE PLAYER MARKET</div><h3>Live Bidding Board</h3><p class="hs-msg">Search every player still eligible to be bid on, watch live ECHL movement, and add any player directly to Calgary's shared bidding board.</p></div>
         <div class="hlm-sync"><span id="hlmBadge" class="hs-tag">LOADING</span><button id="hlmSync" class="hs-btn primary" type="button">Refresh Live Market</button></div>
       </div>
-      <div class="hlm-meta"><span id="hlmUpdated">No snapshot yet</span><span id="hlmRev"></span><span>Auto-check: 1 min while open</span></div>
+      <div class="hlm-meta"><span id="hlmUpdated">No snapshot yet</span><span id="hlmRev"></span><span>Auto-check: 1 min while connected</span></div>
+      <details class="hlm-bridge">
+        <summary><span><b>Live Source Bridge</b><small>Use your authorized market tab for true live eligibility and bidding updates</small></span><strong id="hlmBridgeBadge">READY</strong></summary>
+        <div class="hlm-bridge-body">
+          <p>Wildman never receives your login cookie or password. The bridge reads the market response inside your already-authorized source tab, strips it to player/market fields, and sends only that snapshot back to this signed-in Calgary workspace.</p>
+          <div class="hlm-actions"><button id="hlmOpenSource" class="hs-btn" type="button">Open Market Source</button><button id="hlmCopyBridge" class="hs-btn primary" type="button">Copy Live Sync Bookmark</button></div>
+          <div id="hlmBridgeMsg" class="hs-msg">One-time setup for bidding night. Keep both tabs open after starting the bookmark.</div>
+        </div>
+      </details>
       <div class="hlm-kpis">
         <button type="button" data-hlm-filter="eligible"><small>ELIGIBLE PLAYERS</small><strong id="hlmEligible">0</strong></button>
         <button type="button" data-hlm-filter="echl_live"><small>ECHL LIVE BIDS</small><strong id="hlmEchlLive">0</strong></button>
@@ -86,7 +94,88 @@
     section.querySelectorAll('[data-hlm-position]').forEach(b=>b.onclick=()=>{M.position=b.dataset.hlmPosition||'';M.page=1;section.querySelectorAll('[data-hlm-position]').forEach(x=>x.classList.toggle('active',x===b));renderRows();});
     $('hlmPrev').onclick=()=>{if(M.page>1){M.page--;renderRows();}};
     $('hlmNext').onclick=()=>{M.page++;renderRows();};
+    $('hlmOpenSource').onclick=()=>window.open('https://chelscout.net/gm-hub','wildman-market-source');
+    $('hlmCopyBridge').onclick=copyBridgeBookmark;
+    bindBridgeListener();
     return true;
+  }
+
+  function rowKey(r){
+    return r.source_uid!=null?'live:'+String(r.source_uid):'pool:'+String(r.scouting_player_id||r.player_name||'');
+  }
+  function findRow(key){
+    return M.rows.find(r=>rowKey(r)===String(key||''))||null;
+  }
+  function bridgeMsg(text,badge){
+    if($('hlmBridgeMsg'))$('hlmBridgeMsg').textContent=text||'';
+    if($('hlmBridgeBadge')&&badge)$('hlmBridgeBadge').textContent=badge;
+  }
+  function liveBridgeBookmarklet(){
+    function runner(){
+      if(!/(^|\.)chelscout\.net$/i.test(location.hostname)){alert('Open the market source tab first.');return;}
+      if(window.__wildmanLiveTimer){alert('Wildman live sync is already running in this tab.');return;}
+      var TARGET='https://wildmanhockey-elitechelmedia.app';
+      function n(v){v=Number(v);return v===null||v===undefined||v===''||!isFinite(v)?null:v;}
+      function clean(r){
+        var contracted=r&&r.contracted&&typeof r.contracted==='object'?{M:n(r.contracted.M),league_id:n(r.contracted.league_id),season:n(r.contracted.season),seasons:n(r.contracted.seasons),team:r.contracted.team?String(r.contracted.team):null,type:r.contracted.type?String(r.contracted.type):null}:null;
+        var bid=r&&r.bid_elsewhere&&typeof r.bid_elsewhere==='object'?{M:n(r.bid_elsewhere.M),league_id:n(r.bid_elsewhere.league_id)}:null;
+        var price=r&&r.price&&typeof r.price==='object'?{likely_M:n(r.price.likely_M),likely_band_M:Array.isArray(r.price.likely_band_M)?r.price.likely_band_M.slice(0,2).map(n):null,likely_basis:r.price.likely_basis?String(r.price.likely_basis).slice(0,500):null,live_bid_M:n(r.price.live_bid_M),top_of_pool:r.price.top_of_pool===true}:{live_bid_M:null,likely_M:null};
+        var role=r&&r.role&&typeof r.role==='object'?{band:r.role.band||null,chip:r.role.chip||null,league:r.role.league||null,group:r.role.group||null,view:r.role.view&&typeof r.role.view==='object'?{band:r.role.view.band||null,chip:r.role.view.chip||null,clears:r.role.view.clears||null,receipt:r.role.view.receipt?String(r.role.view.receipt).slice(0,260):null}:null}:null;
+        var last=r&&r.last&&typeof r.last==='object'?{gp:n(r.last.gp),pts:n(r.last.pts),ppg:n(r.last.ppg),plus_minus:n(r.last.plus_minus),sv:n(r.last.sv),gaa:n(r.last.gaa),record:r.last.record||null}:null;
+        return {uid:n(r.uid),name:r.name?String(r.name):'',pos:r.pos?String(r.pos):null,server:r.server?String(r.server):null,console:r.console?String(r.console):null,bid_elsewhere:bid,contracted:contracted,off_auction:r.off_auction===true,reach:r.reach?String(r.reach):null,score:n(r.score),last_league:n(r.last_league),last_season:n(r.last_season),price:price,role:role,last:last,tags:Array.isArray(r.tags)?r.tags.slice(0,16).map(String):[]};
+      }
+      async function send(){
+        try{
+          var res=await fetch('/gm-hub/api/bid-board',{credentials:'include',headers:{accept:'application/json'},cache:'no-store'});
+          var body=await res.json();
+          if(!res.ok||!body||!Array.isArray(body.rows))throw new Error('Market response unavailable');
+          var rows=body.rows.map(clean).filter(function(r){return r.uid&&r.name;});
+          var payload={type:'WILDMAN_LIVE_MARKET',data:{auction_ran:body.auction_ran===true,bids_updated:body.bids_updated||null,board_rev:body.board_rev||body.bids_updated||null,row_total:Number(body.row_total||body.rows.length||0),rows:rows}};
+          var w=window.opener&&!window.opener.closed?window.opener:window.open(TARGET+'/calgary?tab=live#hitmen-scouting','wildmanLiveBridge');
+          if(!w)throw new Error('Allow the Wildman popup once');
+          setTimeout(function(){w.postMessage(payload,TARGET);},w===window.opener?0:1400);
+          document.title='● LIVE · '+document.title.replace(/^● LIVE · /,'');
+        }catch(e){console.error(e);alert('Wildman live sync could not read the market. '+(e.message||''));}
+      }
+      send();
+      window.__wildmanLiveTimer=setInterval(send,60000);
+      alert('Wildman live sync started. Keep this market tab and the Wildman tab open.');
+    }
+    return 'javascript:('+runner.toString()+')();';
+  }
+  async function copyBridgeBookmark(){
+    try{
+      await navigator.clipboard.writeText(liveBridgeBookmarklet());
+      bridgeMsg('Copied. Save it as a bookmark named “Wildman Live Sync”, open the market source from this page, then tap that bookmark once. It will update Wildman every minute while both tabs stay open.','COPIED');
+    }catch(e){
+      bridgeMsg('Clipboard access was blocked. Use a browser that allows copying bookmark URLs.','COPY BLOCKED');
+    }
+  }
+  async function applyBridgePayload(data){
+    if(!canWrite()||!db()||!auth().user||!Array.isArray(data?.rows))return;
+    if(data.rows.length>6000){bridgeMsg('Live snapshot rejected because it was unexpectedly large.','REJECTED');return;}
+    bridgeMsg('Applying live market snapshot…','SYNCING');
+    const rpc=await db().rpc('apply_hitmen_live_market_snapshot',{
+      p_team_id:TEAM_ID,
+      p_board_rev:data.board_rev||data.bids_updated||new Date().toISOString(),
+      p_source_updated_at:data.bids_updated||new Date().toISOString(),
+      p_auction_ran:data.auction_ran===true,
+      p_row_total:Number(data.row_total||data.rows.length||0),
+      p_rows:data.rows
+    });
+    if(rpc.error){bridgeMsg(rpc.error.message||'Could not apply live snapshot.','ERROR');return;}
+    M.serverBlocked=true;
+    await load();
+    bridgeMsg('Live source connected · '+Number(data.rows.length||0).toLocaleString()+' market players received.','LIVE');
+  }
+  function bindBridgeListener(){
+    if(M.bridgeBound)return;
+    M.bridgeBound=true;
+    window.addEventListener('message',e=>{
+      if(!['https://chelscout.net','https://www.chelscout.net'].includes(e.origin))return;
+      if(e.data?.type!=='WILDMAN_LIVE_MARKET')return;
+      applyBridgePayload(e.data.data).catch(err=>bridgeMsg(err.message||'Live bridge failed.','ERROR'));
+    });
   }
 
   function statusLabel(s){
