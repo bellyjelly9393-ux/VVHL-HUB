@@ -173,15 +173,28 @@
   }
   function msg(t){if($('hlmStatus'))$('hlmStatus').textContent=t||'';}
 
+  async function loadAllPlayers(){
+    const all=[];const batch=1000;
+    for(let from=0;;from+=batch){
+      const q=await db().from('hitmen_live_market_players').select('*').eq('team_id',TEAM_ID).eq('season',55).order('player_name',{ascending:true}).range(from,from+batch-1);
+      if(q.error)throw q.error;
+      all.push(...(q.data||[]));
+      if((q.data||[]).length<batch)break;
+    }
+    return all;
+  }
+
   async function load(){
     if(!db()||!auth().user||!role())return;
-    const [rows,events,meta]=await Promise.all([
-      db().from('hitmen_live_market_players').select('*').eq('team_id',TEAM_ID).eq('season',55),
-      db().from('hitmen_live_market_events').select('*').eq('team_id',TEAM_ID).eq('season',55).order('observed_at',{ascending:false}).limit(60),
-      db().from('hitmen_live_market_meta').select('*').eq('team_id',TEAM_ID).eq('season',55).maybeSingle()
-    ]);
-    const err=rows.error||events.error||meta.error;if(err){msg(err.message);return;}
-    M.rows=rows.data||[];M.events=events.data||[];M.meta=meta.data||null;render();
+    try{
+      const [players,events,meta]=await Promise.all([
+        loadAllPlayers(),
+        db().from('hitmen_live_market_events').select('*').eq('team_id',TEAM_ID).eq('season',55).order('observed_at',{ascending:false}).limit(60),
+        db().from('hitmen_live_market_meta').select('*').eq('team_id',TEAM_ID).eq('season',55).maybeSingle()
+      ]);
+      const err=events.error||meta.error;if(err)throw err;
+      M.rows=players;M.events=events.data||[];M.meta=meta.data||null;render();
+    }catch(e){msg(e.message||'Could not load the full live player market.');}
   }
 
   async function sync(manual=false){
@@ -202,7 +215,7 @@
       if(rpc.error)throw rpc.error;
       await load();
       const x=rpc.data||{};
-      msg(x.changed===false?'Market checked. No new board revision yet.':`Market synced ✓ ${x.players||0} watched rows · ${x.events||0} new change${Number(x.events||0)===1?'':'s'}.`);
+      msg(x.changed===false?'Market checked. No source changes yet.':`Market synced ✓ ${Number(x.players||0).toLocaleString()} source players · ${M.rows.filter(isEligible).length.toLocaleString()} eligible · ${x.events||0} new change${Number(x.events||0)===1?'':'s'}.`);
     }catch(e){
       console.error(e);
       msg((e.message||'Live refresh failed.')+' Existing shared market snapshot was kept.');
