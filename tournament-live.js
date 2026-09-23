@@ -3,13 +3,18 @@
   const KEY='sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
   const db=window.VVHLBackend?.db || (window.supabase?window.supabase.createClient(URL,KEY):null);
   if(!db) return;
-  const S={events:[],teams:[],players:[],games:[],teamStats:[],playerStats:[]};
+  const S={events:[],teams:[],players:[],games:[],teamStats:[],playerStats:[],eventTeams:[],rosters:[],rankings:[]};
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[c]);
   const team=id=>S.teams.find(x=>x.id===id);
   const event=id=>S.events.find(x=>x.id===id);
   const player=id=>S.players.find(x=>x.id===id);
+  const eventTeam=(eventId,teamId)=>S.eventTeams.find(x=>x.event_id===eventId&&x.team_id===teamId);
+  const rosterPos=(eventId,playerId)=>S.rosters.find(x=>x.event_id===eventId&&x.player_id===playerId)?.position||player(playerId)?.primary_position||'';
   const fmt=v=>v?new Date(v).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'TBD';
+  const fmtTime=v=>v?new Date(v).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'TBD';
+  const teamLogo=t=>t?.logo_url?`<img src="${esc(t.logo_url)}" alt="${esc(t.name)} logo">`:`<span class="pro-live-fallback">${esc((t?.abbreviation||t?.name||'T').split(/\s+/).map(x=>x[0]).join('').slice(0,3))}</span>`;
+  const teamHref=t=>t?.slug==='wildman-hockey'?'team.html':`esports-team.html?team=${encodeURIComponent(t?.slug||'')}`;
   const score=g=>g.status==='scheduled'?'VS':`${g.home_score??0}-${g.away_score??0}`;
   const statusRank={live:0,scheduled:1,final:2,postponed:3,cancelled:4};
   const gameHref=g=>`live-game.html?id=${encodeURIComponent(g.id)}`;
@@ -53,18 +58,77 @@
   function roadEvent(){return S.events.find(e=>e.slug==='road-to-pro-2026');}
   function renderSchedule(){
     const root=$('proSeriesSchedule'),e=roadEvent(); if(!root||!e)return;
-    const rows=S.games.filter(g=>g.event_id===e.id).sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));
-    root.innerHTML=rows.length?`<div class="game-list">${rows.map(gameCard).join('')}</div>`:'<div class="empty-state">Official schedule has not been imported yet.</div>';
+    const rows=S.games.filter(g=>g.event_id===e.id&&g.round_label==='Week 3').sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0)||a.broadcast_order-b.broadcast_order);
+    if(!rows.length){root.innerHTML='<div class="empty-state">Official schedule has not been imported yet.</div>';return;}
+    const groups=[];
+    for(const g of rows){
+      const key=new Date(g.scheduled_at).toISOString().slice(0,16);
+      let bucket=groups.find(x=>x.key===key);
+      if(!bucket){bucket={key,label:fmtTime(g.scheduled_at),rows:[]};groups.push(bucket);}
+      bucket.rows.push(g);
+    }
+    const active=groups[0]?.key||'';
+    root.innerHTML=`
+      <div class="pro-time-tabs">${groups.map((g,i)=>`<button type="button" class="${i===0?'active':''}" data-pro-slot="${esc(g.key)}">${esc(g.label)}</button>`).join('')}</div>
+      <div class="pro-schedule-meta"><strong>WEEK 3 · SEPTEMBER 23</strong><span>16 games per time slot · 64 matchups loaded</span></div>
+      ${groups.map((g,i)=>`<div class="pro-matchup-grid" data-pro-slot-panel="${esc(g.key)}" ${i?'hidden':''}>${g.rows.map(game=>{
+        const home=team(game.home_team_id),away=team(game.away_team_id);
+        const wild=home?.slug==='wildman-hockey'||away?.slug==='wildman-hockey';
+        return `<a class="pro-matchup-card ${wild?'is-wildman':''}" href="${gameHref(game)}">
+          <div class="pro-match-team">${teamLogo(away)}<span>${esc(away?.name||'TBD')}</span></div>
+          <div class="pro-match-mid"><b>@</b><small>${esc(fmtTime(game.scheduled_at))}</small></div>
+          <div class="pro-match-team home">${teamLogo(home)}<span>${esc(home?.name||'TBD')}</span></div>
+          <em>${game.status==='scheduled'?'GAME CENTER →':game.status==='live'?'LIVE NOW →':'FINAL →'}</em>
+        </a>`;
+      }).join('')}</div>`).join('')}`;
+    root.querySelectorAll('[data-pro-slot]').forEach(btn=>btn.onclick=()=>{
+      root.querySelectorAll('[data-pro-slot]').forEach(x=>x.classList.toggle('active',x===btn));
+      root.querySelectorAll('[data-pro-slot-panel]').forEach(p=>p.hidden=p.dataset.proSlotPanel!==btn.dataset.proSlot);
+    });
   }
   function renderStandings(){
-    const root=$('proStandings'),e=roadEvent(); if(!root||!e)return;
-    const rows=S.teamStats.filter(x=>x.event_id===e.id).sort((a,b)=>(a.seed??999)-(b.seed??999)||b.points-a.points);
-    root.innerHTML=rows.length?`<div class="wm-table-wrap"><table class="wm-table standings-table"><thead><tr><th>#</th><th>Team</th><th>GP</th><th>W</th><th>L</th><th>OTL</th><th>GF</th><th>GA</th><th>GD</th><th>PTS</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${r.seed??i+1}</td><td><a href="${team(r.team_id)?.slug==='wildman-hockey'?'team.html':`esports-team.html?team=${encodeURIComponent(team(r.team_id)?.slug||'')}`}">${esc(team(r.team_id)?.name||'Team')}</a></td><td>${r.games_played}</td><td>${r.wins}</td><td>${r.losses}</td><td>${r.ot_losses}</td><td>${r.goals_for}</td><td>${r.goals_against}</td><td>${r.goals_for-r.goals_against}</td><td><b>${r.points}</b></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state">Standings will populate from finalized tournament games.</div>';
+    const root=$('proStandings'),divRoot=$('proDivisions'),e=roadEvent(); if(!e)return;
+    if(root){
+      const races=['Race 1','Race 2','Race 3','Race 4'];
+      root.innerHTML=`<div class="pro-race-grid">${races.map(race=>{
+        const ids=S.eventTeams.filter(x=>x.event_id===e.id&&x.group_name===race).map(x=>x.team_id);
+        const rows=S.teamStats.filter(x=>x.event_id===e.id&&ids.includes(x.team_id)).sort((a,b)=>b.points-a.points||b.wins-a.wins||((b.goals_for-b.goals_against)-(a.goals_for-a.goals_against))||(a.seed??99)-(b.seed??99));
+        return `<section class="pro-race-card"><div class="pro-race-head"><small>REGULAR SEASON</small><h3>${esc(race)}</h3></div><div class="wm-table-wrap"><table class="wm-table standings-table"><thead><tr><th>#</th><th>Team</th><th>GP</th><th>W</th><th>L</th><th>OTL</th><th>GD</th><th>PTS</th></tr></thead><tbody>${rows.map((r,i)=>{
+          const t=team(r.team_id); return `<tr class="${t?.slug==='wildman-hockey'?'is-wildman':''}"><td>${i+1}</td><td><a class="pro-stand-team" href="${teamHref(t)}">${teamLogo(t)}<span>${esc(t?.name||'Team')}</span></a></td><td>${r.games_played}</td><td>${r.wins}</td><td>${r.losses}</td><td>${r.ot_losses}</td><td>${r.goals_for-r.goals_against}</td><td><b>${r.points}</b></td></tr>`;
+        }).join('')}</tbody></table></div></section>`;
+      }).join('')}</div>`;
+    }
+    if(divRoot){
+      const divisions=[1,2,3];
+      divRoot.innerHTML=`<div class="pro-division-stack">${divisions.map(div=>{
+        const rows=S.rankings.filter(x=>x.event_id===e.id&&x.division===div).sort((a,b)=>a.rank-b.rank);
+        return `<section class="pro-division-card division-${div}"><div class="pro-division-head"><div><small>ESHL HISTORY · PRO SERIES FIELD</small><h3>DIVISION ${div}</h3></div><span>${rows.length} TEAMS</span></div><div class="wm-table-wrap"><table class="wm-table"><thead><tr><th>Rank</th><th>Team</th><th>ESHL Pts</th><th>Events</th><th>Record</th><th>Top 8</th></tr></thead><tbody>${rows.map(r=>{
+          const t=team(r.team_id); return `<tr class="${t?.slug==='wildman-hockey'?'is-wildman':''}"><td><b>#${r.rank}</b></td><td><a class="pro-stand-team" href="${teamHref(t)}">${teamLogo(t)}<span>${esc(t?.name||'Team')}</span></a></td><td><b>${Number(r.eshl_points||0).toLocaleString()}</b></td><td>${r.events||0}</td><td>${esc(r.career_record||'0-0-0')}</td><td>${r.top8||0}</td></tr>`;
+        }).join('')}</tbody></table></div></section>`;
+      }).join('')}</div>`;
+    }
   }
   function renderLeaderboard(){
-    const root=$('proLeaderboard'),e=roadEvent(); if(!root||!e)return;
-    const rows=S.playerStats.filter(x=>x.event_id===e.id).sort((a,b)=>b.points-a.points||b.goals-a.goals).slice(0,100);
-    root.innerHTML=rows.length?`<div class="wm-table-wrap"><table class="wm-table"><thead><tr><th>GT</th><th>Team</th><th>GP</th><th>G</th><th>A</th><th>P</th><th>+/-</th><th>Shots</th></tr></thead><tbody>${rows.map(r=>`<tr><td><a href="esports-player.html?id=${encodeURIComponent(r.player_id)}">${esc(player(r.player_id)?.gamertag||'Player')}</a></td><td>${esc(team(r.team_id)?.name||'—')}</td><td>${r.games_played}</td><td>${r.goals}</td><td>${r.assists}</td><td><b>${r.points}</b></td><td>${r.plus_minus??'—'}</td><td>${r.shots??'—'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty-state">Player leaderboard will populate as game stats are entered.</div>';
+    const skaterRoot=$('proSkaterLeaderboard'),goalieRoot=$('proGoalieLeaderboard'),e=roadEvent(); if(!e)return;
+    const eventRows=S.playerStats.filter(x=>x.event_id===e.id);
+    const isGoalie=r=>{
+      const pos=String(rosterPos(e.id,r.player_id)||'').toUpperCase();
+      return pos==='G'||Number(r.goalie_shots||0)>0||Number(r.goalie_saves||0)>0;
+    };
+    if(skaterRoot){
+      const rows=eventRows.filter(r=>!isGoalie(r)).sort((a,b)=>b.points-a.points||b.goals-a.goals||b.assists-a.assists||(b.plus_minus||0)-(a.plus_minus||0)).slice(0,100);
+      skaterRoot.innerHTML=rows.length?`<div class="wm-table-wrap"><table class="wm-table pro-leader-table"><thead><tr><th>#</th><th>Skater</th><th>Team</th><th>GP</th><th>G</th><th>A</th><th>P</th><th>P/GP</th><th>+/-</th><th>S</th></tr></thead><tbody>${rows.map((r,i)=>{
+        const p=player(r.player_id),t=team(r.team_id),ppg=r.games_played?Number(r.points||0)/r.games_played:0;
+        return `<tr><td><b>${i+1}</b></td><td><a href="esports-player.html?id=${encodeURIComponent(r.player_id)}">${esc(p?.gamertag||'Player')}</a><small class="pro-leader-pos">${esc(rosterPos(e.id,r.player_id)||'F')}</small></td><td><a class="pro-stand-team compact" href="${teamHref(t)}">${teamLogo(t)}<span>${esc(t?.name||'—')}</span></a></td><td>${r.games_played}</td><td>${r.goals}</td><td>${r.assists}</td><td><b>${r.points}</b></td><td>${ppg.toFixed(2)}</td><td>${r.plus_minus??'—'}</td><td>${r.shots??'—'}</td></tr>`;
+      }).join('')}</tbody></table></div>`:'<div class="empty-state">Skater leaderboard is wired and ready. It will populate automatically as Week 3 game stats are finalized.</div>';
+    }
+    if(goalieRoot){
+      const rows=eventRows.filter(isGoalie).sort((a,b)=>b.wins-a.wins||(Number(b.save_pct)||0)-(Number(a.save_pct)||0)||(a.goalie_goals_against||999)-(b.goalie_goals_against||999)).slice(0,50);
+      goalieRoot.innerHTML=rows.length?`<div class="wm-table-wrap"><table class="wm-table pro-leader-table"><thead><tr><th>#</th><th>Goalie</th><th>Team</th><th>GP</th><th>W</th><th>L</th><th>OTL</th><th>Shots</th><th>Saves</th><th>GA</th><th>SV%</th></tr></thead><tbody>${rows.map((r,i)=>{
+        const p=player(r.player_id),t=team(r.team_id),pct=r.save_pct!=null?Number(r.save_pct):(r.goalie_shots?Number(r.goalie_saves||0)/Number(r.goalie_shots):null);
+        return `<tr><td><b>${i+1}</b></td><td><a href="esports-player.html?id=${encodeURIComponent(r.player_id)}">${esc(p?.gamertag||'Goalie')}</a></td><td><a class="pro-stand-team compact" href="${teamHref(t)}">${teamLogo(t)}<span>${esc(t?.name||'—')}</span></a></td><td>${r.games_played}</td><td><b>${r.wins}</b></td><td>${r.losses}</td><td>${r.ot_losses}</td><td>${r.goalie_shots??'—'}</td><td>${r.goalie_saves??'—'}</td><td>${r.goalie_goals_against??'—'}</td><td><b>${pct==null?'—':(pct*100).toFixed(1)+'%'}</b></td></tr>`;
+      }).join('')}</tbody></table></div>`:'<div class="empty-state">Goalie leaderboard is wired and ready. Wins, saves and save percentage will appear automatically after finalized games.</div>';
+    }
   }
   function renderCounts(){
     const e=roadEvent(); if(!e)return; const games=S.games.filter(g=>g.event_id===e.id); const set=(id,v)=>{if($(id))$(id).textContent=v;};
@@ -72,11 +136,24 @@
   }
 
   async function load(){
-    const [events,teams,players,games,teamStats,playerStats]=await Promise.all([
-      db.from('esports_events').select('*').eq('active',true),db.from('esports_teams').select('*').eq('active',true),db.from('esports_players').select('*').eq('active',true),db.from('esports_games').select('*'),db.from('esports_team_event_stats').select('*'),db.from('esports_player_event_stats').select('*')
+    const [events,teams,players,games,teamStats,playerStats,eventTeams,rosters,rankings]=await Promise.all([
+      db.from('esports_events').select('*').eq('active',true),
+      db.from('esports_teams').select('*').eq('active',true),
+      db.from('esports_players').select('*').eq('active',true),
+      db.from('esports_games').select('*'),
+      db.from('esports_team_event_stats').select('*'),
+      db.from('esports_player_event_stats').select('*'),
+      db.from('esports_event_teams').select('*'),
+      db.from('esports_event_rosters').select('*').eq('active',true),
+      db.from('esports_event_rankings').select('*')
     ]);
-    if([events,teams,players,games,teamStats,playerStats].some(x=>x.error)){console.error('Tournament live refresh failed',[events.error,teams.error,players.error,games.error,teamStats.error,playerStats.error]);return;}
-    Object.assign(S,{events:events.data||[],teams:teams.data||[],players:players.data||[],games:games.data||[],teamStats:teamStats.data||[],playerStats:playerStats.data||[]});
+    const all=[events,teams,players,games,teamStats,playerStats,eventTeams,rosters,rankings];
+    if(all.some(x=>x.error)){console.error('Tournament live refresh failed',all.map(x=>x.error));return;}
+    Object.assign(S,{
+      events:events.data||[],teams:teams.data||[],players:players.data||[],games:games.data||[],
+      teamStats:teamStats.data||[],playerStats:playerStats.data||[],eventTeams:eventTeams.data||[],
+      rosters:rosters.data||[],rankings:rankings.data||[]
+    });
     renderFeatured();renderBoard();renderSchedule();renderStandings();renderLeaderboard();renderCounts();
     const stamp=$('liveRefreshStamp'); if(stamp)stamp.textContent=`Updated ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})}`;
   }
