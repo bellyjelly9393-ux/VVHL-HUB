@@ -58,20 +58,9 @@
         </div>
         <div id="hsTargetEmpty" class="hs-empty" hidden>No targets yet. Mark players Watch, Priority or Bid Target from their profile.</div>
       </section>
-      <details class="hs-card hs-utility-drawer" hidden aria-hidden="true">
-        <summary><span><b>ChelScout Sync Tools</b><small>Open only when you need to import a player report</small></span><span id="hsChelSyncBadge" class="hs-tag">READY</span></summary>
-        <div class="hs-utility-body">
-          <p class="hs-msg">Sync a ChelScout player report you legitimately opened into the matching Calgary profile without sending ChelScout cookies or passwords to Wildman.</p>
-          <div class="hs-actions">
-            <button id="hsCopyChelSync" class="hs-btn primary" type="button">Copy “Send to Wildman” Bookmark</button>
-            <a class="hs-btn" href="https://chelscout.net/scout/player" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;text-decoration:none">Open ChelScout Player Scout ↗</a>
-          </div>
-          <div id="hsChelSyncMsg" class="hs-msg" style="margin-top:9px">Save the copied JavaScript as a browser bookmark URL once. On an exact ChelScout player report, tap that bookmark to send the report here.</div>
-        </div>
-      </details>
     </div>
 
-        <div class="hs-pane active" data-hs-pane="pool">
+    <div class="hs-pane active" data-hs-pane="pool">
       <section class="hs-card hs-market-card">
         <div class="hs-market-top">
           <div>
@@ -157,10 +146,8 @@
             <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1)">
               <div class="hs-card-head"><h3>Market Intelligence</h3><span id="hsIntelMeta" class="hs-msg"></span></div>
               <div id="hsIntelView" class="hs-empty" style="text-align:left">No market intelligence available for this player yet.</div>
-              <details style="margin-top:12px" hidden aria-hidden="true"><summary style="cursor:pointer;font-weight:700">Import External Scout JSON</summary><p class="hs-msg">Paste the JSON response from your authorized ChelScout GM Hub scout request. It stays private to Calgary management.</p><textarea id="hsChelScoutJson" class="hs-textarea" style="min-height:150px" placeholder='{"availability":...,"career":[...],"dna":...}'></textarea><div class="hs-actions"><button id="hsChelScoutImport" class="hs-btn primary" type="button">Import Intelligence</button><span id="hsChelScoutMsg" class="hs-msg"></span></div></details>
               <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">
                 <div class="hs-card-head"><h3>Imported Reports</h3><span id="hsExternalReportMeta" class="hs-msg"></span></div><div id="hsExternalReports" class="hs-reports"></div><div id="hsExternalReportEmpty" class="hs-empty">No imported scouting reports for this player yet.</div>
-                <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">Import ChelScout reports JSON</summary><p class="hs-msg">Paste the report response from your authorized ChelScout session. Arrays, reports, or data payloads are accepted. Your ChelScout login cookie is never stored.</p><textarea id="hsChelScoutReportsJson" class="hs-textarea" style="min-height:150px" placeholder='{"reports":[...]}'></textarea><div class="hs-actions"><button id="hsChelScoutReportsImport" class="hs-btn primary" type="button">Import Reports</button><span id="hsChelScoutReportsMsg" class="hs-msg"></span></div></details>
               </div>
             </div>
           </div>
@@ -254,18 +241,10 @@
     s.src = 'hitmen-scouting.js';
     s.dataset.hitmenScoutingJs = '1';
     document.body.appendChild(s);
-    const sync = document.createElement('script');
-    sync.src = 'hitmen-chelscout-sync.js';
-    sync.dataset.hitmenChelScoutSync = '1';
-    document.body.appendChild(sync);
     const dossier = document.createElement('script');
     dossier.src = 'hitmen-player-dossier.js';
     dossier.dataset.hitmenPlayerDossier = '1';
     document.body.appendChild(dossier);
-    const market = document.createElement('script');
-    market.src = 'hitmen-market-import.js';
-    market.dataset.hitmenMarketImport = '1';
-    document.body.appendChild(market);
   };
 
   let claimBusy = false;
