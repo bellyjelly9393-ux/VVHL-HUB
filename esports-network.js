@@ -46,7 +46,32 @@
   const initials = (name) => String(name || "WH").split(/\s+/).map(x => x[0]).join("").slice(0,3).toUpperCase();
   const teamMark = (team) => team?.logo_url
     ? `<img class="network-team-logo" src="${esc(team.logo_url)}" alt="${esc(team.name)} logo">`
-    : `<div class="network-team-mark">${esc(team?.abbreviation || initials(team?.name))}</div>`;
+    : `<div class="network-team-mark network-team-mark-fallback" title="Team logo pending">${esc(team?.abbreviation || initials(team?.name))}</div>`;
+
+  const teamMini = (team) => team?.logo_url
+    ? `<img class="network-team-mini-logo" src="${esc(team.logo_url)}" alt="" aria-hidden="true">`
+    : `<span class="network-team-mini-mark">${esc(team?.abbreviation || initials(team?.name))}</span>`;
+
+  const roleLabel = (role) => {
+    const value = String(role || "").toLowerCase();
+    if (value === "owner") return "OWNER";
+    if (value === "gm") return "GM";
+    if (value === "agm") return "AGM";
+    if (value === "captain") return "CAPTAIN";
+    return "";
+  };
+
+  const rosterPreview = (roster) => {
+    const ordered = [...roster].sort((a,b) => {
+      const order = {LW:1,C:2,RW:3,LD:4,RD:5,G:6,UTL:7};
+      return (order[a.position] || 99) - (order[b.position] || 99);
+    });
+    return ordered.slice(0,7).map(r => {
+      const p = playerById(r.player_id);
+      const pos = r.position || p?.primary_position || "TBD";
+      return `<span class="pro-roster-chip"><b>${esc(pos)}</b><em>${esc(p?.gamertag || "Player")}</em></span>`;
+    }).join("");
+  };
   const playerVisual = (player) => {
     const src = coreImages[lower(player?.gamertag)];
     return src
@@ -160,7 +185,18 @@
         const team = teamById(entry.team_id);
         if (!team) return "";
         const roster = rosterForTeam(team.id, event.id);
-        return `<a class="network-team-card" href="${esc(teamHref(team))}">${teamMark(team)}<div><small>${team.is_owned ? "Wildman Entry" : "Tournament Team"}</small><h3>${esc(team.name)}</h3><p>${roster.length} rostered player${roster.length === 1 ? "" : "s"}${entry.group_name ? ` · ${esc(entry.group_name)}` : ""}</p><b>OPEN ROSTER →</b></div></a>`;
+        const management = roster.filter(r => roleLabel(r.roster_role)).map(r => roleLabel(r.roster_role));
+        const roles = [...new Set(management)].join(" · ");
+        return `<a class="network-team-card pro-team-card ${team.is_owned ? "is-wildman" : ""}" href="${esc(teamHref(team))}">
+          <div class="pro-team-crest">${teamMark(team)}<span>${team.logo_url ? "TEAM CREST" : "LOGO SLOT"}</span></div>
+          <div class="pro-team-copy">
+            <small>${team.is_owned ? "WILDMAN ENTRY" : "PRO SERIES · SEASON 14"}</small>
+            <h3>${esc(team.name)}</h3>
+            <div class="pro-team-meta"><span>${roster.length} PLAYERS</span>${roles ? `<span>${esc(roles)}</span>` : ""}${entry.group_name ? `<span>${esc(entry.group_name)}</span>` : ""}</div>
+            <div class="pro-roster-preview">${rosterPreview(roster)}</div>
+            <b>OPEN TEAM HUB →</b>
+          </div>
+        </a>`;
       }).join("")}</div>${eventTeams.length <= 1 ? `<div class="network-note">Only Wildman Hockey is loaded right now. The rest of the field will appear automatically after the official tournament roster import.</div>` : ""}` : `<div class="empty-state">Official tournament teams have not been imported yet.</div>`;
     }
 
@@ -172,7 +208,7 @@
       const rows = state.stats.filter(x => x.event_id === event.id).sort((a,b) => (b.points || 0) - (a.points || 0) || (b.goals || 0) - (a.goals || 0));
       leaderboard.innerHTML = rows.length ? `<div class="wm-table-wrap"><table class="wm-table"><thead><tr><th>GT</th><th>Team</th><th>GP</th><th>G</th><th>A</th><th>P</th><th>+/-</th></tr></thead><tbody>${rows.map(s => {
         const p = playerById(s.player_id); const t = teamById(s.team_id);
-        return `<tr><td><a href="${esc(playerHref(p))}">${esc(p?.gamertag || "Player")}</a></td><td>${esc(t?.name || "—")}</td><td>${s.games_played || 0}</td><td>${s.goals || 0}</td><td>${s.assists || 0}</td><td><b>${s.points || 0}</b></td><td>${s.plus_minus ?? "—"}</td></tr>`;
+        return `<tr><td><a href="${esc(playerHref(p))}">${esc(p?.gamertag || "Player")}</a></td><td><span class="network-team-inline">${teamMini(t)}<span>${esc(t?.name || "—")}</span></span></td><td>${s.games_played || 0}</td><td>${s.goals || 0}</td><td>${s.assists || 0}</td><td><b>${s.points || 0}</b></td><td>${s.plus_minus ?? "—"}</td></tr>`;
       }).join("")}</tbody></table></div>` : `<div class="empty-state">Tournament player stats will populate here as soon as the event feed starts producing results.</div>`;
     }
 
@@ -235,14 +271,44 @@
     const roster = currentEventEntry ? rosterForTeam(team.id, currentEventEntry.id) : permanent;
     const games = state.games.filter(g => g.home_team_id === team.id || g.away_team_id === team.id);
     document.title = `${team.name} | Wildman Esports Network`;
-    root.innerHTML = `<a class="profile-back" href="esports-hub.html">← Back to Esports Hub</a><div class="network-profile-head">${teamMark(team)}<div><div class="eyebrow">${team.is_owned ? "WILDMAN ORGANIZATION" : "ESPORTS TEAM"}</div><h1>${esc(team.name)}</h1><p>${esc(currentEventEntry?.name || (team.team_type === "academy" ? "Wildman development roster" : "Esports team profile"))}</p></div></div><div class="hub-tabs"><a href="#roster">Roster</a><a href="#stats">Tournament Stats</a><a href="#games">Games</a></div><section id="roster" class="profile-section"><div class="section-heading"><div><div class="eyebrow">ROSTER</div><h2>${esc(currentEventEntry?.name || "CURRENT TEAM")}</h2></div></div>${roster.length ? rosterTable(roster,currentEventEntry?.id) : `<div class="empty-state">No roster has been imported for this team yet.</div>`}</section><section id="stats" class="profile-section"><div class="section-heading"><div><div class="eyebrow">PERFORMANCE</div><h2>TOURNAMENT STATS</h2></div></div>${teamStatsTable(team.id,currentEventEntry?.id)}</section><section id="games" class="profile-section"><div class="section-heading"><div><div class="eyebrow">SCHEDULE + RESULTS</div><h2>GAME CENTER</h2></div></div><div class="game-list">${games.length ? games.map(gameCard).join("") : `<div class="empty-state">No games loaded for this team yet.</div>`}</div></section>`;
+    const managerRows = roster.filter(r => roleLabel(r.roster_role));
+    root.innerHTML = `<a class="profile-back" href="pro-series.html">← Back to Pro Series</a>
+      <div class="network-profile-head pro-team-profile-head">
+        <div class="pro-profile-crest">${teamMark(team)}</div>
+        <div>
+          <div class="eyebrow">${team.is_owned ? "WILDMAN ORGANIZATION" : "LG PRO SERIES · SEASON 14"}</div>
+          <h1>${esc(team.name)}</h1>
+          <p>${esc(currentEventEntry?.name || (team.team_type === "academy" ? "Wildman development roster" : "Esports team profile"))}</p>
+          <div class="pro-profile-badges"><span>${roster.length} ROSTERED</span>${managerRows.map(r => {
+            const p = playerById(r.player_id);
+            return `<span>${esc(roleLabel(r.roster_role))} · ${esc(p?.gamertag || "Player")}</span>`;
+          }).join("")}</div>
+        </div>
+      </div>
+      <div class="hub-tabs"><a href="#roster">Roster</a><a href="#stats">Tournament Stats</a><a href="#games">Games</a></div>
+      <section id="roster" class="profile-section">
+        <div class="section-heading"><div><div class="eyebrow">ROSTER</div><h2>${esc(currentEventEntry?.name || "CURRENT TEAM")}</h2></div></div>
+        ${roster.length ? rosterTable(roster,currentEventEntry?.id,team) : `<div class="empty-state">No roster has been imported for this team yet.</div>`}
+      </section>
+      <section id="stats" class="profile-section"><div class="section-heading"><div><div class="eyebrow">PERFORMANCE</div><h2>TOURNAMENT STATS</h2></div></div>${teamStatsTable(team.id,currentEventEntry?.id)}</section>
+      <section id="games" class="profile-section"><div class="section-heading"><div><div class="eyebrow">SCHEDULE + RESULTS</div><h2>GAME CENTER</h2></div></div><div class="game-list">${games.length ? games.map(gameCard).join("") : `<div class="empty-state">No games loaded for this team yet.</div>`}</div></section>`;
   }
 
-  function rosterTable(roster, eventId) {
-    return `<div class="wm-table-wrap"><table class="wm-table"><thead><tr><th>GT</th><th>Position</th><th>Status</th><th>GP</th><th>PTS</th><th>Profile</th></tr></thead><tbody>${roster.map(r => {
-      const p = playerById(r.player_id); const s = eventId ? statsFor(r.player_id,eventId) : null;
-      return `<tr><td>${esc(p?.gamertag || "Player")}</td><td>${esc(r.position || p?.primary_position || "TBD")}</td><td>${esc(r.roster_role || r.roster_status || "Active")}</td><td>${s?.games_played ?? "—"}</td><td>${s?.points ?? "—"}</td><td><a href="${esc(playerHref(p))}">OPEN →</a></td></tr>`;
-    }).join("")}</tbody></table></div>`;
+  function rosterTable(roster, eventId, team = null) {
+    return `<div class="pro-roster-shell">
+      <div class="pro-roster-banner">${team ? teamMark(team) : ""}<div><small>ACTIVE TOURNAMENT ROSTER</small><strong>${esc(team?.name || "TEAM ROSTER")}</strong></div><span>${roster.length} PLAYERS</span></div>
+      <div class="wm-table-wrap"><table class="wm-table pro-roster-table"><thead><tr><th>Player</th><th>Position</th><th>Role</th><th>GP</th><th>PTS</th><th>Profile</th></tr></thead><tbody>${roster.map(r => {
+        const p = playerById(r.player_id); const s = eventId ? statsFor(r.player_id,eventId) : null;
+        const role = roleLabel(r.roster_role) || String(r.roster_role || r.roster_status || "Active").toUpperCase();
+        return `<tr>
+          <td><div class="pro-player-cell"><span class="pro-position-icon">${esc(r.position || p?.primary_position || "?")}</span><div><strong>${esc(p?.gamertag || "Player")}</strong><small>${esc(p?.source_player_id ? "LG ID "+p.source_player_id : "Tournament player")}</small></div></div></td>
+          <td><span class="pro-pos-pill">${esc(r.position || p?.primary_position || "TBD")}</span></td>
+          <td><span class="pro-role-pill ${role === "OWNER" || role === "GM" || role === "AGM" ? "is-management" : ""}">${esc(role)}</span></td>
+          <td>${s?.games_played ?? "—"}</td><td>${s?.points ?? "—"}</td>
+          <td><a href="${esc(playerHref(p))}">OPEN →</a></td>
+        </tr>`;
+      }).join("")}</tbody></table></div>
+    </div>`;
   }
 
   function teamStatsTable(teamId, eventId) {
@@ -262,7 +328,22 @@
     const team = permanent[0] ? teamById(permanent[0].team_id) : eventRows[0] ? teamById(eventRows[0].team_id) : null;
     const playerStats = state.stats.filter(s => s.player_id === player.id).sort((a,b) => new Date(eventById(b.event_id)?.starts_on || 0) - new Date(eventById(a.event_id)?.starts_on || 0));
     document.title = `${player.gamertag} | Wildman Esports Network`;
-    root.innerHTML = `<a class="profile-back" href="players.html">← Back to Player Directory</a><div class="network-player-profile">${playerVisual(player)}<div><div class="eyebrow">ESPORTS PLAYER PROFILE</div><h1>${esc(player.gamertag)}</h1><p>${esc(player.primary_position || eventRows[0]?.position || "Position TBD")}${team ? ` · ${esc(team.name)}` : ""}${player.platform ? ` · ${esc(player.platform)}` : ""}</p><div class="directory-meta">${player.lg_profile_url ? `<a class="directory-pill" href="${esc(player.lg_profile_url)}" target="_blank" rel="noopener">LG Profile</a>` : ""}${player.chelstats_username ? `<span class="directory-pill">Chelstats Connected</span>` : ""}</div></div></div><section class="profile-section"><div class="section-heading"><div><div class="eyebrow">TOURNAMENT HISTORY</div><h2>EVENT STATS</h2></div></div>${playerStats.length ? `<div class="wm-table-wrap"><table class="wm-table"><thead><tr><th>Event</th><th>Team</th><th>GP</th><th>G</th><th>A</th><th>P</th><th>+/-</th></tr></thead><tbody>${playerStats.map(s => `<tr><td>${esc(eventById(s.event_id)?.name || "Event")}</td><td>${esc(teamById(s.team_id)?.name || "—")}</td><td>${s.games_played || 0}</td><td>${s.goals || 0}</td><td>${s.assists || 0}</td><td><b>${s.points || 0}</b></td><td>${s.plus_minus ?? "—"}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty-state">No tournament stats have been imported for this player yet.</div>`}</section>`;
+    root.innerHTML = `<a class="profile-back" href="players.html">← Back to Player Directory</a>
+      <div class="network-player-profile">
+        ${playerVisual(player)}
+        <div>
+          <div class="eyebrow">ESPORTS PLAYER PROFILE</div>
+          <h1>${esc(player.gamertag)}</h1>
+          <p>${esc(player.primary_position || eventRows[0]?.position || "Position TBD")}${team ? ` · ${esc(team.name)}` : ""}${player.platform ? ` · ${esc(player.platform)}` : ""}</p>
+          ${team ? `<a class="player-team-lockup" href="${esc(teamHref(team))}">${teamMini(team)}<span><small>PRO SERIES TEAM</small><strong>${esc(team.name)}</strong></span></a>` : ""}
+          <div class="directory-meta">${player.lg_profile_url ? `<a class="directory-pill" href="${esc(player.lg_profile_url)}" target="_blank" rel="noopener">LG Profile</a>` : ""}${player.chelstats_username ? `<span class="directory-pill">Chelstats Connected</span>` : ""}</div>
+        </div>
+      </div>
+      <section class="profile-section"><div class="section-heading"><div><div class="eyebrow">TOURNAMENT HISTORY</div><h2>EVENT STATS</h2></div></div>
+      ${playerStats.length ? `<div class="wm-table-wrap"><table class="wm-table"><thead><tr><th>Event</th><th>Team</th><th>GP</th><th>G</th><th>A</th><th>P</th><th>+/-</th></tr></thead><tbody>${playerStats.map(s => {
+        const t = teamById(s.team_id);
+        return `<tr><td>${esc(eventById(s.event_id)?.name || "Event")}</td><td><span class="network-team-inline">${teamMini(t)}<span>${esc(t?.name || "—")}</span></span></td><td>${s.games_played || 0}</td><td>${s.goals || 0}</td><td>${s.assists || 0}</td><td><b>${s.points || 0}</b></td><td>${s.plus_minus ?? "—"}</td></tr>`;
+      }).join("")}</tbody></table></div>` : `<div class="empty-state">No tournament stats have been imported for this player yet.</div>`}</section>`;
   }
 
   function renderLiveGameDetail() {
