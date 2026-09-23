@@ -28,7 +28,7 @@
       <label><span>Scouting Section</span>
         <select id="hsSectionSelect" class="hs-select">
           <option value="pool">Player Market</option>
-          <option value="live">Live Market</option>
+          <option value="live">Live Market</option>\n          <option value="bidfile">Bid File</option>
           <option value="targets">Target Board</option>
           <option value="reports">Reports</option>
           <option value="bids">Bidding Board</option>
@@ -39,6 +39,10 @@
 
     <div class="hs-pane" data-hs-pane="live">
       <div id="hsLiveMarketMount"></div>
+    </div>
+
+    <div class="hs-pane" data-hs-pane="bidfile">
+      <div id="hsBidFileMount"></div>
     </div>
 
     <div class="hs-pane" data-hs-pane="targets">
