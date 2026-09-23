@@ -291,8 +291,8 @@
         ${r.details?.last?`<div class="hlm-bidline">Last sample <b>${esc([r.details.last.ppg!=null?r.details.last.ppg+' PPG':'',r.details.last.gp!=null?r.details.last.gp+' GP':'',r.details.last.pts!=null?r.details.last.pts+' PTS':'',r.details.last.sv!=null?r.details.last.sv+' SV%':'',r.details.last.gaa!=null?r.details.last.gaa+' GAA':''].filter(Boolean).join(' · ')||'—')}</b></div>`:''}
         ${echlBid!=null?`<div class="hlm-bidline">Current ECHL bid <b>${money(echlBid)}</b></div>`:''}
         <div class="hlm-actions">
-          <button type="button" class="hs-btn" data-hlm-open="${esc(r.player_name)}">Open Full Profile</button>
-          ${canWrite()&&isEligible(r)?`<button type="button" class="hs-btn" data-hlm-watch="${r.source_uid}">Watch</button><button type="button" class="hs-btn primary" data-hlm-bid="${r.source_uid}">Add to Bidding</button>`:''}
+          <button type="button" class="hs-btn" data-hlm-open="${esc(rowKey(r))}">Open Full Profile</button>
+          ${canWrite()&&isEligible(r)?`<button type="button" class="hs-btn" data-hlm-watch="${esc(rowKey(r))}">Watch</button><button type="button" class="hs-btn primary" data-hlm-bid="${esc(rowKey(r))}">Add to Bidding</button>`:''}
         </div>
       </article>`;
     }).join('');
@@ -302,8 +302,8 @@
     if($('hlmNext'))$('hlmNext').disabled=M.page>=pages;
     msg(rows.length?`Showing ${start+1}–${start+shown.length} of ${rows.length.toLocaleString()} matching players.`:'No matching players.');
     box.querySelectorAll('[data-hlm-open]').forEach(b=>b.onclick=()=>openPlayer(b.dataset.hlmOpen));
-    box.querySelectorAll('[data-hlm-watch]').forEach(b=>b.onclick=()=>addToCalgary(Number(b.dataset.hlmWatch),false,b));
-    box.querySelectorAll('[data-hlm-bid]').forEach(b=>b.onclick=()=>addToCalgary(Number(b.dataset.hlmBid),true,b));
+    box.querySelectorAll('[data-hlm-watch]').forEach(b=>b.onclick=()=>addToCalgary(b.dataset.hlmWatch,false,b));
+    box.querySelectorAll('[data-hlm-bid]').forEach(b=>b.onclick=()=>addToCalgary(b.dataset.hlmBid,true,b));
   }
 
   function renderEvents(){
@@ -324,16 +324,79 @@
     return all;
   }
 
+  async function loadFallbackPool(){
+    const all=[];const batch=1000;
+    for(let from=0;;from+=batch){
+      const q=await db().from('team_scouting_pool')
+        .select('id,scouting_player_id,status,priority,projected_role,target_bid,max_bid,market_status,market_price,market_team,market_updated_at,is_biddable,market_focus,market_details,scouting_players(gamertag,primary_position,platform)')
+        .eq('team_id',TEAM_ID)
+        .range(from,from+batch-1);
+      if(q.error)throw q.error;
+      all.push(...(q.data||[]));
+      if((q.data||[]).length<batch)break;
+    }
+    return all;
+  }
+
+  function fallbackRow(p){
+    const sp=p.scouting_players||{},m=p.market_details||{};
+    const display=Number(m.display_price||m.model_value||p.market_price||0)||null;
+    const score=m.rank!=null?Math.max(0,1000-Number(m.rank)):null;
+    return {
+      source_uid:m.uid??m.source_uid??null,
+      scouting_player_id:p.scouting_player_id,
+      pool_id:p.id,
+      player_name:sp.gamertag||'Unknown',
+      position:sp.primary_position||null,
+      server:m.server||null,
+      console:sp.platform||null,
+      market_status:p.is_biddable===false?'off_auction':'available_unconfirmed',
+      bid_league_id:null,
+      bid_amount:null,
+      contracted_league_id:null,
+      contracted_team:p.market_team||null,
+      contracted_amount:null,
+      live_chl_bid:null,
+      likely_price:display,
+      reach:m.reach_pct!=null?'reach_'+String(m.reach_pct):null,
+      score,
+      source_updated_at:p.market_updated_at||null,
+      details:{
+        off_auction:p.is_biddable===false,
+        fallback_pool:true,
+        role:{chip:m.role||p.projected_role||null},
+        price:{likely_M:display!=null?display/1000000:null,likely_band_M:null,top_of_pool:m.market_tier==='PREM'},
+        last:{gp:m.gp??null,ppg:m.ppg??null,sv:m.save_pct??null},
+        tags:[m.market_tier,m.projection,m.latest_league?'S'+String(m.latest_season||'')+' '+m.latest_league:null].filter(Boolean)
+      }
+    };
+  }
+
+  function mergeMarketRows(liveRows,poolRows){
+    const map=new Map();
+    for(const p of poolRows||[]){
+      const r=fallbackRow(p);
+      map.set(String(r.player_name||'').trim().toLowerCase(),r);
+    }
+    for(const live of liveRows||[]){
+      const key=String(live.player_name||'').trim().toLowerCase();
+      const base=map.get(key)||{};
+      map.set(key,{...base,...live,scouting_player_id:base.scouting_player_id||null,pool_id:base.pool_id||null,details:{...(base.details||{}),...(live.details||{})}});
+    }
+    return [...map.values()].filter(r=>r.player_name);
+  }
+
   async function load(){
     if(!db()||!auth().user||!role())return;
     try{
-      const [players,events,meta]=await Promise.all([
+      const [players,poolRows,events,meta]=await Promise.all([
         loadAllPlayers(),
+        loadFallbackPool(),
         db().from('hitmen_live_market_events').select('*').eq('team_id',TEAM_ID).eq('season',55).order('observed_at',{ascending:false}).limit(60),
         db().from('hitmen_live_market_meta').select('*').eq('team_id',TEAM_ID).eq('season',55).maybeSingle()
       ]);
       const err=events.error||meta.error;if(err)throw err;
-      M.rows=players;M.events=events.data||[];M.meta=meta.data||null;render();
+      M.rows=mergeMarketRows(players,poolRows);M.events=events.data||[];M.meta=meta.data||null;render();
     }catch(e){msg(e.message||'Could not load the full live player market.');}
   }
 
@@ -431,9 +494,9 @@
     return {player,poolId:ins.data.id};
   }
 
-  async function addToCalgary(uid,toBid,button){
+  async function addToCalgary(key,toBid,button){
     if(!canWrite())return;
-    const r=M.rows.find(x=>Number(x.source_uid)===Number(uid));if(!r)return;
+    const r=findRow(key);if(!r)return;
     button.disabled=true;
     try{
       const ensured=await ensurePlayerInScouting(r,toBid?'bid_target':'watch');
@@ -461,8 +524,8 @@
     }
   }
 
-  async function openPlayer(name){
-    const r=M.rows.find(x=>String(x.player_name||'').toLowerCase()===String(name||'').toLowerCase());
+  async function openPlayer(key){
+    const r=findRow(key);
     if(!r)return;
     msg('Opening full player dossier…');
     try{
@@ -472,7 +535,7 @@
       }else{
         const section=$('hsSectionSelect');
         if(section){section.value='pool';section.dispatchEvent(new Event('change',{bubbles:true}));}
-        const s=$('hsSearch');if(s){s.value=name;s.dispatchEvent(new Event('input',{bubbles:true}));}
+        const s=$('hsSearch');if(s){s.value=r.player_name;s.dispatchEvent(new Event('input',{bubbles:true}));}
       }
       window.dispatchEvent(new CustomEvent('vvhl-auth-change',{detail:auth()}));
       msg('');
