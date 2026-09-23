@@ -45,7 +45,7 @@
     <section class="gm-ai-hero">
       <div class="gm-ai-hero-copy">
         <div class="eyebrow">DATABASE-FIRST DECISION ENGINE</div>
-        <h1>GM MVP <span>AI.</span></h1>
+        <h1>WAR ROOM <span>AI.</span></h1>
         <p>Ask roster, target, value and position questions against the Wildman Player Intelligence database before making a management decision.</p>
         <div class="gm-ai-hero-meta">
           <span>CALGARY HITMEN</span><b>SEASON 55</b><span>PRIVATE</span>
@@ -69,9 +69,19 @@
 
           <div class="gm-ai-prompt-row">
             <textarea id="gmAiQuestion" class="text-input" rows="3" placeholder="Example: Show me the best RD under $5M for Calgary"></textarea>
-            <button id="gmAiAsk" class="small-btn primary" type="button">Ask GM MVP AI</button>
+            <button id="gmAiAsk" class="small-btn primary" type="button">Search Database</button>
           </div>
 
+          <div class="gm-ai-deep-inputs">
+            <label for="gmAiPlayers">Players to compare — exact gamertags, one per line (up to 24)</label>
+            <textarea id="gmAiPlayers" class="text-input" rows="3" placeholder="Include your candidates and opponent players already in the scouting pool."></textarea>
+            <label for="gmAiScenario">Matchup and constraints</label>
+            <textarea id="gmAiScenario" class="text-input" rows="3" maxlength="6000" placeholder="Opponent lineup, date, availability, budget, positions and what you want to solve. Unverified details will be labeled as assumptions."></textarea>
+            <label for="gmAiMode">Analysis depth</label>
+            <select id="gmAiMode" class="text-input"><option value="deep">Deep — compare options and counterplays</option><option value="quick">Quick — evidence summary</option></select>
+            <button id="gmAiDeepAsk" class="small-btn primary" type="button">Analyze Hockey Decision</button>
+            <p class="section-note">Uses configured AI APIs. Deep mode can take longer. Recommendations require management review; no roster changes are made.</p>
+          </div>
           <div class="gm-ai-examples">
             <button type="button" data-gm-example="Show me the best RD under $5M">Best RD under $5M</button>
             <button type="button" data-gm-example="Show me C targets under $4M">Centers under $4M</button>
@@ -82,7 +92,7 @@
           <div id="gmAiAnswer" class="gm-ai-answer">
             <div class="eyebrow">GM MVP AI</div>
             <h3>READY FOR A QUESTION.</h3>
-            <p>Use natural language. The current MVP understands position and budget filters and ranks results using the Wildman valuation/fit data already attached to Calgary.</p>
+            <p>Use natural language. Search Database builds a shortlist. Analyze Hockey Decision compares hockey fit, alternatives and counterplays against saved evidence.</p>
           </div>
         </section>
 
@@ -92,7 +102,7 @@
           <div class="gm-ai-check"><span>01</span><div><b>Player Intelligence</b><small>Permanent Wildman player identity and position.</small></div></div>
           <div class="gm-ai-check"><span>02</span><div><b>Calgary Valuation</b><small>Expected market, fair value and walk price.</small></div></div>
           <div class="gm-ai-check"><span>03</span><div><b>Team Fit</b><small>Calgary fit and performance scores when available.</small></div></div>
-          <div class="gm-ai-check"><span>04</span><div><b>Management Evidence</b><small>Designed to sit beside scouting reports, VOD and chemistry evidence.</small></div></div>
+          <div class="gm-ai-check"><span>04</span><div><b>Management Evidence</b><small>Loads saved reports, available VOD evidence, season stats, roster, lineups and availability.</small></div></div>
           <div class="gm-ai-links">
             <a href="hitmen-management.html?tab=pool">Open Scouting Pool →</a>
             <a href="hitmen-management.html?tab=bids">Open Target Board →</a>

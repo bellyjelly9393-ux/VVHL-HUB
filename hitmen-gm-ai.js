@@ -107,6 +107,27 @@
     }finally{$('gmAiAsk').disabled=false;}
   }
 
+  let analysisGeneration=0;
+  async function deepAsk(){
+    if(!team||!canUse())return;
+    const question=$('gmAiQuestion').value.trim();if(!question)return;
+    const generation=++analysisGeneration, userId=auth().user.id;
+    $('gmAiDeepAsk').disabled=true;$('gmAiAsk').disabled=true;
+    setStatus('LOADING EVIDENCE · ANALYZING');
+    try{
+      const {data,error}=await db().auth.getSession();if(error)throw error;
+      if(!data.session?.access_token)throw new Error('Sign in again before analyzing.');
+      const response=await fetch('/api/chelscout-deepthink',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+data.session.access_token},body:JSON.stringify({question,playerNames:$('gmAiPlayers').value.split('\n').map(x=>x.trim()).filter(Boolean),scenario:$('gmAiScenario').value.trim(),mode:$('gmAiMode').value}),signal:AbortSignal.timeout(115000)});
+      const result=await response.json();if(!response.ok)throw new Error(result.error||'Analysis failed.');
+      if(generation!==analysisGeneration||auth().user?.id!==userId)return;
+      $('gmAiAnswer').innerHTML='<div class="eyebrow">HOCKEY DECISION · MANAGEMENT REVIEW</div><p>'+esc(result.model)+(result.evidenceModel?' · evidence brief: '+esc(result.evidenceModel):'')+'</p><div style="white-space:pre-wrap">'+esc(result.answer)+'</div><details><summary>Evidence and coverage</summary><p>'+esc(result.coverage.selection)+'</p><p>Players: '+esc(result.coverage.selectedPlayers.join(', ')||'No scouting candidates selected')+'</p><p>Unmatched: '+esc(result.coverage.unmatchedNames.join(', ')||'None')+'</p>'+result.coverage.warnings.map(x=>'<p>'+esc(x)+'</p>').join('')+result.sources.map(x=>'<details><summary>['+esc(x.id)+'] '+esc(x.source)+'</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(JSON.stringify(x.data,null,2))+'</pre></details>').join('')+'</details>';
+      setStatus('ANALYSIS READY · ADVISORY');
+    }catch(e){if(generation===analysisGeneration&&auth().user?.id===userId){$('gmAiAnswer').textContent=e.name==='TimeoutError'?'Analysis timed out. Try fewer players or Quick mode.':e.message;setStatus('ANALYSIS UNAVAILABLE');}}
+    finally{if(generation===analysisGeneration){$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;}}
+  }
+  $('gmAiDeepAsk')?.addEventListener('click',deepAsk);
+  window.addEventListener('vvhl-auth-change',()=>{analysisGeneration++;$('gmAiAnswer').textContent='Ask a new question to load evidence for this session.';$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;});
+
   $('gmAiAsk')?.addEventListener('click',ask);
   $('gmAiQuestion')?.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')ask();});
   document.querySelectorAll('[data-gm-example]').forEach(b=>b.addEventListener('click',()=>{$('gmAiQuestion').value=b.dataset.gmExample;ask();}));
