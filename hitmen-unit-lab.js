@@ -425,7 +425,7 @@
       const [rosterR,bidsR,poolR,plansR,relsR]=await Promise.all([
         db().from('roster_entries').select('player_id,cap_hit,players(id,gamertag,primary_position,secondary_position,platform,overall_rating,offense_rating,defense_rating,teamplay_rating)').eq('team_id',TEAM),
         db().from('team_bid_board').select('scouting_player_id,target_price,max_price,priority,status,plan,note').eq('team_id',TEAM),
-        db().from('team_scouting_pool').select('id,scouting_player_id,status,priority,projected_role,market_price,market_details,scouting_players(id,gamertag,primary_position,platform)').eq('team_id',TEAM).in('status',['watch','priority','bid_target','scouted']).range(0,999),
+        db().from('team_scouting_pool').select('id,scouting_player_id,status,priority,projected_role,market_price,market_details,scouting_players(id,gamertag,primary_position,platform)').eq('team_id',TEAM).in('status',['watch','priority','bid_target']).range(0,999),
         db().from('hitmen_unit_plans').select('*').eq('team_id',TEAM).eq('season',SEASON),
         db().from('scouting_player_relationships').select('player_a_id,player_b_id,season,games_sample,chemistry_score,shared_metrics,notes').limit(1000)
       ]);
