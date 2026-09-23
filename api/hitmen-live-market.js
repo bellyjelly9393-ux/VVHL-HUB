@@ -89,10 +89,10 @@ export default async function handler(req,res){
     const text=await upstream.text();
     let body;
     try{body=JSON.parse(text);}catch{
-      return res.status(502).json({error:'ChelScout returned a non-JSON market response.',upstream_status:upstream.status});
+      return res.status(502).json({error:'Live market source returned a non-JSON response.',upstream_status:upstream.status});
     }
     if(!upstream.ok||!body||!Array.isArray(body.rows)){
-      return res.status(upstream.status||502).json({error:'ChelScout live bid board is not available to the server right now.',upstream_status:upstream.status});
+      return res.status(upstream.status||502).json({error:'Live bid board is not available to the server right now.',upstream_status:upstream.status});
     }
     const rows=body.rows.map(sanitizeRow).filter(validMarketRow);
     const eligibleRows=rows.filter(isEligibleRow).length;
@@ -109,6 +109,6 @@ export default async function handler(req,res){
       rows
     });
   }catch(error){
-    return res.status(502).json({error:'ChelScout live market is temporarily unreachable.'});
+    return res.status(502).json({error:'Live market source is temporarily unreachable.'});
   }
 }
