@@ -8,6 +8,16 @@
   const clamp=(v,a=0,b=100)=>Math.max(a,Math.min(b,Number(v)||0));
   const num=(...xs)=>{for(const x of xs){const n=Number(x);if(x!==null&&x!==''&&Number.isFinite(n))return n;}return null;};
   const norm=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,'');
+  function canonPos(v){
+    const p=String(v||'').trim().toLowerCase().replace(/[^a-z]/g,'');
+    if(['lw','leftwing','leftwinger'].includes(p))return 'LW';
+    if(['rw','rightwing','rightwinger'].includes(p))return 'RW';
+    if(['c','center','centre'].includes(p))return 'C';
+    if(['ld','leftdefense','leftdefence','leftdefenceman','leftdefenseman'].includes(p))return 'LD';
+    if(['rd','rightdefense','rightdefence','rightdefenceman','rightdefenseman'].includes(p))return 'RD';
+    if(['g','goalie','goaltender'].includes(p))return 'G';
+    return String(v||'').trim().toUpperCase();
+  }
   const money=v=>{const n=Number(v);if(!Number.isFinite(n))return '—';return n>=1e6?'$'+(n/1e6).toFixed(2).replace(/\.00$/,'')+'M':'$'+Math.round(n).toLocaleString();};
   const db=()=>window.VVHLBackend?.db;
   const st=()=>window.VVHLBackend?.state||{};
@@ -37,7 +47,7 @@
           <div>
             <div class="eyebrow">SEASON 55 · LINE INTELLIGENCE</div>
             <h2>UNIT LAB</h2>
-            <p>Build three five-man units, compare them to the league baseline, inspect offense/defense/overall shapes and keep Official, Plan and What-if versions separate.</p>
+            <p>Build three five-man units using only players Calgary has placed on the Watch List or Bidding Board. Each position picker is locked to that position, so LW only shows left wings, C only shows centers, and so on.</p>
           </div>
           <div class="hmu-actions"><button id="hmuSuggest" class="hm-action">Suggest Lines</button><button id="hmuSave" class="hm-action primary">Save Shared Plan</button></div>
         </div>
@@ -182,17 +192,15 @@
 
   function optionList(slot,current){
     const used=selectedKeys();
-    let list=state.candidates.filter(c=>c.pos!=='G');
-    list.sort((a,b)=>{
-      const ae=a.pos===slot?1:0,be=b.pos===slot?1:0;
-      return be-ae-(b.metrics.overall-a.metrics.overall)||a.name.localeCompare(b.name);
-    });
-    return '<option value="">tap to fill</option>'+list.map(c=>`<option value="${esc(c.key)}" ${c.key===current?'selected':''} ${used.has(c.key)&&c.key!==current?'disabled':''}>${esc(candidateLabel(c))}</option>`).join('');
+    const list=state.candidates.filter(c=>c.pos===slot).sort((a,b)=>(b.metrics.overall-a.metrics.overall)||a.name.localeCompare(b.name));
+    const label='Choose '+slot+' · '+list.length+' player'+(list.length===1?'':'s');
+    return '<option value="">'+esc(label)+'</option>'+list.map(c=>`<option value="${esc(c.key)}" ${c.key===current?'selected':''} ${used.has(c.key)&&c.key!==current?'disabled':''}>${esc(candidateLabel(c))}</option>`).join('');
   }
 
   function goalieOptions(current){
     const used=selectedKeys();
-    return '<option value="">tap to fill</option>'+state.candidates.filter(c=>c.pos==='G').sort((a,b)=>b.metrics.overall-a.metrics.overall).map(c=>`<option value="${esc(c.key)}" ${c.key===current?'selected':''} ${used.has(c.key)&&c.key!==current?'disabled':''}>${esc(candidateLabel(c))}</option>`).join('');
+    const list=state.candidates.filter(c=>c.pos==='G').sort((a,b)=>b.metrics.overall-a.metrics.overall);
+    return '<option value="">Choose G · '+list.length+' player'+(list.length===1?'':'s')+'</option>'+list.map(c=>`<option value="${esc(c.key)}" ${c.key===current?'selected':''} ${used.has(c.key)&&c.key!==current?'disabled':''}>${esc(candidateLabel(c))}</option>`).join('');
   }
 
   function unitPlayers(unitKey){
@@ -368,10 +376,10 @@
 
   function suggestLines(){
     const used=new Set(),units=blankUnits();
-    const score=(c,pos)=>c.metrics.overall+(c.pos===pos?18:0)+((pos==='LD'||pos==='RD')&&['LD','RD','D'].includes(c.pos)?8:0)+(['LW','C','RW'].includes(pos)&&['LW','C','RW','F'].includes(c.pos)?6:0);
+    const score=c=>c.metrics.overall;
     for(let i=1;i<=3;i++){
       for(const pos of POS){
-        const pool=state.candidates.filter(c=>c.pos!=='G'&&!used.has(c.key)).sort((a,b)=>score(b,pos)-score(a,pos));
+        const pool=state.candidates.filter(c=>c.pos===pos&&!used.has(c.key)).sort((a,b)=>score(b)-score(a));
         const pick=pool[0];if(pick){units['unit'+i][pos]=pick.key;used.add(pick.key);}
       }
     }
@@ -422,14 +430,13 @@
     if(state.loading||!db()||!st().user||!role())return;
     state.loading=true;status('Loading Calgary lineup intelligence…');
     try{
-      const [rosterR,bidsR,poolR,plansR,relsR]=await Promise.all([
-        db().from('roster_entries').select('player_id,cap_hit,players(id,gamertag,primary_position,secondary_position,platform,overall_rating,offense_rating,defense_rating,teamplay_rating)').eq('team_id',TEAM),
+      const [bidsR,poolR,plansR,relsR]=await Promise.all([
         db().from('team_bid_board').select('scouting_player_id,target_price,max_price,priority,status,plan,note').eq('team_id',TEAM),
-        db().from('team_scouting_pool').select('id,scouting_player_id,status,priority,projected_role,market_price,market_details,scouting_players(id,gamertag,primary_position,platform)').eq('team_id',TEAM).in('status',['watch','priority','bid_target']).range(0,999),
+        db().from('team_scouting_pool').select('id,scouting_player_id,status,priority,projected_role,market_price,market_details,scouting_players(id,gamertag,primary_position,platform)').eq('team_id',TEAM).range(0,999),
         db().from('hitmen_unit_plans').select('*').eq('team_id',TEAM).eq('season',SEASON),
         db().from('scouting_player_relationships').select('player_a_id,player_b_id,season,games_sample,chemistry_score,shared_metrics,notes').limit(1000)
       ]);
-      for(const r of [rosterR,bidsR,poolR,plansR,relsR])if(r.error)throw r.error;
+      for(const r of [bidsR,poolR,plansR,relsR])if(r.error)throw r.error;
       const bidMap=new Map((bidsR.data||[]).map(x=>[x.scouting_player_id,x]));
       const targetIds=new Set((bidsR.data||[]).map(x=>x.scouting_player_id));
       const pool=(poolR.data||[]).filter(x=>targetIds.has(x.scouting_player_id)||['watch','priority','bid_target'].includes(x.status));
@@ -444,23 +451,15 @@
       }
       const latestStats=new Map();for(const s of stats)if(!latestStats.has(s.scouting_player_id))latestStats.set(s.scouting_player_id,s);
       const preMap=new Map(pres.map(x=>[x.scouting_player_id,x]));
-      const poolByNorm=new Map(pool.map(x=>[norm(x.scouting_players?.gamertag),x]));
       const candidates=[];
-      for(const r of rosterR.data||[]){
-        const p=r.players||{},match=poolByNorm.get(norm(p.gamertag));
-        candidates.push({
-          key:'r:'+r.player_id,kind:'roster',id:r.player_id,scoutId:match?.scouting_player_id||null,name:p.gamertag||'Unknown',
-          pos:p.primary_position||'',platform:p.platform||'',capHit:num(r.cap_hit),pool:match||null,bid:match?bidMap.get(match.scouting_player_id):null,
-          pre:match?preMap.get(match.scouting_player_id):null,stats:match?latestStats.get(match.scouting_player_id):null,
-          rosterRatings:p
-        });
-      }
-      const existingNorm=new Set(candidates.map(c=>norm(c.name)));
+      const seen=new Set();
       for(const p of pool){
-        const sp=p.scouting_players||{};if(existingNorm.has(norm(sp.gamertag)))continue;
+        const sp=p.scouting_players||{},name=sp.gamertag||'Unknown',nameKey=norm(name);
+        if(seen.has(nameKey))continue;
+        seen.add(nameKey);
         candidates.push({
-          key:'s:'+p.scouting_player_id,kind:'scout',id:p.scouting_player_id,scoutId:p.scouting_player_id,name:sp.gamertag||'Unknown',
-          pos:sp.primary_position||'',platform:sp.platform||'',pool:p,bid:bidMap.get(p.scouting_player_id)||null,
+          key:'s:'+p.scouting_player_id,kind:'scout',id:p.scouting_player_id,scoutId:p.scouting_player_id,name,
+          pos:canonPos(sp.primary_position),platform:sp.platform||'',pool:p,bid:bidMap.get(p.scouting_player_id)||null,
           pre:preMap.get(p.scouting_player_id)||null,stats:latestStats.get(p.scouting_player_id)||null,rosterRatings:null
         });
       }
@@ -473,7 +472,8 @@
       state.baseline=current?.baseline_mode||'league_average';state.salaryCap=Number(current?.salary_cap)||30000000;
       $('hmuLabel').value=current?.label||'';
       renderAll();
-      status(`${candidates.length} lineup candidates loaded · ${stats.length} imported stat rows available · shared management view ready.`);
+      const counts=POS.map(p=>p+': '+candidates.filter(c=>c.pos===p).length).join(' · ');
+      status(`${candidates.length} Watch/Bid candidates loaded · ${counts}`);
       ensureRealtime();
     }catch(e){console.error(e);status(e.message||'Could not load Unit Lab.',true);}
     finally{state.loading=false;}
