@@ -22,7 +22,7 @@
   function scoutPlayer(r){
     var p=r.scouting_players||{},i=intel(r.scouting_player_id),b=bid(r.scouting_player_id),live=liveFor(r);
     var liveChl=live&&live.live_chl_bid!=null?norm(live.live_chl_bid):(live&&live.market_status==='chl_live_bid'?norm(live.bid_amount):null);
-    var market=norm(r.market_price),target=norm(b.target_price!=null?b.target_price:r.target_bid),likely=mil(i.likely_price_m),fair=mil(i.fair_value_m);
+    var market=(String(r.market_league||'').toUpperCase()==='CHL'?norm(r.market_price):null),target=norm(b.target_price!=null?b.target_price:r.target_bid),likely=mil(i.likely_price_m),fair=mil(i.fair_value_m);
     var expected=target!=null?target:(likely!=null?likely:fair);
     var cost=liveChl!=null?liveChl:(market!=null?market:expected);
     var max=norm(b.max_price!=null?b.max_price:r.max_bid);if(max==null)max=mil(i.walk_above_m);if(max==null)max=cost;
@@ -41,7 +41,7 @@
   function optionText(p){
     if(p.kind==='roster')return p.name+' · '+(p.pos||'?')+' · '+money(p.cost);
     if(p.current!=null)return p.name+' · '+(p.pos||'?')+' · LIVE '+money(p.current)+(p.expected!=null?' · est '+money(p.expected):'');
-    if(p.echl!=null)return p.name+' · '+(p.pos||'?')+' · ECHL '+money(p.echl)+(p.expected!=null?' · CHL est '+money(p.expected):'');
+    if(p.echl!=null)return p.name+' · '+(p.pos||'?')+' · Previous ECHL '+money(p.echl)+(p.expected!=null?' · CHL est '+money(p.expected):'');
     return p.name+' · '+(p.pos||'?')+(p.expected!=null?' · est '+money(p.expected):'');
   }
   function dateAvail(id,date){return S.avail.find(function(x){return x.player_id===id&&x.game_date===date})||null}
