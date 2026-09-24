@@ -57,7 +57,7 @@
 
   function renderGameSelects(){
     const games=currentEventGames();
-    ['broadcastGameSelect','statGameSelect'].forEach(id=>{
+    ['broadcastGameSelect','statGameSelect','lgPublicLogGameSelect'].forEach(id=>{
       const el=$(id); if(!el) return;
       const prev=el.value;
       el.innerHTML=games.length?games.map(g=>`<option value="${g.id}" ${g.id===prev?'selected':''}>${esc(gameLabel(g))}</option>`).join(''):'<option value="">No games loaded</option>';
@@ -78,6 +78,105 @@
   function renderBacklog(){
     const root=$('backlogList'); if(!root) return;
     root.innerHTML=S.backlog.length?S.backlog.map(x=>`<div class="backlog-item"><div><span class="backlog-priority">${esc(x.area)} · ${esc(x.priority.replaceAll('_',' '))}</span><strong>${esc(x.title)}</strong><small>${esc(x.notes||x.deferred_reason||'Queued for after tournament operations.')}</small></div><span class="status-pill">${esc(x.status.toUpperCase())}</span></div>`).join(''):'<div class="empty-state">Queue is empty. Miracles happen.</div>';
+  }
+
+
+  const LG_STAT_KEYS=new Set(['points','goals','assists','toi','puckpos','hits','pim','plusminus','pass_att','pass_com','deflections','interceptions','pk_clear','shots','shot_att','bs','giveaway','takeaway','gwg','ppg','shg','fow','fol','pendrawn','class','ecu','sog','savep','ga','sa','gaa','pchk','dsv','brks','bap','psp','gso_p']);
+  const intStat=v=>{const m=String(v??'').match(/-?\d+/);return m?Number(m[0]):0;};
+  const pimMinutes=v=>{const s=String(v??'').trim();if(s.includes(':'))return intStat(s.split(':')[0]);return intStat(s);};
+  function parseLgPublicLog(raw){
+    const text=String(raw||'').replace(/\r/g,'').trim();
+    const lines=text.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    const lowerLines=lines.map(lower);
+    const userStart=lowerLines.findIndex(x=>x==='user stats');
+    const teamStart=lowerLines.findIndex(x=>x==='team stats');
+    const periodStart=lowerLines.findIndex((x,i)=>i>teamStart&&x==='period stats');
+    if(teamStart<0)throw new Error('This does not look like a LeagueGaming Public Log. The Team Stats section is missing.');
+    const teamEnd=periodStart>teamStart?periodStart:lines.length;
+    const teamSlice=lines.slice(teamStart,teamEnd);
+    const scores=[];
+    for(let i=0;i<teamSlice.length-1;i++){
+      if(lower(teamSlice[i])==='goals'&&/^-?\d+$/.test(teamSlice[i+1]))scores.push(Number(teamSlice[i+1]));
+    }
+    if(scores.length<2){
+      const block=teamSlice.join(' ');
+      for(const m of block.matchAll(/\bgoals\s+(-?\d+)\b/gi))scores.push(Number(m[1]));
+    }
+    if(scores.length<2)throw new Error('I found the Public Log, but not both team goal totals. Copy the full page text from User Stats through Team Stats.');
+
+    const players=[];
+    if(userStart>=0&&teamStart>userStart){
+      const seg=lines.slice(userStart+1,teamStart);
+      let current=null;
+      for(let i=0;i<seg.length;i++){
+        const line=seg[i], key=lower(line), next=lower(seg[i+1]||'');
+        if(['user','stat','save index'].includes(key)||/^save #?\d+$/i.test(line)||/^save \d+$/i.test(line))continue;
+        if(!LG_STAT_KEYS.has(key)&&next==='points'){
+          current={gamertag:line,raw:{}};players.push(current);continue;
+        }
+        if(current&&LG_STAT_KEYS.has(key)&&i+1<seg.length){
+          current.raw[key]=seg[i+1];i++;
+        }
+      }
+    }
+    const gameMatch=text.match(/gameid[=\/](\d+)/i);
+    const dateMatches=[...text.matchAll(/20\d{2}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/g)];
+    return {scores:scores.slice(0,2),players,gameId:gameMatch?.[1]||'',saveTime:dateMatches.at(-1)?.[0]||''};
+  }
+
+  function playerAndRosterForGt(gt){
+    const p=S.players.find(x=>lower(x.gamertag).trim()===lower(gt).trim());
+    if(!p)return {player:null,roster:null};
+    const roster=S.rosters.find(r=>r.event_id===S.eventId&&r.player_id===p.id&&r.active!==false);
+    return {player:p,roster};
+  }
+
+  async function importLgPublicLog(){
+    try{
+      msg('lgPublicLogMessage','Reading LG Public Log…');
+      const game=gameById($('lgPublicLogGameSelect')?.value);
+      if(!game)throw new Error('Select the matching tournament game first.');
+      const parsed=parseLgPublicLog($('lgPublicLogText')?.value);
+      const typedId=String($('lgPublicLogGameId')?.value||'').match(/\d+/)?.[0]||'';
+      const lgGameId=typedId||parsed.gameId||'';
+
+      const orderedTeams=[];
+      const matched=[];
+      for(const row of parsed.players){
+        const info=playerAndRosterForGt(row.gamertag);
+        const player=info.player,roster=info.roster;
+        if(!player||!roster)continue;
+        if(roster.team_id!==game.home_team_id&&roster.team_id!==game.away_team_id)continue;
+        if(!orderedTeams.includes(roster.team_id))orderedTeams.push(roster.team_id);
+        matched.push({row,player,roster});
+      }
+      if(orderedTeams.length<2)throw new Error('I parsed the score, but could not prove which score belongs to which team from the event rosters. Make sure this game roster is imported, then retry.');
+      const scoreByTeam=new Map([[orderedTeams[0],parsed.scores[0]],[orderedTeams[1],parsed.scores[1]]]);
+      const homeScore=scoreByTeam.get(game.home_team_id),awayScore=scoreByTeam.get(game.away_team_id);
+      if(!Number.isFinite(homeScore)||!Number.isFinite(awayScore))throw new Error('Could not match the two Public Log scores to the selected matchup.');
+
+      const sourceUrl=lgGameId?'https://www.leaguegaming.com/forums/index.php?leaguegaming/league&action=league&page=league_game_edit_log&gameid='+encodeURIComponent(lgGameId):null;
+      const gamePatch={status:'final',home_score:homeScore,away_score:awayScore,source_provider:'leaguegaming-public-log',source_updated_at:new Date().toISOString()};
+      if(lgGameId)gamePatch.external_game_id=lgGameId;
+      if(sourceUrl)gamePatch.source_url=sourceUrl;
+      let res=await db.from('esports_games').update(gamePatch).eq('id',game.id);
+      if(res.error)throw res.error;
+
+      const statRows=matched.map(({row,player,roster})=>{
+        const s=row.raw, goalieShots=intStat(s.sog),goalieSaves=intStat(s.sa),goalieGa=intStat(s.ga);
+        return {
+          game_id:game.id,event_id:S.eventId,team_id:roster.team_id,player_id:player.id,position:roster.position||player.primary_position||null,
+          goals:intStat(s.goals),assists:intStat(s.assists),points:intStat(s.points),plus_minus:intStat(s.plusminus),shots:intStat(s.shots),hits:intStat(s.hits),takeaways:intStat(s.takeaway),giveaways:intStat(s.giveaway),interceptions:intStat(s.interceptions),blocked_shots:intStat(s.bs),pim:pimMinutes(s.pim),faceoff_wins:intStat(s.fow),faceoff_losses:intStat(s.fol),goalie_shots:goalieShots,goalie_saves:goalieSaves,goalie_goals_against:goalieGa,save_pct:goalieShots?goalieSaves/goalieShots:null,raw_stats:s,source_provider:'leaguegaming-public-log',updated_at:new Date().toISOString()
+        };
+      });
+      if(statRows.length){
+        res=await db.from('esports_game_player_stats').upsert(statRows,{onConflict:'game_id,player_id'});
+        if(res.error)throw res.error;
+      }
+      await rebuildEventStats();
+      msg('lgPublicLogMessage','Imported LG Public Log: '+homeScore+'-'+awayScore+', '+statRows.length+' player stat lines matched'+(lgGameId?', game '+lgGameId:'')+'.');
+      await loadData();
+    }catch(e){console.error(e);msg('lgPublicLogMessage',e.message||'Public Log import failed.',true);}
   }
 
   async function ensureTeams(names){
@@ -224,6 +323,7 @@
     $('refreshControlBtn')?.addEventListener('click',loadData); $('importRostersBtn')?.addEventListener('click',importRosters); $('importScheduleBtn')?.addEventListener('click',importSchedule);
     $('broadcastGameSelect')?.addEventListener('change',loadBroadcastForm); $('saveBroadcastBtn')?.addEventListener('click',saveBroadcast);
     $('statGameSelect')?.addEventListener('change',populateStatPlayers); $('statPlayerSelect')?.addEventListener('change',loadStatForm); $('savePlayerStatsBtn')?.addEventListener('click',savePlayerStats);
+    $('importLgPublicLogBtn')?.addEventListener('click',importLgPublicLog);
     $('rebuildEventStatsBtn')?.addEventListener('click',async()=>{try{msg('statMessage','Rebuilding…');await rebuildEventStats();msg('statMessage','Event totals and standings rebuilt.');await loadData();}catch(e){msg('statMessage',e.message||'Rebuild failed.',true);}});
     $('addBacklogBtn')?.addEventListener('click',addBacklog);
   }
