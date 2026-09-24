@@ -6,7 +6,7 @@ const DISCOVERY_URLS = [
   'https://www.leaguegaming.com/forums/index.php?forums/community-events-pro-series.506/'
 ];
 
-const UA = 'Mozilla/5.0 (compatible; WildmanHockey/1.0; +https://www.leaguegaming.com/)';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0';
 
 function asId(v){ return String(v || '').replace(/\D/g,''); }
 function pairKey(ids){ return ids.map(asId).filter(Boolean).sort((a,b)=>Number(a)-Number(b)).join('-'); }
@@ -36,7 +36,7 @@ function htmlToText(html=''){
     .trim();
 }
 
-async function fetchHtml(url){
+async function fetchHtml(url,referer='https://www.leaguegaming.com/'){
   const r = await fetch(url,{
     method:'GET',
     redirect:'follow',
@@ -44,7 +44,15 @@ async function fetchHtml(url){
       'accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'accept-language':'en-US,en;q=0.9',
       'user-agent':UA,
-      'cache-control':'no-cache'
+      'referer':referer,
+      'upgrade-insecure-requests':'1',
+      'sec-ch-ua':'\"Microsoft Edge\";v=\"153\", \"Not_A Brand\";v=\"8\", \"Chromium\";v=\"153\"',
+      'sec-ch-ua-mobile':'?0',
+      'sec-ch-ua-platform':'\"Windows\"',
+      'sec-fetch-dest':'document',
+      'sec-fetch-mode':'navigate',
+      'sec-fetch-site':'same-origin',
+      'cache-control':'max-age=0'
     },
     signal:AbortSignal.timeout(15000)
   });
@@ -140,7 +148,7 @@ function parsePublicLog(gameId, html){
 
 async function directGame(gameId){
   const url = LG_BASE+'?leaguegaming/league&action=league&page=league_game_edit_log&gameid='+encodeURIComponent(gameId);
-  const html = await fetchHtml(url);
+  const html = await fetchHtml(url,LG_BASE+'?leaguegaming/league&action=league&page=game&gameid='+encodeURIComponent(gameId));
   return parsePublicLog(gameId,html);
 }
 
