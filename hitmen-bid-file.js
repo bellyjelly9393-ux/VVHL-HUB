@@ -107,7 +107,7 @@
   }
 
   function priceOf(live,pool){
-    return live?.live_chl_bid??live?.bid_amount??live?.likely_price??pool?.market_price??pool?.market_details?.display_price??null;
+    return live?.live_chl_bid??(Number(live?.bid_league_id||0)===39?live?.bid_amount:null)??live?.likely_price??(String(pool?.market_league||'').toUpperCase()==='CHL'?pool?.market_price:null)??pool?.market_details?.display_price??null;
   }
   function posOf(live,pool){
     return live?.position||pool?.scouting_players?.primary_position||'';
