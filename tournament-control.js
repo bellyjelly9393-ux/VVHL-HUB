@@ -41,6 +41,7 @@
     Object.assign(S,{events:events.data||[],teams:teams.data||[],players:players.data||[],eventTeams:eventTeams.data||[],rosters:rosters.data||[],games:games.data||[],gameStats:gameStats.data||[],backlog:backlog.data||[]});
     if(!S.eventId || !S.events.some(e=>e.id===S.eventId)) S.eventId=S.events.find(e=>e.slug==='road-to-pro-2026')?.id || S.events[0]?.id || '';
     render();
+    consumeLgBrowserCapture();
   }
 
   function render(){
@@ -129,6 +130,61 @@
     if(!p)return {player:null,roster:null};
     const roster=S.rosters.find(r=>r.event_id===S.eventId&&r.player_id===p.id&&r.active!==false);
     return {player:p,roster};
+  }
+
+
+  let lgBrowserCaptureConsumed=false;
+  function resolveCapturedGame(parsed,lgGameId){
+    const games=currentEventGames();
+    if(lgGameId){
+      const exact=games.find(g=>String(g.external_game_id||'')===String(lgGameId));
+      if(exact)return exact;
+    }
+    const teamCounts=new Map();
+    for(const row of parsed.players||[]){
+      const info=playerAndRosterForGt(row.gamertag);
+      const roster=info.roster;
+      if(!roster)continue;
+      teamCounts.set(roster.team_id,(teamCounts.get(roster.team_id)||0)+1);
+    }
+    const teams=[...teamCounts.entries()].sort((a,b)=>b[1]-a[1]).map(x=>x[0]);
+    if(teams.length<2)return null;
+    const a=teams[0],b=teams[1];
+    const candidates=games.filter(g=>(g.home_team_id===a&&g.away_team_id===b)||(g.home_team_id===b&&g.away_team_id===a));
+    if(!candidates.length)return null;
+    if(candidates.length===1)return candidates[0];
+    const stamp=parsed.saveTime?new Date(parsed.saveTime.replace(' ','T')).getTime():NaN;
+    if(Number.isFinite(stamp)){
+      return [...candidates].sort((x,y)=>Math.abs(new Date(x.scheduled_at||0).getTime()-stamp)-Math.abs(new Date(y.scheduled_at||0).getTime()-stamp))[0];
+    }
+    return candidates.find(g=>g.status!=='final')||candidates[0];
+  }
+
+  function consumeLgBrowserCapture(){
+    if(lgBrowserCaptureConsumed)return;
+    let raw=null;
+    try{raw=sessionStorage.getItem('wildman-lg-public-log-capture');}catch{}
+    if(!raw)return;
+    lgBrowserCaptureConsumed=true;
+    try{
+      const capture=JSON.parse(raw);
+      sessionStorage.removeItem('wildman-lg-public-log-capture');
+      if(!capture?.text)throw new Error('The browser capture did not include Public Log text.');
+      const parsed=parseLgPublicLog(capture.text);
+      if($('lgPublicLogText'))$('lgPublicLogText').value=capture.text;
+      if($('lgPublicLogGameId'))$('lgPublicLogGameId').value=capture.gameId||parsed.gameId||'';
+      const game=resolveCapturedGame(parsed,capture.gameId||parsed.gameId||'');
+      if(game&&$('lgPublicLogGameSelect')){
+        $('lgPublicLogGameSelect').value=game.id;
+        msg('lgPublicLogMessage','Browser capture loaded and matched to '+gameLabel(game)+'. Review it, then press Import Public Log.');
+      }else{
+        msg('lgPublicLogMessage','Browser capture loaded. Choose the matching tournament game, then press Import Public Log.');
+      }
+      setTimeout(()=>$('lg-public-log')?.scrollIntoView({behavior:'smooth',block:'start'}),150);
+    }catch(e){
+      console.error(e);
+      msg('lgPublicLogMessage',e.message||'Could not load the LeagueGaming browser capture.',true);
+    }
   }
 
   async function importLgPublicLog(){
