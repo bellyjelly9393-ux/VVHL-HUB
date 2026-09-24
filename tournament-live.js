@@ -3,7 +3,7 @@
   const KEY='sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
   const db=window.VVHLBackend?.db || (window.supabase?window.supabase.createClient(URL,KEY):null);
   if(!db) return;
-  const S={events:[],teams:[],players:[],games:[],teamStats:[],playerStats:[],eventTeams:[],rosters:[],rankings:[]};
+  const S={events:[],teams:[],players:[],games:[],teamStats:[],playerStats:[],eventTeams:[],rosters:[],rankings:[],lgPublicLog:{applied:0,matched:0,lastError:null}};
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[c]);
   const team=id=>S.teams.find(x=>x.id===id);
@@ -18,6 +18,52 @@
   const score=g=>g.status==='scheduled'?'VS':`${g.home_score??0}-${g.away_score??0}`;
   const statusRank={live:0,scheduled:1,final:2,postponed:3,cancelled:4};
   const gameHref=g=>`live-game.html?id=${encodeURIComponent(g.id)}`;
+
+  const cleanSourceId=v=>String(v||'').replace(/\\D/g,'');
+  const sourceTeamId=id=>cleanSourceId(team(id)?.source_team_id);
+  const sourcePairForGame=g=>[sourceTeamId(g.home_team_id),sourceTeamId(g.away_team_id)].filter(Boolean).sort((a,b)=>Number(a)-Number(b)).join('-');
+  const updatePair=u=>String(u?.pair||'')||((u?.teamSourceIds||[]).map(cleanSourceId).filter(Boolean).sort((a,b)=>Number(a)-Number(b)).join('-'));
+
+  async function applyLgPublicLogUpdates(){
+    const e=roadEvent(); if(!e)return;
+    const now=Date.now(),pastWindow=24*60*60*1000,futureWindow=45*60*1000;
+    const candidates=S.games.filter(g=>{
+      if(g.event_id!==e.id||!g.scheduled_at)return false;
+      const t=new Date(g.scheduled_at).getTime();
+      return Number.isFinite(t)&&t>=now-pastWindow&&t<=now+futureWindow;
+    });
+    const pairs=[...new Set(candidates.map(sourcePairForGame).filter(x=>/^\\d+-\\d+$/.test(x)))];
+    if(!pairs.length)return;
+    try{
+      const r=await fetch('/api/lg-public-log?teams='+encodeURIComponent(pairs.join(',')),{cache:'no-store'});
+      const data=await r.json().catch(()=>({}));
+      if(!r.ok||!data.ok)throw new Error(data.error||('LG feed HTTP '+r.status));
+      let applied=0;
+      for(const u of data.updates||[]){
+        if(u.status!=='final'||!Array.isArray(u.scores)||u.scores.length!==2)continue;
+        const pair=updatePair(u); if(!pair)continue;
+        const matches=candidates.filter(g=>sourcePairForGame(g)===pair).sort((a,b)=>new Date(b.scheduled_at||0)-new Date(a.scheduled_at||0));
+        const game=matches.find(g=>String(g.external_game_id||'')===String(u.gameId))||matches.find(g=>g.status!=='final')||matches[0];
+        if(!game)continue;
+        const ids=(u.teamSourceIds||[]).map(cleanSourceId);
+        const home=sourceTeamId(game.home_team_id),away=sourceTeamId(game.away_team_id);
+        const hi=ids.indexOf(home),ai=ids.indexOf(away);
+        if(hi<0||ai<0)continue;
+        game.home_score=Number(u.scores[hi]);
+        game.away_score=Number(u.scores[ai]);
+        game.status='final';
+        game.external_game_id=String(u.gameId);
+        game.source_provider='leaguegaming-public-log';
+        game.source_url=u.sourceUrl||game.source_url;
+        game.source_updated_at=u.updatedAt||data.retrievedAt||new Date().toISOString();
+        applied++;
+      }
+      S.lgPublicLog={applied,matched:Number(data.matched||0),lastError:null,retrievedAt:data.retrievedAt||null};
+    }catch(err){
+      S.lgPublicLog={applied:0,matched:0,lastError:String(err?.message||err)};
+      console.warn('LeagueGaming Public Log refresh failed:',err);
+    }
+  }
 
   function twitchChannel(raw){try{const u=new URL(raw);return u.pathname.split('/').filter(Boolean).pop()||'';}catch{return String(raw||'').split('/').filter(Boolean).pop()||'';}}
   function youtubeId(raw){try{const u=new URL(raw);if(u.hostname.includes('youtu.be'))return u.pathname.slice(1);if(u.searchParams.get('v'))return u.searchParams.get('v');const parts=u.pathname.split('/').filter(Boolean);const i=parts.findIndex(x=>x==='embed'||x==='live');return i>=0?parts[i+1]||'':'';}catch{return '';}}
@@ -76,7 +122,7 @@
         const wild=home?.slug==='wildman-hockey'||away?.slug==='wildman-hockey';
         return `<a class="pro-matchup-card ${wild?'is-wildman':''}" href="${gameHref(game)}">
           <div class="pro-match-team">${teamLogo(away)}<span>${esc(away?.name||'TBD')}</span></div>
-          <div class="pro-match-mid"><b>@</b><small>${esc(fmtTime(game.scheduled_at))}</small></div>
+          <div class="pro-match-mid"><b>${game.status==='scheduled'?'@':`${game.away_score??0}-${game.home_score??0}`}</b><small>${game.status==='scheduled'?esc(fmtTime(game.scheduled_at)):game.status==='live'?'LIVE':'FINAL'}</small></div>
           <div class="pro-match-team home">${teamLogo(home)}<span>${esc(home?.name||'TBD')}</span></div>
           <em>${game.status==='scheduled'?'GAME CENTER →':game.status==='live'?'LIVE NOW →':'FINAL →'}</em>
         </a>`;
@@ -154,8 +200,8 @@
       teamStats:teamStats.data||[],playerStats:playerStats.data||[],eventTeams:eventTeams.data||[],
       rosters:rosters.data||[],rankings:rankings.data||[]
     });
-    renderFeatured();renderBoard();renderSchedule();renderStandings();renderLeaderboard();renderCounts();
-    const stamp=$('liveRefreshStamp'); if(stamp)stamp.textContent=`Updated ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})}`;
+    await applyLgPublicLogUpdates();\n    renderFeatured();renderBoard();renderSchedule();renderStandings();renderLeaderboard();renderCounts();
+    const stamp=$('liveRefreshStamp'); if(stamp){const lg=S.lgPublicLog?.applied?` · ${S.lgPublicLog.applied} score${S.lgPublicLog.applied===1?'':'s'} from LG Public Log`:S.lgPublicLog?.lastError?' · LG Public Log temporarily unavailable':'';stamp.textContent=`Updated ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})}${lg}`;}
   }
   load();
   setInterval(()=>{if(!document.hidden)load();},10000);
