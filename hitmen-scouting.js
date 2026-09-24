@@ -582,7 +582,7 @@
   function renderBids(){
     if(!$('hsBidBody'))return;
     const map=new Map(S.bids.map(b=>[b.scouting_player_id,b]));
-    const rows=S.pool.filter(p=>p.status==='bid_target'||p.target_bid!=null||p.max_bid!=null||map.has(p.scouting_player_id))
+    const rows=S.pool.filter(p=>p.status!=='signed'&&(p.status==='bid_target'||p.target_bid!=null||p.max_bid!=null||map.has(p.scouting_player_id)))
       .sort((a,b)=>(Number(map.get(a.scouting_player_id)?.priority??a.priority??9)-Number(map.get(b.scouting_player_id)?.priority??b.priority??9))||String(a.scouting_players?.gamertag||'').localeCompare(String(b.scouting_players?.gamertag||'')));
     const targetTotal=rows.reduce((sum,p)=>sum+Number(map.get(p.scouting_player_id)?.target_price??p.target_bid??0),0);
     const maxTotal=rows.reduce((sum,p)=>sum+Number(map.get(p.scouting_player_id)?.max_price??p.max_bid??0),0);
