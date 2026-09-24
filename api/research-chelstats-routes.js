@@ -3,29 +3,39 @@ export default async function handler(req,res){
   try{
     const base="https://chelstats.app";
     const html=await (await fetch(base+"/",{headers:{"User-Agent":"Mozilla/5.0","Accept":"text/html"}})).text();
-    const srcs=[...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(m=>m[1]);
-    const urls=[...new Set(srcs.map(s=>new URL(s,base).href).filter(u=>u.startsWith(base)))].slice(0,12);
-    const matches=[];
-    for(const url of urls){
+    const srcs=[...html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)].map(m=>new URL(m[1],base).href).filter(u=>u.startsWith(base));
+    const routes=new Set(), matchIdSnippets=[], gameSnippets=[];
+    for(const url of [...new Set(srcs)].slice(0,12)){
       const r=await fetch(url,{headers:{"User-Agent":"Mozilla/5.0","Accept":"*/*"}});
       if(!r.ok) continue;
       const js=await r.text();
-      let idx=0, guard=0;
-      while((idx=js.indexOf("/api/",idx))!==-1 && guard<250){
-        const start=Math.max(0,idx-180), end=Math.min(js.length,idx+260);
-        matches.push({url,snippet:js.slice(start,end)});
-        idx+=5; guard++;
+      for(const m of js.matchAll(/\/api\/[A-Za-z0-9_./\$\{\}?&=:+%-]{2,160}/g)) routes.add(m[0]);
+      for(const needle of ["matchId","period-stats","clubs/stats","games?","/games","gameType"]){
+        let i=0,n=0;
+        while((i=js.indexOf(needle,i))!==-1 && n<25){
+          const s=js.slice(Math.max(0,i-350),Math.min(js.length,i+500));
+          (needle==="matchId"?matchIdSnippets:gameSnippets).push({needle,snippet:s});
+          i+=needle.length;n++;
+        }
       }
     }
-    const uniq=[]; const seen=new Set();
-    for(const m of matches){
-      const key=m.snippet.replace(/\s+/g," ");
-      if(seen.has(key)) continue;
-      seen.add(key); uniq.push(m);
-      if(uniq.length>=200) break;
-    }
+    const uniq=(arr,limit=80)=>{
+      const out=[],seen=new Set();
+      for(const x of arr){
+        const key=x.snippet.replace(/\s+/g," ");
+        if(seen.has(key)) continue;
+        seen.add(key);out.push(x);
+        if(out.length>=limit) break;
+      }
+      return out;
+    };
     res.setHeader("Cache-Control","no-store");
-    return res.status(200).json({scripts:urls,matches:uniq});
+    return res.status(200).json({
+      scripts:[...new Set(srcs)],
+      routes:[...routes].sort(),
+      matchIdSnippets:uniq(matchIdSnippets,40),
+      gameSnippets:uniq(gameSnippets,60)
+    });
   }catch(e){
     return res.status(500).json({error:e?.message||"failed"});
   }
