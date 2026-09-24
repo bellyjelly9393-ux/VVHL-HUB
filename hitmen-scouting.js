@@ -592,15 +592,26 @@
     $('hsBidBody').innerHTML=rows.map(p=>{
       const b=map.get(p.scouting_player_id)||{},sp=p.scouting_players||{};
       const status=(b.status||p.status||'watch').replaceAll('_',' ');
+      const chlMarket=String(p.market_league||'').toUpperCase()==='CHL';
+      const currentChl=chlMarket&&p.market_price!=null?Number(p.market_price):null;
+      const marketText=p.is_biddable===false
+        ?'Unavailable / signed'
+        :currentChl!=null
+          ?'Current CHL bid '+money(currentChl)
+          :p.is_biddable===true
+            ?'CHL eligible · no current bid'
+            :'CHL status not yet verified';
       return `<article class="hs-bid-card">
         <div class="hs-bid-card-top">
           <div><strong>${esc(sp.gamertag||'Unknown')}</strong><small>${esc(sp.primary_position||'—')} · Priority ${b.priority??p.priority??'—'}</small></div>
           <span class="hs-tag">${esc(status)}</span>
         </div>
         <div class="hs-bid-money">
+          <div><small>Current CHL</small><b>${currentChl!=null?money(currentChl):'—'}</b></div>
           <div><small>Target</small><b>${money(b.target_price??p.target_bid)}</b></div>
-          <div><small>Max</small><b>${money(b.max_price??p.max_bid)}</b></div>
+          <div><small>Walk Away</small><b>${money(b.max_price??p.max_bid)}</b></div>
         </div>
+        <div class="hs-bid-plan"><small>CHL MARKET</small><span>${esc(marketText)}</span></div>
         <div class="hs-bid-plan"><small>ROLE / PLAN</small><span>${esc(b.plan||p.projected_role||'No role set')}</span></div>
         <div class="hs-bid-actions">
           <button type="button" class="hs-btn" data-hs-open-player="${p.id}">Open Player</button>
