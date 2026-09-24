@@ -113,9 +113,14 @@
     return live?.position||pool?.scouting_players?.primary_position||'';
   }
   function statusOf(live){
-    if(!live)return 'BID FILE · ELIGIBLE';
-    const s=String(live.market_status||'').replaceAll('_',' ').toUpperCase();
-    return s?('BID FILE · '+s):'BID FILE · ELIGIBLE';
+    if(!live)return 'BID FILE · CHL ELIGIBLE';
+    const s=String(live.market_status||'');
+    if(s==='chl_live_bid')return 'BID FILE · CHL LIVE BID';
+    if(['echl_live_bid','just_fell_to_chl','possible_chl_fall','echl_history_unsigned'].includes(s))return 'BID FILE · CHL ELIGIBLE · ECHL HISTORY';
+    if(s==='chl_signed')return 'BID FILE · CHL SIGNED';
+    if(s==='echl_signed')return 'BID FILE · ECHL SIGNED · UNAVAILABLE';
+    if(['signed_other','off_auction'].includes(s))return 'BID FILE · UNAVAILABLE';
+    return 'BID FILE · CHL ELIGIBLE';
   }
   function onBoard(pool){
     if(!pool)return false;
