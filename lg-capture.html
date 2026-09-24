@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#09070c">
+<meta name="description" content="Wildman Hockey browser bridge for LeagueGaming Public Logs.">
+<title>LG Browser Capture | Wildman Hockey</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="hub.css">
+<link rel="stylesheet" href="wildman.css">
+<link rel="stylesheet" href="operations.css">
+<link rel="stylesheet" href="network-v2.css">
+</head>
+<body class="wildman-site">
+<header class="site-header">
+<a class="brand" href="index.html"><span class="wm-brand-mark">W</span><span class="brand-copy wm-brand-copy">WILDMAN HOCKEY<br><b>LG BROWSER BRIDGE</b></span></a>
+<nav class="main-nav"><a href="pro-series.html">Pro Series</a><a href="tournament-control.html">Tournament Control</a></nav>
+</header>
+<main>
+<section class="section-shell ops-hero">
+<div class="eyebrow">LEAGUEGAMING PUBLIC LOG BRIDGE</div>
+<h1>ONE CLICK.<br><span class="wm-green">NO COPY/PASTE.</span></h1>
+<p>This bookmark runs only when you click it on LeagueGaming. It reads the public page text already visible in your browser and forwards that text to Wildman Tournament Control. It does not send your LG cookies, password or session tokens.</p>
+</section>
+<section class="section-shell section-block">
+<div class="control-card">
+<div class="eyebrow">INSTALL ONCE</div>
+<h3>Wildman LG Capture</h3>
+<p>Drag the button below onto your browser bookmarks bar. If dragging is awkward, use Copy Bookmarklet and create a bookmark manually with the copied text as its address.</p>
+<div class="control-actions" style="margin-top:14px">
+<a id="lgBookmarklet" class="small-btn primary" href="#">Wildman LG Capture</a>
+<button id="copyLgBookmarklet" class="small-btn" type="button">Copy Bookmarklet</button>
+<a class="small-btn" href="tournament-control.html">Tournament Control</a>
+</div>
+<p id="bookmarkletMessage" class="control-message"></p>
+</div>
+</section>
+<section class="section-shell section-block">
+<div class="control-card">
+<div class="eyebrow">HOW TO USE IT</div>
+<h3>Capture a Public Log</h3>
+<p>Open a LeagueGaming game Public Log, then click <b>Wildman LG Capture</b> in your bookmarks bar. A Wildman window opens, receives the public log text, and forwards you to Tournament Control with the log already loaded.</p>
+<div id="bridgeStatus" class="empty-state">Waiting for a LeagueGaming capture…</div>
+</div>
+</section>
+</main>
+<footer><div class="section-shell footer-inner"><div><b>WILDMAN LG BROWSER BRIDGE</b><span>Public log text only · No LG credentials stored</span></div></div></footer>
+<script src="lg-capture.js"></script>
+</body>
+</html>
