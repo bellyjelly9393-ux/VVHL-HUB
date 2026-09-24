@@ -86,7 +86,10 @@
   const statsFor = (playerId, eventId) => state.stats.find(s => s.player_id === playerId && (!eventId || s.event_id === eventId));
 
   function renderNetworkHub() {
-    const owned = state.teams.filter(t => t.is_owned && t.active !== false);
+    const proEvent = eventBySlug("road-to-pro-2026");
+    const proEntries = proEvent
+      ? state.eventTeams.filter(x => x.event_id === proEvent.id).sort((a,b) => (a.seed || 999) - (b.seed || 999))
+      : [];
     const teamCount = document.getElementById("networkTeamCount");
     const playerCount = document.getElementById("networkPlayerCount");
     const eventCount = document.getElementById("networkEventCount");
@@ -96,11 +99,15 @@
     if (eventCount) eventCount.textContent = state.events.filter(e => e.active !== false).length;
     if (gameCount) gameCount.textContent = state.games.length;
 
-    const ownedGrid = document.getElementById("ownedTeamsGrid");
-    if (ownedGrid) ownedGrid.innerHTML = owned.map(team => {
-      const count = rosterForTeam(team.id).length;
-      return `<a class="network-team-card" href="${esc(teamHref(team))}">${teamMark(team)}<div><small>${team.team_type === "academy" ? "Development Team" : "Competitive Team"}</small><h3>${esc(team.name)}</h3><p>${count ? `${count} player${count === 1 ? "" : "s"} currently indexed.` : "Roster opens as players are added."}</p><b>OPEN TEAM →</b></div></a>`;
-    }).join("");
+    const proGrid = document.getElementById("proSeriesHubTeams") || document.getElementById("ownedTeamsGrid");
+    const proCount = document.getElementById("proSeriesHubTeamCount");
+    if (proCount) proCount.textContent = `${proEntries.length} TEAMS`;
+    if (proGrid) proGrid.innerHTML = proEntries.length ? proEntries.map(entry => {
+      const team = teamById(entry.team_id);
+      if (!team) return "";
+      const count = rosterForTeam(team.id, proEvent.id).length;
+      return `<a class="network-team-card" href="${esc(teamHref(team))}">${teamMark(team)}<div><small>#${entry.seed || "—"} · PRO SERIES TEAM</small><h3>${esc(team.name)}</h3><p>${count} tournament player${count === 1 ? "" : "s"} rostered.</p><b>OPEN ROSTER →</b></div></a>`;
+    }).join("") : `<div class="empty-state">Pro Series teams have not been loaded yet.</div>`;
 
     const eventGrid = document.getElementById("networkEventGrid");
     if (eventGrid) eventGrid.innerHTML = state.events.length ? state.events.map(event => {
@@ -168,7 +175,7 @@
     const event = eventBySlug("road-to-pro-2026");
     if (!event) return;
     const status = document.getElementById("proSeriesStatus");
-    const eventTeams = state.eventTeams.filter(x => x.event_id === event.id);
+    const eventTeams = state.eventTeams.filter(x => x.event_id === event.id).sort((a,b) => (a.seed || 999) - (b.seed || 999));
     const eventRosters = state.eventRosters.filter(x => x.event_id === event.id && x.active !== false);
     if (status) status.textContent = event.status === "upcoming"
       ? (eventTeams.length > 1 ? "FIELD LOADED" : "AWAITING FIELD")
@@ -272,11 +279,12 @@
     const games = state.games.filter(g => g.home_team_id === team.id || g.away_team_id === team.id);
     document.title = `${team.name} | Wildman Esports Network`;
     const managerRows = roster.filter(r => roleLabel(r.roster_role));
+    const isProSeriesTeam = currentEventEntry?.slug === "road-to-pro-2026";
     root.innerHTML = `<a class="profile-back" href="pro-series.html">← Back to Pro Series</a>
       <div class="network-profile-head pro-team-profile-head">
         <div class="pro-profile-crest">${teamMark(team)}</div>
         <div>
-          <div class="eyebrow">${team.is_owned ? "WILDMAN ORGANIZATION" : "LG PRO SERIES · SEASON 14"}</div>
+          <div class="eyebrow">${isProSeriesTeam ? "PRO SERIES TEAM · SEASON 14" : (team.is_owned ? "WILDMAN ORGANIZATION" : "ESPORTS TEAM")}</div>
           <h1>${esc(team.name)}</h1>
           <p>${esc(currentEventEntry?.name || (team.team_type === "academy" ? "Wildman development roster" : "Esports team profile"))}</p>
           <div class="pro-profile-badges"><span>${roster.length} ROSTERED</span>${managerRows.map(r => {
