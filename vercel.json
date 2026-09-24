@@ -80,6 +80,9 @@
   "functions": {
     "api/chelscout-deepthink.js": {
       "maxDuration": 120
+    },
+    "api/lg-public-log.js": {
+      "maxDuration": 60
     }
   }
 }
