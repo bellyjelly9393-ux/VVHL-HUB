@@ -5,7 +5,7 @@
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=v=>v==null?'—':'$'+Number(v).toLocaleString();
-  const M={rows:[],events:[],meta:null,filter:'eligible',position:'',sort:'score',search:'',page:1,pageSize:100,busy:false,timer:null,dbTimer:null,serverBlocked:true,bridgeBound:false};
+  const M={rows:[],events:[],meta:null,rosterNames:new Set(),filter:'eligible',position:'',sort:'score',search:'',page:1,pageSize:100,busy:false,timer:null,dbTimer:null,serverBlocked:true,bridgeBound:false};
 
   function role(){
     if(String(auth().profile?.role||'').toLowerCase()==='admin')return'admin';
@@ -225,7 +225,9 @@
     return {label:'CHL BID',value:null};
   }
   function isEligible(r){
-    return !['echl_signed','chl_signed','signed_other','off_auction'].includes(r.market_status)
+    const name=String(r.player_name||'').trim().toLowerCase();
+    return !M.rosterNames.has(name)
+      && !['echl_signed','chl_signed','signed_other','off_auction'].includes(r.market_status)
       && r.details?.off_auction!==true
       && !Number(r.contracted_league_id||0);
   }
@@ -407,13 +409,15 @@
   async function load(){
     if(!db()||!auth().user||!role())return;
     try{
-      const [players,poolRows,events,meta]=await Promise.all([
+      const [players,poolRows,events,meta,roster]=await Promise.all([
         loadAllPlayers(),
         loadFallbackPool(),
         db().from('hitmen_live_market_events').select('*').eq('team_id',TEAM_ID).eq('season',55).order('observed_at',{ascending:false}).limit(60),
-        db().from('hitmen_live_market_meta').select('*').eq('team_id',TEAM_ID).eq('season',55).maybeSingle()
+        db().from('hitmen_live_market_meta').select('*').eq('team_id',TEAM_ID).eq('season',55).maybeSingle(),
+        db().from('hitmen_roster_snapshot').select('gamertag').eq('team_id',TEAM_ID).eq('season',55).eq('active',true)
       ]);
-      const err=events.error||meta.error;if(err)throw err;
+      const err=events.error||meta.error||roster.error;if(err)throw err;
+      M.rosterNames=new Set((roster.data||[]).map(x=>String(x.gamertag||'').trim().toLowerCase()));
       M.rows=mergeMarketRows(players,poolRows);M.events=events.data||[];M.meta=meta.data||null;render();
     }catch(e){msg(e.message||'Could not load the full live player market.');}
   }
