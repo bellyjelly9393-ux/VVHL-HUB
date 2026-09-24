@@ -53,7 +53,17 @@
     if($('controlLiveCount')) $('controlLiveCount').textContent=currentEventGames().filter(x=>x.status==='live').length;
     const eventSelect=$('controlEventSelect');
     if(eventSelect){ eventSelect.innerHTML=S.events.map(e=>`<option value="${e.id}" ${e.id===S.eventId?'selected':''}>${esc(e.name)}</option>`).join(''); }
-    renderGameSelects(); renderBroadcastList(); renderBacklog();
+    renderGameSelects(); renderBroadcastList(); renderEaSyncStatus(); renderBacklog();
+  }
+
+  function renderEaSyncStatus(){
+    const eventTeamIds=new Set(S.eventTeams.filter(x=>x.event_id===S.eventId).map(x=>x.team_id));
+    const mapped=S.teams.filter(t=>eventTeamIds.has(t.id)&&t.ea_club_id).length;
+    const syncedGames=currentEventGames().filter(g=>g.ea_match_id).length;
+    const syncedStats=S.gameStats.filter(s=>s.event_id===S.eventId&&s.source_provider==='chelstats-ea').length;
+    if($('eaMappedTeamCount')) $('eaMappedTeamCount').textContent=String(mapped);
+    if($('eaSyncedGameCount')) $('eaSyncedGameCount').textContent=String(syncedGames);
+    if($('eaSyncedStatCount')) $('eaSyncedStatCount').textContent=String(syncedStats);
   }
 
   function renderGameSelects(){
@@ -235,6 +245,34 @@
     }catch(e){console.error(e);msg('lgPublicLogMessage',e.message||'Public Log import failed.',true);}
   }
 
+  async function syncEaGamesNow(){
+    const btn=$('eaSyncNowBtn');
+    try{
+      if(btn) btn.disabled=true;
+      msg('eaSyncMessage','Checking verified EA club games through ChelStats…');
+      const {data,error}=await db.functions.invoke('pro-series-ea-sync',{
+        body:{eventId:S.eventId,force:true,lookbackHours:48,maxGames:64}
+      });
+      if(error) throw error;
+      if(data?.error) throw new Error(data.error);
+      const unresolved=Array.isArray(data?.unresolvedTeams)?data.unresolvedTeams.length:0;
+      const importedGames=Number(data?.importedGames||0);
+      const importedStats=Number(data?.importedStats||0);
+      const mapped=Number(data?.mappedTeams||0);
+      msg('eaSyncMessage',
+        importedGames
+          ? `EA sync complete: ${importedGames} verified game${importedGames===1?'':'s'}, ${importedStats} player stat lines, ${mapped} teams mapped${unresolved?' · '+unresolved+' teams still need an EA club match':''}.`
+          : `EA sync complete. No new verified games found. ${mapped} teams are mapped${unresolved?' · '+unresolved+' still unresolved':''}.`
+      );
+      await loadData();
+    }catch(e){
+      console.error(e);
+      msg('eaSyncMessage',e?.message||'EA / ChelStats sync failed.',true);
+    }finally{
+      if(btn) btn.disabled=false;
+    }
+  }
+
   async function ensureTeams(names){
     const map=new Map(S.teams.map(t=>[slugify(t.name),t]));
     const missing=[...new Set(names.map(x=>String(x||'').trim()).filter(Boolean))].filter(n=>!map.has(slugify(n)));
@@ -352,19 +390,46 @@
     ]);
     if(statsRes.error) throw statsRes.error; if(gamesRes.error) throw gamesRes.error; if(eventTeamsRes.error) throw eventTeamsRes.error;
     const stats=statsRes.data||[], games=gamesRes.data||[];
+    const sumFields=[
+      'goals','assists','points','plus_minus','shots','shot_attempts','passes','pass_attempts','hits',
+      'takeaways','giveaways','interceptions','blocked_shots','pim','faceoff_wins','faceoff_losses',
+      'possession_seconds','penalties_drawn','pp_goals','sh_goals','gw_goals','goalie_shots','goalie_saves',
+      'goalie_goals_against','goalie_shutout_periods','goalie_breakaway_shots','goalie_breakaway_saves',
+      'goalie_penalty_shots','goalie_penalty_saves'
+    ];
     const pMap=new Map();
     for(const s of stats){
-      const k=s.player_id; if(!pMap.has(k)) pMap.set(k,{event_id:eventId,team_id:s.team_id,player_id:k,games_played:0,wins:0,losses:0,ot_losses:0,goals:0,assists:0,points:0,plus_minus:0,shots:0,hits:0,takeaways:0,giveaways:0,interceptions:0,blocked_shots:0,pim:0,faceoff_wins:0,faceoff_losses:0,goalie_shots:0,goalie_saves:0,goalie_goals_against:0,source_provider:'manual',source_updated_at:new Date().toISOString()});
-      const a=pMap.get(k); a.games_played++; ['goals','assists','points','plus_minus','shots','hits','takeaways','giveaways','interceptions','blocked_shots','pim','faceoff_wins','faceoff_losses','goalie_shots','goalie_saves','goalie_goals_against'].forEach(f=>a[f]+=(Number(s[f])||0));
-      const g=games.find(x=>x.id===s.game_id); if(g?.status==='final'&&s.team_id){ const isHome=s.team_id===g.home_team_id, gf=isHome?g.home_score:g.away_score, ga=isHome?g.away_score:g.home_score; if(gf>ga)a.wins++;else if(gf<ga){if(g.overtime)a.ot_losses++;else a.losses++;} }
+      const k=s.player_id;
+      if(!pMap.has(k)){
+        const base={event_id:eventId,team_id:s.team_id,player_id:k,games_played:0,wins:0,losses:0,ot_losses:0,source_provider:'event-rebuild',source_updated_at:new Date().toISOString(),raw_stats:{rebuilt_from:'esports_game_player_stats'}};
+        sumFields.forEach(f=>base[f]=0);
+        pMap.set(k,base);
+      }
+      const a=pMap.get(k);
+      a.team_id=s.team_id||a.team_id;
+      a.games_played++;
+      sumFields.forEach(f=>a[f]+=(Number(s[f])||0));
+      const g=games.find(x=>x.id===s.game_id);
+      if(g?.status==='final'&&s.team_id){
+        const isHome=s.team_id===g.home_team_id, gf=isHome?g.home_score:g.away_score, ga=isHome?g.away_score:g.home_score;
+        if(gf>ga)a.wins++;else if(gf<ga){if(g.overtime)a.ot_losses++;else a.losses++;}
+      }
     }
-    const playerRows=[...pMap.values()].map(a=>({...a,shooting_pct:a.shots?100*a.goals/a.shots:null,save_pct:a.goalie_shots?a.goalie_saves/a.goalie_shots:null,updated_at:new Date().toISOString()}));
+    const playerRows=[...pMap.values()].map(a=>({...a,
+      shooting_pct:a.shots?100*a.goals/a.shots:null,
+      passing_pct:a.pass_attempts?100*a.passes/a.pass_attempts:null,
+      save_pct:a.goalie_shots?a.goalie_saves/a.goalie_shots:null,
+      updated_at:new Date().toISOString()
+    }));
     if(playerRows.length){ const r=await db.from('esports_player_event_stats').upsert(playerRows,{onConflict:'event_id,player_id'}); if(r.error) throw r.error; }
-    const teamIds=[...new Set((eventTeamsRes.data||[]).map(x=>x.team_id))]; const tRows=[];
+    const teamIds=[...new Set((eventTeamsRes.data||[]).map(x=>x.team_id))], tRows=[];
     for(const teamId of teamIds){
       let gp=0,w=0,l=0,otl=0,gf=0,ga=0;
-      games.filter(g=>g.status==='final'&&(g.home_team_id===teamId||g.away_team_id===teamId)).forEach(g=>{const home=g.home_team_id===teamId, f=home?g.home_score:g.away_score, a=home?g.away_score:g.home_score;gp++;gf+=f;ga+=a;if(f>a)w++;else if(f<a){if(g.overtime)otl++;else l++;}});
-      tRows.push({event_id:eventId,team_id:teamId,games_played:gp,wins:w,losses:l,ot_losses:otl,goals_for:gf,goals_against:ga,points:w*2+otl,updated_at:new Date().toISOString()});
+      games.filter(g=>g.status==='final'&&(g.home_team_id===teamId||g.away_team_id===teamId)).forEach(g=>{
+        const home=g.home_team_id===teamId, f=home?g.home_score:g.away_score, a=home?g.away_score:g.home_score;
+        gp++;gf+=f;ga+=a;if(f>a)w++;else if(f<a){if(g.overtime)otl++;else l++;}
+      });
+      tRows.push({event_id:eventId,team_id:teamId,games_played:gp,wins:w,losses:l,ot_losses:otl,goals_for:gf,goals_against:ga,points:w*2+otl,raw_stats:{source:'esports_games'},updated_at:new Date().toISOString()});
     }
     tRows.sort((a,b)=>b.points-a.points||(b.goals_for-b.goals_against)-(a.goals_for-a.goals_against)||b.goals_for-a.goals_for).forEach((r,i)=>r.seed=i+1);
     if(tRows.length){ const r=await db.from('esports_team_event_stats').upsert(tRows,{onConflict:'event_id,team_id'}); if(r.error) throw r.error; }
@@ -380,6 +445,7 @@
     $('broadcastGameSelect')?.addEventListener('change',loadBroadcastForm); $('saveBroadcastBtn')?.addEventListener('click',saveBroadcast);
     $('statGameSelect')?.addEventListener('change',populateStatPlayers); $('statPlayerSelect')?.addEventListener('change',loadStatForm); $('savePlayerStatsBtn')?.addEventListener('click',savePlayerStats);
     $('importLgPublicLogBtn')?.addEventListener('click',importLgPublicLog);
+    $('eaSyncNowBtn')?.addEventListener('click',syncEaGamesNow);
     $('rebuildEventStatsBtn')?.addEventListener('click',async()=>{try{msg('statMessage','Rebuilding…');await rebuildEventStats();msg('statMessage','Event totals and standings rebuilt.');await loadData();}catch(e){msg('statMessage',e.message||'Rebuild failed.',true);}});
     $('addBacklogBtn')?.addEventListener('click',addBacklog);
   }
