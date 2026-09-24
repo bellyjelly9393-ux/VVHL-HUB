@@ -94,7 +94,7 @@
     if(!S.poller)S.poller=setInterval(function(){if(document.visibilityState==='visible'&&ST().user&&!S.loading)load()},30000);
     if(!S.marketTimer)S.marketTimer=setInterval(function(){if(document.visibilityState==='visible'&&(E('lineupType')||{}).value==='bidding'&&writable())syncMarket(false)},60000)
   }
-  function updateMarketStamp(){var b=E('biddingPickerBar'),s=E('currentMarketStamp');if(b)b.hidden=(E('lineupType')||{}).value!=='bidding';if(s)s.textContent=S.liveMeta&&S.liveMeta.source_updated_at?'Market source: '+new Date(S.liveMeta.source_updated_at).toLocaleString():'Market source: waiting for first sync'}
+  function updateMarketStamp(){var b=E('biddingPickerBar'),s=E('currentMarketStamp');if(b)b.hidden=(E('lineupType')||{}).value!=='bidding';if(s){if(S.liveMeta&&S.liveMeta.source_updated_at){var t=new Date(S.liveMeta.source_updated_at),fresh=(Date.now()-t.getTime())<10*60*1000;s.textContent='CHL market source: '+t.toLocaleString()+(fresh?' · LIVE':' · SYNC NEEDED')}else s.textContent='CHL market source: waiting for first sync'}}
   async function syncMarket(manual){
     if(S.marketBusy||!writable()||!DB()||(E('lineupType')||{}).value!=='bidding')return;
     S.marketBusy=true;var btn=E('refreshBiddingMarket');if(btn)btn.disabled=true;
