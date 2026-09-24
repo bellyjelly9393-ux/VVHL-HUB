@@ -263,12 +263,15 @@
     $('hlmChlLive').textContent=chl.toLocaleString();
     $('hlmNoChlBid').textContent=noChl.toLocaleString();
     $('hlmSigned').textContent=signed.toLocaleString();
-    $('hlmBadge').textContent='CHL BIDDING';
-    $('hlmUpdated').textContent=M.meta?.source_updated_at?'Source '+new Date(M.meta.source_updated_at).toLocaleString():'No source snapshot yet';
+    const sourceTime=M.meta?.source_updated_at?new Date(M.meta.source_updated_at).getTime():0;
+    const sourceFresh=sourceTime>0&&(Date.now()-sourceTime)<10*60*1000;
+    $('hlmBadge').textContent=sourceFresh?'CHL BIDDING · LIVE':'CHL BIDDING · SYNC NEEDED';
+    $('hlmUpdated').textContent=M.meta?.source_updated_at?'Source '+new Date(M.meta.source_updated_at).toLocaleString()+(sourceFresh?'':' · STALE'):'No source snapshot yet';
     $('hlmRev').textContent=M.meta?.board_rev?'Rev '+M.meta.board_rev:'';
     $('hlmEventCount').textContent=M.events.length;
     $('hlmSync').hidden=!canWrite();
     renderRows();
+    if(!sourceFresh)msg('Stored snapshot is from the previous market round. Connect Live Source to load the current CHL bidding board.');
     renderEvents();
   }
 
