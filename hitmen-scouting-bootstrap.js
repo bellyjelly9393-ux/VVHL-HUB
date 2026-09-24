@@ -195,8 +195,8 @@
     <div class="hs-pane" data-hs-pane="bids">
       <section class="hs-card hs-board-card">
         <div class="hs-board-head">
-          <div><div class="eyebrow">BIDDING NIGHT COMMAND</div><h3>Calgary Bidding Board</h3><p class="hs-msg">The shared management list. Keep the board focused on who Calgary may actually bid on, the target number, and the walk-away ceiling.</p></div>
-          <a class="hs-btn primary" href="hitmen-locker-room.html?mode=bidding">Open Lineup Simulator →</a>
+          <div><div class="eyebrow">LGCHL SEASON 55 · CHL BIDDING</div><h3>Calgary CHL Bidding Board</h3><p class="hs-msg">The shared management list for the active CHL bidding phase. Keep it focused on eligible targets, current CHL price, our target number, and the walk-away ceiling.</p></div>
+          <div class="hs-actions"><a class="hs-btn" href="/calgary?tab=live#hitmen-scouting">Open CHL Live Market →</a><a class="hs-btn primary" href="hitmen-locker-room.html?mode=bidding">Open Lineup Simulator →</a></div>
         </div>
         <div class="hs-bid-summary">
           <div><small>Players</small><strong id="hsBidBoardCount">0</strong></div>
