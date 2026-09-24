@@ -1,7 +1,7 @@
 (() => {
   const TARGET_ORIGIN = location.origin;
   const ALLOWED_LG_ORIGINS = new Set(['https://www.leaguegaming.com','https://leaguegaming.com']);
-  const bookmarklet = `javascript:(()=>{try{const O='https://wildmanhockey-elitechelmedia.app';const U=location.href;const T=document.title;const X=document.body?.innerText||'';const M=U.match(/gameid=(\\d+)/i)||X.match(/gameid[=\\/](\\d+)/i);const G=M?M[1]:'';const P={type:'WILDMAN_LG_PUBLIC_LOG_CAPTURE',url:U,title:T,text:X,gameId:G,capturedAt:new Date().toISOString()};const W=window.open(O+'/lg-capture.html','wildmanLgCapture','width=760,height=840');if(!W){alert('Allow pop-ups for LeagueGaming, then click Wildman LG Capture again.');return}let n=0;const send=()=>{try{W.postMessage(P,O)}catch(e){}};const h=e=>{if(e.origin===O&&e.data&&e.data.type==='WILDMAN_LG_BRIDGE_READY')send()};window.addEventListener('message',h);send();const q=setInterval(()=>{send();if(++n>20){clearInterval(q);window.removeEventListener('message',h)}},400)}catch(e){alert('Wildman LG Capture failed: '+e.message)}})()`;
+  const bookmarklet = `javascript:(async()=>{try{const O='https://wildmanhockey-elitechelmedia.app';const U=location.href;const M=U.match(/gameid=(\\d+)/i)||(document.body?.innerText||'').match(/gameid[=\\/](\\d+)/i);const G=M?M[1]:'';if(!G){alert('Open a LeagueGaming game page first, then run Wildman LG Capture.');return}const W=window.open(O+'/lg-capture.html','wildmanLgCapture','width=760,height=840');if(!W){alert('Allow pop-ups for LeagueGaming, then try again.');return}const L=location.origin+'/forums/index.php?leaguegaming/league&action=league&page=league_game_edit_log&gameid='+encodeURIComponent(G);let X='',T='LeagueGaming Public Log '+G;const V=document.body?.innerText||'';if(/\\bTeam Stats\\b/i.test(V)&&(/\\bUser Stats\\b/i.test(V)||/\\bPeriod Stats\\b/i.test(V))){X=V;T=document.title||T}else{const R=await fetch(L,{credentials:'include',cache:'no-store',headers:{'accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'}});if(!R.ok)throw new Error('LeagueGaming Public Log returned HTTP '+R.status);const H=await R.text();const D=new DOMParser().parseFromString(H,'text/html');X=D.body?.innerText||'';T=D.title||T;if(!/\\bTeam Stats\\b/i.test(X))throw new Error('The Public Log loaded, but the stats table was not available yet.')}const P={type:'WILDMAN_LG_PUBLIC_LOG_CAPTURE',url:L,title:T,text:X,gameId:G,capturedAt:new Date().toISOString()};let n=0;const send=()=>{try{W.postMessage(P,O)}catch(e){}};const h=e=>{if(e.origin===O&&e.data&&e.data.type==='WILDMAN_LG_BRIDGE_READY')send()};window.addEventListener('message',h);send();const q=setInterval(()=>{send();if(++n>20){clearInterval(q);window.removeEventListener('message',h)}},400)}catch(e){alert('Wildman LG Capture failed: '+e.message)}})()`;
 
   const link = document.getElementById('lgBookmarklet');
   const copy = document.getElementById('copyLgBookmarklet');
@@ -38,7 +38,7 @@
 
     const text = String(payload.text || '');
     if (!validPublicLogText(text)) {
-      if (status) status.innerHTML = '<strong>That LeagueGaming page is not a Public Log.</strong><br>Open the game Public Log first, then click the bookmark again.';
+      if (status) status.innerHTML = '<strong>The LeagueGaming stats could not be read.</strong><br>Open the game page after stats are saved, then run Wildman LG Capture again.';
       return;
     }
 
