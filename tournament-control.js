@@ -42,6 +42,7 @@
     if(!S.eventId || !S.events.some(e=>e.id===S.eventId)) S.eventId=S.events.find(e=>e.slug==='road-to-pro-2026')?.id || S.events[0]?.id || '';
     render();
     consumeLgBrowserCapture();
+    consumeLgScheduleStreamCapture();
   }
 
   function render(){
@@ -194,6 +195,93 @@
     }catch(e){
       console.error(e);
       msg('lgPublicLogMessage',e.message||'Could not load the LeagueGaming browser capture.',true);
+    }
+  }
+
+  let lgScheduleStreamCaptureConsumed=false;
+  function parseCapturedScheduleDate(timeText,capturedAt){
+    const m=String(timeText||'').match(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)?\/?(\d{1,2})\s+(\d{1,2}):(\d{2})\s*(am|pm)/i);
+    if(!m)return null;
+    const base=new Date(capturedAt||Date.now());
+    if(Number.isNaN(base.getTime()))return null;
+    const day=Number(m[1]),minute=Number(m[3]);
+    let hour=Number(m[2])%12;if(lower(m[4])==='pm')hour+=12;
+    let d=new Date(base.getFullYear(),base.getMonth(),day,hour,minute,0,0);
+    const diff=d.getTime()-base.getTime(),windowMs=18*24*3600*1000;
+    if(diff>windowMs)d=new Date(base.getFullYear(),base.getMonth()-1,day,hour,minute,0,0);
+    else if(diff<-windowMs)d=new Date(base.getFullYear(),base.getMonth()+1,day,hour,minute,0,0);
+    return Number.isNaN(d.getTime())?null:d;
+  }
+
+  function streamProviderFor(url){
+    const u=lower(url);
+    if(u.includes('twitch.tv'))return 'twitch';
+    if(u.includes('youtube.com')||u.includes('youtu.be'))return 'youtube';
+    return 'other';
+  }
+
+  async function consumeLgScheduleStreamCapture(){
+    if(lgScheduleStreamCaptureConsumed)return;
+    let raw=null;
+    try{raw=sessionStorage.getItem('wildman-lg-schedule-stream-capture');}catch{}
+    if(!raw)return;
+    lgScheduleStreamCaptureConsumed=true;
+    try{
+      const capture=JSON.parse(raw);
+      sessionStorage.removeItem('wildman-lg-schedule-stream-capture');
+      const cards=Array.isArray(capture?.cards)?capture.cards:[];
+      if(!cards.length)throw new Error('LG capture found no matchup cards. Try the Pro Series schedule page, or open LG Streams and run the capture there.');
+      const teamBySource=new Map(S.teams.filter(t=>t.source_team_id).map(t=>[String(t.source_team_id),t]));
+      let created=0,updated=0,streamed=0,live=0,skipped=0;
+      for(const card of cards){
+        const ids=[...new Set((card.teamIds||[]).map(String).filter(Boolean))];
+        if(ids.length!==2){skipped++;continue}
+        const home=teamBySource.get(ids[0]),away=teamBySource.get(ids[1]);
+        if(!home||!away){skipped++;continue}
+        const when=parseCapturedScheduleDate(card.timeText,capture.capturedAt);
+        if(!when){skipped++;continue}
+        const gameId=String((card.gameIds||[])[0]||'').match(/\d+/)?.[0]||'';
+        const streams=[...new Set((card.streamUrls||[]).map(String).filter(Boolean))];
+        let game=currentEventGames().find(g=>{
+          const samePair=(g.home_team_id===home.id&&g.away_team_id===away.id)||(g.home_team_id===away.id&&g.away_team_id===home.id);
+          return samePair&&Math.abs(new Date(g.scheduled_at||0).getTime()-when.getTime())<=20*60*1000;
+        });
+        if(!game&&gameId)game=currentEventGames().find(g=>String(g.external_game_id||'')===gameId);
+        const streamUrl=streams[0]||null;
+        if(game){
+          const patch={source_updated_at:new Date().toISOString()};
+          if(card.live&&game.status!=='final')patch.status='live';
+          if(streamUrl){
+            patch.stream_url=streamUrl;
+            patch.stream_provider=streamProviderFor(streamUrl);
+            patch.broadcast_title=game.broadcast_title||'LG Pro Series Live';
+          }
+          if(gameId&&(!game.external_game_id||String(game.external_game_id).startsWith('pro-s14-')))patch.external_game_id=gameId;
+          const r=await db.from('esports_games').update(patch).eq('id',game.id);if(r.error)throw r.error;
+          updated++;
+        }else{
+          const ext=gameId||`lg-s14-${when.getFullYear()}${String(when.getMonth()+1).padStart(2,'0')}${String(when.getDate()).padStart(2,'0')}-${String(when.getHours()).padStart(2,'0')}${String(when.getMinutes()).padStart(2,'0')}-${ids[0]}-${ids[1]}`;
+          const row={
+            event_id:S.eventId,home_team_id:home.id,away_team_id:away.id,scheduled_at:when.toISOString(),
+            status:card.live?'live':'scheduled',stage:'Regular Season',round_label:'LG Pro Series',
+            best_of:1,source_provider:'leaguegaming-browser-capture',external_game_id:ext,
+            source_url:capture.url||null,source_updated_at:new Date().toISOString(),
+            stream_url:streamUrl,stream_provider:streamUrl?streamProviderFor(streamUrl):null,
+            broadcast_title:streamUrl?'LG Pro Series Live':null
+          };
+          const r=await db.from('esports_games').upsert(row,{onConflict:'source_provider,external_game_id'});if(r.error)throw r.error;
+          created++;
+        }
+        if(streamUrl)streamed++;
+        if(card.live)live++;
+      }
+      const orphanCount=Array.isArray(capture.orphanStreams)?capture.orphanStreams.length:0;
+      msg('broadcastMessage',`LG capture imported ${created+updated} matchup${created+updated===1?'':'s'}: ${created} new, ${updated} updated, ${streamed} direct stream link${streamed===1?'':'s'}, ${live} marked live${orphanCount?' · '+orphanCount+' extra stream link'+(orphanCount===1?'':'s')+' found on the page':''}.`);
+      await loadData();
+      setTimeout(()=>$('broadcast')?.scrollIntoView({behavior:'smooth',block:'start'}),150);
+    }catch(e){
+      console.error(e);
+      msg('broadcastMessage',e.message||'Could not import the LeagueGaming schedule / stream capture.',true);
     }
   }
 
