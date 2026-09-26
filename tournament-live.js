@@ -178,7 +178,9 @@
   }
   function renderLeaderboard(){
     const skaterRoot=$('proSkaterLeaderboard'),goalieRoot=$('proGoalieLeaderboard'),e=roadEvent(); if(!e)return;
-    const eventRows=S.playerStats.filter(x=>x.event_id===e.id);
+    const allEventRows=S.playerStats.filter(x=>x.event_id===e.id);
+    const officialRows=allEventRows.filter(x=>String(x.source_provider||'').startsWith('leaguegaming-official-player-stats'));
+    const eventRows=officialRows.length?officialRows:allEventRows;
     const isGoalie=r=>{
       const pos=String(rosterPos(e.id,r.player_id)||'').toUpperCase();
       return pos==='G'||Number(r.goalie_shots||0)>0||Number(r.goalie_saves||0)>0;
