@@ -1,0 +1,138 @@
+/* Official Wildman Hockey + Chelmachine Elite Series Media brand refresh.
+   Added 2026-09-26. Public Wildman surfaces only; private Hitmen/management styling is intentionally excluded. */
+:root{
+  --wm-ice:#42b6ff;
+  --wm-ice-2:#9bddff;
+  --wm-frost:#eef8ff;
+  --wm-night:#02060a;
+  --wm-brand-gold:#d8ad55;
+}
+body.wildman-site:not(.management-protected){
+  background:
+    radial-gradient(circle at 82% 12%,rgba(41,157,255,.14),transparent 28%),
+    radial-gradient(circle at 14% 8%,rgba(216,173,85,.085),transparent 25%),
+    linear-gradient(180deg,#020508 0%,#06090d 46%,#020405 100%) !important;
+}
+body.wildman-site:not(.management-protected) .ice-glow-a{background:#168de5!important;opacity:.13!important}
+body.wildman-site:not(.management-protected) .ice-glow-b{background:#d8ad55!important;opacity:.07!important}
+
+body.wildman-site:not(.management-protected) .wm-brand-mark{
+  width:54px!important;
+  height:54px!important;
+  border-radius:13px!important;
+  background:#02060a url('https://d2ol7oe51mr4n9.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/72f4c4d6-ce4d-4da6-a1b9-45079d9fb21b.png') center/contain no-repeat!important;
+  border:1px solid rgba(112,201,255,.5)!important;
+  box-shadow:0 0 26px rgba(52,169,255,.2),0 0 16px rgba(216,173,85,.08)!important;
+  color:transparent!important;
+}
+body.wildman-site:not(.management-protected) .wm-brand-copy b{color:#9edcff!important}
+body.wildman-site:not(.management-protected) .main-nav a:hover,
+body.wildman-site:not(.management-protected) .main-nav a.active-nav{
+  color:#c8edff!important;
+  background:rgba(49,160,238,.07)!important;
+  box-shadow:inset 0 -2px #4ebcff!important;
+}
+body.wildman-site:not(.management-protected) .eyebrow{color:#87d3ff!important}
+body.wildman-site:not(.management-protected) .wm-network-strip{
+  border-color:rgba(78,188,255,.19)!important;
+  background:rgba(2,7,11,.82)!important;
+}
+body.wildman-site:not(.management-protected) .wm-network-strip strong{color:#7dd0ff!important}
+body.wildman-site:not(.management-protected) .wm-network-strip a:hover{color:#bfeaff!important}
+
+/* Home: show the official Wildman crest without replacing the existing cinematic hero composition. */
+body.wildman-home{--wm-home-purple:#279fe9!important}
+.wm-home-official-logo{
+  display:block;
+  width:min(250px,58vw);
+  height:auto;
+  margin:0 0 18px;
+  border-radius:18px;
+  filter:drop-shadow(0 12px 26px rgba(0,0,0,.62)) drop-shadow(0 0 18px rgba(66,182,255,.12));
+}
+.wildman-home .wm-home-hero{
+  border-color:rgba(89,191,255,.24)!important;
+  box-shadow:0 36px 100px rgba(0,0,0,.62),0 0 44px rgba(54,169,245,.08)!important;
+}
+.wildman-home .wm-home-header{
+  border-bottom-color:rgba(87,192,255,.2)!important;
+}
+.wildman-home .wm-home-header .main-nav a.active-nav{border-bottom-color:#54bcff!important}
+.wildman-home .wm-feature-card:not(.wm-feature-media){
+  border-color:rgba(81,183,249,.18)!important;
+  background:linear-gradient(135deg,rgba(6,12,17,.97),rgba(11,15,18,.93))!important;
+}
+.wildman-home .wm-feature-card:not(.wm-feature-media):hover{border-color:rgba(104,202,255,.46)!important}
+.wildman-home .wm-feature-icon{
+  background:linear-gradient(145deg,#d9f3ff,#55bfff 55%,#8d671d)!important;
+}
+.wm-feature-media{position:relative;isolation:isolate}
+.wm-feature-media::after{
+  content:"";
+  position:absolute;
+  right:-10px;top:-18px;
+  width:128px;height:150px;
+  background:url('https://d2ol7oe51mr4n9.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/2d93c4f2-d65b-4568-bbb8-86bf81223818.png') center/contain no-repeat;
+  opacity:.16;
+  filter:saturate(1.08);
+  z-index:-1;
+}
+
+/* Elite Chel Media gets its own fire/red visual language while remaining inside Wildman. */
+body.elite-media-page{
+  background:
+    radial-gradient(circle at 84% 12%,rgba(255,83,17,.15),transparent 28%),
+    radial-gradient(circle at 12% 10%,rgba(255,177,52,.08),transparent 25%),
+    linear-gradient(180deg,#050201 0%,#090403 48%,#020202 100%)!important;
+}
+.elite-media-page .pro-hero{
+  border-color:rgba(255,110,39,.32)!important;
+  background:#050201!important;
+  box-shadow:0 32px 90px rgba(0,0,0,.56),0 0 36px rgba(255,82,16,.08)!important;
+}
+.elite-media-page .pro-hero-shade{
+  background:linear-gradient(90deg,#030201 0%,rgba(5,2,1,.97) 30%,rgba(8,3,2,.78) 54%,rgba(0,0,0,.12) 76%)!important;
+}
+.elite-media-logo{
+  display:block;
+  width:min(245px,58vw);
+  max-height:300px;
+  object-fit:contain;
+  object-position:left center;
+  margin:0 0 18px;
+  filter:drop-shadow(0 12px 25px rgba(0,0,0,.65)) drop-shadow(0 0 18px rgba(255,91,16,.18));
+}
+.elite-media-page .eyebrow{color:#ff9d46!important}
+.elite-media-page .status-pill{
+  border-color:rgba(255,125,45,.35)!important;
+  background:rgba(255,86,20,.08)!important;
+  color:#ffc071!important;
+}
+.elite-media-page .media-feature-v2,
+.elite-media-page .media-stack-v2>a{
+  border-color:rgba(255,107,35,.23)!important;
+}
+.elite-media-page .media-feature-v2{
+  background:
+    linear-gradient(0deg,rgba(5,2,1,.97),rgba(5,2,1,.22)),
+    radial-gradient(circle at 72% 26%,rgba(255,75,12,.22),transparent 37%),
+    radial-gradient(circle at 24% 34%,rgba(255,176,56,.12),transparent 35%),
+    #080302!important;
+}
+.elite-media-page .media-stack-v2 small,
+.elite-media-page .network-kicker{color:#ffad50!important}
+.elite-media-page .small-btn{
+  border-color:rgba(255,115,42,.43)!important;
+  background:linear-gradient(180deg,rgba(255,93,20,.14),rgba(35,10,3,.18))!important;
+  color:#ffd0a3!important;
+}
+
+@media(max-width:900px){
+  .wm-home-official-logo{width:min(220px,52vw)}
+  .elite-media-logo{width:min(220px,54vw);max-height:250px}
+}
+@media(max-width:620px){
+  body.wildman-site:not(.management-protected) .wm-brand-mark{width:46px!important;height:46px!important}
+  .wm-home-official-logo{width:190px;margin-bottom:14px}
+  .elite-media-logo{width:190px;max-height:230px;margin-bottom:14px}
+}
