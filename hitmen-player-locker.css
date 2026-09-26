@@ -49,3 +49,27 @@
 .big-jersey-front:after,
 .big-jersey-front .big-jersey-front-crest{display:none!important}
 .big-jersey-front .big-sleeve-number{display:block!important;z-index:8}
+
+/* GENERATED PLAYER LOCKER ASSETS V2 */
+.personal-upper-shelf{
+  display:block!important;
+  top:94px!important;left:12%!important;right:12%!important;height:84px!important;
+  padding:0!important;border:0!important;
+  background:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_124611_1335aef5-45db-468d-ab4e-c5dbcd3ac601.png") center/contain no-repeat!important;
+  box-shadow:none!important;z-index:5!important;pointer-events:none;
+}
+.personal-upper-shelf>*{display:none!important}
+.big-jersey-back{
+  background:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_124555_6052c0fb-df01-453a-9d6d-619030a463fc.png") center/contain no-repeat!important;
+}
+.big-jersey-back .big-jersey-body,
+.big-jersey-back:after{display:none!important}
+.big-jersey-back .big-jersey-name{top:83px!important;z-index:8!important;text-shadow:0 3px 4px #000}
+.big-jersey-back .big-jersey-number{top:118px!important;z-index:8!important;text-shadow:0 4px 5px #000}
+.big-skates{
+  display:block!important;left:24px!important;bottom:28px!important;width:138px!important;height:105px!important;
+  background:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_124602_69d819a1-73ed-4271-811d-1246e1f54294.png") center/contain no-repeat!important;
+  filter:drop-shadow(0 10px 7px #000);z-index:6!important;
+}
+.big-skates i{display:none!important}
+.big-gloves{display:none!important}
