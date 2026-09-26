@@ -19,3 +19,22 @@
 .gm-ai-results-panel{margin-top:18px}.gm-ai-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.gm-ai-result{position:relative;padding:18px;border:1px solid rgba(215,25,45,.18);border-radius:14px;background:linear-gradient(145deg,rgba(21,8,11,.93),rgba(7,4,5,.98))}.gm-ai-result-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.gm-ai-result h3{margin:3px 0 0;font-size:25px}.gm-ai-result-pos{padding:5px 8px;border:1px solid rgba(215,25,45,.28);border-radius:999px;color:#f1c7cc;font-size:9px;font-weight:900}.gm-ai-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:14px}.gm-ai-metric{padding:9px;border-radius:9px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05)}.gm-ai-metric small,.gm-ai-metric b{display:block}.gm-ai-metric small{font-size:7px;color:#8f8588;letter-spacing:.08em}.gm-ai-metric b{margin-top:3px;font-size:13px;color:#f4eef0}.gm-ai-result-actions{display:flex;gap:7px;margin-top:13px}
 @media(max-width:900px){.gm-ai-hero{grid-template-columns:1fr;min-height:0}.gm-ai-screen{display:none}.gm-ai-grid{grid-template-columns:1fr}.gm-ai-hero-copy{padding:46px 24px}.gm-ai-results{grid-template-columns:1fr}}
 @media(max-width:620px){.gm-ai-hero{width:calc(100% - 14px);border-radius:18px}.gm-ai-hero h1{font-size:clamp(58px,18vw,82px)}.gm-ai-prompt-row{grid-template-columns:1fr}.gm-ai-prompt-row button{min-height:48px}.gm-ai-metrics{grid-template-columns:repeat(2,1fr)}}
+.gm-ai-control-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.gm-ai-control-grid label{display:grid;gap:6px;color:#bcaeb1;font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.gm-ai-analysis-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:16px}
+.gm-ai-analysis-head h3{margin:4px 0 0}
+.gm-ai-analysis-meta{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.gm-ai-analysis-meta span{padding:6px 8px;border:1px solid rgba(215,25,45,.22);border-radius:999px;background:rgba(215,25,45,.05);color:#cdbfc2;font-size:7px;font-weight:900;letter-spacing:.08em}
+.gm-ai-analysis-body{display:grid;gap:2px}
+.gm-ai-analysis-body h2,.gm-ai-analysis-body h3,.gm-ai-analysis-body h4{margin:15px 0 5px;font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.01em}
+.gm-ai-analysis-body h2{font-size:28px}.gm-ai-analysis-body h3{font-size:21px;color:#f4dde0}.gm-ai-analysis-body h4{font-size:17px;color:#e8bac0}
+.gm-ai-analysis-body p{margin:4px 0;color:#c7bec0;line-height:1.58}
+.gm-ai-analysis-gap{height:7px}
+.gm-ai-analysis-bullet{display:grid;grid-template-columns:22px 1fr;gap:6px;align-items:start;margin:2px 0}.gm-ai-analysis-bullet>span{color:#e04a5a;font-weight:900}.gm-ai-analysis-bullet p{margin:0}
+.gm-ai-cite{display:inline-block;margin-left:2px;padding:1px 4px;border:1px solid rgba(239,197,95,.25);border-radius:5px;background:rgba(239,197,95,.06);color:#efd58c;font-size:.8em;font-weight:900}
+.gm-ai-evidence{margin-top:18px;padding-top:12px;border-top:1px solid rgba(255,255,255,.07)}
+.gm-ai-evidence>summary{cursor:pointer;color:#e0c5ca;font-size:10px;font-weight:900}
+.gm-ai-coverage-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:10px 0}.gm-ai-coverage-grid>div{padding:9px;border:1px solid rgba(255,255,255,.06);border-radius:9px;background:rgba(255,255,255,.02)}.gm-ai-coverage-grid small{display:block;color:#817679;font-size:7px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.gm-ai-coverage-grid b{display:block;margin-top:3px;color:#d9d0d2;font-size:9px;line-height:1.4}
+.gm-ai-warnings{padding:9px 10px;border-left:3px solid #d4a94f;background:rgba(212,169,79,.05);margin:8px 0}.gm-ai-warnings p{margin:2px 0;color:#c9b88d;font-size:9px}
+.gm-ai-source{margin-top:6px;border:1px solid rgba(255,255,255,.055);border-radius:8px;background:#090607}.gm-ai-source>summary{padding:8px;cursor:pointer;color:#bbaeb1;font-size:8px;font-weight:800}.gm-ai-source pre{max-height:320px;overflow:auto;margin:0;padding:9px;border-top:1px solid rgba(255,255,255,.05);white-space:pre-wrap;overflow-wrap:anywhere;color:#9e9496;font-size:8px;line-height:1.45}
+@media(max-width:620px){.gm-ai-control-grid,.gm-ai-coverage-grid{grid-template-columns:1fr}.gm-ai-analysis-head{display:grid}.gm-ai-analysis-meta{justify-content:flex-start}}
