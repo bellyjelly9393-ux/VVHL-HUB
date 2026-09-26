@@ -3,22 +3,22 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>Player Locker | Calgary Hitmen</title>
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-team-locker.css"><link rel="stylesheet" href="hitmen-player-locker.css">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="management.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-team-locker.css"><link rel="stylesheet" href="hitmen-player-locker.css">
 </head>
-<body class="wildman-site hitmen-player-locker-page">
+<body class="wildman-site management-protected hitmen-player-locker-page">
 <header class="site-header locker-header">
 <a class="brand" href="hitmen-team-locker.html"><span class="locker-brand-mark">H</span><span class="brand-copy">CALGARY HITMEN<br><b>PLAYER LOCKER</b></span></a>
 <button class="menu-toggle" type="button" aria-label="Open navigation">☰</button>
-<nav class="main-nav"><a href="hitmen-team-locker.html">Locker Room</a><a class="active-nav" href="hitmen-player-locker.html">My Stall</a></nav>
+<nav class="main-nav"><a href="hitmen-workspace.html">War Room</a><a href="hitmen-team-locker.html">Locker Room</a><a href="hitmen-locker-room.html">Lineups</a><a href="hitmen-opponents.html">Opponents</a><a href="hitmen-battle-plan.html">Battle Plan</a></nav>
 </header>
 
 <main>
 <section class="section-shell locker-access-shell">
 <section id="accountPanel" class="panel account-panel"></section>
-<div id="lockerLockedMessage" class="wm-card"><b>Team sign-in required.</b><p>This player dashboard is restricted to Calgary Hitmen team accounts.</p></div>
+<div id="managementLockedMessage" class="wm-card"><b>Management sign-in required.</b><p>This dossier contains private Calgary scouting, development and lineup information.</p></div>
 </section>
 
-<div data-locker-content hidden>
+<div data-management-content hidden>
 <section class="section-shell player-shell">
 <aside class="player-sidebar">
 <div class="player-id-card">
@@ -26,7 +26,7 @@
 <div><h2 id="playerSideName">PLAYER</h2><p><span id="playerSidePos">—</span> · Calgary Hitmen</p></div>
 </div>
 <nav class="player-side-nav">
-<a href="#stall">My Locker Stall</a><a href="#performance">Season Performance</a><a href="#games">Game Reports</a><a href="#weekly">Weekly Report</a><a href="#line">Line Performance</a><a href="#profile">Player Profile</a>
+<a href="#stall">Locker Stall</a><a href="#dossier">Scouting Dossier</a><a href="#performance">Season Performance</a><a href="#games">Game Reports</a><a href="#weekly">Weekly Report</a><a href="#line">Line Performance</a><a href="#profile">Player Media</a>
 </nav>
 <div class="player-side-note"><small>SEASON 55</small><b id="playerClaimStatus">TEAM PROFILE</b></div>
 </aside>
@@ -60,13 +60,41 @@
 </div>
 <div class="player-stall-copy">
 <div class="eyebrow">CALGARY HITMEN · PERSONAL STALL</div><h1 id="playerTitle">PLAYER</h1><p id="playerMeta">Season 55</p>
-<div class="player-identity-badges"><span id="playerPositionBadge">—</span><span id="playerRoleBadge">ROSTER</span><span id="playerSalaryBadge">—</span></div>
+<div class="player-identity-badges"><span id="playerPositionBadge">—</span><span id="playerRoleBadge">ROSTER</span><span id="playerRosterClassBadge">ACTIVE ROSTER</span><span id="playerAvailabilityBadge">UNKNOWN</span><span id="playerSalaryBadge">—</span></div>
 <div id="editLockerBox" class="locker-edit-box">
 <h3>Customize Your Jersey</h3>
 <div class="locker-edit-grid"><label>Name on back<input id="jerseyNameInput" maxlength="18" placeholder="PLAYER"></label><label>Number<input id="jerseyNumberInput" maxlength="2" inputmode="numeric" placeholder="00"></label></div>
 <button id="saveJersey" class="small-btn primary" type="button">Save Jersey</button><span id="jerseySaveStatus"></span>
 </div>
 </div>
+</section>
+
+<section id="dossier" class="player-panel player-dossier-panel">
+<div class="player-panel-head"><div><div class="eyebrow">PRIVATE MANAGEMENT INTELLIGENCE</div><h2>SCOUTING DOSSIER</h2></div><span id="dossierStatus">SEASON 55</span></div>
+<div class="dossier-read-grid">
+  <article><small>EXECUTIVE READ</small><p id="dossierSummary">No management summary saved yet.</p></article>
+  <article><small>STRENGTHS</small><p id="dossierStrengths">No verified strengths saved yet.</p></article>
+  <article><small>CONCERNS</small><p id="dossierConcerns">No verified concerns saved yet.</p></article>
+  <article><small>TENDENCIES</small><p id="dossierTendencies">No repeatable tendencies saved yet.</p></article>
+  <article><small>CHEMISTRY / ROLE FIT</small><p id="dossierChemistry">No chemistry notes saved yet.</p></article>
+  <article><small>DEVELOPMENT FOCUS</small><p id="dossierDevelopment">No development focus saved yet.</p></article>
+</div>
+<div id="dossierEdit" class="dossier-edit">
+  <div class="dossier-form-grid">
+    <label>Roster classification<select id="dossierRosterClass"><option value="active_roster">Active Roster</option><option value="tc">TC</option></select></label>
+    <label>Availability<select id="dossierAvailability"><option value="unknown">Unknown</option><option value="available">Available</option><option value="maybe">Questionable</option><option value="unavailable">Unavailable</option></select></label>
+    <label>Handedness<select id="dossierHandedness"><option value="">Unknown</option><option value="left">Left</option><option value="right">Right</option></select></label>
+    <label class="wide">Executive scouting read<textarea id="dossierSummaryInput" placeholder="Role, overall read, current value to Calgary…"></textarea></label>
+    <label>Strengths<textarea id="dossierStrengthsInput" placeholder="Evidence-supported strengths…"></textarea></label>
+    <label>Concerns<textarea id="dossierConcernsInput" placeholder="Risks, exploitable habits, unknowns…"></textarea></label>
+    <label>Tendencies<textarea id="dossierTendenciesInput" placeholder="Repeatable habits observed in stats or film…"></textarea></label>
+    <label>Chemistry / role fit<textarea id="dossierChemistryInput" placeholder="Who this player fits with and why…"></textarea></label>
+    <label class="wide">Development focus<textarea id="dossierDevelopmentInput" placeholder="Next coaching priority or skill focus…"></textarea></label>
+  </div>
+  <div class="dossier-actions"><button id="saveDossier" class="small-btn primary" type="button">Save Dossier</button><span id="dossierSaveStatus"></span></div>
+</div>
+<div class="player-panel-head dossier-history-head"><div><div class="eyebrow">REPORT HISTORY</div><h2>SCOUTING EVIDENCE</h2></div><span>Saved reports + VOD-generated notes</span></div>
+<div id="historicalScoutingReports" class="player-report-list"></div>
 </section>
 
 <section id="performance" class="player-panel">
@@ -98,6 +126,6 @@
 </div>
 </main>
 
-<footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN · PLAYER LOCKER</b><span>Performance · development · media profile</span></div><p>Private team access</p></div></footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="backend.js"></script><script src="script.js"></script><script src="hitmen-player-locker.js"></script>
+<footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN · PLAYER DOSSIER</b><span>Locker · Scouting · Performance · Development · Evidence</span></div><p>Private management</p></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="backend.js"></script><script src="management-guard.js"></script><script src="script.js"></script><script src="hitmen-player-locker.js?v=20260926-warroom"></script>
 </body></html>
