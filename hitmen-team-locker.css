@@ -52,3 +52,17 @@ body.hitmen-team-locker-page{background:radial-gradient(circle at 50% -10%,#3410
 .stall-footer{background:#080809;min-height:42px}
 @media(max-width:1000px){.locker-stall-grid{grid-template-columns:repeat(2,minmax(280px,1fr))}}
 @media(max-width:650px){.locker-stall-grid{grid-template-columns:1fr}.locker-stall{min-height:455px}.stall-interior{height:340px}}
+
+/* GENERATED LOCKER ASSETS V1 */
+.stall-interior{
+  background-image:linear-gradient(rgba(5,5,6,.10),rgba(5,5,6,.10)),url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_103244_e1de2ac9-4be3-45ef-ad5c-4b999b9cd437.png");
+  background-size:cover;
+  background-position:center;
+}
+.mini-jersey-front{
+  background:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_103308_62dd93fd-206f-4d15-b6d0-5cfc92cdfabf.png") center/contain no-repeat!important;
+}
+.mini-jersey-front .mini-jersey-body,
+.mini-jersey-front:before,
+.mini-jersey-front:after,
+.mini-jersey-front .mini-jersey-crest{display:none!important}
