@@ -22,20 +22,15 @@
   <nav class="main-nav hm-section-nav">
     <a class="active-nav" href="hitmen-workspace.html">War Room</a>
     <details class="hm-section-menu">
-      <summary>Sections ▾</summary>
+      <summary>Team Ops ▾</summary>
       <div class="hm-section-menu-panel">
-        <a href="/calgary?tab=pool#hitmen-scouting"><b>Scouting HQ</b><small>Player market & dossiers</small></a>
-        <a href="/calgary?tab=live#hitmen-scouting"><b>Live Market</b><small>Live bidding movement & market changes</small></a>
-        <a href="/calgary?tab=bidfile#hitmen-scouting"><b>Bid File</b><small>Official BidList.xls biddable players</small></a>
-        <a href="/calgary?tab=targets#hitmen-scouting"><b>Targets</b><small>Watch, priority & bid targets</small></a>
-        <a href="/calgary?tab=bids#hitmen-scouting"><b>Bidding</b><small>Shared Calgary bid board</small></a>
-        <a href="hitmen-locker-room.html?mode=bidding"><b>Lineups</b><small>Roster & cap simulator</small></a>
-        <a href="vod-lab.html?team=calgary-hitmen"><b>VOD Scouting</b><small>Film review & evidence</small></a>
+        <a href="hitmen-team-locker.html"><b>Locker Room</b><small>Active roster + TC stalls and player dossiers</small></a>
+        <a href="hitmen-locker-room.html"><b>Lineup Room</b><small>Game-night lines, availability and AI matchup analysis</small></a>
         <a href="hitmen-opponents.html"><b>Opponents</b><small>Season matchup intelligence</small></a>
-        <a href="hitmen-gm-ai.html"><b>GM MVP AI</b><small>Ask, compare & shortlist</small></a>
-        <a href="hitmen-battle-plan.html"><b>Battle Plan</b><small>Matchup assignments</small></a>
+        <a href="hitmen-battle-plan.html"><b>Battle Plan</b><small>Assignments, keys to win and matchup notes</small></a>
+        <a href="vod-lab.html?team=calgary-hitmen"><b>VOD</b><small>Private film review and evidence</small></a>
+        <a href="hitmen-gm-ai.html"><b>GM AI</b><small>Roster and hockey-ops intelligence</small></a>
         <a href="#hitmen-live-session"><b>Game Night</b><small>Live series controls</small></a>
-        <a href="hitmen-card-vault.html"><b>Card Vault</b><small>Players & team history</small></a>
       </div>
     </details>
   </nav>
@@ -46,7 +41,7 @@
   <section class="section-shell section-block management-login-shell hm-login">
     <div class="section-heading"><div><div class="eyebrow">PRIVATE · LGCHL MANAGEMENT</div><h2>CALGARY HITMEN ACCESS</h2></div><div id="managementAccessStatus" class="status-pill">PRIVATE · MANAGEMENT ONLY</div></div>
     <section id="accountPanel" class="panel account-panel"><div><div class="eyebrow">SECURE ACCESS</div><h3>Loading account…</h3></div></section>
-    <div id="managementLockedMessage" class="wm-card" style="margin-top:16px"><b>Management sign-in required.</b><p>This War Room is restricted to authorized Calgary Hitmen management.</p></div>
+    <div id="managementLockedMessage" class="wm-card" style="margin-top:16px"><b>Management sign-in required.</b><p>Use Discord or your Wildman account. Access still requires an authorized Calgary Hitmen management membership.</p></div>
   </section>
 
   <div data-management-content hidden>
@@ -61,14 +56,14 @@
       </div>
     </section>
 
-    <section class="section-shell hm-command-deck" aria-label="Calgary Hitmen command stations" hidden>
-      <a class="hm-command-card" href="/calgary?tab=pool#hitmen-scouting"><span class="hm-command-icon">◉</span><small>PLAYER INTELLIGENCE</small><h3>Scouting HQ</h3><p>One place for the player market, target board, reports, market intelligence and the shared bidding board.</p></a>
-      <a class="hm-command-card" href="hitmen-locker-room.html"><span class="hm-command-icon">♟</span><small>ROSTER + CAP</small><h3>Lineup Builder</h3><p>Build lines, test bidding combinations, track cost and save shared roster plans.</p></a>
-      <a class="hm-command-card" href="vod-lab.html?team=calgary-hitmen"><span class="hm-command-icon">▶</span><small>SEPARATE VIDEO WORKFLOW</small><h3>VOD Scouting</h3><p>Period-by-period film review, markers, player evidence and game scouting reports.</p></a>
-      <a class="hm-command-card" href="hitmen-gm-ai.html"><span class="hm-command-icon">AI</span><small>ASK · COMPARE · DECIDE</small><h3>GM MVP AI</h3><p>Database-first roster questions, player values, fit and target shortlists.</p></a>
-      <a class="hm-command-card" href="hitmen-opponents.html"><span class="hm-command-icon">◎</span><small>SEASON-LONG INTELLIGENCE</small><h3>Opponent Tracker</h3><p>All 66 games, repeat matchups, team stats, results, tendencies and linked VOD evidence.</p></a>\n      <a class="hm-command-card" href="hitmen-battle-plan.html"><span class="hm-command-icon">⚔</span><small>KNOW THE OPPONENT</small><h3>Battle Plan</h3><p>Turn opponent intelligence into matchup assignments and keys to win.</p></a>
-      <a class="hm-command-card" href="#hitmen-live-session"><span class="hm-command-icon">▣</span><small>PREPARE · EXECUTE</small><h3>Game Night</h3><p>Scouting series, stream bridge, live controls and results.</p></a>
-      <a class="hm-command-card" href="hitmen-card-vault.html"><span class="hm-command-icon">▤</span><small>PLAYERS & HISTORY</small><h3>Card Vault</h3><p>Management profiles, player visuals and team-history assets.</p></a>
+    <section class="section-shell hm-command-deck" aria-label="Calgary Hitmen command stations">
+      <a class="hm-command-card" href="hitmen-team-locker.html"><span class="hm-command-icon">▦</span><small>ROSTER + DEVELOPMENT</small><h3>Locker Room</h3><p>Every active roster and TC player gets a stall with jersey, status, scouting notes, reports and development context.</p></a>
+      <a class="hm-command-card" href="hitmen-locker-room.html"><span class="hm-command-icon">⌗</span><small>LINES + MATCHUPS</small><h3>Lineup Room</h3><p>Set both 6s lines, scratches and availability, then run opponent-aware AI matchup analysis.</p></a>
+      <a class="hm-command-card" href="hitmen-opponents.html"><span class="hm-command-icon">◎</span><small>SEASON INTELLIGENCE</small><h3>Opponents</h3><p>Roster, tendencies, results, danger players and linked VOD evidence for every Season 55 opponent.</p></a>
+      <a class="hm-command-card" href="hitmen-battle-plan.html"><span class="hm-command-icon">⚔</span><small>GAME PREP</small><h3>Battle Plan</h3><p>Turn lineup analysis and opponent evidence into assignments and concise keys to win.</p></a>
+      <a class="hm-command-card" href="vod-lab.html?team=calgary-hitmen"><span class="hm-command-icon">▶</span><small>PRIVATE FILM ROOM</small><h3>VOD</h3><p>Period review, clips, player evidence and game scouting reports stay inside management.</p></a>
+      <a class="hm-command-card" href="hitmen-gm-ai.html"><span class="hm-command-icon">AI</span><small>HOCKEY OPS</small><h3>GM AI</h3><p>Database-first roster, player and matchup questions with evidence-aware reasoning.</p></a>
+      <a class="hm-command-card" href="#hitmen-live-session"><span class="hm-command-icon">▣</span><small>PREPARE · EXECUTE</small><h3>Game Night</h3><p>Active series controls, stream bridge, results and postgame handoff.</p></a>
     </section>
 
     <section class="section-shell hm-war-dashboard">
@@ -81,22 +76,22 @@
       <article class="hm-status-card">
         <div class="eyebrow">TEAM STATUS</div>
         <div class="hm-status-row"><span>Management</span><strong>3</strong></div>
-        <div class="hm-status-row"><span>Priority Targets</span><strong id="hitmenPriorityCount">0</strong></div>
-        <div class="hm-status-row"><span>Players Awaiting Review</span><strong id="hitmenAwaitingCount">0</strong></div>
+        <div class="hm-status-row"><span>Roster Stalls</span><strong id="hitmenRosterCount">0</strong></div>
+        <div class="hm-status-row"><span>TC Players</span><strong id="hitmenTcCount">0</strong></div>
         <div class="hm-status-row"><span>Tracked Record</span><strong id="hitmenRecord">0-0</strong></div>
       </article>
       <article class="hm-status-card">
         <div class="eyebrow">WAR ROOM DATA</div>
-        <div class="hm-status-row"><span>Scouting Reports</span><strong id="hitmenReportCount">0</strong></div>
-        <div class="hm-status-row"><span>Tracked Sessions</span><strong id="hitmenSessionCount">0</strong></div>
+        <div class="hm-status-row"><span>Player Reports</span><strong id="hitmenReportCount">0</strong></div>
+        <div class="hm-status-row"><span>Saved Lineups</span><strong id="hitmenLineupCount">0</strong></div>
         <div class="hm-status-row"><span>VOD Workflow</span><strong>READY</strong></div>
         <div class="hm-status-row"><span>Game Center Bridge</span><strong>LINKED</strong></div>
       </article>
       <article class="hm-upcoming-card">
         <div class="eyebrow">NEXT ACTION</div>
-        <h3>GAME NIGHT COMMAND</h3>
-        <p>Create the next scouting series, attach the live stream and send completed games directly into the Hitmen VOD pipeline.</p>
-        <a class="hm-red-btn" href="#hitmen-live-session">Open Game Night →</a>
+        <h3>BUILD TONIGHT'S PLAN</h3>
+        <p>Set the lineup, choose the opponent, run the AI matchup breakdown and carry the result into the Battle Plan.</p>
+        <a class="hm-red-btn" href="hitmen-locker-room.html">Open Lineup Room →</a>
       </article>
     </section>
 
@@ -153,8 +148,6 @@
 <script src="management-guard.js?v=20260922-cleanup"></script>
 <script src="wildman-player-intelligence.js"></script>
 <script src="hitmen-scouting-bootstrap.js?v=20260922-cleanup"></script>
- <script src="hitmen-live-market.js?v=20260922-bridge"></script>
-<script src="hitmen-bid-file.js?v=20260922-bidfile"></script>
 <script src="script.js"></script>
 <script src="hitmen-workspace.js"></script>
 <script src="hitmen-game-center-sync.js"></script>
