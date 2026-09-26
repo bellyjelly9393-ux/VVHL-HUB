@@ -2,7 +2,7 @@
   const URL='https://lrgllzvwgvqagcpiyvfd.supabase.co';
   const KEY='sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
   const db=window.supabase?.createClient(URL,KEY); if(!db)return;
-  const S={teams:[],events:[],games:[],sources:[],selected:new Set()};
+  const S={teams:[],events:[],games:[],selected:new Set()};
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[c]);
   const team=id=>S.teams.find(x=>x.id===id);
@@ -11,22 +11,36 @@
   function twitchRef(raw){try{const u=new URL(raw);const parts=u.pathname.split('/').filter(Boolean);const videos=parts.indexOf('videos');if(videos>=0&&parts[videos+1])return {video:'v'+parts[videos+1]};const v=parts.indexOf('v');if(v>=0&&parts[v+1])return {video:'v'+parts[v+1]};return {channel:parts[0]||''};}catch{return {channel:String(raw||'').split('/').filter(Boolean).pop()||''};}}
   function youtubeId(raw){try{const u=new URL(raw);if(u.hostname.includes('youtu.be'))return u.pathname.slice(1);if(u.searchParams.get('v'))return u.searchParams.get('v');const p=u.pathname.split('/').filter(Boolean),i=p.findIndex(x=>x==='embed'||x==='live');return i>=0?p[i+1]||'':'';}catch{return '';}}
   function embed(g){const p=String(g.stream_provider||'').toLowerCase();if(p==='twitch'){const ref=twitchRef(g.stream_url),q=ref.video?`video=${encodeURIComponent(ref.video)}`:`channel=${encodeURIComponent(ref.channel||'')}`;return (ref.video||ref.channel)?`<iframe src="https://player.twitch.tv/?${q}&parent=${encodeURIComponent(location.hostname)}&autoplay=false" allowfullscreen title="Twitch stream"></iframe>`:'';}if(p==='youtube'){const id=youtubeId(g.stream_url);return id?`<iframe src="https://www.youtube.com/embed/${encodeURIComponent(id)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="YouTube stream"></iframe>`:'';}return '';}
-  function label(g){if(g._kind==='source')return g.broadcast_title||'Tournament Stream';return `${team(g.home_team_id)?.name||'TBD'} vs ${team(g.away_team_id)?.name||'TBD'}`;}
-  function stateText(g){if(g._kind==='source')return `${String(g.intake_mode||'media').toUpperCase()} SOURCE`;if(g.status==='live')return `LIVE${g.period?` · P${g.period}`:''}${g.clock?` · ${g.clock}`:''}`;if(g.status==='final')return `FINAL · ${g.home_score}-${g.away_score}`;return fmt(g.scheduled_at);}
-  function eligible(){const games=S.games.filter(g=>g.stream_url&&['live','scheduled'].includes(g.status)).map(g=>({...g,_kind:'game',_key:`game:${g.id}`}));const sources=S.sources.filter(s=>s.active!==false&&s.url).map(s=>({_kind:'source',_key:`source:${s.id}`,id:s.id,event_id:s.event_id,stream_url:s.url,stream_provider:s.provider||'external',broadcast_title:s.display_label||s.metadata?.title||s.source_type||'Tournament Stream',intake_mode:s.intake_mode||'media',status:'live',scheduled_at:s.created_at,featured:false}));return [...games,...sources].sort((a,b)=>(a._kind==='source'?0:(a.status==='live'?0:1))-(b._kind==='source'?0:(b.status==='live'?0:1))||Number(b.featured)-Number(a.featured)||new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));}
+  function label(g){return `${team(g.home_team_id)?.name||'TBD'} vs ${team(g.away_team_id)?.name||'TBD'}`;}
+  function stateText(g){if(g.status==='live')return `LIVE${g.period?` · P${g.period}`:''}${g.clock?` · ${g.clock}`:''}`;if(g.status==='final')return `FINAL · ${g.home_score}-${g.away_score}`;return fmt(g.scheduled_at);}
+  function eligible(){return S.games.filter(g=>g.stream_url&&['live','scheduled'].includes(g.status)).map(g=>({...g,_kind:'game',_key:`game:${g.id}`})).sort((a,b)=>(a.status==='live'?0:1)-(b.status==='live'?0:1)||Number(b.featured)-Number(a.featured)||new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));}
   function setFromQuery(){const q=new URLSearchParams(location.search),raw=q.get('streams')||q.get('games')||'';raw.split(',').filter(Boolean).slice(0,8).forEach(id=>S.selected.add(id.includes(':')?id:`game:${id}`));}
   function syncQuery(){const ids=[...S.selected];const u=new URL(location.href);if(ids.length)u.searchParams.set('streams',ids.join(','));else u.searchParams.delete('streams');u.searchParams.delete('games');history.replaceState(null,'',u);}
   function render(){
     const rows=eligible(),picker=$('multiviewPicker'),grid=$('multiviewGrid'),status=$('multiviewStatus');
     [...S.selected].forEach(id=>{if(!rows.some(g=>g._key===id))S.selected.delete(id);});
     if(status)status.textContent=`${S.selected.size}/8 SELECTED · ${rows.filter(g=>g.status==='live').length} AVAILABLE`;
-    if(picker)picker.innerHTML=rows.length?rows.map(g=>`<label class="multi-pick"><input type="checkbox" data-multi-id="${g._key}" ${S.selected.has(g._key)?'checked':''}><div><strong>${esc(label(g))}</strong><small>${esc(event(g.event_id)?.name||'Tournament')} · ${esc(stateText(g))} · ${esc((g.stream_provider||'stream').toUpperCase())}${g.featured?' · FEATURED':''}</small></div></label>`).join(''):'<div class="empty-state">No public tournament streams are assigned yet.</div>';
+    if(picker)picker.innerHTML=rows.length?rows.map(g=>`<label class="multi-pick"><input type="checkbox" data-multi-id="${g._key}" ${S.selected.has(g._key)?'checked':''}><div><strong>${esc(label(g))}</strong><small>${esc(event(g.event_id)?.name||'Tournament')} · ${esc(stateText(g))} · ${esc((g.stream_provider||'stream').toUpperCase())}${g.featured?' · FEATURED':''}</small></div></label>`).join(''):'<div class="empty-state">No public tournament game streams are assigned yet.</div>';
     picker?.querySelectorAll('[data-multi-id]').forEach(box=>box.onchange=()=>{const id=box.dataset.multiId;if(box.checked){if(S.selected.size>=8){box.checked=false;return;}S.selected.add(id);}else S.selected.delete(id);syncQuery();render();});
     const selected=rows.filter(g=>S.selected.has(g._key));
-    if(grid)grid.innerHTML=selected.length?selected.map(g=>{const e=embed(g),action=g._kind==='game'?`<a class="small-btn" href="live-game.html?id=${encodeURIComponent(g.id)}">Game</a>`:`<a class="small-btn" href="${esc(g.stream_url)}" target="_blank" rel="noopener">Source</a>`;const score=g._kind==='game'&&g.status!=='scheduled'?` · ${g.home_score}-${g.away_score}`:'';return `<article class="multi-tile"><div class="multi-tile-head"><div><strong>${esc(label(g))}</strong><small>${esc(stateText(g))}${score}</small></div>${action}</div>${e||`<div class="featured-placeholder"><div><strong>External stream</strong><p>${esc(g.stream_provider||'Provider')} cannot be embedded here.</p><a class="btn btn-primary" href="${esc(g.stream_url)}" target="_blank" rel="noopener">Open Stream</a></div></div>`}</article>`;}).join(''):'<div class="empty-state">Select up to eight streams above.</div>';
+    if(grid)grid.innerHTML=selected.length?selected.map(g=>{const e=embed(g),action=`<a class="small-btn" href="live-game.html?id=${encodeURIComponent(g.id)}">Game</a>`;const score=g.status!=='scheduled'?` · ${g.home_score}-${g.away_score}`:'';return `<article class="multi-tile"><div class="multi-tile-head"><div><strong>${esc(label(g))}</strong><small>${esc(stateText(g))}${score}</small></div>${action}</div>${e||`<div class="featured-placeholder"><div><strong>External stream</strong><p>${esc(g.stream_provider||'Provider')} cannot be embedded here.</p><a class="btn btn-primary" href="${esc(g.stream_url)}" target="_blank" rel="noopener">Open Stream</a></div></div>`}</article>`;}).join(''):'<div class="empty-state">Select up to eight streams above.</div>';
     const stamp=$('liveRefreshStamp');if(stamp)stamp.textContent=`Updated ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})}`;
   }
-  async function load(first=false){const [teams,events,games,sources]=await Promise.all([db.from('esports_teams').select('*').eq('active',true),db.from('esports_events').select('*').eq('active',true),db.from('esports_games').select('*'),db.from('tournament_automation_sources').select('*').eq('active',true).order('slot_order')]);if([teams,events,games,sources].some(x=>x.error)){console.error(teams.error||events.error||games.error||sources.error);return;}S.teams=teams.data||[];S.events=events.data||[];S.games=games.data||[];S.sources=sources.data||[];if(first){setFromQuery();if(!S.selected.size){eligible().filter(g=>g.status==='live').slice(0,4).forEach(g=>S.selected.add(g._key));}}render();}
+  async function load(first=false){
+    const [teams,events,games]=await Promise.all([
+      db.from('esports_teams').select('*').eq('active',true),
+      db.from('esports_events').select('*').eq('active',true).eq('is_public',true),
+      db.from('esports_games').select('*')
+    ]);
+    if([teams,events,games].some(x=>x.error)){console.error(teams.error||events.error||games.error);return;}
+    const privateTeamIds=new Set((teams.data||[]).filter(t=>{const h=String(`${t.name||''} ${t.slug||''} ${t.abbreviation||''}`).toLowerCase();return h.includes('calgary hitmen')||h.includes('calgary-hitmen')||h==='hitmen'||h.includes(' hitmen ');}).map(t=>t.id));
+    const publicEventIds=new Set((events.data||[]).map(e=>e.id));
+    S.teams=(teams.data||[]).filter(t=>!privateTeamIds.has(t.id));
+    S.events=events.data||[];
+    S.games=(games.data||[]).filter(g=>publicEventIds.has(g.event_id)&&!privateTeamIds.has(g.home_team_id)&&!privateTeamIds.has(g.away_team_id));
+    if(first){setFromQuery();if(!S.selected.size){eligible().filter(g=>g.status==='live').slice(0,4).forEach(g=>S.selected.add(g._key));}}
+    render();
+  }
   $('clearMultiview')?.addEventListener('click',()=>{S.selected.clear();syncQuery();render();});
   load(true);setInterval(()=>{if(!document.hidden)load(false);},10000);
 })();
