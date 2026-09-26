@@ -35,7 +35,22 @@
 <section id="stall" class="player-stall-hero">
 <div class="player-stall-scene">
 <div class="stall-light"></div><div class="stall-big-rail"></div><div class="stall-big-hook"></div>
-<div class="big-jersey"><div class="big-jersey-body"></div><div id="jerseyNameLive" class="big-jersey-name">HITMEN</div><div id="jerseyNumberLive" class="big-jersey-number"></div></div>
+<div id="bigJerseyFlip" class="big-jersey-flip" role="button" tabindex="0" aria-label="Flip jersey front to back">
+  <div class="big-jersey-card">
+    <div class="big-jersey-face big-jersey-front">
+      <div class="big-jersey-body"></div>
+      <div class="big-jersey-front-crest">HITMEN</div>
+      <div id="jerseyFrontNumLeft" class="big-sleeve-number left"></div>
+      <div id="jerseyFrontNumRight" class="big-sleeve-number right"></div>
+    </div>
+    <div class="big-jersey-face big-jersey-back">
+      <div class="big-jersey-body"></div>
+      <div id="jerseyNameLive" class="big-jersey-name">HITMEN</div>
+      <div id="jerseyNumberLive" class="big-jersey-number"></div>
+    </div>
+  </div>
+  <span id="jerseyFlipHint" class="big-flip-hint">TAP JERSEY TO VIEW BACK</span>
+</div>
 <div class="big-skates"><i></i><i></i></div><div class="big-gloves"><i></i><i></i></div><div class="big-helmet"></div>
 <div id="chelPlayerDisplay" class="chel-player-display"><div class="chel-placeholder"><b>YOUR CHEL PLAYER</b><small>Upload a clean screenshot or render for future team media projects.</small></div></div>
 </div>
