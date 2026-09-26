@@ -11,7 +11,7 @@
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const n = v => Number(v) || 0;
-  const S = { team:null, sessions:[], games:[], pool:[], reports:[], loading:false };
+  const S = { team:null, sessions:[], games:[], lockers:[], reports:[], lineups:[], loading:false };
 
   function setStatus(text,tone=''){
     const el=$('hitmenStatus'); if(!el)return;
@@ -64,13 +64,14 @@
     try{
       const allowed=await loadTeam();
       if(!allowed){setStatus('Calgary Hitmen workspace access is restricted.','error');return;}
-      const [sessions,pool,reports]=await Promise.all([
+      const [sessions,lockers,reports,lineups]=await Promise.all([
         db().from('team_competitive_sessions').select('*').eq('team_id',S.team.id).order('created_at',{ascending:false}),
-        db().from('team_scouting_pool').select('id,status,priority').eq('team_id',S.team.id),
-        db().from('team_scouting_reports').select('id').eq('team_id',S.team.id)
+        db().from('team_player_lockers').select('id,roster_class,gamertag,position,management_role').eq('team_id',S.team.id).eq('season',55),
+        db().from('hitmen_player_reports').select('id').eq('team_id',S.team.id).eq('season',55),
+        db().from('lineups').select('id,status,is_active,updated_at').eq('team_id',S.team.id).eq('league','LGCHL')
       ]);
-      if(sessions.error||pool.error||reports.error) throw (sessions.error||pool.error||reports.error);
-      S.sessions=sessions.data||[]; S.pool=pool.data||[]; S.reports=reports.data||[];
+      if(sessions.error||lockers.error||reports.error||lineups.error) throw (sessions.error||lockers.error||reports.error||lineups.error);
+      S.sessions=sessions.data||[]; S.lockers=lockers.data||[]; S.reports=reports.data||[]; S.lineups=lineups.data||[];
       const ids=S.sessions.map(x=>x.id);
       if(ids.length){
         const games=await db().from('team_competitive_games').select('*').in('session_id',ids).order('game_number');
@@ -138,9 +139,9 @@
   function renderKpis(){
     if($('hitmenWatchCount')) $('hitmenWatchCount').textContent=STAFF.length;
     if($('hitmenReportCount')) $('hitmenReportCount').textContent=S.reports.length;
-    if($('hitmenSessionCount')) $('hitmenSessionCount').textContent=S.sessions.length;
-    if($('hitmenPriorityCount')) $('hitmenPriorityCount').textContent=S.pool.filter(x=>x.status==='priority'||x.status==='bid_target'||Number(x.priority)===1).length;
-    if($('hitmenAwaitingCount')) $('hitmenAwaitingCount').textContent=S.pool.filter(x=>!['signed','pass','lost'].includes(String(x.status||''))).length;
+    if($('hitmenRosterCount')) $('hitmenRosterCount').textContent=S.lockers.filter(x=>x.roster_class!=='tc').length;
+    if($('hitmenTcCount')) $('hitmenTcCount').textContent=S.lockers.filter(x=>x.roster_class==='tc').length;
+    if($('hitmenLineupCount')) $('hitmenLineupCount').textContent=S.lineups.length;
     const finals=S.games.filter(g=>g.status==='final');
     const w=finals.filter(g=>n(g.team_score)>n(g.opponent_score)).length,l=finals.filter(g=>n(g.opponent_score)>n(g.team_score)).length;
     if($('hitmenRecord')) $('hitmenRecord').textContent=`${w}-${l}`;
