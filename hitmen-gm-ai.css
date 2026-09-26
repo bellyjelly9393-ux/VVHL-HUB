@@ -38,3 +38,12 @@
 .gm-ai-warnings{padding:9px 10px;border-left:3px solid #d4a94f;background:rgba(212,169,79,.05);margin:8px 0}.gm-ai-warnings p{margin:2px 0;color:#c9b88d;font-size:9px}
 .gm-ai-source{margin-top:6px;border:1px solid rgba(255,255,255,.055);border-radius:8px;background:#090607}.gm-ai-source>summary{padding:8px;cursor:pointer;color:#bbaeb1;font-size:8px;font-weight:800}.gm-ai-source pre{max-height:320px;overflow:auto;margin:0;padding:9px;border-top:1px solid rgba(255,255,255,.05);white-space:pre-wrap;overflow-wrap:anywhere;color:#9e9496;font-size:8px;line-height:1.45}
 @media(max-width:620px){.gm-ai-control-grid,.gm-ai-coverage-grid{grid-template-columns:1fr}.gm-ai-analysis-head{display:grid}.gm-ai-analysis-meta{justify-content:flex-start}}
+
+.gm-ai-auto-depth{display:grid;gap:4px;padding:11px 12px;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(255,255,255,.02)}
+.gm-ai-auto-depth small{color:#8e8386;font-size:7px;font-weight:900;letter-spacing:.1em}
+.gm-ai-auto-depth b{color:#f0d58d;font:900 18px/1 "Barlow Condensed",sans-serif}
+.gm-ai-auto-depth span{color:#9d9295;font-size:8px;line-height:1.35}
+.gm-ai-analysis-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.gm-ai-analysis-actions .small-btn{min-height:42px}
+.gm-ai-depth-note{margin:6px 0 0!important;color:#9f9497!important;font-size:9px!important}
+.gm-ai-depth-note b{color:#efd58c}
