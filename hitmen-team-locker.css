@@ -14,3 +14,16 @@ body.hitmen-team-locker-page{background:radial-gradient(circle at 50% -10%,#3410
 .locker-line-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.line-report-card{padding:14px;border:1px solid rgba(255,255,255,.065);border-radius:13px;background:#0d0d10}.line-report-card h3{margin:0 0 4px;font:900 20px/1 "Barlow Condensed",sans-serif}.line-report-card p{color:#998e91;font-size:9px;line-height:1.5}.line-report-card .line-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.line-report-card .line-meta span{padding:5px 7px;border:1px solid rgba(215,25,45,.2);border-radius:999px;font-size:7px;font-weight:900}.locker-empty{grid-column:1/-1;padding:24px;text-align:center;border:1px dashed rgba(215,25,45,.2);border-radius:12px;color:#8d8285}
 @media(max-width:1000px){.locker-stall-grid{grid-template-columns:repeat(2,1fr)}.locker-line-grid{grid-template-columns:1fr 1fr}.locker-hero{grid-template-columns:1fr}.locker-hero-meta{max-width:520px}}
 @media(max-width:650px){.locker-stall-grid,.locker-line-grid{grid-template-columns:1fr}.locker-hero-meta{grid-template-columns:repeat(3,1fr)}.locker-section-head{display:grid}.locker-stall{min-height:290px}}
+.mini-jersey-flip{position:absolute;top:31px;left:50%;width:126px;height:154px;transform:translateX(-50%);perspective:800px;z-index:2;cursor:pointer;outline:none}
+.mini-jersey-flip:focus-visible{filter:drop-shadow(0 0 8px rgba(228,201,120,.7))}
+.mini-jersey-card{position:relative;width:100%;height:136px;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.2,.75,.2,1);filter:drop-shadow(0 8px 6px #000)}
+.mini-jersey-flip.is-flipped .mini-jersey-card{transform:rotateY(180deg)}
+.mini-jersey-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.mini-jersey-back{transform:rotateY(180deg)}
+.mini-jersey-face .mini-jersey-body{position:absolute;inset:14px 19px 0;background:linear-gradient(145deg,#211014,#09090a 65%);border:2px solid #b61b2c;clip-path:polygon(12% 0,35% 8%,50% 4%,65% 8%,88% 0,100% 22%,84% 35%,83% 100%,17% 100%,16% 35%,0 22%)}
+.mini-jersey-face:after{content:"";position:absolute;left:53px;top:18px;width:19px;height:13px;border-radius:50%;border:2px solid #c7a95c;border-top-color:transparent}
+.mini-jersey-crest{position:absolute;z-index:3;left:29px;right:29px;top:65px;text-align:center;font:900 13px/1 "Barlow Condensed",sans-serif;letter-spacing:-.03em;color:#eee6d7;text-shadow:0 2px #8b101e}
+.mini-jersey-sleeve-num{position:absolute;z-index:3;top:72px;font:900 12px/1 "Barlow Condensed",sans-serif;color:#eee}.mini-jersey-sleeve-num.left{left:13px}.mini-jersey-sleeve-num.right{right:13px}
+.mini-jersey-name{position:absolute;z-index:3;top:47px;left:21px;right:21px;text-align:center;font:900 8px/1 "Barlow Condensed",sans-serif;letter-spacing:.07em}
+.mini-jersey-number{position:absolute;z-index:3;top:68px;left:0;right:0;text-align:center;font:900 35px/.9 "Barlow Condensed",sans-serif;color:#f0eadc;text-shadow:0 2px #8b101e}
+.mini-flip-hint{position:absolute;left:0;right:0;bottom:0;text-align:center;color:#a99a9e;font-size:6px;font-weight:900;letter-spacing:.12em;opacity:.8}
