@@ -4,145 +4,122 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Locker Room | Calgary Hitmen</title>
+<meta name="theme-color" content="#070303">
+<title>Lineup Room | Calgary Hitmen</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="hub.css">
 <link rel="stylesheet" href="wildman.css">
 <link rel="stylesheet" href="management.css">
 <link rel="stylesheet" href="network-v2.css">
 <link rel="stylesheet" href="hitmen-war-tools.css">
-<link rel="stylesheet" href="hitmen-lineup-builder.css">
+<link rel="stylesheet" href="hitmen-lineup-room.css">
 </head>
-<body class="wildman-site management-protected hitmen-tool-page">
+<body class="wildman-site management-protected hitmen-tool-page hm-lineup-room-page">
 <header class="site-header hitmen-tool-header">
-  <a class="brand" href="hitmen-workspace.html"><span class="wm-brand-mark">H</span><span class="brand-copy">CALGARY HITMEN<br><b>WAR ROOM</b></span></a>
+  <a class="brand" href="hitmen-workspace.html"><span class="wm-brand-mark">H</span><span class="brand-copy">CALGARY HITMEN<br><b>LINEUP ROOM</b></span></a>
   <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
   <nav class="main-nav">
     <a href="hitmen-workspace.html">War Room</a>
-    <a href="/calgary?tab=pool#hitmen-scouting">Scouting HQ</a>
+    <a href="hitmen-team-locker.html">Locker Room</a>
     <a class="active-nav" href="hitmen-locker-room.html">Lineups</a>
-    <a href="vod-lab.html?team=calgary-hitmen">VOD Scouting</a>
+    <a href="hitmen-opponents.html">Opponents</a>
     <a href="hitmen-battle-plan.html">Battle Plan</a>
+    <a href="vod-lab.html?team=calgary-hitmen">VOD</a>
   </nav>
 </header>
 
 <main>
   <section class="section-shell section-block management-login-shell">
-    <div class="section-heading"><div><div class="eyebrow">PRIVATE · CALGARY HITMEN</div><h2>LOCKER ROOM ACCESS</h2></div><div id="managementAccessStatus" class="status-pill">PRIVATE</div></div>
+    <div class="section-heading"><div><div class="eyebrow">PRIVATE · CALGARY HITMEN</div><h2>LINEUP ROOM ACCESS</h2></div><div id="managementAccessStatus" class="status-pill">PRIVATE</div></div>
     <section id="accountPanel" class="panel account-panel"></section>
-    <div id="managementLockedMessage" class="wm-card"><b>Management sign-in required.</b></div>
+    <div id="managementLockedMessage" class="wm-card"><b>Management sign-in required.</b><p>Use Discord or your Wildman account. Only authorized Hitmen management can save or analyze lineups.</p></div>
   </section>
 
   <div data-management-content hidden>
-    <section class="section-shell hm-tool-hero">
-      <div class="eyebrow">LGCHL SEASON 55 · ROSTER CONSTRUCTION</div>
-      <h1>LOCKER<br><span>ROOM.</span></h1>
-      <p>This is the roster side only: weekly lines, availability, cap math and bidding combinations. Player scouting stays in Scouting HQ, while film review stays in VOD Scouting. Three jobs, three rooms, considerably less digital soup.</p>
-      <div class="hm-tool-tabs">
-        <a href="hitmen-workspace.html">← War Room</a>
-        <a href="/calgary?tab=pool#hitmen-scouting">Scouting HQ</a>
-        <a href="/calgary?tab=bids#hitmen-scouting">Bidding Board</a>
-        <a href="vod-lab.html?team=calgary-hitmen">VOD Scouting</a>
-        <a href="hitmen-battle-plan.html">Battle Plan</a>
+    <section class="section-shell hm-lineup-hero">
+      <div>
+        <div class="eyebrow">LGCHL SEASON 55 · GAME PREP</div>
+        <h1>LINEUP<br><span>ROOM.</span></h1>
+        <p>Build both 6s lines from the actual roster and TC pool, set availability, choose the opponent, and let the hockey-ops AI explain the matchup implications with stored evidence.</p>
       </div>
-      <div class="hm-budget-strip" style="margin-top:22px">
-        <div class="hm-budget-kpi"><small>Access</small><strong id="lockerRole">PRIVATE</strong></div>
-        <div class="hm-budget-kpi"><small>Signed Roster</small><strong id="rosterCount">0</strong></div>
-        <div class="hm-budget-kpi"><small>Scouting Candidates</small><strong id="candidateCount">0</strong></div>
+      <div class="hm-lineup-hero-kpis">
+        <div><small>ACTIVE ROSTER</small><strong id="lineupRosterCount">0</strong></div>
+        <div><small>TC PLAYERS</small><strong id="lineupTcCount">0</strong></div>
+        <div><small>SAVED PLANS</small><strong id="lineupSavedCount">0</strong></div>
       </div>
     </section>
 
-    <section class="section-shell section-block hm-locker-shell">
-      <div id="hitmenUnitLab"></div>
-
-      <article id="builderCard" class="hm-tool-card">
-        <div class="eyebrow">WEEKLY + BIDDING PLANNER</div>
-        <h2>LINEUP BUILDER</h2>
-        <p class="hm-status-line" id="lineupStatus">Loading shared Calgary lineup board…</p>
-
-        <div class="hm-locker-toolbar">
-          <label>Lineup name<input id="lineupLabel" placeholder="Tuesday 9 PM · Lineup A"></label>
-          <label>Week / set<input id="weekLabel" placeholder="Week 1"></label>
-          <label>Game date<input id="gameDate" type="date"></label>
-          <label>Mode
-            <select id="lineupType">
-              <option value="weekly">Weekly lineup</option>
-              <option value="bidding">Bidding simulator</option>
-              <option value="practice">Practice</option>
-              <option value="scrim">Scrim</option>
-            </select>
-          </label>
-          <label>Plan status
-            <select id="lineupPlanStatus">
-              <option value="draft">Draft</option>
-              <option value="submitted">Submitted</option>
-              <option value="confirmed">Confirmed</option>
-            </select>
-          </label>
-          <label>Team cap<input id="salaryCap" type="number" min="0" step="250000" value="30000000"></label>
+    <section class="section-shell section-block">
+      <article class="hm-lineup-card">
+        <div class="hm-lineup-card-head">
+          <div><div class="eyebrow">GAME CONTEXT</div><h2>TONIGHT'S PLAN</h2></div>
+          <span id="lineupStatus" class="hm-lineup-status">Loading roster…</span>
         </div>
-
-        <div id="modeNote" class="hm-mode-note">Weekly mode uses the signed Calgary roster and saved game-date availability.</div>
-        <div id="biddingPickerBar" class="hm-bidding-market-bar" hidden>
-          <span><b>LIVE MARKET LINKED</b><small id="currentMarketStamp">Market source: waiting for first sync</small></span>
-          <button id="refreshBiddingMarket" class="hm-action" type="button">Refresh Market Prices</button>
+        <div class="hm-lineup-context">
+          <label>Lineup name<input id="lineupLabel" class="field" placeholder="Sunday 9 PM · Lineup A"></label>
+          <label>Game date<input id="lineupGameDate" class="field" type="date"></label>
+          <label>Opponent<select id="lineupOpponent" class="select-field"><option value="">Choose opponent…</option></select></label>
+          <label>Plan status<select id="lineupPlanStatus" class="select-field"><option value="draft">Draft</option><option value="confirmed">Confirmed</option></select></label>
         </div>
-
-        <div class="hm-budget-strip">
-          <div class="hm-budget-kpi"><small>Selected 6 Cost</small><strong id="selectedCost">$0</strong></div>
-          <div class="hm-budget-kpi"><small>Average / Player</small><strong id="averageCost">$0</strong></div>
-          <div class="hm-budget-kpi"><small>Ceiling Total</small><strong id="ceilingCost">$0</strong></div>
-          <div class="hm-budget-kpi"><small>Cap Remaining</small><strong id="capRemaining">$30M</strong></div>
-          <div class="hm-budget-kpi"><small>Available</small><strong id="availabilityCount">0/0</strong></div>
-        </div>
-
-        <datalist id="hmPlayerOptions"></datalist>
-        <div id="lineBuilderGrid" class="hm-line-builder-grid"></div>
-
-        <label style="display:grid;gap:6px;margin-top:12px;color:#bcaeb1;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase">Lineup / matchup notes
-          <textarea id="lineupNotes" class="hm-lineup-note" placeholder="Matchups, chemistry, faceoffs, emergency swaps, special teams notes…"></textarea>
-        </label>
-
-        <div class="hm-locker-actions">
-          <button id="saveLineup" class="hm-action primary" data-write-only type="button">Save Shared Lineup</button>
-          <button id="newLineup" class="hm-action" type="button">New Lineup</button>
-          <a class="hm-action hm-action-link" href="/calgary?tab=bids#hitmen-scouting">Open Bidding Board →</a>
-        </div>
+        <label class="hm-lineup-notes">Management notes<textarea id="lineupNotes" class="text-input" placeholder="Availability, matchup goals, special assignments, emergency swaps…"></textarea></label>
       </article>
+    </section>
 
-      <div class="hm-tool-grid">
-        <article class="hm-tool-card">
-          <div class="eyebrow">MULTIPLE VERSIONS</div>
-          <h3>Saved Lineups</h3>
-          <p>Keep Lineup A, Lineup B, alternate nights, scrims and bidding mocks without overwriting each other.</p>
-          <div id="savedLineups" class="hm-saved-list"></div>
-        </article>
+    <section class="section-shell section-block">
+      <div class="section-heading"><div><div class="eyebrow">GAME NIGHT LINES</div><h2>TWO COMPLETE 6s UNITS</h2></div><div class="status-pill">TAP TO SELECT · MOBILE READY</div></div>
+      <div id="lineupLines" class="hm-two-lines"></div>
+    </section>
 
-        <article class="hm-tool-card">
-          <div class="eyebrow">BIDDING MODE</div>
-          <h3>Projected Cost Logic</h3>
-          <p>Signed players use their cap hit. Bidding targets pull the best price evidence already stored for Calgary: live/current market price first, then Calgary target bid, then the current Wildman valuation model. Every projected cost and ceiling can still be overridden by management.</p>
-          <div class="hm-mode-note">That lets management drop six targets into a mock lineup and instantly see total projected spend, average player cost, ceiling spend and remaining room against the $30M cap.</div>
-        </article>
-      </div>
+    <section class="section-shell section-block hm-lineup-lower">
+      <article class="hm-lineup-card">
+        <div class="eyebrow">DEPTH</div><h2>SCRATCHES + TC</h2>
+        <p class="hm-lineup-muted">Roster players not used in either unit remain visible here. TC players are clearly marked and can be placed directly into a line.</p>
+        <div id="lineupDepth" class="hm-depth-list"></div>
+      </article>
+      <article class="hm-lineup-card">
+        <div class="eyebrow">GAME-DATE STATUS</div><h2>AVAILABILITY</h2>
+        <p class="hm-lineup-muted">Set availability for the selected game date. This is shared across Calgary management.</p>
+        <div id="lineupAvailability" class="hm-availability-list"></div>
+      </article>
+    </section>
 
-      <article class="hm-tool-card">
-        <div class="eyebrow">GAME-DATE AVAILABILITY</div>
-        <h2>ROSTER AVAILABILITY</h2>
-        <p>Pick a game date above. Once the official roster is loaded, every signed player appears here with Available, Maybe, Unavailable or Unknown plus a management note.</p>
-        <div id="availabilityRows" class="hm-avail-list"></div>
+    <section class="section-shell section-block">
+      <article class="hm-lineup-card">
+        <div class="hm-lineup-actions">
+          <button id="saveLineup" class="hm-action primary" type="button">Save Lineup</button>
+          <button id="activateLineup" class="hm-action" type="button">Set Active</button>
+          <button id="newLineup" class="hm-action" type="button">New Draft</button>
+        </div>
+        <div class="eyebrow" style="margin-top:18px">SAVED PLANS</div>
+        <div id="savedLineups" class="hm-saved-lineups"></div>
+      </article>
+    </section>
+
+    <section class="section-shell section-block">
+      <article class="hm-lineup-card hm-ai-card">
+        <div class="hm-lineup-card-head">
+          <div><div class="eyebrow">WILDMAN HOCKEY OPS</div><h2>AI MATCHUP BREAKDOWN</h2></div>
+          <span id="lineupAiStatus" class="status-pill">READY</span>
+        </div>
+        <p class="hm-lineup-muted">The AI uses the selected Calgary lineup plus stored opponent, roster, VOD and scouting evidence. It must separate observed evidence from inference and recommendation.</p>
+        <div class="hm-ai-actions">
+          <button id="analyzeLineup" class="hm-action primary" type="button">Analyze Matchup</button>
+          <button id="reanalyzeLineup" class="hm-action" type="button">Reanalyze</button>
+          <button id="savePregameReport" class="hm-action" type="button" disabled>Save Pregame Report</button>
+          <a id="battlePlanLink" class="hm-action hm-action-link" href="hitmen-battle-plan.html">Open Battle Plan →</a>
+        </div>
+        <div id="lineupAiAnswer" class="hm-ai-answer"><div class="empty-state">Choose an opponent and build at least one complete line.</div></div>
       </article>
     </section>
   </div>
 </main>
 
-<footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN LOCKER ROOM</b><span>Season 55 lineup planning · availability · bidding simulator</span></div><p>Private management</p></div></footer>
+<footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN · LINEUP ROOM</b><span>Roster · TC · Availability · Matchup AI · Battle Plan</span></div><p>Private management</p></div></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
 <script src="backend.js"></script>
 <script src="management-guard.js"></script>
 <script src="script.js"></script>
-<script src="hitmen-unit-lab.js?v=20260923"></script>
-<script src="hitmen-lineup-builder.js?v=20260923"></script>
+<script src="hitmen-lineup-room.js?v=20260926"></script>
 </body>
 </html>
