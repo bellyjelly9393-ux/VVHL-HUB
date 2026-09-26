@@ -230,3 +230,11 @@ body.hitmen-team-locker-page{background:radial-gradient(circle at 50% -10%,#3410
   mix-blend-mode:normal!important;
   filter:drop-shadow(0 12px 12px rgba(0,0,0,.45)) saturate(1.05)!important;
 }
+
+.locker-preview-v2.is-tc{border-color:rgba(228,201,120,.28)!important}
+.locker-preview-v2.is-tc .stall-nameplate-v2{border-bottom-color:#d6b76b!important}
+.team-preview-name{position:absolute;z-index:6;top:34%;left:19%;right:19%;text-align:center;color:#f7f2ef;font:900 clamp(9px,1vw,14px)/1 "Barlow Condensed",sans-serif;letter-spacing:.06em;text-shadow:0 2px 4px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team-preview-number{position:absolute;z-index:6;top:45%;left:0;right:0;text-align:center;color:#f6f0ea;font:900 clamp(32px,4.6vw,66px)/.9 "Barlow Condensed",sans-serif;text-shadow:0 3px 4px #000,0 0 3px #b3164d}
+.stall-footer-v2{display:grid!important;grid-template-columns:1fr auto!important;gap:5px 10px!important;align-items:center!important}
+.stall-footer-v2 small:nth-child(2){grid-column:1/2}
+.stall-footer-v2 b{grid-column:2;grid-row:1/3}
