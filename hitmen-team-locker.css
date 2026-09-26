@@ -66,3 +66,7 @@ body.hitmen-team-locker-page{background:radial-gradient(circle at 50% -10%,#3410
 .mini-jersey-front:before,
 .mini-jersey-front:after,
 .mini-jersey-front .mini-jersey-crest{display:none!important}
+
+/* GENERATED LOCKER ASSETS V1.1 */
+.stall-neon,.stall-top-shelf,.stall-side-art,.stall-bench,.stall-underlight,.stall-rail,.stall-hook{display:none!important}
+.mini-jersey-front .mini-jersey-sleeve-num{display:block!important;z-index:8}
