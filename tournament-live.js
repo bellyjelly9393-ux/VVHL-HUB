@@ -207,7 +207,7 @@
 
   async function load(){
     const [events,teams,players,games,teamStats,playerStats,eventTeams,rosters,rankings]=await Promise.all([
-      db.from('esports_events').select('*').eq('active',true),
+      db.from('esports_events').select('*').eq('active',true).eq('is_public',true),
       db.from('esports_teams').select('*').eq('active',true),
       db.from('esports_players').select('*').eq('active',true),
       db.from('esports_games').select('*'),
@@ -219,10 +219,22 @@
     ]);
     const all=[events,teams,players,games,teamStats,playerStats,eventTeams,rosters,rankings];
     if(all.some(x=>x.error)){console.error('Tournament live refresh failed',all.map(x=>x.error));return;}
+    const privateTeamIds=new Set((teams.data||[]).filter(t=>{
+      const h=String(`${t.name||''} ${t.slug||''} ${t.abbreviation||''}`).toLowerCase();
+      return h.includes('calgary hitmen')||h.includes('calgary-hitmen')||h==='hitmen'||h.includes(' hitmen ');
+    }).map(t=>t.id));
+    const publicEventIds=new Set((events.data||[]).map(e=>e.id));
+    const visibleTeams=(teams.data||[]).filter(t=>!privateTeamIds.has(t.id));
     Object.assign(S,{
-      events:events.data||[],teams:teams.data||[],players:players.data||[],games:games.data||[],
-      teamStats:teamStats.data||[],playerStats:playerStats.data||[],eventTeams:eventTeams.data||[],
-      rosters:rosters.data||[],rankings:rankings.data||[]
+      events:events.data||[],
+      teams:visibleTeams,
+      players:players.data||[],
+      games:(games.data||[]).filter(g=>publicEventIds.has(g.event_id)&&!privateTeamIds.has(g.home_team_id)&&!privateTeamIds.has(g.away_team_id)),
+      teamStats:(teamStats.data||[]).filter(s=>publicEventIds.has(s.event_id)&&!privateTeamIds.has(s.team_id)),
+      playerStats:(playerStats.data||[]).filter(s=>publicEventIds.has(s.event_id)&&!privateTeamIds.has(s.team_id)),
+      eventTeams:(eventTeams.data||[]).filter(r=>publicEventIds.has(r.event_id)&&!privateTeamIds.has(r.team_id)),
+      rosters:(rosters.data||[]).filter(r=>publicEventIds.has(r.event_id)&&!privateTeamIds.has(r.team_id)),
+      rankings:(rankings.data||[]).filter(r=>publicEventIds.has(r.event_id)&&!privateTeamIds.has(r.team_id))
     });
     renderFeatured();renderBoard();renderSchedule();renderStories();renderStandings();renderLeaderboard();renderCounts();
     const stamp=$('liveRefreshStamp'); if(stamp)stamp.textContent=`Updated ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})}`;
