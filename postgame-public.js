@@ -1,7 +1,7 @@
 (() => {
   if (!window.supabase) return;
   const db = window.supabase.createClient("https://lrgllzvwgvqagcpiyvfd.supabase.co", "sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP");
-  const S = { reports: [], games: [], teams: [], players: [] };
+  const S = { reports: [], games: [], teams: [], players: [], events: [] };
   const esc = (v) => String(v ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[c]);
   const teamById = (id) => S.teams.find((x) => x.id === id);
   const gameById = (id) => S.games.find((x) => x.id === id);
@@ -9,14 +9,28 @@
   const stat = (obj, key) => Number(obj?.[key] || 0);
 
   async function load() {
-    const [reports, games, teams, players] = await Promise.all([
+    const [reports, games, teams, players, events] = await Promise.all([
       db.from("esports_game_reports").select("*").eq("status", "published").order("published_at", { ascending: false }),
       db.from("esports_games").select("*"),
       db.from("esports_teams").select("*").eq("active", true),
       db.from("esports_players").select("*").eq("active", true),
+      db.from("esports_events").select("*").eq("active", true).eq("is_public", true),
     ]);
-    if ([reports, games, teams, players].some((x) => x.error)) return;
-    Object.assign(S, { reports: reports.data || [], games: games.data || [], teams: teams.data || [], players: players.data || [] });
+    if ([reports, games, teams, players, events].some((x) => x.error)) return;
+    const privateTeamIds = new Set((teams.data || []).filter((t) => {
+      const h = String(`${t.name || ""} ${t.slug || ""} ${t.abbreviation || ""}`).toLowerCase();
+      return h.includes("calgary hitmen") || h.includes("calgary-hitmen") || h === "hitmen" || h.includes(" hitmen ");
+    }).map((t) => t.id));
+    const publicEventIds = new Set((events.data || []).map((e) => e.id));
+    const visibleGames = (games.data || []).filter((g) => publicEventIds.has(g.event_id) && !privateTeamIds.has(g.home_team_id) && !privateTeamIds.has(g.away_team_id));
+    const visibleGameIds = new Set(visibleGames.map((g) => g.id));
+    Object.assign(S, {
+      reports: (reports.data || []).filter((r) => visibleGameIds.has(r.game_id)),
+      games: visibleGames,
+      teams: (teams.data || []).filter((t) => !privateTeamIds.has(t.id)),
+      players: players.data || [],
+      events: events.data || []
+    });
     renderList(); renderDetail();
   }
 
