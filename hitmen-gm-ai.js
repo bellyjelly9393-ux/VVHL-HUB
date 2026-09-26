@@ -107,6 +107,27 @@
     }finally{$('gmAiAsk').disabled=false;}
   }
 
+  function renderAnalysisText(text){
+    return String(text||'').split(/\r?\n/).map(line=>{
+      const raw=line.trimEnd(),t=raw.trim();
+      if(!t)return '<div class="gm-ai-analysis-gap"></div>';
+      const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\[(E\d+)\]/g,'<span class="gm-ai-cite">[$1]</span>');
+      if(/^###\s+/.test(t))return '<h4>'+inline(t.replace(/^###\s+/,''))+'</h4>';
+      if(/^##\s+/.test(t))return '<h3>'+inline(t.replace(/^##\s+/,''))+'</h3>';
+      if(/^#\s+/.test(t))return '<h2>'+inline(t.replace(/^#\s+/,''))+'</h2>';
+      if(/^[-*]\s+/.test(t))return '<div class="gm-ai-analysis-bullet"><span>•</span><p>'+inline(t.replace(/^[-*]\s+/,''))+'</p></div>';
+      if(/^\d+[.)]\s+/.test(t)){const m=t.match(/^(\d+)[.)]\s+(.*)$/);return '<div class="gm-ai-analysis-bullet"><span>'+esc(m[1])+'.</span><p>'+inline(m[2])+'</p></div>';}
+      return '<p>'+inline(t)+'</p>';
+    }).join('');
+  }
+
+  function usageText(usage){
+    if(!usage)return'';
+    const input=usage.prompt_tokens??usage.input_tokens,output=usage.completion_tokens??usage.output_tokens,total=usage.total_tokens;
+    const parts=[];if(input!=null)parts.push('input '+Number(input).toLocaleString());if(output!=null)parts.push('output '+Number(output).toLocaleString());if(total!=null)parts.push('total '+Number(total).toLocaleString());
+    return parts.join(' · ');
+  }
+
   let analysisGeneration=0;
   async function deepAsk(){
     if(!team||!canUse())return;
@@ -117,11 +138,19 @@
     try{
       const {data,error}=await db().auth.getSession();if(error)throw error;
       if(!data.session?.access_token)throw new Error('Sign in again before analyzing.');
-      const response=await fetch('/api/chelscout-deepthink',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+data.session.access_token},body:JSON.stringify({question,playerNames:$('gmAiPlayers').value.split('\n').map(x=>x.trim()).filter(Boolean),scenario:$('gmAiScenario').value.trim(),mode:$('gmAiMode').value}),signal:AbortSignal.timeout(115000)});
+      const response=await fetch('/api/chelscout-deepthink',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+data.session.access_token},body:JSON.stringify({question,playerNames:$('gmAiPlayers').value.split('\n').map(x=>x.trim()).filter(Boolean),scenario:$('gmAiScenario').value.trim(),mode:$('gmAiMode').value,lens:$('gmAiLens')?.value||'auto'}),signal:AbortSignal.timeout(115000)});
       const result=await response.json();if(!response.ok)throw new Error(result.error||'Analysis failed.');
       if(generation!==analysisGeneration||auth().user?.id!==userId)return;
-      $('gmAiAnswer').innerHTML='<div class="eyebrow">HOCKEY DECISION · MANAGEMENT REVIEW</div><p>'+esc(result.model)+(result.evidenceModel?' · evidence brief: '+esc(result.evidenceModel):'')+'</p><div style="white-space:pre-wrap">'+esc(result.answer)+'</div><details><summary>Evidence and coverage</summary><p>'+esc(result.coverage.selection)+'</p><p>Players: '+esc(result.coverage.selectedPlayers.join(', ')||'No scouting candidates selected')+'</p><p>Unmatched: '+esc(result.coverage.unmatchedNames.join(', ')||'None')+'</p>'+result.coverage.warnings.map(x=>'<p>'+esc(x)+'</p>').join('')+result.sources.map(x=>'<details><summary>['+esc(x.id)+'] '+esc(x.source)+'</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(JSON.stringify(x.data,null,2))+'</pre></details>').join('')+'</details>';
-      setStatus('ANALYSIS READY · ADVISORY');
+      const coverage=result.coverage||{},matched=(coverage.matchedOpponents||[]).join(', ')||'None',players=(coverage.selectedPlayers||[]).join(', ')||'None',warn=(coverage.warnings||[]);
+      $('gmAiAnswer').innerHTML=
+        '<div class="gm-ai-analysis-head"><div><div class="eyebrow">'+esc(result.engine||'WILDMAN HOCKEY OPS')+'</div><h3>'+esc(String(result.lens||'general').replaceAll('_',' ').toUpperCase())+' ANALYSIS</h3></div><div class="gm-ai-analysis-meta"><span>'+esc(result.model||'Claude')+'</span><span>'+esc((result.reasoningEffort||'').toUpperCase())+' REASONING</span></div></div>'+
+        '<div class="gm-ai-analysis-body">'+renderAnalysisText(result.answer)+'</div>'+
+        '<details class="gm-ai-evidence"><summary>Evidence packet & coverage · '+esc(String(coverage.evidenceRecords??result.sources?.length??0))+' records</summary>'+
+          '<div class="gm-ai-coverage-grid"><div><small>Players</small><b>'+esc(players)+'</b></div><div><small>Opponents</small><b>'+esc(matched)+'</b></div><div><small>Selection</small><b>'+esc(coverage.selection||'—')+'</b></div><div><small>Usage</small><b>'+esc(usageText(result.usage)||'—')+'</b></div></div>'+
+          (warn.length?'<div class="gm-ai-warnings">'+warn.map(x=>'<p>'+esc(x)+'</p>').join('')+'</div>':'')+
+          (result.sources||[]).map(x=>'<details class="gm-ai-source"><summary>['+esc(x.id)+'] '+esc(x.source)+(x.meta?.evidenceClass?' · '+esc(String(x.meta.evidenceClass).replaceAll('_',' ')):'')+'</summary><pre>'+esc(JSON.stringify(x.data,null,2))+'</pre></details>').join('')+
+        '</details>';
+      setStatus('CLAUDE ANALYSIS READY');
     }catch(e){if(generation===analysisGeneration&&auth().user?.id===userId){$('gmAiAnswer').textContent=e.name==='TimeoutError'?'Analysis timed out. Try fewer players or Quick mode.':e.message;setStatus('ANALYSIS UNAVAILABLE');}}
     finally{if(generation===analysisGeneration){$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;}}
   }
@@ -130,7 +159,7 @@
 
   $('gmAiAsk')?.addEventListener('click',ask);
   $('gmAiQuestion')?.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')ask();});
-  document.querySelectorAll('[data-gm-example]').forEach(b=>b.addEventListener('click',()=>{$('gmAiQuestion').value=b.dataset.gmExample;ask();}));
+  document.querySelectorAll('[data-gm-example]').forEach(b=>b.addEventListener('click',()=>{$('gmAiQuestion').value=b.dataset.gmExample;if(b.dataset.gmLens&&$('gmAiLens'))$('gmAiLens').value=b.dataset.gmLens;if(b.dataset.gmLens)deepAsk();else ask();}));
 
   window.addEventListener('vvhl-auth-change',init);
   if(auth().user)init();
