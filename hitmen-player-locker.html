@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>Player Locker | Calgary Hitmen</title>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-team-locker.css"><link rel="stylesheet" href="hitmen-player-locker.css">
+</head>
+<body class="wildman-site hitmen-player-locker-page">
+<header class="site-header locker-header">
+<a class="brand" href="hitmen-team-locker.html"><span class="locker-brand-mark">H</span><span class="brand-copy">CALGARY HITMEN<br><b>PLAYER LOCKER</b></span></a>
+<button class="menu-toggle" type="button" aria-label="Open navigation">☰</button>
+<nav class="main-nav"><a href="hitmen-team-locker.html">Locker Room</a><a class="active-nav" href="hitmen-player-locker.html">My Stall</a></nav>
+</header>
+
+<main>
+<section class="section-shell locker-access-shell">
+<section id="accountPanel" class="panel account-panel"></section>
+<div id="lockerLockedMessage" class="wm-card"><b>Team sign-in required.</b><p>This player dashboard is restricted to Calgary Hitmen team accounts.</p></div>
+</section>
+
+<div data-locker-content hidden>
+<section class="section-shell player-shell">
+<aside class="player-sidebar">
+<div class="player-id-card">
+<div id="playerMiniImage" class="player-mini-image"><span>CHEL</span></div>
+<div><h2 id="playerSideName">PLAYER</h2><p><span id="playerSidePos">—</span> · Calgary Hitmen</p></div>
+</div>
+<nav class="player-side-nav">
+<a href="#stall">My Locker Stall</a><a href="#performance">Season Performance</a><a href="#games">Game Reports</a><a href="#weekly">Weekly Report</a><a href="#line">Line Performance</a><a href="#profile">Player Profile</a>
+</nav>
+<div class="player-side-note"><small>SEASON 55</small><b id="playerClaimStatus">TEAM PROFILE</b></div>
+</aside>
+
+<div class="player-main">
+<section id="stall" class="player-stall-hero">
+<div class="player-stall-scene">
+<div class="stall-light"></div><div class="stall-big-rail"></div><div class="stall-big-hook"></div>
+<div class="big-jersey"><div class="big-jersey-body"></div><div id="jerseyNameLive" class="big-jersey-name">HITMEN</div><div id="jerseyNumberLive" class="big-jersey-number"></div></div>
+<div class="big-skates"><i></i><i></i></div><div class="big-gloves"><i></i><i></i></div><div class="big-helmet"></div>
+<div id="chelPlayerDisplay" class="chel-player-display"><div class="chel-placeholder"><b>YOUR CHEL PLAYER</b><small>Upload a clean screenshot or render for future team media projects.</small></div></div>
+</div>
+<div class="player-stall-copy">
+<div class="eyebrow">CALGARY HITMEN · PERSONAL STALL</div><h1 id="playerTitle">PLAYER</h1><p id="playerMeta">Season 55</p>
+<div class="player-identity-badges"><span id="playerPositionBadge">—</span><span id="playerRoleBadge">ROSTER</span><span id="playerSalaryBadge">—</span></div>
+<div id="editLockerBox" class="locker-edit-box">
+<h3>Customize Your Jersey</h3>
+<div class="locker-edit-grid"><label>Name on back<input id="jerseyNameInput" maxlength="18" placeholder="PLAYER"></label><label>Number<input id="jerseyNumberInput" maxlength="2" inputmode="numeric" placeholder="00"></label></div>
+<button id="saveJersey" class="small-btn primary" type="button">Save Jersey</button><span id="jerseySaveStatus"></span>
+</div>
+</div>
+</section>
+
+<section id="performance" class="player-panel">
+<div class="player-panel-head"><div><div class="eyebrow">SEASON 55</div><h2>PERFORMANCE DASHBOARD</h2></div><span id="performanceSample">0 GAMES</span></div>
+<div class="player-stat-grid">
+<div><small>GOALS</small><strong id="psGoals">0</strong></div><div><small>ASSISTS</small><strong id="psAssists">0</strong></div><div><small>POINTS</small><strong id="psPoints">0</strong></div><div><small>+ / -</small><strong id="psPlusMinus">0</strong></div><div><small>SHOTS</small><strong id="psShots">0</strong></div><div><small>HITS</small><strong id="psHits">0</strong></div><div><small>TAKEAWAYS</small><strong id="psTakeaways">0</strong></div><div><small>GIVEAWAYS</small><strong id="psGiveaways">0</strong></div>
+</div>
+<div class="player-ratings-grid"><article><h3>OFFENSE</h3><div id="offenseMetrics"></div></article><article><h3>DEFENSE</h3><div id="defenseMetrics"></div></article><article><h3>TEAM</h3><div id="teamMetrics"></div></article></div>
+</section>
+
+<section id="games" class="player-panel">
+<div class="player-panel-head"><div><div class="eyebrow">FILM + STATS</div><h2>GAME-BY-GAME REPORTS</h2></div><span>Individual scouting reports</span></div><div id="playerGameReports" class="player-report-list"></div>
+</section>
+
+<section id="weekly" class="player-panel">
+<div class="player-panel-head"><div><div class="eyebrow">DEVELOPMENT</div><h2>WEEKLY REPORT</h2></div><span id="weeklyLabel">WEEK 1</span></div><div id="playerWeeklyReport"></div>
+</section>
+
+<section id="line" class="player-panel">
+<div class="player-panel-head"><div><div class="eyebrow">CHEMISTRY</div><h2>LINE PERFORMANCE</h2></div><span>How your unit performed together</span></div><div id="playerLineReports" class="player-report-list"></div>
+</section>
+
+<section id="profile" class="player-panel">
+<div class="player-panel-head"><div><div class="eyebrow">MEDIA PROFILE</div><h2>CHEL PLAYER IMAGE</h2></div><span>Private team asset</span></div>
+<div class="upload-layout"><div><p>Upload a clear screenshot or render of your World of CHEL player. This stays inside the private Hitmen team area and can be used later for player cards, lineup graphics, broadcasts and other team projects.</p><input id="chelImageInput" type="file" accept="image/jpeg,image/png,image/webp"><button id="uploadChelImage" class="small-btn primary" type="button">Upload CHEL Player</button><span id="uploadStatus"></span></div><div id="uploadPreview" class="upload-preview"><span>NO IMAGE YET</span></div></div>
+</section>
+</div>
+</section>
+</div>
+</main>
+
+<footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN · PLAYER LOCKER</b><span>Performance · development · media profile</span></div><p>Private team access</p></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="backend.js"></script><script src="script.js"></script><script src="hitmen-player-locker.js"></script>
+</body></html>
