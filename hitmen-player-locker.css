@@ -33,3 +33,19 @@
 .personal-side-art{position:absolute;z-index:2;top:166px;bottom:24px;width:46px;background:linear-gradient(180deg,#ef286d,#b60d49 58%,#ff347b);overflow:hidden}.personal-side-art.left{left:0}.personal-side-art.right{right:0}.personal-side-art i{position:absolute;left:50%;bottom:55px;width:3px;height:100px;background:#111216;transform:translateX(-50%)}.personal-side-art i:before{content:"";position:absolute;left:-9px;top:-3px;width:20px;height:5px;background:#111216}.personal-side-art i:after{content:"";position:absolute;left:-5px;top:-14px;width:11px;height:11px;border-radius:50%;border:2px solid #111216}
 .player-stall-scene{min-height:560px}.stall-light{top:35px}.stall-big-rail{top:179px}.stall-big-hook{top:163px}.big-jersey-flip{top:196px}.big-skates{bottom:42px}.big-gloves{bottom:48px}.big-helmet{top:196px}
 @media(max-width:700px){.personal-stall-nameplate{grid-template-columns:30px 36px minmax(0,1fr) 36px 30px;height:52px}.personal-stall-nameplate strong{font-size:16px}.personal-plate-num{font-size:23px}.personal-logo-chip{width:28px;height:28px;font-size:15px}.player-stall-scene{min-height:540px}}
+
+/* GENERATED PLAYER LOCKER ASSETS V1 */
+.player-stall-scene{
+  background-image:linear-gradient(rgba(5,5,6,.08),rgba(5,5,6,.08)),url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_103244_e1de2ac9-4be3-45ef-ad5c-4b999b9cd437.png")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+.personal-neon-strip,.personal-upper-shelf,.personal-side-art,.stall-light,.stall-big-rail,.stall-big-hook,.big-helmet{display:none!important}
+.big-jersey-front{
+  background:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_103308_62dd93fd-206f-4d15-b6d0-5cfc92cdfabf.png") center/contain no-repeat!important;
+}
+.big-jersey-front .big-jersey-body,
+.big-jersey-front:after,
+.big-jersey-front .big-jersey-front-crest{display:none!important}
+.big-jersey-front .big-sleeve-number{display:block!important;z-index:8}
