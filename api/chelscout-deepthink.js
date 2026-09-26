@@ -194,9 +194,11 @@ async function contextFor(token,names,question,scenario,requestedLens){
   relevantGames=scheduleRows.filter(g=>opponentNames.includes(g.opponent_name));
   add('Calgary head-to-head schedule/results',relevantGames,{evidenceClass:'verified_game_record'});
 
-  const [rosterResult,snapshotResult]=await Promise.allSettled([
+  const [rosterResult,snapshotResult,playerStatsResult,sourceSnapshotResult]=await Promise.allSettled([
    read(`hitmen_opponent_roster_players?select=*&team_id=eq.${TEAM}&season=eq.${SEASON}&active=eq.true&limit=1500`),
-   read(`hitmen_opponent_stat_snapshots?select=*&team_id=eq.${TEAM}&season=eq.${SEASON}&order=as_of.desc&limit=500`)
+   read(`hitmen_opponent_stat_snapshots?select=*&team_id=eq.${TEAM}&season=eq.${SEASON}&order=as_of.desc&limit=500`),
+   read(`hitmen_opponent_player_stats?select=*&team_id=eq.${TEAM}&season=eq.${SEASON}&order=source_updated_at.desc&limit=2000`),
+   read(`hitmen_opponent_source_snapshots?select=id,opponent_name,source,source_label,source_url,payload,fetched_at&team_id=eq.${TEAM}&season=eq.${SEASON}&order=fetched_at.desc&limit=120`)
   ]);
   if(rosterResult.status==='fulfilled'){
    const rows=rosterResult.value.filter(r=>opponentNames.includes(r.opponent_name));
@@ -205,6 +207,12 @@ async function contextFor(token,names,question,scenario,requestedLens){
   }else warnings.push('Opponent roster data could not be loaded.');
   if(snapshotResult.status==='fulfilled')add('Opponent statistical snapshots',snapshotResult.value.filter(s=>opponentNames.includes(s.opponent_name)).slice(0,100),{evidenceClass:'structured_team_stats'});
   else warnings.push('Opponent stat snapshots could not be loaded.');
+  if(playerStatsResult.status==='fulfilled')add('Opponent player public statistics',playerStatsResult.value.filter(s=>opponentNames.includes(s.opponent_name)).slice(0,180),{evidenceClass:'structured_player_stats'});
+  else warnings.push('Opponent player statistics could not be loaded.');
+  if(sourceSnapshotResult.status==='fulfilled'){
+   const raw=sourceSnapshotResult.value.filter(s=>opponentNames.includes(s.opponent_name)).slice(0,12);
+   add('Public source snapshots including EA NHL 27 game/member logs',raw,{evidenceClass:'public_game_log'});
+  }else warnings.push('Public EA/league source snapshots could not be loaded.');
  }else if(['opponent','postgame','general'].includes(lens)){
   addOne('Calgary Season 55 schedule/results index',{games:scheduleRows.map(g=>({week:g.week,scheduled_at:g.scheduled_at,opponent_name:g.opponent_name,status:g.status,calgary_score:g.calgary_score,opponent_score:g.opponent_score,overtime:g.overtime}))},{evidenceClass:'verified_game_record'});
  }
