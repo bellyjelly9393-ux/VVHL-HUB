@@ -31,7 +31,7 @@ async function imageUrl(path){if(!path)return null;const r=await DB().storage.fr
 async function render(){
  if(!locker)return;
  E('playerSideName').textContent=locker.gamertag;E('playerSidePos').textContent=locker.position||'—';E('playerTitle').textContent=locker.gamertag;E('playerMeta').textContent='Season 55 · '+(locker.management_role||'Calgary Hitmen roster');E('playerPositionBadge').textContent=locker.position||'—';E('playerRoleBadge').textContent=locker.management_role||'ROSTER';E('playerSalaryBadge').textContent=money(locker.salary);E('playerClaimStatus').textContent=locker.user_id?'PLAYER ACCESS LINKED':'STALL NOT YET CLAIMED';
- E('jerseyNameInput').value=locker.jersey_name||locker.gamertag;E('jerseyNumberInput').value=locker.jersey_number||'';E('jerseyNameLive').textContent=(locker.jersey_name||locker.gamertag).toUpperCase();E('jerseyNumberLive').textContent=locker.jersey_number||'';
+ E('jerseyNameInput').value=locker.jersey_name||locker.gamertag;E('jerseyNumberInput').value=locker.jersey_number||'';E('jerseyNameLive').textContent=(locker.jersey_name||locker.gamertag).toUpperCase();E('jerseyNumberLive').textContent=locker.jersey_number||'';if(E('jerseyFrontNumLeft'))E('jerseyFrontNumLeft').textContent=locker.jersey_number||'';if(E('jerseyFrontNumRight'))E('jerseyFrontNumRight').textContent=locker.jersey_number||'';
  E('editLockerBox').hidden=!canEdit();E('uploadChelImage').disabled=!canEdit();E('chelImageInput').disabled=!canEdit();
  signedImage=await imageUrl(locker.chel_player_image_path);
  const photo=signedImage?'<img src="'+esc(signedImage)+'" alt="">':'<span>CHEL</span>';E('playerMiniImage').innerHTML=photo;E('uploadPreview').innerHTML=signedImage?'<img src="'+esc(signedImage)+'" alt="CHEL player upload">':'<span>NO IMAGE YET</span>';E('chelPlayerDisplay').innerHTML=signedImage?'<img src="'+esc(signedImage)+'" alt="CHEL player">':'<div class="chel-placeholder"><b>YOUR CHEL PLAYER</b><small>Upload a screenshot or render for future team media.</small></div>';
@@ -67,8 +67,18 @@ async function load(){
  }catch(e){console.error(e);E('playerTitle').textContent='LOCKER UNAVAILABLE';}
 }
 E('jerseyNameInput')?.addEventListener('input',e=>E('jerseyNameLive').textContent=e.target.value.toUpperCase());
-E('jerseyNumberInput')?.addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,2);E('jerseyNumberLive').textContent=e.target.value});
+E('jerseyNumberInput')?.addEventListener('input',e=>{e.target.value=e.target.value.replace(/\D/g,'').slice(0,2);E('jerseyNumberLive').textContent=e.target.value;if(E('jerseyFrontNumLeft'))E('jerseyFrontNumLeft').textContent=e.target.value;if(E('jerseyFrontNumRight'))E('jerseyFrontNumRight').textContent=e.target.value});
 E('saveJersey')?.addEventListener('click',async()=>{if(!canEdit())return;const name=E('jerseyNameInput').value.trim().slice(0,18),num=E('jerseyNumberInput').value.trim();E('jerseySaveStatus').textContent='Saving…';const r=await DB().from('team_player_lockers').update({jersey_name:name||locker.gamertag,jersey_number:num||null,updated_at:new Date().toISOString()}).eq('id',locker.id);E('jerseySaveStatus').textContent=r.error?r.error.message:'Saved ✓';if(!r.error){locker.jersey_name=name||locker.gamertag;locker.jersey_number=num||null;}});
 E('uploadChelImage')?.addEventListener('click',async()=>{if(!canEdit())return;const f=E('chelImageInput').files?.[0];if(!f){E('uploadStatus').textContent='Choose an image first.';return}if(f.size>8*1024*1024){E('uploadStatus').textContent='Keep the image under 8 MB.';return}E('uploadStatus').textContent='Uploading…';const ownerFolder=locker.user_id||ST().user.id,path=TEAM+'/'+ownerFolder+'/'+locker.id+'-'+Date.now()+'.'+(f.name.split('.').pop()||'jpg').toLowerCase();const up=await DB().storage.from('hitmen-player-images').upload(path,f,{upsert:false,contentType:f.type});if(up.error){E('uploadStatus').textContent=up.error.message;return}const save=await DB().from('team_player_lockers').update({chel_player_image_path:path,chel_player_image_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',locker.id);if(save.error){E('uploadStatus').textContent=save.error.message;return}locker.chel_player_image_path=path;E('uploadStatus').textContent='Uploaded ✓';await render();});
+function flipBigJersey(e){
+ const el=E('bigJerseyFlip');if(!el)return;
+ if(e){e.preventDefault();e.stopPropagation();}
+ el.classList.toggle('is-flipped');
+ const back=el.classList.contains('is-flipped');
+ el.setAttribute('aria-label',back?'Flip jersey back to front':'Flip jersey front to back');
+ if(E('jerseyFlipHint'))E('jerseyFlipHint').textContent=back?'TAP JERSEY TO VIEW FRONT':'TAP JERSEY TO VIEW BACK';
+}
+E('bigJerseyFlip')?.addEventListener('click',flipBigJersey);
+E('bigJerseyFlip')?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' ')flipBigJersey(e)});
 window.addEventListener('vvhl-auth-change',gate);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',gate);else gate();
 })();
