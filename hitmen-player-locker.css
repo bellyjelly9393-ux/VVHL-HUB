@@ -73,3 +73,100 @@
 }
 .big-skates i{display:none!important}
 .big-gloves{display:none!important}
+
+/* PLAYER LOCKER V2 IMMERSIVE */
+.player-stall-scene{
+  min-height:620px!important;
+  background-image:linear-gradient(180deg,rgba(4,4,5,.02),rgba(4,4,5,.08)),url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_103244_e1de2ac9-4be3-45ef-ad5c-4b999b9cd437.png")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  box-shadow:inset 0 -55px 75px rgba(0,0,0,.24)!important;
+}
+.player-stall-scene:before,.player-stall-scene:after{display:none!important}
+.personal-upper-shelf,.big-skates,.big-gloves,.big-helmet,.personal-neon-strip,.personal-side-art,.stall-light,.stall-big-rail,.stall-big-hook{display:none!important}
+.personal-stall-nameplate{
+  left:7%!important;right:7%!important;top:15px!important;height:62px!important;
+  grid-template-columns:62px minmax(0,1fr) 62px!important;
+  gap:8px!important;
+  padding:8px 14px!important;
+  background:linear-gradient(180deg,#252429,#0d0d0f)!important;
+  border:1px solid rgba(255,255,255,.11)!important;
+  border-bottom:2px solid #ee276d!important;
+  box-shadow:0 8px 18px rgba(0,0,0,.58),inset 0 -8px 18px rgba(238,39,109,.04)!important;
+}
+.personal-logo-chip{display:none!important}
+.personal-stall-nameplate strong{
+  font-size:clamp(19px,2.4vw,30px)!important;
+  letter-spacing:.035em!important;
+  color:#f8f3f1!important;
+  text-shadow:0 2px 4px #000!important;
+}
+.personal-plate-num{
+  font-size:clamp(25px,2.8vw,36px)!important;
+  color:#f2e8e5!important;
+  text-shadow:0 2px 0 #a71544,0 0 9px rgba(238,39,109,.3)!important;
+}
+.big-jersey-flip{
+  top:188px!important;
+  left:50%!important;
+  width:min(42%,290px)!important;
+  height:360px!important;
+  transform:translateX(-50%)!important;
+  z-index:5!important;
+}
+.big-jersey-card{height:328px!important;filter:drop-shadow(0 18px 15px rgba(0,0,0,.65))!important}
+.big-jersey-front,.big-jersey-back{background:none!important}
+.big-jersey-front:before,.big-jersey-back:before{
+  content:""!important;
+  display:block!important;
+  position:absolute!important;
+  inset:0!important;
+  background-position:center!important;
+  background-size:contain!important;
+  background-repeat:no-repeat!important;
+  mix-blend-mode:multiply;
+  filter:brightness(1.22) saturate(1.17) contrast(1.04);
+  z-index:1!important;
+}
+.big-jersey-front:before{
+  background-image:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_103308_62dd93fd-206f-4d15-b6d0-5cfc92cdfabf.png")!important;
+}
+.big-jersey-back:before{
+  background-image:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_124555_6052c0fb-df01-453a-9d6d-619030a463fc.png")!important;
+}
+.big-jersey-front .big-jersey-body,.big-jersey-back .big-jersey-body,.big-jersey-front:after,.big-jersey-back:after,.big-jersey-front-crest{display:none!important}
+.big-jersey-name{top:109px!important;z-index:8!important;font-size:17px!important;text-shadow:0 3px 5px #000!important}
+.big-jersey-number{top:151px!important;z-index:8!important;font-size:82px!important;text-shadow:0 4px 6px #000,0 0 3px #a71645!important}
+.big-sleeve-number{z-index:8!important;top:161px!important;font-size:23px!important}
+.big-sleeve-number.left{left:9px!important}.big-sleeve-number.right{right:9px!important}
+.big-flip-hint{
+  bottom:0!important;
+  font-size:8px!important;
+  letter-spacing:.13em!important;
+  color:#c8bec0!important;
+  text-shadow:0 2px 5px #000!important;
+}
+.chel-player-display{
+  right:5%!important;
+  top:auto!important;
+  bottom:28px!important;
+  width:140px!important;
+  height:190px!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  opacity:.96;
+}
+.chel-player-display img{object-fit:contain!important;filter:drop-shadow(0 10px 10px rgba(0,0,0,.6))}
+.chel-player-display .chel-placeholder{opacity:.45}
+@media(max-width:700px){
+  .player-stall-scene{min-height:590px!important}
+  .personal-stall-nameplate{left:5%!important;right:5%!important;grid-template-columns:48px minmax(0,1fr) 48px!important}
+  .big-jersey-flip{top:175px!important;width:52%!important;height:330px!important}
+  .big-jersey-card{height:300px!important}
+  .big-jersey-name{top:101px!important;font-size:14px!important}
+  .big-jersey-number{top:138px!important;font-size:68px!important}
+  .big-sleeve-number{top:147px!important;font-size:19px!important}
+  .chel-player-display{width:102px!important;height:150px!important;right:3%!important;bottom:20px!important}
+}
