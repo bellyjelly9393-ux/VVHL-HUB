@@ -12,18 +12,8 @@ function gate(){
  if(ok)load();
 }
 function jersey(l){
- const name=esc((l.jersey_name||l.gamertag||'HITMEN').toUpperCase()),num=esc(l.jersey_number||'');
- return '<div class="stall-neon"></div><div class="stall-top-shelf">'+
-   '<div class="equipment helmet-eq"><span>'+num+'</span></div><div class="equipment glove-eq left"></div><div class="equipment glove-eq right"></div><div class="equipment bag-eq">H</div>'+
- '</div><div class="stall-rail"></div><div class="stall-hook"></div>'+
- '<div class="stall-side-art left"><i></i><b></b></div><div class="stall-side-art right"><i></i><b></b></div>'+
- '<div class="mini-jersey-flip" data-jersey-flip role="button" tabindex="0" aria-label="Flip jersey front to back">'+
-   '<div class="mini-jersey-card">'+
-     '<div class="mini-jersey-face mini-jersey-front"><div class="mini-jersey-body"></div><div class="mini-jersey-crest">HITMEN</div><div class="mini-jersey-sleeve-num left">'+num+'</div><div class="mini-jersey-sleeve-num right">'+num+'</div></div>'+
-     '<div class="mini-jersey-face mini-jersey-back"><div class="mini-jersey-body"></div><div class="mini-jersey-name">'+name+'</div><div class="mini-jersey-number">'+num+'</div></div>'+
-   '</div><span class="mini-flip-hint">TAP TO FLIP</span>'+
- '</div><div class="stall-skates"><i></i><i></i></div><div class="stall-gloves"><i></i><i></i></div>'+
- '<div class="stall-bench"><span>HITMEN</span></div><div class="stall-underlight"></div>';
+ const num=esc(l.jersey_number||'');
+ return '<div class="team-preview-jersey" aria-hidden="true"><div class="team-preview-jersey-art"></div>'+(num?'<span class="team-preview-sleeve left">'+num+'</span><span class="team-preview-sleeve right">'+num+'</span>':'')+'</div>';
 }
 async function load(){
  if(!allowed()||!DB())return;
@@ -37,9 +27,8 @@ async function load(){
  E('lockerReportCount').textContent=reports.length;
  const currentWeek=reports[0]?.week||1;E('lockerWeek').textContent=currentWeek;
  const order={LW:1,C:2,RW:3,LD:4,RD:5,G:6};lockers.sort((a,b)=>(order[a.position]||9)-(order[b.position]||9)||a.gamertag.localeCompare(b.gamertag));
- E('lockerRoster').innerHTML=lockers.map(l=>{const displayName=esc((l.jersey_name||l.gamertag).toUpperCase()),displayNum=esc(l.jersey_number||'');return '<a class="locker-stall" href="hitmen-player-locker.html?player='+l.id+'"><div class="stall-nameplate"><span class="stall-logo-chip">H</span><span class="stall-name-num">'+displayNum+'</span><strong>'+displayName+'</strong><span class="stall-name-num">'+displayNum+'</span><span class="stall-logo-chip">H</span></div><div class="stall-position-strip">'+esc(l.position||'—')+(l.management_role?' · '+esc(l.management_role):'')+'</div><div class="stall-interior">'+jersey(l)+'</div><div class="stall-footer"><small>'+(l.user_id?'<span class="stall-claimed">PLAYER ACCESS LINKED</span>':'<span class="stall-unclaimed">STALL UNCLAIMED</span>')+'</small><b>ENTER STALL →</b></div></a>'}).join('');
+ E('lockerRoster').innerHTML=lockers.map(l=>{const displayName=esc((l.jersey_name||l.gamertag).toUpperCase()),displayNum=esc(l.jersey_number||'');return '<a class="locker-stall locker-preview-v2" href="hitmen-player-locker.html?player='+l.id+'"><div class="stall-nameplate stall-nameplate-v2"><span class="stall-name-num">'+displayNum+'</span><strong>'+displayName+'</strong><span class="stall-name-num">'+displayNum+'</span></div><div class="stall-interior stall-preview-scene">'+jersey(l)+'</div><div class="stall-footer stall-footer-v2"><small><span class="stall-position">'+esc(l.position||'—')+'</span>'+(l.management_role?' · '+esc(l.management_role):'')+' · '+(l.user_id?'<span class="stall-claimed">LINKED</span>':'<span class="stall-unclaimed">UNCLAIMED</span>')+'</small><b>ENTER STALL</b></div></a>'}).join('');
  E('lockerLineReports').innerHTML=reports.length?reports.slice(0,6).map(r=>'<article class="line-report-card"><div class="eyebrow">WEEK '+esc(r.week)+'</div><h3>'+esc(r.line_label)+'</h3><p>'+esc(r.summary||'Weekly line report will populate after games are reviewed.')+'</p><div class="line-meta"><span>'+esc(r.record||'0-0-0')+'</span><span>GF '+esc(r.goals_for??'—')+'</span><span>GA '+esc(r.goals_against??'—')+'</span></div></article>').join(''):'<div class="locker-empty">Line reports will begin populating once Week 1 games are played and reviewed.</div>';
- bindJerseyFlips();
 }
 function bindJerseyFlips(){
  document.querySelectorAll('[data-jersey-flip]').forEach(el=>{
