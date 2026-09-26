@@ -9,6 +9,13 @@
     document.head.appendChild(polish);
   }
 
+  if (!document.querySelector('link[href*="brand-refresh.css"]')) {
+    const brandRefresh = document.createElement('link');
+    brandRefresh.rel = 'stylesheet';
+    brandRefresh.href = 'brand-refresh.css?v=20260926a';
+    document.head.appendChild(brandRefresh);
+  }
+
   const isPrivate = body?.classList.contains('management-protected');
   const path = location.pathname.split('/').pop() || 'index.html';
 
