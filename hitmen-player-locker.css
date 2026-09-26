@@ -9,3 +9,17 @@
 .upload-layout{display:grid;grid-template-columns:1fr 220px;gap:16px;align-items:center}.upload-layout p{color:#9b9093;line-height:1.55}.upload-layout input{display:block;margin:10px 0;color:#bbb}.upload-preview{height:260px;border:1px dashed rgba(215,25,45,.28);border-radius:12px;overflow:hidden;display:grid;place-items:center;background:#09090b;color:#7d7275;font-size:9px;font-weight:900}.upload-preview img{width:100%;height:100%;object-fit:cover}
 @media(max-width:1000px){.player-shell{grid-template-columns:1fr}.player-sidebar{position:static;grid-template-columns:1fr 2fr}.player-side-nav{grid-template-columns:repeat(3,1fr)}.player-side-note{display:none}.player-stall-hero{grid-template-columns:1fr}.player-stall-copy{min-height:300px}}
 @media(max-width:700px){.player-sidebar{grid-template-columns:1fr}.player-side-nav{grid-template-columns:1fr 1fr}.player-stall-scene{min-height:430px}.chel-player-display{right:8%;width:120px;height:180px}.big-jersey{left:34%;transform:translateX(-50%) scale(.88)}.player-stat-grid{grid-template-columns:repeat(2,1fr)}.player-ratings-grid,.weekly-card,.upload-layout,.player-report-grid{grid-template-columns:1fr}.upload-preview{height:300px}}
+.big-jersey-flip{position:absolute;top:60px;left:39%;width:232px;height:286px;transform:translateX(-50%);perspective:1200px;z-index:4;cursor:pointer;outline:none}
+.big-jersey-flip:focus-visible{filter:drop-shadow(0 0 14px rgba(228,201,120,.7))}
+.big-jersey-card{position:relative;width:100%;height:258px;transform-style:preserve-3d;transition:transform .72s cubic-bezier(.2,.72,.15,1);filter:drop-shadow(0 12px 11px #000)}
+.big-jersey-flip.is-flipped .big-jersey-card{transform:rotateY(180deg)}
+.big-jersey-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.big-jersey-back{transform:rotateY(180deg)}
+.big-jersey-face .big-jersey-body{position:absolute;inset:20px 24px 0;background:linear-gradient(145deg,#2a1116,#09090a 68%);border:3px solid #a91627;clip-path:polygon(12% 0,35% 8%,50% 4%,65% 8%,88% 0,100% 22%,85% 35%,83% 100%,17% 100%,15% 35%,0 22%)}
+.big-jersey-face:after{content:"";position:absolute;left:98px;top:25px;width:35px;height:22px;border-radius:50%;border:3px solid #d0b363;border-top-color:transparent}
+.big-jersey-front-crest{position:absolute;z-index:3;left:54px;right:54px;top:124px;text-align:center;font:900 28px/.86 "Barlow Condensed",sans-serif;color:#f0e7d8;text-shadow:0 3px #8e101f;letter-spacing:-.04em}
+.big-sleeve-number{position:absolute;z-index:3;top:130px;font:900 22px/1 "Barlow Condensed",sans-serif;color:#f1ede3;text-shadow:0 2px #8d0f1d}.big-sleeve-number.left{left:17px}.big-sleeve-number.right{right:17px}
+.big-jersey-name{position:absolute;z-index:3;top:83px;left:30px;right:30px;text-align:center;font:900 15px/1 "Barlow Condensed",sans-serif;letter-spacing:.1em}
+.big-jersey-number{position:absolute;z-index:3;top:118px;left:0;right:0;text-align:center;font:900 72px/.9 "Barlow Condensed",sans-serif;color:#f1ede3;text-shadow:0 3px #8d0f1d}
+.big-flip-hint{position:absolute;left:0;right:0;bottom:0;text-align:center;color:#b7aaad;font-size:7px;font-weight:900;letter-spacing:.12em;text-shadow:0 1px 3px #000}
+@media(max-width:700px){.big-jersey-flip{left:34%;transform:translateX(-50%) scale(.88)}}
