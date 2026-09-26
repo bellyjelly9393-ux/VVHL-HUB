@@ -129,37 +129,39 @@
   }
 
   let analysisGeneration=0;
-  async function deepAsk(){
+  let nextDepth=null;
+  async function deepAsk(forceMode='auto'){
     if(!team||!canUse())return;
     const question=$('gmAiQuestion').value.trim();if(!question)return;
     const generation=++analysisGeneration, userId=auth().user.id;
-    $('gmAiDeepAsk').disabled=true;$('gmAiAsk').disabled=true;
-    setStatus('LOADING EVIDENCE · ANALYZING');
+    $('gmAiDeepAsk').disabled=true;$('gmAiAsk').disabled=true;if($('gmAiGoDeeper'))$('gmAiGoDeeper').disabled=true;
+    setStatus(forceMode==='auto'?'CHOOSING DEPTH · LOADING EVIDENCE':'DEEPER ANALYSIS · LOADING EVIDENCE');
     try{
       const {data,error}=await db().auth.getSession();if(error)throw error;
       if(!data.session?.access_token)throw new Error('Sign in again before analyzing.');
-      const response=await fetch('/api/chelscout-deepthink',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+data.session.access_token},body:JSON.stringify({question,playerNames:$('gmAiPlayers').value.split('\n').map(x=>x.trim()).filter(Boolean),scenario:$('gmAiScenario').value.trim(),mode:$('gmAiMode').value,lens:$('gmAiLens')?.value||'auto'}),signal:AbortSignal.timeout(115000)});
+      const response=await fetch('/api/chelscout-deepthink',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+data.session.access_token},body:JSON.stringify({question,playerNames:$('gmAiPlayers').value.split('\n').map(x=>x.trim()).filter(Boolean),scenario:$('gmAiScenario').value.trim(),mode:forceMode,lens:$('gmAiLens')?.value||'auto'}),signal:AbortSignal.timeout(115000)});
       const result=await response.json();if(!response.ok)throw new Error(result.error||'Analysis failed.');
       if(generation!==analysisGeneration||auth().user?.id!==userId)return;
       const coverage=result.coverage||{},matched=(coverage.matchedOpponents||[]).join(', ')||'None',players=(coverage.selectedPlayers||[]).join(', ')||'None',warn=(coverage.warnings||[]);
       $('gmAiAnswer').innerHTML=
-        '<div class="gm-ai-analysis-head"><div><div class="eyebrow">'+esc(result.engine||'WILDMAN HOCKEY OPS')+'</div><h3>'+esc(String(result.lens||'general').replaceAll('_',' ').toUpperCase())+' ANALYSIS</h3></div><div class="gm-ai-analysis-meta"><span>'+esc(result.model||'Claude')+'</span><span>'+esc((result.reasoningEffort||'').toUpperCase())+' REASONING</span></div></div>'+
+        '<div class="gm-ai-analysis-head"><div><div class="eyebrow">'+esc(result.engine||'WILDMAN HOCKEY OPS')+'</div><h3>'+esc(String(result.lens||'general').replaceAll('_',' ').toUpperCase())+' ANALYSIS</h3><p class="gm-ai-depth-note">Auto depth: <b>'+esc(String(result.depthMode||'deep').toUpperCase())+'</b> · '+esc(result.depthReason||'')+'</p></div><div class="gm-ai-analysis-meta"><span>'+esc(result.model||'Claude')+'</span><span>'+esc((result.reasoningEffort||'').toUpperCase())+' REASONING</span></div></div>'+
         '<div class="gm-ai-analysis-body">'+renderAnalysisText(result.answer)+'</div>'+
         '<details class="gm-ai-evidence"><summary>Evidence packet & coverage · '+esc(String(coverage.evidenceRecords??result.sources?.length??0))+' records</summary>'+
           '<div class="gm-ai-coverage-grid"><div><small>Players</small><b>'+esc(players)+'</b></div><div><small>Opponents</small><b>'+esc(matched)+'</b></div><div><small>Selection</small><b>'+esc(coverage.selection||'—')+'</b></div><div><small>Usage</small><b>'+esc(usageText(result.usage)||'—')+'</b></div></div>'+
           (warn.length?'<div class="gm-ai-warnings">'+warn.map(x=>'<p>'+esc(x)+'</p>').join('')+'</div>':'')+
           (result.sources||[]).map(x=>'<details class="gm-ai-source"><summary>['+esc(x.id)+'] '+esc(x.source)+(x.meta?.evidenceClass?' · '+esc(String(x.meta.evidenceClass).replaceAll('_',' ')):'')+'</summary><pre>'+esc(JSON.stringify(x.data,null,2))+'</pre></details>').join('')+
         '</details>';
-      setStatus('CLAUDE ANALYSIS READY');
-    }catch(e){if(generation===analysisGeneration&&auth().user?.id===userId){$('gmAiAnswer').textContent=e.name==='TimeoutError'?'Analysis timed out. Try fewer players or Quick mode.':e.message;setStatus('ANALYSIS UNAVAILABLE');}}
-    finally{if(generation===analysisGeneration){$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;}}
+      nextDepth=result.nextDepth||null;const deeper=$('gmAiGoDeeper');if(deeper){deeper.hidden=!nextDepth;deeper.disabled=false;deeper.textContent=nextDepth==='max'?'Go Deeper · Max Analysis':'Go Deeper · Deep Analysis';}setStatus('CLAUDE ANALYSIS READY · '+String(result.depthMode||'').toUpperCase());
+    }catch(e){if(generation===analysisGeneration&&auth().user?.id===userId){$('gmAiAnswer').textContent=e.name==='TimeoutError'?'Analysis timed out. Narrow the question slightly and retry.':e.message;setStatus('ANALYSIS UNAVAILABLE');}}
+    finally{if(generation===analysisGeneration){$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;if($('gmAiGoDeeper'))$('gmAiGoDeeper').disabled=false;}}
   }
-  $('gmAiDeepAsk')?.addEventListener('click',deepAsk);
-  window.addEventListener('vvhl-auth-change',()=>{analysisGeneration++;$('gmAiAnswer').textContent='Ask a new question to load evidence for this session.';$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;});
+  $('gmAiDeepAsk')?.addEventListener('click',()=>deepAsk('auto'));
+  $('gmAiGoDeeper')?.addEventListener('click',()=>{if(nextDepth)deepAsk(nextDepth);});
+  window.addEventListener('vvhl-auth-change',()=>{analysisGeneration++;nextDepth=null;$('gmAiAnswer').textContent='Ask a new question to load evidence for this session.';$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;if($('gmAiGoDeeper'))$('gmAiGoDeeper').hidden=true;});
 
   $('gmAiAsk')?.addEventListener('click',ask);
   $('gmAiQuestion')?.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')ask();});
-  document.querySelectorAll('[data-gm-example]').forEach(b=>b.addEventListener('click',()=>{$('gmAiQuestion').value=b.dataset.gmExample;if(b.dataset.gmLens&&$('gmAiLens'))$('gmAiLens').value=b.dataset.gmLens;if(b.dataset.gmLens)deepAsk();else ask();}));
+  document.querySelectorAll('[data-gm-example]').forEach(b=>b.addEventListener('click',()=>{$('gmAiQuestion').value=b.dataset.gmExample;if(b.dataset.gmLens&&$('gmAiLens'))$('gmAiLens').value=b.dataset.gmLens;if(b.dataset.gmLens)deepAsk('auto');else ask();}));
 
   window.addEventListener('vvhl-auth-change',init);
   if(auth().user)init();
