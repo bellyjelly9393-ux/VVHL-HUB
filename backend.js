@@ -25,6 +25,7 @@ const backendState = {
   teams: [],
   memberships: [],
   teamId: localStorage.getItem("vvhl-team-context") || "",
+  hitmenLockerClaim: null,
 };
 const emitBackend = () =>
   window.dispatchEvent(
@@ -51,6 +52,18 @@ async function loadBackendState() {
       await vvhlDb.rpc("claim_my_team_invite");
     } catch (error) {
       console.warn("Could not auto-claim team invite", error);
+    }
+    // If the account authenticated through Discord and management has already
+    // pre-linked that permanent Discord ID to a Hitmen roster player, attach
+    // the account to its locker and create ordinary player access automatically.
+    try {
+      const { data: lockerClaim, error: lockerClaimError } = await vvhlDb.rpc(
+        "claim_my_hitmen_discord_locker",
+      );
+      if (lockerClaimError) console.warn("Could not auto-link Hitmen locker", lockerClaimError);
+      else backendState.hitmenLockerClaim = lockerClaim || null;
+    } catch (error) {
+      console.warn("Could not auto-link Hitmen locker", error);
     }
     const [{ data: profile }, { data: memberships }] = await Promise.all([
       vvhlDb
@@ -90,9 +103,10 @@ function renderAccountPanel() {
     const signupPage = document.body.classList.contains("signup-page");
     const publicAccountPage = document.body.classList.contains("public-account-page");
     panel.innerHTML = signupPage || publicAccountPage
-      ? `<div><div class="eyebrow">JOIN THE WILDMAN NETWORK</div><h3>Create Your Account</h3><p>Create one Wildman account for tournaments, Academy access, player tools and any management permissions you are assigned later.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email" autocomplete="email"><input id="authPassword" class="field" type="password" placeholder="Password · 6+ characters" autocomplete="new-password"><button id="signUp" class="small-btn primary" type="button">Create Account</button><button id="signIn" class="small-btn" type="button">Already Have an Account? Sign In</button><button id="magicLink" class="small-btn" type="button">Email Me a Sign-In Link</button><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`
-      : `<div><div class="eyebrow">SECURE WILDMAN ACCESS</div><h3>Management Sign In</h3><p>Sign in to access any Wildman Hockey, Calgary Hitmen or tournament-management tools assigned to your account.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email" autocomplete="email"><input id="authPassword" class="field" type="password" placeholder="Password" autocomplete="current-password"><button id="signIn" class="small-btn primary" type="button">Sign In</button><button id="magicLink" class="small-btn" type="button">Email Me a Sign-In Link</button><a class="small-btn" href="signup.html">Create Account</a><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`;
+      ? `<div><div class="eyebrow">JOIN THE WILDMAN NETWORK</div><h3>Create Your Account</h3><p>Create one Wildman account for tournaments, Academy access, player tools and any management permissions you are assigned later.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email" autocomplete="email"><input id="authPassword" class="field" type="password" placeholder="Password · 6+ characters" autocomplete="new-password"><button id="signUp" class="small-btn primary" type="button">Create Account</button><button id="signIn" class="small-btn" type="button">Already Have an Account? Sign In</button><button id="discordSignIn" class="small-btn" type="button">Continue with Discord</button><button id="magicLink" class="small-btn" type="button">Email Me a Sign-In Link</button><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`
+      : `<div><div class="eyebrow">SECURE WILDMAN ACCESS</div><h3>Management Sign In</h3><p>Sign in to access any Wildman Hockey, Calgary Hitmen or tournament-management tools assigned to your account.</p></div><div class="account-form"><input id="authEmail" class="field" type="email" placeholder="Email" autocomplete="email"><input id="authPassword" class="field" type="password" placeholder="Password" autocomplete="current-password"><button id="signIn" class="small-btn primary" type="button">Sign In</button><button id="discordSignIn" class="small-btn" type="button">Continue with Discord</button><button id="magicLink" class="small-btn" type="button">Email Me a Sign-In Link</button><a class="small-btn" href="signup.html">Create Account</a><button id="resetPassword" class="small-btn" type="button">Reset Password</button><span id="authMessage"></span></div>`;
     document.getElementById("signIn")?.addEventListener("click", () => authenticate("signin"));
+    document.getElementById("discordSignIn")?.addEventListener("click", signInWithDiscord);
     document.getElementById("magicLink")?.addEventListener("click", sendMagicLink);
     document.getElementById("signUp")?.addEventListener("click", () => authenticate("signup"));
     document.getElementById("resetPassword")?.addEventListener("click", resetPassword);
@@ -141,6 +155,19 @@ async function authenticate(mode) {
   if (!result.error && result.data.session) await loadBackendState();
 }
 
+
+async function signInWithDiscord() {
+  const message = document.getElementById("authMessage");
+  if (message) message.textContent = "Opening Discord…";
+  const { error } = await vvhlDb.auth.signInWithOAuth({
+    provider: "discord",
+    options: {
+      redirectTo: vvhlAuthRedirectUrl(),
+      scopes: "identify email",
+    },
+  });
+  if (error && message) message.textContent = error.message;
+}
 
 async function sendMagicLink() {
   const email = document.getElementById("authEmail").value.trim();
