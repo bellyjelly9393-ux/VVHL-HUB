@@ -3,39 +3,44 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>Calgary Hitmen Team Locker Room</title>
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-team-locker.css">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="management.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-team-locker.css">
 </head>
-<body class="wildman-site hitmen-team-locker-page">
+<body class="wildman-site management-protected hitmen-team-locker-page">
 <header class="site-header locker-header">
 <a class="brand" href="hitmen-team-locker.html"><span class="locker-brand-mark">H</span><span class="brand-copy">CALGARY HITMEN<br><b>TEAM LOCKER ROOM</b></span></a>
 <button class="menu-toggle" type="button" aria-label="Open navigation">☰</button>
-<nav class="main-nav"><a class="active-nav" href="hitmen-team-locker.html">Locker Room</a><a href="hitmen-player-locker.html">My Stall</a></nav>
+<nav class="main-nav"><a href="hitmen-workspace.html">War Room</a><a class="active-nav" href="hitmen-team-locker.html">Locker Room</a><a href="hitmen-locker-room.html">Lineups</a><a href="hitmen-opponents.html">Opponents</a><a href="hitmen-battle-plan.html">Battle Plan</a><a href="vod-lab.html?team=calgary-hitmen">VOD</a></nav>
 </header>
 
 <main>
 <section class="section-shell locker-access-shell">
 <div class="section-heading"><div><div class="eyebrow">PRIVATE · CALGARY HITMEN</div><h2>TEAM ACCESS</h2></div><div id="lockerAccessStatus" class="status-pill">PRIVATE</div></div>
 <section id="accountPanel" class="panel account-panel"></section>
-<div id="lockerLockedMessage" class="wm-card"><b>Team sign-in required.</b><p>This area is only for active Calgary Hitmen team accounts.</p></div>
+<div id="managementLockedMessage" class="wm-card"><b>Management sign-in required.</b><p>Use Discord or your Wildman account. This room contains private player scouting and lineup information.</p></div>
 </section>
 
-<div data-locker-content hidden>
+<div data-management-content hidden>
 <section class="section-shell locker-hero">
 <div>
 <div class="eyebrow">LGCHL SEASON 55 · PLAYER DEVELOPMENT</div>
 <h1>THE<br><span>LOCKER ROOM.</span></h1>
 <p>Your team space for weekly performance, player reports, lineup chemistry and personal development throughout the season.</p>
 </div>
-<div class="locker-hero-meta"><div><small>ACTIVE ROSTER</small><strong id="lockerRosterCount">15</strong></div><div><small>WEEK</small><strong id="lockerWeek">1</strong></div><div><small>REPORTS</small><strong id="lockerReportCount">0</strong></div></div>
+<div class="locker-hero-meta"><div><small>ACTIVE ROSTER</small><strong id="lockerRosterCount">15</strong></div><div><small>TC PLAYERS</small><strong id="lockerTcCount">2</strong></div><div><small>PLAYER REPORTS</small><strong id="lockerReportCount">0</strong></div></div>
 </section>
 
 <section class="section-shell locker-section">
-<div class="locker-section-head"><div><div class="eyebrow">CALGARY HITMEN</div><h2>PLAYER STALLS</h2></div><p>Pick a name to enter that player’s locker.</p></div>
+<div class="locker-section-head"><div><div class="eyebrow">CALGARY HITMEN</div><h2>ACTIVE ROSTER STALLS</h2></div><p>Open a stall for the player dossier, scouting report, development notes and connected VOD evidence.</p></div>
 <div id="lockerRoster" class="locker-stall-grid"></div>
 </section>
 
 <section class="section-shell locker-section">
-<div class="locker-section-head"><div><div class="eyebrow">THIS WEEK</div><h2>LINE PERFORMANCE</h2></div><p>How each unit performed together across the week.</p></div>
+<div class="locker-section-head"><div><div class="eyebrow">TRAINING CAMP</div><h2>TC PLAYER STALLS</h2></div><p>TC players live in the same room so management can evaluate or call them into a lineup without losing context.</p></div>
+<div id="lockerTcRoster" class="locker-stall-grid"></div>
+</section>
+
+<section class="section-shell locker-section">
+<div class="locker-section-head"><div><div class="eyebrow">THIS WEEK</div><h2>LINE PERFORMANCE</h2></div><p>How each saved unit performed together across the week.</p></div>
 <div id="lockerLineReports" class="locker-line-grid"></div>
 </section>
 </div>
@@ -44,5 +49,5 @@
 <footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN · TEAM LOCKER ROOM</b><span>Player development · weekly reports · team chemistry</span></div><p>Private team access</p></div></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
-<script src="backend.js"></script><script src="script.js"></script><script src="hitmen-team-locker.js"></script>
+<script src="backend.js"></script><script src="management-guard.js"></script><script src="script.js"></script><script src="hitmen-team-locker.js?v=20260926-warroom"></script>
 </body></html>
