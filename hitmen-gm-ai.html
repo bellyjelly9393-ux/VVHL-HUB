@@ -76,17 +76,39 @@
             <label for="gmAiPlayers">Players to compare — exact gamertags, one per line (up to 24)</label>
             <textarea id="gmAiPlayers" class="text-input" rows="3" placeholder="Include your candidates and opponent players already in the scouting pool."></textarea>
             <label for="gmAiScenario">Matchup and constraints</label>
-            <textarea id="gmAiScenario" class="text-input" rows="3" maxlength="6000" placeholder="Opponent lineup, date, availability, budget, positions and what you want to solve. Unverified details will be labeled as assumptions."></textarea>
-            <label for="gmAiMode">Analysis depth</label>
-            <select id="gmAiMode" class="text-input"><option value="deep">Deep — compare options and counterplays</option><option value="quick">Quick — evidence summary</option></select>
-            <button id="gmAiDeepAsk" class="small-btn primary" type="button">Analyze Hockey Decision</button>
-            <p class="section-note">Uses configured AI APIs. Deep mode can take longer. Recommendations require management review; no roster changes are made.</p>
+            <textarea id="gmAiScenario" class="text-input" rows="3" maxlength="8000" placeholder="Opponent lineup, date, availability, budget, positions, score context and what you want solved. Unverified details are treated as assumptions."></textarea>
+
+            <div class="gm-ai-control-grid">
+              <label for="gmAiLens">Hockey analysis lens
+                <select id="gmAiLens" class="text-input">
+                  <option value="auto">Auto-detect from question</option>
+                  <option value="player">Player Scout</option>
+                  <option value="opponent">Opponent Scout</option>
+                  <option value="lineup">Lineup & Matchup</option>
+                  <option value="postgame">Postgame Review</option>
+                  <option value="market">Market & Bidding</option>
+                  <option value="general">General Hockey Analyst</option>
+                </select>
+              </label>
+              <label for="gmAiMode">Analysis depth
+                <select id="gmAiMode" class="text-input">
+                  <option value="deep">Deep · Claude high reasoning</option>
+                  <option value="max">Max · exhaustive Claude reasoning</option>
+                  <option value="quick">Quick · faster Claude evidence read</option>
+                </select>
+              </label>
+            </div>
+            <button id="gmAiDeepAsk" class="small-btn primary" type="button">Run Hockey Ops Analysis</button>
+            <p class="section-note">Claude receives Calgary's private evidence packet, applies position-specific scouting, tactical, opponent, lineup and market lenses, then cites the records supporting its conclusions. Deep and Max can take longer. No roster changes are made.</p>
           </div>
           <div class="gm-ai-examples">
             <button type="button" data-gm-example="Show me the best RD under $5M">Best RD under $5M</button>
             <button type="button" data-gm-example="Show me C targets under $4M">Centers under $4M</button>
             <button type="button" data-gm-example="Show me the best LD targets">Best LD targets</button>
             <button type="button" data-gm-example="Show me goalies under $3M">Goalies under $3M</button>
+            <button type="button" data-gm-lens="opponent" data-gm-example="Give me a full opponent scouting report on our next opponent. What do they want to create, where can we hurt them, and what is their likely counter?">Scout Next Opponent</button>
+            <button type="button" data-gm-lens="lineup" data-gm-example="Build the strongest six-player lineup from the evidence we have. Explain role fit, risks, matchup utility and alternatives.">Build Best 6</button>
+            <button type="button" data-gm-lens="postgame" data-gm-example="Review our most recent completed game. Separate result from process, identify what was repeatable, and give rematch adjustments.">Postgame Review</button>
           </div>
 
           <div id="gmAiAnswer" class="gm-ai-answer">
@@ -102,7 +124,9 @@
           <div class="gm-ai-check"><span>01</span><div><b>Player Intelligence</b><small>Permanent Wildman player identity and position.</small></div></div>
           <div class="gm-ai-check"><span>02</span><div><b>Calgary Valuation</b><small>Expected market, fair value and walk price.</small></div></div>
           <div class="gm-ai-check"><span>03</span><div><b>Team Fit</b><small>Calgary fit and performance scores when available.</small></div></div>
-          <div class="gm-ai-check"><span>04</span><div><b>Management Evidence</b><small>Loads saved reports, available VOD evidence, season stats, roster, lineups and availability.</small></div></div>
+          <div class="gm-ai-check"><span>04</span><div><b>Opponent Memory</b><small>Season 55 schedule, repeat meetings, team stat snapshots, matchup notes and opponent profiles.</small></div></div>
+          <div class="gm-ai-check"><span>05</span><div><b>VOD Evidence</b><small>Loads linked game reviews, timestamped segments and markers when they exist.</small></div></div>
+          <div class="gm-ai-check"><span>06</span><div><b>Counterfactual Reasoning</b><small>Challenges the first conclusion, compares alternatives and identifies the next evidence check.</small></div></div>
           <div class="gm-ai-links">
             <a href="hitmen-management.html?tab=pool">Open Scouting Pool →</a>
             <a href="hitmen-management.html?tab=bids">Open Target Board →</a>
