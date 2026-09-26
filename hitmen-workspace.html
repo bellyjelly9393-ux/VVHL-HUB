@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="management.css">
   <link rel="stylesheet" href="scouting-phase1.css">
   <link rel="stylesheet" href="hitmen-workspace.css">
+  <link rel="stylesheet" href="hitmen-depth-board.css">
   <link rel="stylesheet" href="network-v2.css">
 </head>
 <body class="wildman-site management-protected hitmen-war-room">
@@ -35,6 +36,7 @@
         <a href="hitmen-gm-ai.html"><b>GM MVP AI</b><small>Ask, compare & shortlist</small></a>
         <a href="hitmen-battle-plan.html"><b>Battle Plan</b><small>Matchup assignments</small></a>
         <a href="#hitmen-live-session"><b>Game Night</b><small>Live series controls</small></a>
+        <a href="#hitmen-player-depth"><b>Player Depth</b><small>Active roster roles, stats & management cards</small></a>
         <a href="hitmen-card-vault.html"><b>Card Vault</b><small>Players & team history</small></a>
       </div>
     </details>
@@ -100,6 +102,14 @@
       </article>
     </section>
 
+    <section id="hitmen-player-depth" class="section-shell hm-depth-board-section">
+      <div class="hm-depth-board-head">
+        <div><div class="eyebrow">ACTIVE ROSTER · MANAGEMENT INTELLIGENCE</div><h2>PLAYER DEPTH BOARD</h2><p>Every active Hitmen player gets a management depth card with role, line status, season production and a full private player profile.</p></div>
+        <div class="hm-depth-board-count"><strong id="hitmenDepthCount">0</strong><small>ACTIVE PLAYERS</small></div>
+      </div>
+      <div id="hitmenDepthBoard"><div class="hm-depth-card-empty">Loading active roster depth cards…</div></div>
+    </section>
+
     <section class="section-shell hitmen-shell">
       <div id="hitmenStatus" class="hitmen-status" hidden aria-live="polite">Loading Calgary Hitmen War Room…</div>
       <div style="display:none" aria-hidden="true">
@@ -157,6 +167,7 @@
 <script src="hitmen-bid-file.js?v=20260922-bidfile"></script>
 <script src="script.js"></script>
 <script src="hitmen-workspace.js"></script>
+<script src="hitmen-depth-board.js"></script>
 <script src="hitmen-game-center-sync.js"></script>
 <script src="hitmen-vod-handoff.js"></script>
 </body>
