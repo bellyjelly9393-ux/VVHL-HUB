@@ -519,7 +519,7 @@
       db.from("esports_teams").select("*").eq("active", true).order("name"),
       db.from("esports_players").select("*").eq("active", true).order("gamertag"),
       db.from("esports_team_players").select("*").eq("active", true),
-      db.from("esports_events").select("*").eq("active", true).order("starts_on", { ascending: false }),
+      db.from("esports_events").select("*").eq("active", true).eq("is_public", true).order("starts_on", { ascending: false }),
       db.from("esports_event_teams").select("*"),
       db.from("esports_event_rosters").select("*").eq("active", true),
       db.from("esports_games").select("*").order("scheduled_at", { ascending: true, nullsFirst: false }),
@@ -534,16 +534,17 @@
 
     // Calgary Hitmen hockey-operations data is private. Keep it out of every
     // public directory, search result, roster surface, event listing and game page.
+    const publicEventIds = new Set((events.data || []).map(e => e.id));
     state.teams = rawTeams.filter(t => !privateTeamIds.has(t.id));
     state.players = players.data || [];
     state.teamPlayers = (teamPlayers.data || []).filter(r => !privateTeamIds.has(r.team_id));
     state.events = events.data || [];
-    state.eventTeams = (eventTeams.data || []).filter(r => !privateTeamIds.has(r.team_id));
-    state.eventRosters = (eventRosters.data || []).filter(r => !privateTeamIds.has(r.team_id));
-    state.games = (games.data || []).filter(g => !privateTeamIds.has(g.home_team_id) && !privateTeamIds.has(g.away_team_id));
-    state.stats = (stats.data || []).filter(s => !privateTeamIds.has(s.team_id));
-    state.gamePlayerStats = (gamePlayerStats.data || []).filter(s => !privateTeamIds.has(s.team_id));
-    state.teamStats = (teamStats.data || []).filter(s => !privateTeamIds.has(s.team_id));
+    state.eventTeams = (eventTeams.data || []).filter(r => publicEventIds.has(r.event_id) && !privateTeamIds.has(r.team_id));
+    state.eventRosters = (eventRosters.data || []).filter(r => publicEventIds.has(r.event_id) && !privateTeamIds.has(r.team_id));
+    state.games = (games.data || []).filter(g => publicEventIds.has(g.event_id) && !privateTeamIds.has(g.home_team_id) && !privateTeamIds.has(g.away_team_id));
+    state.stats = (stats.data || []).filter(s => publicEventIds.has(s.event_id) && !privateTeamIds.has(s.team_id));
+    state.gamePlayerStats = (gamePlayerStats.data || []).filter(s => publicEventIds.has(s.event_id) && !privateTeamIds.has(s.team_id));
+    state.teamStats = (teamStats.data || []).filter(s => publicEventIds.has(s.event_id) && !privateTeamIds.has(s.team_id));
     renderNetworkHub();
     renderPlayerDirectory();
     renderProSeries();
