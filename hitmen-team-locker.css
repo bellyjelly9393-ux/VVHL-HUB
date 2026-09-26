@@ -70,3 +70,30 @@ body.hitmen-team-locker-page{background:radial-gradient(circle at 50% -10%,#3410
 /* GENERATED LOCKER ASSETS V1.1 */
 .stall-neon,.stall-top-shelf,.stall-side-art,.stall-bench,.stall-underlight,.stall-rail,.stall-hook{display:none!important}
 .mini-jersey-front .mini-jersey-sleeve-num{display:block!important;z-index:8}
+
+/* GENERATED LOCKER ASSETS V2 */
+.stall-top-shelf{
+  display:block!important;
+  top:31px!important;left:13%!important;right:13%!important;height:72px!important;
+  border:0!important;padding:0!important;
+  background:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_124611_1335aef5-45db-468d-ab4e-c5dbcd3ac601.png") center/contain no-repeat!important;
+  box-shadow:none!important;
+  z-index:3!important;
+  pointer-events:none;
+}
+.stall-top-shelf>*{display:none!important}
+.mini-jersey-back{
+  background:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_124555_6052c0fb-df01-453a-9d6d-619030a463fc.png") center/contain no-repeat!important;
+}
+.mini-jersey-back .mini-jersey-body,
+.mini-jersey-back:before,
+.mini-jersey-back:after{display:none!important}
+.mini-jersey-back .mini-jersey-name{top:47px!important;z-index:8!important;text-shadow:0 2px 3px #000}
+.mini-jersey-back .mini-jersey-number{top:69px!important;z-index:8!important;text-shadow:0 3px 4px #000}
+.stall-skates{
+  display:block!important;left:20px!important;bottom:63px!important;width:92px!important;height:70px!important;
+  background:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_124602_69d819a1-73ed-4271-811d-1246e1f54294.png") center/contain no-repeat!important;
+  filter:drop-shadow(0 8px 6px #000);z-index:5!important;
+}
+.stall-skates i{display:none!important}
+.stall-gloves{display:none!important}
