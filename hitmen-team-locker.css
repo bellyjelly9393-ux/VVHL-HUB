@@ -220,3 +220,13 @@ body.hitmen-team-locker-page{background:radial-gradient(circle at 50% -10%,#3410
   .stall-nameplate-v2{grid-template-columns:52px minmax(0,1fr) 52px!important}
   .team-preview-jersey{width:44%;top:31%}
 }
+
+/* CLEAN JERSEY ASSETS V3 */
+.team-preview-jersey-art{
+  background-image:url("https://d2ol7oe51mr4n9.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/8dab25da-ccf3-4f5b-b244-7a264e17f5fd.png")!important;
+  background-position:center!important;
+  background-size:contain!important;
+  background-repeat:no-repeat!important;
+  mix-blend-mode:normal!important;
+  filter:drop-shadow(0 12px 12px rgba(0,0,0,.45)) saturate(1.05)!important;
+}
