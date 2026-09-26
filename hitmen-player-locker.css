@@ -170,3 +170,64 @@
   .big-sleeve-number{top:147px!important;font-size:19px!important}
   .chel-player-display{width:102px!important;height:150px!important;right:3%!important;bottom:20px!important}
 }
+
+/* CLEAN FLIP JERSEY V3 */
+.big-jersey-card{
+  transform-style:preserve-3d!important;
+  transform-origin:50% 50%!important;
+  transition:transform .78s cubic-bezier(.22,.78,.16,1)!important;
+  will-change:transform;
+}
+.big-jersey-flip.is-flipped .big-jersey-card{transform:rotateY(180deg)!important}
+.big-jersey-face{
+  backface-visibility:hidden!important;
+  -webkit-backface-visibility:hidden!important;
+  transform-style:preserve-3d!important;
+}
+.big-jersey-front{transform:rotateY(0deg)!important}
+.big-jersey-back{transform:rotateY(180deg)!important}
+.big-jersey-front:before,.big-jersey-back:before{
+  mix-blend-mode:normal!important;
+  filter:none!important;
+  background-position:center!important;
+  background-size:contain!important;
+  background-repeat:no-repeat!important;
+}
+.big-jersey-front:before{background-image:url("https://d2ol7oe51mr4n9.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/8dab25da-ccf3-4f5b-b244-7a264e17f5fd.png")!important}
+.big-jersey-back:before{background-image:url("https://d2ol7oe51mr4n9.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/266b0358-f8bd-447c-a3c9-a69961817449.png")!important}
+.big-jersey-name{
+  top:94px!important;
+  left:21%!important;
+  right:21%!important;
+  z-index:10!important;
+  color:#f5f3f1!important;
+  font-size:clamp(13px,1.65vw,20px)!important;
+  line-height:1!important;
+  font-weight:900!important;
+  letter-spacing:.07em!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  text-shadow:0 2px 3px #000,0 0 3px rgba(0,0,0,.9)!important;
+}
+.big-jersey-number{
+  top:129px!important;
+  z-index:10!important;
+  color:#f4f1ed!important;
+  font-size:clamp(66px,7vw,92px)!important;
+  line-height:.9!important;
+  text-shadow:0 3px 3px #000,0 0 2px #c01a53!important;
+}
+.big-flip-hint{
+  bottom:2px!important;
+  opacity:.82;
+  transition:opacity .25s ease;
+}
+.big-jersey-flip:hover .big-flip-hint,.big-jersey-flip:focus .big-flip-hint{opacity:1}
+@media (prefers-reduced-motion:reduce){
+  .big-jersey-card{transition-duration:.01ms!important}
+}
+@media(max-width:700px){
+  .big-jersey-name{top:88px!important;font-size:13px!important}
+  .big-jersey-number{top:120px!important;font-size:66px!important}
+}
