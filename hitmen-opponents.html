@@ -37,6 +37,27 @@
 <div class="hoi-panel-head"><div><div class="eyebrow">OPPONENT FILE</div><h2 id="hoiOpponentName">Opponent</h2><p id="hoiOpponentMeta" class="hoi-muted"></p></div><a id="hoiBattleLink" class="hm-save" href="hitmen-battle-plan.html">Build Battle Plan</a></div>
 <div class="hoi-rollup" id="hoiRollup"></div>
 
+<section class="hoi-subsection hoi-roster-section">
+  <div class="hoi-panel-head">
+    <div><div class="eyebrow">CURRENT PERSONNEL</div><h3>Opponent Roster & Player Intelligence</h3><p id="hoiRosterStatus" class="hoi-muted">Roster sync pending.</p></div>
+    <div class="hoi-source-actions">
+      <button id="hoiSyncLg" class="hm-save" data-write-only type="button">Sync LG Rosters</button>
+      <button id="hoiFindEa" class="hm-save" data-write-only type="button">Find EA Club</button>
+      <button id="hoiSyncEa" class="hm-save" data-write-only type="button">Sync EA Logs</button>
+    </div>
+  </div>
+  <div id="hoiEaClub" class="hoi-ea-club"></div>
+  <div id="hoiRoster" class="hoi-roster-grid"></div>
+</section>
+
+<section class="hoi-subsection hoi-pregame-section">
+  <div class="hoi-panel-head">
+    <div><div class="eyebrow">WILDMAN HOCKEY OPS</div><h3>Pregame Scouting Report</h3><p class="hoi-muted">Built from current roster, public league stats, EA game logs, Calgary history and VOD evidence.</p></div>
+    <button id="hoiGenerateReport" class="hm-save" data-write-only type="button">Generate Pregame Report</button>
+  </div>
+  <div id="hoiPregameReport" class="hoi-pregame-report"><div class="hoi-empty">No generated pregame report yet.</div></div>
+</section>
+
 <div class="hoi-detail-grid">
 <section><h3>Season Scouting Report</h3><div class="hoi-form">
 <label class="wide">Scouting summary<textarea id="hoiSummary"></textarea></label>
