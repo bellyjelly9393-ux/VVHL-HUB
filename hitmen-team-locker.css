@@ -97,3 +97,126 @@ body.hitmen-team-locker-page{background:radial-gradient(circle at 50% -10%,#3410
 }
 .stall-skates i{display:none!important}
 .stall-gloves{display:none!important}
+
+/* LOCKER PREVIEW V2 CLEAN */
+.locker-stall-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.locker-preview-v2{
+  min-height:0!important;
+  border-radius:14px!important;
+  overflow:hidden!important;
+  background:#080809!important;
+  border:1px solid rgba(255,255,255,.09)!important;
+  box-shadow:0 16px 34px rgba(0,0,0,.42)!important;
+}
+.locker-preview-v2:before{display:none!important}
+.stall-nameplate-v2{
+  min-height:58px!important;
+  display:grid!important;
+  grid-template-columns:58px minmax(0,1fr) 58px!important;
+  align-items:center!important;
+  gap:8px!important;
+  padding:8px 12px!important;
+  background:linear-gradient(180deg,#242329 0%,#101012 76%,#09090a 100%)!important;
+  border:0!important;
+  border-bottom:2px solid #ee276d!important;
+  box-shadow:inset 0 -10px 22px rgba(238,39,109,.045)!important;
+}
+.stall-nameplate-v2 strong{
+  text-align:center!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  font:900 clamp(16px,1.5vw,23px)/1 "Barlow Condensed",sans-serif!important;
+  letter-spacing:.035em!important;
+  color:#f8f4f2!important;
+  text-shadow:0 2px 4px #000!important;
+}
+.stall-nameplate-v2 .stall-name-num{
+  font:900 clamp(22px,2vw,32px)/1 "Barlow Condensed",sans-serif!important;
+  color:#f3e8e5!important;
+  text-align:center!important;
+  text-shadow:0 2px 0 #a51443,0 0 8px rgba(238,39,109,.3)!important;
+}
+.stall-preview-scene{
+  position:relative!important;
+  height:auto!important;
+  aspect-ratio:4/5!important;
+  overflow:hidden!important;
+  background-image:linear-gradient(180deg,rgba(4,4,5,.02),rgba(4,4,5,.08)),url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_103244_e1de2ac9-4be3-45ef-ad5c-4b999b9cd437.png")!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  box-shadow:inset 0 -35px 50px rgba(0,0,0,.3)!important;
+}
+.stall-preview-scene:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(180deg,transparent 60%,rgba(0,0,0,.2));
+}
+.stall-preview-scene .stall-neon,
+.stall-preview-scene .stall-top-shelf,
+.stall-preview-scene .stall-rail,
+.stall-preview-scene .stall-hook,
+.stall-preview-scene .stall-side-art,
+.stall-preview-scene .stall-skates,
+.stall-preview-scene .stall-gloves,
+.stall-preview-scene .stall-bench,
+.stall-preview-scene .stall-underlight,
+.stall-preview-scene .mini-jersey-flip{display:none!important}
+.team-preview-jersey{
+  position:absolute;
+  left:50%;
+  top:31%;
+  width:48%;
+  height:51%;
+  transform:translateX(-50%);
+  z-index:4;
+  filter:drop-shadow(0 15px 12px rgba(0,0,0,.65));
+  transition:transform .28s ease,filter .28s ease;
+}
+.locker-preview-v2:hover .team-preview-jersey{
+  transform:translateX(-50%) scale(1.025);
+  filter:drop-shadow(0 18px 14px rgba(0,0,0,.72));
+}
+.team-preview-jersey-art{
+  position:absolute;
+  inset:0;
+  background:url("https://d8j0ntlcm91z4.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/hf_20260926_103308_62dd93fd-206f-4d15-b6d0-5cfc92cdfabf.png") center/contain no-repeat;
+  mix-blend-mode:multiply;
+  filter:brightness(1.2) saturate(1.18) contrast(1.04);
+}
+.team-preview-sleeve{
+  position:absolute;
+  top:46%;
+  z-index:5;
+  font:900 clamp(12px,1.2vw,18px)/1 "Barlow Condensed",sans-serif;
+  color:#fff;
+  text-shadow:0 2px 4px #000,0 0 5px #b3164d;
+}
+.team-preview-sleeve.left{left:3%}.team-preview-sleeve.right{right:3%}
+.stall-footer-v2{
+  min-height:44px!important;
+  padding:9px 12px!important;
+  background:linear-gradient(180deg,#0a0a0b,#050506)!important;
+  border-top:1px solid rgba(255,255,255,.055)!important;
+}
+.stall-footer-v2 small{font-size:8px!important;letter-spacing:.04em!important;color:#777074!important}
+.stall-footer-v2 b{
+  padding:5px 8px;
+  border-radius:999px;
+  background:rgba(238,39,109,.08);
+  border:1px solid rgba(238,39,109,.18);
+  color:#eee7e8!important;
+  font-size:8px!important;
+  letter-spacing:.06em;
+}
+.stall-position{color:#b7adb0}
+@media(max-width:1150px){.locker-stall-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:800px){
+  .locker-stall-grid{grid-template-columns:1fr!important;gap:18px!important}
+  .locker-preview-v2{max-width:620px;margin-inline:auto;width:100%}
+  .stall-nameplate-v2{grid-template-columns:52px minmax(0,1fr) 52px!important}
+  .team-preview-jersey{width:44%;top:31%}
+}
