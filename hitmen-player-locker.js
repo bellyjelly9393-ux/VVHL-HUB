@@ -25,8 +25,10 @@
     const ok=canAccess();
     const content=document.querySelector('[data-locker-content]');
     const locked=E('lockerLockedMessage');
+    const accessShell=document.querySelector('.locker-access-shell');
     if(content)content.hidden=!ok;
     if(locked)locked.hidden=ok;
+    if(accessShell)accessShell.hidden=ok;
     if(ok)load();
   }
 
@@ -333,6 +335,11 @@
 
   E('jerseyFrontBtn')?.addEventListener('click',()=>setStallView(false));
   E('jerseyBackBtn')?.addEventListener('click',()=>setStallView(true));
+
+  document.querySelectorAll('[data-stall-tab-jump]').forEach(btn=>btn.addEventListener('click',()=>{
+    const target=btn.dataset.stallTabJump;
+    document.querySelector('[data-stall-tab="'+target+'"]')?.click();
+  }));
 
   document.querySelectorAll('[data-stall-tab]').forEach(btn=>btn.addEventListener('click',()=>{
     const tab=btn.dataset.stallTab;
