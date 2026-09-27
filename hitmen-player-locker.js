@@ -33,16 +33,47 @@
   }
 
   async function chooseLocker(){
-    const wanted=new URLSearchParams(location.search).get('player');
+    const params=new URLSearchParams(location.search);
+    const wanted=params.get('player');
+    const inspect=params.get('inspect')==='1';
     const claimedLocker=ST().hitmenLockerClaim?.locker_id||null;
-    let q=DB().from('team_player_lockers').select('*').eq('team_id',TEAM).eq('season',SEASON);
-    if(wanted) q=q.eq('id',wanted);
-    else if(claimedLocker) q=q.eq('id',claimedLocker);
-    else if(ST().user) q=q.eq('user_id',ST().user.id);
-    else return null;
-    const r=await q.limit(1).maybeSingle();
-    if(r.error)throw r.error;
-    return r.data;
+    const userId=ST().user?.id||null;
+
+    async function by(field,value){
+      if(!value)return null;
+      const r=await DB().from('team_player_lockers')
+        .select('*')
+        .eq('team_id',TEAM)
+        .eq('season',SEASON)
+        .eq(field,value)
+        .limit(1)
+        .maybeSingle();
+      if(r.error)throw r.error;
+      return r.data||null;
+    }
+
+    // Explicit team browsing is allowed for signed-in team members, but it
+    // must be marked inspect=1. Normal Discord/player entry always resolves
+    // the signed-in person's own locker first.
+    if(inspect&&wanted){
+      const inspected=await by('id',wanted);
+      if(inspected)return inspected;
+    }
+
+    const claimed=await by('id',claimedLocker);
+    if(claimed)return claimed;
+
+    const own=await by('user_id',userId);
+    if(own)return own;
+
+    // Backward compatibility: an old player= URL may still be valid if it
+    // points to the signed-in player's own locker.
+    if(wanted){
+      const legacy=await by('id',wanted);
+      if(legacy&&legacy.user_id===userId)return legacy;
+    }
+
+    return null;
   }
 
   const add=(o,k)=>Number(o?.[k]||0);
