@@ -1,6 +1,6 @@
 /* Hitmen photo stall: renders the locker stall art with live nameplate + jersey print. */
 (() => {
-const ART={front:'assets/hitmen/stall-front.webp',back:'assets/hitmen/stall-back.webp',empty:'assets/hitmen/stall-empty.webp'};
+const ART={front:'hitmen-stall-front.webp',back:'hitmen-stall-back.webp',empty:'hitmen-stall-empty.webp'};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const q=(root,s)=>root.querySelector(s);
 
