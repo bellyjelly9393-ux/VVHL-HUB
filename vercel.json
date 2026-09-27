@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/hitmen-hub",
+      "destination": "/hitmen-hub.html"
+    },
+    {
       "source": "/academy-trainees",
       "destination": "/academy-trainees.html"
     },

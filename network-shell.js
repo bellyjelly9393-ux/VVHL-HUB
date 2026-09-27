@@ -36,6 +36,7 @@
   const publicNav = [
     ['index.html','Home'],
     ['team.html','Wildman'],
+    ['hitmen-hub.html','Hitmen Hub'],
     ['esports-hub.html','Esports Hub'],
     ['pro-series.html','Road to Pro'],
     ['game-center.html','Live'],
