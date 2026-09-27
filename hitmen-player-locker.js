@@ -34,15 +34,14 @@
 
   async function chooseLocker(){
     const wanted=new URLSearchParams(location.search).get('player');
+    const claimedLocker=ST().hitmenLockerClaim?.locker_id||null;
     let q=DB().from('team_player_lockers').select('*').eq('team_id',TEAM).eq('season',SEASON);
-    if(wanted)q=q.eq('id',wanted);
-    else if(ST().user)q=q.eq('user_id',ST().user.id);
-    let r=await q.limit(1).maybeSingle();
+    if(wanted) q=q.eq('id',wanted);
+    else if(claimedLocker) q=q.eq('id',claimedLocker);
+    else if(ST().user) q=q.eq('user_id',ST().user.id);
+    else return null;
+    const r=await q.limit(1).maybeSingle();
     if(r.error)throw r.error;
-    if(!r.data&&canManage()){
-      r=await DB().from('team_player_lockers').select('*').eq('team_id',TEAM).eq('season',SEASON).order('gamertag').limit(1).maybeSingle();
-      if(r.error)throw r.error;
-    }
     return r.data;
   }
 
