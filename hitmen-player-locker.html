@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>Player Locker | Calgary Hitmen</title>
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-team-locker.css"><link rel="stylesheet" href="hitmen-player-locker.css">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-team-locker.css"><link rel="stylesheet" href="hitmen-player-locker.css"><link rel="stylesheet" href="hitmen-stall-scene.css">
 </head>
 <body class="wildman-site hitmen-player-locker-page">
 <header class="site-header locker-header">
@@ -32,32 +32,8 @@
 </aside>
 
 <div class="player-main">
-<section id="stall" class="player-stall-hero">
-<div class="player-stall-scene">
-<div class="personal-stall-nameplate"><span class="personal-logo-chip">H</span><span id="lockerPlateNumLeft" class="personal-plate-num"></span><strong id="lockerPlateName">PLAYER</strong><span id="lockerPlateNumRight" class="personal-plate-num"></span><span class="personal-logo-chip">H</span></div>
-<div class="personal-neon-strip"></div>
-<div class="personal-upper-shelf"><i class="p-helmet"></i><i class="p-glove one"></i><i class="p-glove two"></i><i class="p-bag"></i></div>
-<div class="personal-side-art left"><i></i></div><div class="personal-side-art right"><i></i></div>
-<div class="stall-light"></div><div class="stall-big-rail"></div><div class="stall-big-hook"></div>
-<div id="bigJerseyFlip" class="big-jersey-flip" role="button" tabindex="0" aria-label="Flip jersey front to back">
-  <div class="big-jersey-card">
-    <div class="big-jersey-face big-jersey-front">
-      <div class="big-jersey-body"></div>
-      <div class="big-jersey-front-crest">HITMEN</div>
-      <div id="jerseyFrontNumLeft" class="big-sleeve-number left"></div>
-      <div id="jerseyFrontNumRight" class="big-sleeve-number right"></div>
-    </div>
-    <div class="big-jersey-face big-jersey-back">
-      <div class="big-jersey-body"></div>
-      <div id="jerseyNameLive" class="big-jersey-name">HITMEN</div>
-      <div id="jerseyNumberLive" class="big-jersey-number"></div>
-    </div>
-  </div>
-  <span id="jerseyFlipHint" class="big-flip-hint">TAP JERSEY TO VIEW BACK</span>
-</div>
-<div class="big-skates"><i></i><i></i></div><div class="big-gloves"><i></i><i></i></div><div class="big-helmet"></div>
-<div id="chelPlayerDisplay" class="chel-player-display"><div class="chel-placeholder"><b>YOUR CHEL PLAYER</b><small>Upload a clean screenshot or render for future team media projects.</small></div></div>
-</div>
+<section id="stall" class="player-stall-hero hs-hero">
+<div id="stallScene" class="player-stall-photo"></div>
 <div class="player-stall-copy">
 <div class="eyebrow">CALGARY HITMEN · PERSONAL STALL</div><h1 id="playerTitle">PLAYER</h1><p id="playerMeta">Season 55</p>
 <div class="player-identity-badges"><span id="playerPositionBadge">—</span><span id="playerRoleBadge">ROSTER</span><span id="playerSalaryBadge">—</span></div>
@@ -99,5 +75,5 @@
 </main>
 
 <footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN · PLAYER LOCKER</b><span>Performance · development · media profile</span></div><p>Private team access</p></div></footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="backend.js"></script><script src="script.js"></script><script src="hitmen-player-locker.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="backend.js"></script><script src="script.js"></script><script src="hitmen-stall-scene.js"></script><script src="hitmen-player-locker.js"></script>
 </body></html>
