@@ -659,7 +659,7 @@ def process(job_id):
     update(job_id, 'processing', result)
     duration = probe(source)
     periods = job['metadata'].get('periods', [])
-    period_mode = result.get('period_detection', 'manual') if periods else None
+    period_mode = (job['metadata'].get('period_source') or result.get('period_detection', 'manual')) if periods else None
     if not periods:
         detected = [] if result.get('period_detection') == 'full_game_fallback' else detect_periods(source, duration)
         if detected:
@@ -677,11 +677,13 @@ def process(job_id):
     plan = segments(periods, duration)
     result.update({
         'duration': duration,
-        'detected_periods': periods if period_mode == 'auto' else [],
+        'detected_periods': periods if period_mode in ('auto', 'live_scoreboard') else [],
         'stage': 'analyzing_video',
         'period_detection': period_mode,
         'period_note': ('Automatic P1/P2/P3 detection was not confident; analysis covers the full recording.'
-                        if period_mode == 'full_game_fallback' else ''),
+                        if period_mode == 'full_game_fallback'
+                        else 'Live scoreboard watcher supplied the period boundaries.'
+                        if period_mode == 'live_scoreboard' else ''),
         'total_chunks': len(plan),
         'frame_step_seconds': frame_step,
         'ai_rate_limit_retries': retry_count,

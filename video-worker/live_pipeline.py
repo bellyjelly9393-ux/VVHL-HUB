@@ -18,6 +18,7 @@ from urllib.parse import urlsplit, urlunsplit
 from uuid import uuid4
 
 import worker
+import live_periods
 from streamlink import Streamlink
 from streamlink.exceptions import StreamlinkError
 
@@ -96,6 +97,23 @@ def safe_terminate(proc):
             pass
 
 
+def direct_stream_url(page_url, selected_name, stream):
+    direct = getattr(stream, 'url', None)
+    if isinstance(direct, str) and direct.startswith(('http://', 'https://')):
+        return direct
+    try:
+        run = subprocess.run(
+            ['streamlink', '--stream-url', page_url, selected_name],
+            capture_output=True, check=True, text=True, timeout=30
+        )
+        direct = run.stdout.strip()
+        if direct.startswith(('http://', 'https://')):
+            return direct
+    except Exception:
+        pass
+    return None
+
+
 def capture_twitch(item, folder):
     raw_url = str(item.get('stream_url') or '').strip()
     if 'twitch.tv' not in raw_url.lower():
@@ -133,10 +151,14 @@ def capture_twitch(item, folder):
         video_names = [name for name in streams.keys() if name not in ('audio_only', 'worst')]
         selected_name = video_names[-1] if video_names else next(iter(streams.keys()))
 
+    selected_stream = streams[selected_name]
     try:
-        fd = streams[selected_name].open()
+        fd = selected_stream.open()
     except StreamlinkError:
         raise RuntimeError('Twitch stream was found but the selected video rendition could not be opened.')
+
+    live_url = direct_stream_url(url, selected_name, selected_stream)
+    period_watcher = live_periods.LivePeriodWatcher(live_url, folder).start() if live_url else None
 
     started = time.time()
     last_state_check = 0.0
@@ -175,6 +197,8 @@ def capture_twitch(item, folder):
             fd.close()
         except Exception:
             pass
+        if period_watcher:
+            period_watcher.stop()
 
     if not ts_path.exists() or ts_path.stat().st_size < MIN_CAPTURE_BYTES:
         raise RuntimeError('The live capture was too short to review.')
@@ -186,10 +210,14 @@ def capture_twitch(item, folder):
     ], check=True, timeout=180)
     ts_path.unlink(missing_ok=True)
     duration = worker.probe(mp4_path)
-    return mp4_path, duration
+    periods = period_watcher.period_ranges(duration) if period_watcher else []
+    diagnostics = period_watcher.diagnostics() if period_watcher else {}
+    if period_watcher:
+        period_watcher.cleanup()
+    return mp4_path, duration, periods, diagnostics
 
 
-def create_review_job(item, source_path, duration):
+def create_review_job(item, source_path, duration, periods=None, period_diagnostics=None):
     if not worker.USERS:
         raise RuntimeError('No automatic VOD review owner is configured.')
     owner = sorted(worker.USERS)[0]
@@ -202,9 +230,9 @@ def create_review_job(item, source_path, duration):
         'title': 'Automatic live game capture',
         'vod_url': str(item.get('stream_url') or ''),
         'players': '',
-        # Empty here is intentional. The worker still processes the complete game in
-        # overlapping windows. Reviewed period boundaries can be added/refined later.
-        'periods': [],
+        'periods': periods or [],
+        'period_source': 'live_scoreboard' if periods else None,
+        'live_period_diagnostics': period_diagnostics or {},
         'media_queue_id': str(item['id']),
         'automatic_live_capture': True,
     }
@@ -317,9 +345,9 @@ def handle_item(item):
         if item.get('provider') != 'twitch':
             queue_update(item['id'], 'failed', error='Automatic capture currently supports Twitch only.')
             return
-        source, duration = capture_twitch(item, folder)
+        source, duration, periods, period_diagnostics = capture_twitch(item, folder)
         queue_update(item['id'], 'captured', duration=duration)
-        job_id = create_review_job(item, source, duration)
+        job_id = create_review_job(item, source, duration, periods, period_diagnostics)
         # Do not block live ingest while AI reviews the previous game.
         # The next queued game must be capturable immediately after this one is finalized.
         threading.Thread(
