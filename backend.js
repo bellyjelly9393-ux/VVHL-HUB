@@ -61,7 +61,21 @@ async function loadBackendState() {
         "claim_my_hitmen_discord_locker",
       );
       if (lockerClaimError) console.warn("Could not auto-link Hitmen locker", lockerClaimError);
-      else backendState.hitmenLockerClaim = lockerClaim || null;
+      else {
+        backendState.hitmenLockerClaim = lockerClaim || null;
+        const oauthReturn = new URLSearchParams(location.search).get("discord_login") === "1";
+        if (
+          oauthReturn &&
+          lockerClaim?.matched === true &&
+          lockerClaim?.claimed === true &&
+          lockerClaim?.locker_id
+        ) {
+          location.replace(
+            `${VVHL_AUTH_ORIGIN}/hitmen-player-locker.html?player=${encodeURIComponent(lockerClaim.locker_id)}&discord=linked`
+          );
+          return;
+        }
+      }
     } catch (error) {
       console.warn("Could not auto-link Hitmen locker", error);
     }
@@ -159,10 +173,16 @@ async function authenticate(mode) {
 async function signInWithDiscord() {
   const message = document.getElementById("authMessage");
   if (message) message.textContent = "Opening Discord…";
+  const hitmenLockerLogin =
+    document.body.classList.contains("hitmen-team-locker-page") ||
+    document.body.classList.contains("hitmen-player-locker-page");
+  const discordRedirect = hitmenLockerLogin
+    ? `${VVHL_AUTH_ORIGIN}/hitmen-player-locker.html?discord_login=1`
+    : vvhlAuthRedirectUrl();
   const { error } = await vvhlDb.auth.signInWithOAuth({
     provider: "discord",
     options: {
-      redirectTo: vvhlAuthRedirectUrl(),
+      redirectTo: discordRedirect,
       scopes: "identify email",
     },
   });
