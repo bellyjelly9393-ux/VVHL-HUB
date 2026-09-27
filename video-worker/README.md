@@ -56,8 +56,16 @@ Twitch may reject retrieval; local MP4 upload avoids that dependency. Postgame D
 replay field is a reference for its uploaded file, not a download command. For a
 trimmed file, enter the original replay offset to keep evidence links accurate.
 Live capture is a separate queue integration in `live_pipeline.py` requiring
-`WORKER_QUEUE_SECRET` and the existing database RPCs. Neither mode is a substitute for
-checking a real game's footage and report.
+`WORKER_QUEUE_SECRET` and the existing database RPCs. During a Twitch capture the worker now
+also runs a low-cost scoreboard watcher inspired by the uploaded VVHL worker design: every
+~20 seconds FFmpeg grabs only the scoreboard crop, local Tesseract OCR reads the period, and
+the same new period must be seen twice before a boundary is accepted. Confident P1/P2/P3
+boundaries are handed directly to the existing evidence review; uncertain reads fall back to
+the post-capture OCR/full-game review rather than fabricating a split. This watcher uses no
+additional AI calls. Tune it with `LIVE_PERIOD_WATCH_SECONDS`,
+`LIVE_PERIOD_CONFIRM_READS`, and the `LIVE_SCOREBOARD_CROP_*` variables.
+
+Neither capture mode is a substitute for checking a real game's footage and report.
 
 ## Verification
 
