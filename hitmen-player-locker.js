@@ -8,7 +8,10 @@ const member=()=> (ST().memberships||[]).find(m=>m.team_id===TEAM&&m.active!==fa
 const canAccess=()=>Boolean(ST().user&&(isAdmin()||member()));
 const canManage=()=>isAdmin()||['owner','gm','agm'].includes(String(member()?.role||'').toLowerCase());
 const canEdit=()=>Boolean(locker&&(canManage()||locker.user_id===ST().user?.id));
-const money=v=>v==null?'—':v===0?'MANAGEMENT':'\{const ok=canAccess(),c=document.querySelector('[data-locker-content]'),l=E('lockerLockedMessage');if(c)c.hidden=!ok;if(l)l.hidden=ok;if(ok)load();}
+const money=v=>v==null?'—':v===0?'MANAGEMENT':'$'+(Number(v)/1000000).toFixed(Number(v)%1000000?2:0)+'M';
+const T=(id,v)=>{const el=E(id);if(el)el.textContent=v??'—';};
+const H=(id,v)=>{const el=E(id);if(el)el.innerHTML=v??'';};
+function gate(){const ok=canAccess(),c=document.querySelector('[data-locker-content]'),l=E('lockerLockedMessage');if(c)c.hidden=!ok;if(l)l.hidden=ok;if(ok)load();}
 async function chooseLocker(){
  const wanted=new URLSearchParams(location.search).get('player');
  let q=DB().from('team_player_lockers').select('*').eq('team_id',TEAM).eq('season',SEASON);
