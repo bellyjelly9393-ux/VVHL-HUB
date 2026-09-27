@@ -1106,3 +1106,441 @@
   .stall-card-title h2{font-size:20px!important}
   .player-panel-head h2{font-size:26px!important}
 }
+
+/* REFERENCE DASHBOARD V5 */
+.hitmen-reference-ui{
+  --ref-side:176px;
+  --ref-top:62px;
+  background:#050506!important;
+}
+.hitmen-reference-ui .locker-access-shell{
+  max-width:720px;
+  margin:40px auto;
+  padding:0 16px;
+}
+.hitmen-reference-ui .hitmen-app{
+  min-height:100vh;
+  background:#050506;
+}
+.hitmen-app-sidebar{
+  position:fixed;
+  left:0;top:0;bottom:0;
+  width:var(--ref-side);
+  z-index:60;
+  display:flex;
+  flex-direction:column;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.018),transparent 20%),
+    linear-gradient(180deg,#09090b,#070709 58%,#08080a);
+  border-right:1px solid rgba(255,255,255,.08);
+  box-shadow:10px 0 30px rgba(0,0,0,.28);
+}
+.hitmen-app-brand{
+  min-height:94px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:12px 14px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  color:#fff;
+  text-decoration:none;
+}
+.hitmen-app-crest{
+  width:56px;height:48px;
+  display:grid;place-items:center;
+  position:relative;
+  transform:skew(-6deg);
+  background:
+    radial-gradient(circle at 50% 50%,rgba(241,38,112,.17),transparent 55%),
+    linear-gradient(145deg,#211017,#08080a);
+  border:1px solid rgba(241,38,112,.34);
+  clip-path:polygon(14% 0,86% 0,100% 20%,88% 100%,12% 100%,0 20%);
+  box-shadow:0 0 16px rgba(241,38,112,.09);
+}
+.hitmen-app-crest span{
+  transform:skew(6deg);
+  font:900 28px/1 var(--font-display);
+  color:#f4edf0;
+  text-shadow:0 2px #a60f43;
+}
+.hitmen-app-brand strong{
+  font:900 16px/.88 var(--font-display);
+  letter-spacing:.055em;
+  color:#f6eff2;
+}
+.hitmen-app-side-nav{
+  display:grid;
+  padding:12px 0;
+}
+.hitmen-app-side-nav a{
+  position:relative;
+  display:grid;
+  grid-template-columns:36px 1fr;
+  align-items:center;
+  min-height:47px;
+  padding:0 15px;
+  color:#8f8689;
+  text-decoration:none;
+  font-size:10px;
+  font-weight:600;
+  border-left:3px solid transparent;
+  transition:.16s ease;
+}
+.hitmen-app-side-nav a:hover{
+  color:#d8d0d3;
+  background:linear-gradient(90deg,rgba(241,38,112,.05),transparent);
+}
+.hitmen-app-side-nav a.active{
+  color:#fff;
+  border-left-color:#f12670;
+  background:linear-gradient(90deg,rgba(241,38,112,.17),rgba(241,38,112,.025) 78%,transparent);
+}
+.hitmen-app-side-nav a.active:after{
+  content:"";
+  position:absolute;left:0;top:0;bottom:0;width:3px;
+  box-shadow:0 0 15px #f12670;
+}
+.rail-glyph{
+  display:grid;place-items:center;
+  width:23px;height:23px;
+  color:#a39a9d;
+  font:800 16px/1 var(--font-display);
+}
+.hitmen-app-side-nav a.active .rail-glyph{color:#ff4386}
+.hitmen-app-side-nav b{font-weight:600}
+.hitmen-app-sidebar-footer{
+  margin-top:auto;
+  min-height:210px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  align-items:center;
+  padding:20px 12px 25px;
+  text-align:center;
+  background:
+    radial-gradient(circle at 50% 75%,rgba(241,38,112,.09),transparent 30%),
+    linear-gradient(180deg,transparent,#09070a);
+}
+.sidebar-skull{
+  width:58px;height:58px;
+  display:grid;place-items:center;
+  margin-bottom:13px;
+  border-radius:50%;
+  border:1px solid rgba(241,38,112,.25);
+  background:radial-gradient(circle,#261019,#080809 68%);
+  color:#f4e9ed;
+  font:900 28px/1 var(--font-display);
+}
+.hitmen-app-sidebar-footer strong{
+  font:900 18px/1 var(--font-display);
+  letter-spacing:.14em;
+  color:#ff4a8c;
+}
+.hitmen-app-sidebar-footer>span{
+  margin-top:4px;
+  font-size:9px;
+  letter-spacing:.35em;
+  color:#b2a8ab;
+}
+.hitmen-app-sidebar-footer small{
+  margin-top:15px;
+  color:#61585b;
+  font-size:6px;
+}
+
+.hitmen-app-content{
+  margin-left:var(--ref-side);
+  min-height:100vh;
+  background:
+    radial-gradient(circle at 58% 10%,rgba(241,38,112,.045),transparent 28%),
+    #050506;
+}
+.hitmen-app-topbar{
+  position:sticky;
+  top:0;
+  z-index:50;
+  height:var(--ref-top);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:14px;
+  padding:0 20px;
+  background:rgba(7,7,9,.97);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  box-shadow:0 8px 22px rgba(0,0,0,.22);
+  backdrop-filter:blur(14px);
+}
+.hitmen-top-tabs{
+  height:100%;
+  display:flex;
+  align-items:stretch;
+  overflow:auto;
+}
+.hitmen-top-tabs a{
+  position:relative;
+  display:flex;
+  align-items:center;
+  padding:0 17px;
+  color:#9d9497;
+  text-decoration:none;
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.035em;
+  white-space:nowrap;
+}
+.hitmen-top-tabs a:hover{color:#ddd5d8}
+.hitmen-top-tabs a.active{
+  color:#fff;
+}
+.hitmen-top-tabs a.active:after{
+  content:"";
+  position:absolute;left:8px;right:8px;bottom:0;height:2px;
+  background:#f12670;
+  box-shadow:0 0 10px rgba(241,38,112,.7);
+}
+.hitmen-top-actions{
+  display:flex;align-items:center;gap:10px;
+}
+.hitmen-search{
+  width:280px;height:35px;
+  display:flex;align-items:center;gap:8px;
+  padding:0 13px;
+  border:1px solid rgba(255,255,255,.11);
+  border-radius:999px;
+  color:#6f6669;
+  background:#0a0a0c;
+  font-size:8px;
+}
+.hitmen-notify{
+  width:34px;height:34px;
+  display:grid;place-items:center;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:50%;
+  color:#f12670;
+  font-size:8px;
+  background:#0a0a0d;
+  box-shadow:inset 0 0 0 7px rgba(241,38,112,.015);
+}
+.hitmen-top-avatar{
+  width:36px;height:36px;
+  overflow:hidden;
+  display:grid;place-items:center;
+  border-radius:50%;
+  border:1px solid rgba(241,38,112,.25);
+  background:radial-gradient(circle,#32101c,#080809 68%);
+  color:#f0e8eb;
+  font:900 15px/1 var(--font-display);
+}
+.hitmen-top-avatar img{width:100%;height:100%;object-fit:cover}
+
+.hitmen-app-main{
+  padding:0 12px 32px;
+}
+.reference-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1.52fr) minmax(410px,.88fr);
+  min-height:565px;
+  background:#070708;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.reference-locker-pane{
+  position:relative;
+  min-width:0;
+  height:565px;
+  overflow:hidden;
+  background:#080809;
+  border-right:1px solid rgba(255,255,255,.08);
+}
+.reference-locker-pane .player-stall-photo{
+  position:absolute;
+  inset:0;
+  border:0!important;
+}
+.reference-locker-pane .player-stall-photo .hs-stall{
+  width:100%;
+  height:100%;
+  aspect-ratio:auto!important;
+}
+.reference-locker-pane .player-stall-photo .hs-img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center 46%;
+}
+.reference-locker-pane .hs-hint{display:none!important}
+.reference-flip-controls{
+  position:absolute;
+  z-index:20;
+  left:50%;
+  bottom:28px;
+  transform:translateX(-50%);
+  display:grid;
+  grid-template-columns:28px 78px 78px 28px;
+  align-items:center;
+  width:230px;
+  padding:3px;
+  border:1px solid rgba(255,255,255,.48);
+  border-radius:999px;
+  background:rgba(5,5,6,.84);
+  backdrop-filter:blur(10px);
+  box-shadow:0 9px 22px rgba(0,0,0,.5);
+}
+.reference-flip-controls>span{
+  text-align:center;color:#fff;font-size:18px;
+}
+.reference-flip-controls button{
+  border:0;
+  border-radius:999px;
+  padding:8px 8px;
+  background:transparent;
+  color:#c6bec1;
+  font:800 8px/1 var(--font-ui);
+  cursor:pointer;
+}
+.reference-flip-controls button.active{
+  background:linear-gradient(180deg,#ff4588,#bd124c);
+  color:#fff;
+  box-shadow:0 0 16px rgba(241,38,112,.34);
+}
+.reference-flip-caption{
+  position:absolute;
+  z-index:20;
+  left:50%;bottom:11px;
+  transform:translateX(-50%);
+  color:#e8dee1;
+  font-size:6px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-shadow:0 1px 3px #000;
+}
+
+.reference-player-pane{
+  padding:26px 26px 18px;
+  background:
+    radial-gradient(circle at 100% 50%,rgba(241,38,112,.08),transparent 28%),
+    linear-gradient(155deg,#101012,#08080a 68%);
+}
+.reference-player-head{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:14px;
+  align-items:start;
+}
+.reference-player-head h1{
+  margin:13px 0 9px;
+  font:900 clamp(38px,3vw,54px)/.86 var(--font-display)!important;
+  letter-spacing:.018em!important;
+}
+.reference-edit{
+  margin-top:2px;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:7px;
+  background:#0d0d0f;
+  color:#ddd4d7;
+  font-size:7px;
+  font-weight:700;
+  cursor:pointer;
+}
+.reference-edit:hover{border-color:rgba(241,38,112,.35)}
+.reference-tabs{
+  margin-top:20px!important;
+}
+.reference-stat-strip{
+  margin-top:2px;
+  border-radius:9px!important;
+}
+.reference-bio-card{
+  margin-top:14px!important;
+  min-height:246px;
+}
+.reference-bio-card .stall-bio-avatar{
+  min-height:165px;
+}
+.reference-bio-card .stall-bio-layout{
+  grid-template-columns:minmax(0,1fr) 135px;
+}
+
+.reference-dashboard-row{
+  display:grid;
+  grid-template-columns:1.22fr .92fr 1.15fr 1.1fr;
+  gap:10px;
+  padding-top:10px;
+}
+.reference-dashboard-row .stall-dashboard-card{
+  min-height:234px;
+  border-radius:8px!important;
+  padding:14px 15px!important;
+}
+.reference-dashboard-row .stall-dashboard-card:before{display:none!important}
+.reference-dashboard-row .stall-card-title h2{
+  font-size:18px!important;
+  letter-spacing:.035em;
+}
+.reference-dashboard-row .stall-card-title>span{
+  color:#8b8184;
+  font-size:6px;
+}
+.reference-dashboard-row .weekly-performance-chart{
+  height:175px;
+}
+.reference-dashboard-row .recent-stat-list>div{
+  padding:6px 2px!important;
+}
+.reference-dashboard-row .recent-stat-list b{
+  font-size:15px;
+}
+.reference-dashboard-row .stall-note{
+  padding:7px;
+}
+.reference-dashboard-row .player-tool-list button{
+  padding:8px 0;
+}
+.reference-secondary{
+  display:grid;
+  gap:10px;
+  margin-top:10px;
+}
+.reference-secondary .player-panel{
+  border-radius:8px!important;
+}
+
+@media(max-width:1320px){
+  .hitmen-search{display:none}
+  .reference-hero{grid-template-columns:minmax(0,1.35fr) minmax(390px,.9fr)}
+  .reference-dashboard-row{grid-template-columns:1fr 1fr}
+}
+@media(max-width:1080px){
+  .hitmen-reference-ui{--ref-side:150px}
+  .hitmen-top-tabs a{padding:0 11px;font-size:8px}
+  .reference-hero{grid-template-columns:1fr}
+  .reference-locker-pane{height:620px;border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}
+  .reference-player-pane{padding:20px}
+}
+@media(max-width:760px){
+  .hitmen-reference-ui{--ref-side:0px}
+  .hitmen-app-sidebar{display:none}
+  .hitmen-app-content{margin-left:0}
+  .hitmen-app-topbar{
+    height:auto;
+    min-height:54px;
+    padding:0 8px;
+    grid-template-columns:1fr auto;
+  }
+  .hitmen-top-tabs a{padding:0 9px;font-size:7px}
+  .hitmen-top-actions{display:none}
+  .hitmen-app-main{padding:0 6px 22px}
+  .reference-locker-pane{height:560px}
+  .reference-player-pane{padding:16px}
+  .reference-player-head{grid-template-columns:1fr}
+  .reference-edit{justify-self:start}
+  .reference-dashboard-row{grid-template-columns:1fr}
+}
+@media(max-width:520px){
+  .reference-locker-pane{height:500px}
+  .reference-player-head h1{font-size:42px!important}
+  .reference-player-pane{padding:14px 12px}
+  .reference-flip-controls{bottom:24px;width:208px;grid-template-columns:24px 72px 72px 24px}
+  .reference-bio-card .stall-bio-layout{grid-template-columns:1fr 100px}
+}
