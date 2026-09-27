@@ -63,17 +63,26 @@ async function loadBackendState() {
       if (lockerClaimError) console.warn("Could not auto-link Hitmen locker", lockerClaimError);
       else {
         backendState.hitmenLockerClaim = lockerClaim || null;
-        const oauthReturn = new URLSearchParams(location.search).get("discord_login") === "1";
+        const params = new URLSearchParams(location.search);
+        const lockerReturn = params.get("discord_login") === "1";
+        const gameCenterReturn = params.get("discord_gamecenter") === "1";
         if (
-          oauthReturn &&
           lockerClaim?.matched === true &&
           lockerClaim?.claimed === true &&
           lockerClaim?.locker_id
         ) {
-          location.replace(
-            `${VVHL_AUTH_ORIGIN}/hitmen-player-locker.html?player=${encodeURIComponent(lockerClaim.locker_id)}&discord=linked`
-          );
-          return;
+          if (lockerReturn) {
+            location.replace(
+              `${VVHL_AUTH_ORIGIN}/hitmen-player-locker.html?player=${encodeURIComponent(lockerClaim.locker_id)}&discord=linked`
+            );
+            return;
+          }
+          if (gameCenterReturn) {
+            location.replace(
+              `${VVHL_AUTH_ORIGIN}/hitmen-game-center.html?discord=linked`
+            );
+            return;
+          }
         }
       }
     } catch (error) {
@@ -176,9 +185,13 @@ async function signInWithDiscord() {
   const hitmenLockerLogin =
     document.body.classList.contains("hitmen-team-locker-page") ||
     document.body.classList.contains("hitmen-player-locker-page");
-  const discordRedirect = hitmenLockerLogin
-    ? `${VVHL_AUTH_ORIGIN}/hitmen-player-locker.html?discord_login=1`
-    : vvhlAuthRedirectUrl();
+  const hitmenGameCenterLogin =
+    document.body.classList.contains("hitmen-game-center-page");
+  const discordRedirect = hitmenGameCenterLogin
+    ? `${VVHL_AUTH_ORIGIN}/hitmen-game-center.html?discord_gamecenter=1`
+    : hitmenLockerLogin
+      ? `${VVHL_AUTH_ORIGIN}/hitmen-player-locker.html?discord_login=1`
+      : vvhlAuthRedirectUrl();
   const { error } = await vvhlDb.auth.signInWithOAuth({
     provider: "discord",
     options: {
