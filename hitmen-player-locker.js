@@ -18,12 +18,17 @@ function gate(){
 }
 async function chooseLocker(){
  const wanted=new URLSearchParams(location.search).get('player');
- let q=DB().from('team_player_lockers').select('*').eq('team_id',TEAM).eq('season',SEASON);
- if(wanted)q=q.eq('id',wanted);
- else q=q.order('management_role',{ascending:false,nullsFirst:false}).order('gamertag');
- const r=await q.limit(1).maybeSingle();
- if(r.error)throw r.error;
- return r.data;
+ const base=()=>DB().from('team_player_lockers').select('*').eq('team_id',TEAM).eq('season',SEASON);
+ if(wanted){
+   const r=await base().eq('id',wanted).maybeSingle();
+   if(r.error)throw r.error;
+   return r.data;
+ }
+ const uid=ST().user?.id;
+ if(!uid)return null;
+ const mine=await base().eq('user_id',uid).maybeSingle();
+ if(mine.error)throw mine.error;
+ return mine.data;
 }
 function add(o,k){return Number(o?.[k]||0)}
 function aggregate(){
@@ -96,7 +101,7 @@ function renderLineReports(){
 async function load(){
  if(!canAccess()||!DB())return;
  try{
-  locker=await chooseLocker();if(!locker){val('playerTitle','NO STALL FOUND');return}
+  locker=await chooseLocker();if(!locker){val('playerTitle','NO STALL LINKED');val('playerMeta','Open the Locker Room and choose a player stall.');return}
   const [gr,wr,lr,hr]=await Promise.all([
    DB().from('team_player_game_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('locker_id',locker.id).order('game_date',{ascending:false}),
    DB().from('team_player_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('locker_id',locker.id).order('week',{ascending:false}),
