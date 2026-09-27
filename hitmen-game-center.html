@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#060607">
+<title>Hitmen Game Center | Calgary Hitmen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="hub.css">
+<link rel="stylesheet" href="wildman.css">
+<link rel="stylesheet" href="hitmen-game-center.css?v=20260927-1">
+</head>
+<body class="wildman-site hitmen-game-center-page">
+
+<section class="gc-access-shell">
+  <section id="accountPanel" class="panel account-panel"></section>
+  <div id="gcLocked" class="gc-locked"><b>Calgary Hitmen team access required.</b><p>Sign in with the Discord account linked to your roster spot.</p></div>
+</section>
+
+<div id="gcApp" class="gc-app" hidden>
+  <aside class="gc-sidebar">
+    <a class="gc-brand" href="hitmen-game-center.html">
+      <span class="gc-crest">H</span>
+      <strong>CALGARY<br>HITMEN</strong>
+    </a>
+    <nav class="gc-side-nav">
+      <a class="active" href="hitmen-game-center.html"><span>⌂</span><b>Game Center</b></a>
+      <a href="hitmen-team-locker.html"><span>◎</span><b>Roster</b></a>
+      <a id="gcMyStallSide" href="hitmen-player-locker.html"><span>▣</span><b>My Stall</b></a>
+      <a href="#schedule"><span>□</span><b>Schedule</b></a>
+      <a href="#results"><span>▥</span><b>Results</b></a>
+      <a href="#streams"><span>▷</span><b>Streams</b></a>
+      <a href="#intel"><span>⌁</span><b>Scouting</b></a>
+      <a href="hitmen-player-locker.html#weekly"><span>↗</span><b>Development</b></a>
+    </nav>
+    <div class="gc-side-footer">
+      <div class="gc-side-mark">H</div>
+      <strong>SEASON 55</strong>
+      <small>TEAM ACCESS</small>
+    </div>
+  </aside>
+
+  <div class="gc-content">
+    <header class="gc-topbar">
+      <nav class="gc-top-tabs">
+        <a class="active" href="hitmen-game-center.html">GAME CENTER</a>
+        <a href="hitmen-team-locker.html">ROSTER</a>
+        <a id="gcMyStallTop" href="hitmen-player-locker.html">MY STALL</a>
+        <a href="#schedule">SCHEDULE</a>
+        <a href="#results">RESULTS</a>
+        <a href="#streams">STREAMS</a>
+        <a href="#intel">SCOUTING</a>
+      </nav>
+      <div class="gc-top-profile">
+        <span id="gcTopPlayer">HITMEN</span>
+        <div id="gcAvatar" class="gc-avatar">H</div>
+      </div>
+    </header>
+
+    <main class="gc-main">
+      <section class="gc-hero">
+        <div class="gc-hero-copy">
+          <div class="gc-kicker"><span></span>CALGARY HITMEN · LGCHL SEASON 55</div>
+          <h1>GAME<br><em>CENTER</em></h1>
+          <p>Your team home for tonight's matchups, schedule, results, streams, scouting and your personal locker.</p>
+          <div class="gc-hero-actions">
+            <a id="gcMyStallHero" class="gc-primary" href="hitmen-player-locker.html">OPEN MY STALL</a>
+            <a class="gc-secondary" href="hitmen-team-locker.html">TEAM LOCKER</a>
+          </div>
+        </div>
+        <div class="gc-record-card">
+          <small>SEASON RECORD</small>
+          <strong id="gcRecord">0-0-0</strong>
+          <span id="gcGamesPlayed">0 games played</span>
+        </div>
+      </section>
+
+      <section class="gc-grid gc-top-grid">
+        <article class="gc-card gc-next-card">
+          <div class="gc-card-head"><div><small>NEXT UP</small><h2>NEXT GAME</h2></div><span id="gcNextWeek">WEEK —</span></div>
+          <div id="gcNextGame" class="gc-next-game"><div class="gc-empty">Loading next game…</div></div>
+        </article>
+
+        <article class="gc-card">
+          <div class="gc-card-head"><div><small>TONIGHT</small><h2>GAME NIGHT</h2></div><span id="gcTonightCount">0 GAMES</span></div>
+          <div id="gcTonight" class="gc-list"><div class="gc-empty">Checking tonight’s schedule…</div></div>
+        </article>
+
+        <article class="gc-card">
+          <div class="gc-card-head"><div><small>PLAYER</small><h2>MY PROFILE</h2></div></div>
+          <div id="gcPlayerCard" class="gc-player-card"><div class="gc-empty">Loading player profile…</div></div>
+        </article>
+      </section>
+
+      <section id="schedule" class="gc-grid gc-main-grid">
+        <article class="gc-card gc-wide">
+          <div class="gc-card-head"><div><small>SEASON 55</small><h2>UPCOMING SCHEDULE</h2></div><span id="gcScheduleCount">0 UPCOMING</span></div>
+          <div id="gcSchedule" class="gc-schedule"><div class="gc-empty">Loading schedule…</div></div>
+        </article>
+
+        <article id="intel" class="gc-card">
+          <div class="gc-card-head"><div><small>NEXT OPPONENT</small><h2>SCOUTING INTEL</h2></div></div>
+          <div id="gcIntel" class="gc-intel"><div class="gc-empty">Scouting intel will appear here.</div></div>
+        </article>
+      </section>
+
+      <section class="gc-grid gc-bottom-grid">
+        <article id="results" class="gc-card">
+          <div class="gc-card-head"><div><small>RECENT</small><h2>RESULTS</h2></div></div>
+          <div id="gcResults" class="gc-list"><div class="gc-empty">No results yet.</div></div>
+        </article>
+
+        <article id="streams" class="gc-card">
+          <div class="gc-card-head"><div><small>TEAM MEDIA</small><h2>STREAMS & GAME FEEDS</h2></div></div>
+          <div id="gcStreams" class="gc-list"><div class="gc-empty">No streams attached yet.</div></div>
+        </article>
+
+        <article class="gc-card">
+          <div class="gc-card-head"><div><small>QUICK LINKS</small><h2>TEAM TOOLS</h2></div></div>
+          <div class="gc-tools">
+            <a id="gcMyStallTool" href="hitmen-player-locker.html"><b>My Stall</b><span>Jersey, stats, reports & development →</span></a>
+            <a href="hitmen-team-locker.html"><b>Team Locker</b><span>Roster and player stalls →</span></a>
+            <a href="hitmen-opponents.html"><b>Opponent Room</b><span>Team scouting intelligence →</span></a>
+          </div>
+        </article>
+      </section>
+
+      <p id="gcStatus" class="gc-status">Loading Hitmen Game Center…</p>
+    </main>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js?v=20260927-gamecenter"></script>
+<script src="script.js"></script>
+<script src="hitmen-game-center.js?v=20260927-1"></script>
+</body>
+</html>
