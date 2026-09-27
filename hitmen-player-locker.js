@@ -13,6 +13,7 @@
   let weekly=[];
   let lineReports=[];
   let signedImage=null;
+  let loadSeq=0;
 
   const isAdmin=()=>String(ST().profile?.role||'').toLowerCase()==='admin';
   const member=()=> (ST().memberships||[]).find(m=>m.team_id===TEAM&&m.active!==false);
@@ -289,27 +290,53 @@
 
   async function load(){
     if(!canAccess()||!DB())return;
+    const seq=++loadSeq;
     try{
-      locker=await chooseLocker();
-      if(!locker){T('playerTitle','NO STALL LINKED');return;}
+      let resolved=await chooseLocker();
+      if(seq!==loadSeq)return;
+
+      // Discord auth can emit more than one state change while the locker claim
+      // finishes. Retry once before declaring the player unlinked.
+      if(!resolved){
+        await new Promise(r=>setTimeout(r,300));
+        if(seq!==loadSeq)return;
+        resolved=await chooseLocker();
+      }
+
+      if(seq!==loadSeq)return;
+
+      // Never let a transient second auth pass erase an already-resolved locker.
+      if(!resolved){
+        if(locker)return;
+        T('playerTitle','NO STALL LINKED');
+        return;
+      }
+
+      locker=resolved;
+
       const [gr,wr,lr]=await Promise.all([
         DB().from('team_player_game_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('locker_id',locker.id).order('game_date',{ascending:false}),
         DB().from('team_player_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('locker_id',locker.id).order('week',{ascending:false}),
         DB().from('team_line_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).order('week',{ascending:false})
       ]);
+
+      if(seq!==loadSeq)return;
       if(gr.error)throw gr.error;
       if(wr.error)throw wr.error;
       if(lr.error)throw lr.error;
+
       reports=gr.data||[];
       weekly=wr.data||[];
       lineReports=(lr.data||[]).filter(r=>(r.player_locker_ids||[]).includes(locker.id));
+
+      if(seq!==loadSeq)return;
       await render();
     }catch(e){
+      if(seq!==loadSeq)return;
       console.error(e);
-      T('playerTitle','LOCKER UNAVAILABLE');
+      if(!locker)T('playerTitle','LOCKER UNAVAILABLE');
     }
   }
-
   const liveStall=()=>{
     if(!locker)return;
     const name=E('jerseyNameInput')?.value.trim()||locker.gamertag||'';
