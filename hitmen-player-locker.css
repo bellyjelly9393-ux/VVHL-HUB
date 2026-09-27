@@ -694,3 +694,415 @@
   .stall-bio-card dl>div{grid-template-columns:78px 1fr}
   .stall-flip-controls{bottom:12px;width:152px}
 }
+
+/* PLAYER LOCKER VISUAL IDENTITY V4 */
+.hitmen-player-locker-page{
+  --font-ui:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --bg-deep:#050406;
+  --bg-burgundy:#16070d;
+  --panel-hi:rgba(20,18,23,.92);
+  --panel-lo:rgba(8,8,11,.94);
+  --line-soft:rgba(255,255,255,.075);
+  --line-pink:rgba(241,38,112,.24);
+  --text-main:#f4eff1;
+  --text-soft:#b7adb0;
+  --text-muted:#81777a;
+  --stall-pink:#f12670;
+  font-family:var(--font-ui);
+  color:var(--text-main);
+  background:
+    radial-gradient(circle at 78% 7%,rgba(241,38,112,.11),transparent 24%),
+    radial-gradient(circle at 16% 24%,rgba(132,18,57,.12),transparent 27%),
+    linear-gradient(180deg,#09060a 0%,#050406 40%,#040405 100%);
+  min-height:100vh;
+  position:relative;
+}
+.hitmen-player-locker-page:before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background:
+    linear-gradient(90deg,transparent 0 49.8%,rgba(255,255,255,.018) 50%,transparent 50.2%),
+    repeating-linear-gradient(135deg,rgba(255,255,255,.009) 0 1px,transparent 1px 8px),
+    radial-gradient(ellipse at 50% 8%,rgba(255,255,255,.025),transparent 42%);
+  opacity:.65;
+}
+.hitmen-player-locker-page:after{
+  content:"";
+  position:fixed;
+  left:8%;
+  right:8%;
+  top:68px;
+  height:220px;
+  pointer-events:none;
+  z-index:0;
+  background:radial-gradient(ellipse at center,rgba(241,38,112,.08),transparent 68%);
+  filter:blur(18px);
+}
+.hitmen-player-locker-page header,
+.hitmen-player-locker-page main,
+.hitmen-player-locker-page footer{
+  position:relative;
+  z-index:1;
+}
+.hitmen-player-locker-page,
+.hitmen-player-locker-page button,
+.hitmen-player-locker-page input,
+.hitmen-player-locker-page select,
+.hitmen-player-locker-page textarea{
+  font-family:var(--font-ui);
+}
+.hitmen-player-locker-page h1,
+.hitmen-player-locker-page h2,
+.hitmen-player-locker-page h3,
+.hitmen-player-locker-page h4,
+.hitmen-player-locker-page .eyebrow,
+.hitmen-player-locker-page .brand-copy b,
+.hitmen-player-locker-page .stall-profile-stats strong,
+.hitmen-player-locker-page .recent-stat-list b,
+.hitmen-player-locker-page .metric-row b,
+.hitmen-player-locker-page .weekly-bar-item b{
+  font-family:var(--font-display)!important;
+}
+
+/* top navigation / chrome */
+.hitmen-player-locker-page .locker-header{
+  background:linear-gradient(180deg,rgba(8,7,10,.97),rgba(5,5,7,.93))!important;
+  border-bottom:1px solid rgba(241,38,112,.18)!important;
+  box-shadow:0 8px 28px rgba(0,0,0,.32);
+  backdrop-filter:blur(14px);
+}
+.hitmen-player-locker-page .locker-brand-mark{
+  background:linear-gradient(145deg,#2b0b16,#0a090b)!important;
+  border:1px solid rgba(241,38,112,.3)!important;
+  color:#f2c7d5!important;
+  box-shadow:inset 0 0 16px rgba(241,38,112,.09),0 0 14px rgba(241,38,112,.06);
+}
+.hitmen-player-locker-page .brand-copy{
+  color:#9b9194;
+  font-size:8px;
+  letter-spacing:.12em;
+}
+.hitmen-player-locker-page .brand-copy b{
+  color:#f3edef;
+  font-size:15px;
+  letter-spacing:.075em;
+}
+.hitmen-player-locker-page .main-nav a{
+  color:#93898c;
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.055em;
+}
+.hitmen-player-locker-page .main-nav a.active-nav{
+  color:#fff;
+  box-shadow:inset 0 -2px var(--stall-pink);
+}
+
+/* sidebar */
+.hitmen-player-locker-page .player-id-card,
+.hitmen-player-locker-page .player-side-nav,
+.hitmen-player-locker-page .player-side-note{
+  border-color:var(--line-soft);
+  background:
+    linear-gradient(145deg,rgba(22,18,23,.92),rgba(8,8,10,.96));
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.02),
+    0 12px 26px rgba(0,0,0,.2);
+}
+.hitmen-player-locker-page .player-id-card h2{
+  font:800 20px/1 var(--font-display)!important;
+  letter-spacing:.035em;
+}
+.hitmen-player-locker-page .player-id-card p{
+  font-size:9px;
+  color:#8d8386;
+}
+.hitmen-player-locker-page .player-side-nav a{
+  position:relative;
+  padding:12px 13px;
+  color:#a09699;
+  font-size:9px;
+  font-weight:650;
+  letter-spacing:.018em;
+  transition:.18s ease;
+}
+.hitmen-player-locker-page .player-side-nav a:hover{
+  padding-left:16px;
+  background:linear-gradient(90deg,rgba(241,38,112,.09),transparent);
+}
+.hitmen-player-locker-page .player-side-nav a:first-child{
+  background:linear-gradient(90deg,rgba(241,38,112,.11),rgba(241,38,112,.02))!important;
+}
+.hitmen-player-locker-page .player-side-note b{
+  font-family:var(--font-display);
+  font-size:12px;
+  letter-spacing:.04em;
+  color:#f098b6;
+}
+
+/* hero treatment */
+.stall-dashboard-hero{
+  border-color:rgba(255,255,255,.095)!important;
+  background:linear-gradient(145deg,rgba(17,14,18,.95),rgba(7,7,9,.98))!important;
+  box-shadow:
+    0 28px 70px rgba(0,0,0,.43),
+    0 0 0 1px rgba(241,38,112,.025),
+    inset 0 1px rgba(255,255,255,.025)!important;
+}
+.stall-dashboard-locker{
+  background:
+    radial-gradient(circle at 50% 16%,rgba(241,38,112,.05),transparent 35%),
+    #070709!important;
+}
+.stall-player-profile{
+  background:
+    radial-gradient(circle at 102% 38%,rgba(241,38,112,.12),transparent 34%),
+    radial-gradient(circle at 12% 4%,rgba(255,255,255,.025),transparent 18%),
+    linear-gradient(160deg,rgba(18,15,20,.98),rgba(8,8,10,.99) 74%)!important;
+}
+.stall-profile-topline{
+  color:#aaa0a3!important;
+  font-size:8px!important;
+  letter-spacing:.11em!important;
+}
+.stall-player-profile>h1{
+  color:#fbf7f8;
+  font-family:var(--font-display)!important;
+  font-size:clamp(42px,4vw,68px)!important;
+  font-weight:900!important;
+  letter-spacing:.012em!important;
+  text-shadow:0 3px 18px rgba(0,0,0,.45);
+}
+.stall-profile-meta{
+  color:#9c9295!important;
+  font-size:9px!important;
+  font-weight:600!important;
+  letter-spacing:.025em;
+}
+.stall-profile-tabs{
+  border-bottom-color:rgba(255,255,255,.08)!important;
+}
+.stall-profile-tabs button{
+  font-family:var(--font-ui)!important;
+  font-size:8px!important;
+  font-weight:700!important;
+  letter-spacing:.055em!important;
+  color:#82787b!important;
+  transition:.17s ease;
+}
+.stall-profile-tabs button:hover{color:#cfc5c8!important}
+.stall-profile-tabs button.active{
+  color:#fff!important;
+  border-bottom-color:#ff3f82!important;
+  text-shadow:0 0 12px rgba(241,38,112,.25);
+}
+
+/* statistics */
+.stall-profile-stats{
+  border-color:rgba(255,255,255,.085)!important;
+  background:
+    linear-gradient(180deg,rgba(17,16,20,.95),rgba(8,8,10,.98))!important;
+  box-shadow:inset 0 1px rgba(255,255,255,.02);
+}
+.stall-profile-stats strong{
+  font-size:33px!important;
+  font-weight:800!important;
+  letter-spacing:.015em;
+  color:#faf5f6;
+}
+.stall-profile-stats small{
+  font-family:var(--font-ui)!important;
+  font-size:7px!important;
+  color:#81777a!important;
+  letter-spacing:.075em;
+}
+
+/* content cards */
+.stall-bio-card,
+.stall-tab-card,
+.stall-dashboard-card,
+.player-panel{
+  position:relative;
+  overflow:hidden;
+  border-color:rgba(255,255,255,.075)!important;
+  background:
+    radial-gradient(circle at 100% 0,rgba(241,38,112,.045),transparent 34%),
+    linear-gradient(145deg,rgba(18,16,20,.94),rgba(8,8,10,.97))!important;
+  box-shadow:
+    inset 0 1px rgba(255,255,255,.02),
+    0 14px 34px rgba(0,0,0,.22)!important;
+}
+.stall-bio-card:before,
+.stall-tab-card:before,
+.stall-dashboard-card:before,
+.player-panel:before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:2px;
+  background:linear-gradient(180deg,rgba(241,38,112,.75),rgba(241,38,112,.04) 52%,transparent);
+  opacity:.45;
+}
+.stall-card-title h2,
+.stall-card-title h3,
+.player-panel-head h2{
+  color:#f6f0f2;
+  font-family:var(--font-display)!important;
+  font-weight:800!important;
+  letter-spacing:.035em;
+}
+.stall-card-title h2{font-size:22px!important}
+.stall-card-title h3{font-size:20px!important}
+.player-panel-head h2{font-size:29px!important}
+.stall-card-title small,
+.player-panel .eyebrow{
+  font-family:var(--font-ui)!important;
+  color:#d95181!important;
+  font-size:7px!important;
+  font-weight:800!important;
+  letter-spacing:.12em!important;
+}
+.stall-bio-card dt{
+  font-family:var(--font-ui);
+  color:#7f7578!important;
+  font-size:8px!important;
+  font-weight:500;
+}
+.stall-bio-card dd{
+  font-family:var(--font-ui);
+  color:#ddd5d8!important;
+  font-size:9px!important;
+  font-weight:650!important;
+}
+.recent-stat-list>div{
+  padding:8px 3px!important;
+  font-size:9px!important;
+}
+.recent-stat-list span{
+  color:#9b9194!important;
+  font-weight:500;
+}
+.recent-stat-list b{
+  font-size:17px;
+  color:#f6f0f2!important;
+}
+.metric-row{
+  padding:6px 0!important;
+  font-family:var(--font-ui);
+  font-size:9px!important;
+}
+.metric-row span{color:#8d8386!important}
+.metric-row b{
+  font-size:12px;
+  color:#ede5e7!important;
+}
+.stall-note{
+  border-color:rgba(255,255,255,.055)!important;
+  background:linear-gradient(145deg,rgba(13,12,15,.88),rgba(8,8,10,.94))!important;
+}
+.stall-note b{
+  font-family:var(--font-ui);
+  font-size:9px!important;
+  font-weight:700;
+}
+.stall-note p{
+  color:#9c9295!important;
+  font-family:var(--font-ui);
+  font-size:8px!important;
+  line-height:1.55!important;
+}
+.player-tool-list button{
+  transition:background .16s ease,padding .16s ease;
+}
+.player-tool-list button:hover{
+  padding-left:5px;
+  background:linear-gradient(90deg,rgba(241,38,112,.055),transparent);
+}
+.player-tool-list b{
+  font-family:var(--font-ui);
+  font-size:9px!important;
+  font-weight:700;
+}
+.player-tool-list small{
+  color:#82787b!important;
+  font-size:7px!important;
+}
+
+/* form refresh */
+.locker-edit-grid label,
+.upload-layout,
+.hitmen-player-locker-page input,
+.hitmen-player-locker-page select,
+.hitmen-player-locker-page textarea{
+  font-family:var(--font-ui);
+}
+.hitmen-player-locker-page input,
+.hitmen-player-locker-page select,
+.hitmen-player-locker-page textarea{
+  border-color:rgba(255,255,255,.09)!important;
+  background:rgba(5,5,7,.86)!important;
+  color:#f1ebed!important;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.35);
+}
+.hitmen-player-locker-page input:focus,
+.hitmen-player-locker-page select:focus,
+.hitmen-player-locker-page textarea:focus{
+  outline:none;
+  border-color:rgba(241,38,112,.55)!important;
+  box-shadow:0 0 0 3px rgba(241,38,112,.08);
+}
+.hitmen-player-locker-page .small-btn{
+  font-family:var(--font-ui);
+  font-weight:750;
+  letter-spacing:.035em;
+}
+
+/* dashboard spacing / background integration */
+.hitmen-player-locker-page .player-main{
+  position:relative;
+}
+.hitmen-player-locker-page .player-main:before{
+  content:"";
+  position:absolute;
+  inset:-12px -10px;
+  z-index:-1;
+  border-radius:22px;
+  background:linear-gradient(180deg,rgba(255,255,255,.012),rgba(255,255,255,0));
+  pointer-events:none;
+}
+.weekly-bar-track{
+  background:
+    repeating-linear-gradient(to top,rgba(255,255,255,.026) 0 1px,transparent 1px 29px),
+    linear-gradient(180deg,rgba(255,255,255,.012),transparent)!important;
+}
+.weekly-bar-track i{
+  background:linear-gradient(180deg,#ff4f8e 0%,#e4266f 48%,#9e0d3e 100%)!important;
+  box-shadow:0 0 18px rgba(241,38,112,.24)!important;
+}
+.stall-flip-controls{
+  border-color:rgba(255,255,255,.17)!important;
+  background:rgba(5,5,7,.9)!important;
+}
+.stall-flip-controls button{
+  font-family:var(--font-ui)!important;
+  font-weight:750!important;
+}
+.stall-flip-controls button.active{
+  background:linear-gradient(180deg,#ff4386,#bc124b)!important;
+}
+
+/* mobile typography */
+@media(max-width:900px){
+  .stall-player-profile>h1{font-size:52px!important}
+}
+@media(max-width:680px){
+  .stall-player-profile>h1{font-size:44px!important}
+  .stall-card-title h2{font-size:20px!important}
+  .player-panel-head h2{font-size:26px!important}
+}
