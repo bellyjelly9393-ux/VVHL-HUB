@@ -81,8 +81,8 @@
         </div>
         ${market?'<div class="gm-ai-result-market">'+[market.tier&&String(market.tier).replaceAll('_',' '),market.role,market.server&&market.server+' server',market.projection&&'↑ '+market.projection].filter(Boolean).map(esc).join(' · ')+'</div>':''}
         <div class="gm-ai-result-actions">
-          <a class="small-btn" href="hitmen-management.html?tab=pool">Scouting</a>
-          <a class="small-btn" href="hitmen-management.html?tab=bids">Target Board</a>
+          <a class="small-btn" href="hitmen-team-locker.html">Locker Room</a>
+          <a class="small-btn" href="hitmen-opponents.html">Opponent Intel</a>
         </div>
       </article>`).join(''):'<div class="empty-state">No matches returned from the current intelligence data.</div>';
   }
