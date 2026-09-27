@@ -231,3 +231,466 @@
   .big-jersey-name{top:88px!important;font-size:13px!important}
   .big-jersey-number{top:120px!important;font-size:66px!important}
 }
+
+/* PLAYER STALL DASHBOARD UI V3 */
+.hitmen-player-locker-page{
+  --stall-pink:#f12670;
+  --stall-pink-soft:#ff6aa0;
+  --stall-panel:#0b0b0e;
+  --stall-panel-2:#111015;
+  --stall-border:rgba(255,255,255,.075);
+}
+.hitmen-player-locker-page .player-shell{
+  grid-template-columns:205px minmax(0,1fr);
+  gap:12px;
+  width:min(1660px,calc(100% - 20px));
+  max-width:none;
+  padding-top:12px;
+}
+.hitmen-player-locker-page .player-sidebar{
+  top:72px;
+}
+.player-dashboard-ui{gap:11px}
+.stall-dashboard-hero{
+  display:grid;
+  grid-template-columns:minmax(500px,1.45fr) minmax(330px,.72fr);
+  border:1px solid var(--stall-border);
+  border-radius:16px;
+  overflow:hidden;
+  background:#08080a;
+  box-shadow:0 22px 55px rgba(0,0,0,.4);
+}
+.stall-dashboard-locker{
+  position:relative;
+  min-width:0;
+  background:#09090a;
+  border-right:1px solid var(--stall-border);
+  overflow:hidden;
+}
+.stall-dashboard-locker .player-stall-photo{
+  height:100%;
+  min-height:690px;
+}
+.stall-dashboard-locker .player-stall-photo .hs-stall{
+  height:100%;
+  min-height:690px;
+  aspect-ratio:auto;
+}
+.stall-dashboard-locker .player-stall-photo .hs-img{
+  object-fit:cover;
+  object-position:center center;
+}
+.stall-flip-controls{
+  position:absolute;
+  z-index:18;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  width:176px;
+  padding:3px;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:999px;
+  background:rgba(4,4,5,.86);
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 20px rgba(0,0,0,.45);
+}
+.stall-flip-controls button{
+  border:0;
+  border-radius:999px;
+  padding:8px 12px;
+  background:transparent;
+  color:#a89ea1;
+  font:900 8px/1 "Barlow Condensed",sans-serif;
+  letter-spacing:.09em;
+  cursor:pointer;
+}
+.stall-flip-controls button.active{
+  color:#fff;
+  background:linear-gradient(180deg,#ee347b,#a80f43);
+  box-shadow:0 0 16px rgba(241,38,112,.25);
+}
+.stall-dashboard-locker .hs-hint{bottom:8.2%}
+
+.stall-player-profile{
+  min-width:0;
+  padding:22px;
+  background:
+    radial-gradient(circle at 100% 40%,rgba(241,38,112,.09),transparent 32%),
+    linear-gradient(150deg,#111015,#08080a 72%);
+}
+.stall-profile-topline{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#afa5a8;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.09em;
+}
+.stall-profile-topline small{margin-left:auto;color:#837a7d}
+.profile-live-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--stall-pink);
+  box-shadow:0 0 12px var(--stall-pink);
+}
+.stall-player-profile>h1{
+  margin:13px 0 8px;
+  font:900 clamp(34px,3.4vw,55px)/.87 "Barlow Condensed",sans-serif;
+  letter-spacing:-.015em;
+  text-transform:uppercase;
+}
+.stall-profile-meta{
+  display:flex;gap:8px;flex-wrap:wrap;
+  color:#9a9093;
+  font-size:8px;
+  font-weight:800;
+  text-transform:uppercase;
+}
+.stall-profile-meta span+span:before{
+  content:"";
+  display:inline-block;
+  width:1px;height:9px;
+  margin-right:8px;
+  vertical-align:-1px;
+  background:rgba(255,255,255,.13);
+}
+.stall-profile-tabs{
+  display:flex;
+  gap:2px;
+  margin-top:22px;
+  overflow:auto;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.stall-profile-tabs button{
+  flex:1;
+  min-width:max-content;
+  padding:11px 8px;
+  border:0;
+  border-bottom:2px solid transparent;
+  background:transparent;
+  color:#8b8184;
+  font:900 7px/1 "Barlow Condensed",sans-serif;
+  letter-spacing:.05em;
+  cursor:pointer;
+}
+.stall-profile-tabs button.active{
+  color:#fff;
+  border-bottom-color:var(--stall-pink);
+}
+.stall-tab-panel{display:none;padding-top:14px}
+.stall-tab-panel.active{display:block}
+.stall-profile-stats{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  border:1px solid var(--stall-border);
+  border-radius:11px;
+  overflow:hidden;
+  background:#0b0b0e;
+}
+.stall-profile-stats>div{
+  min-width:0;
+  padding:14px 5px;
+  text-align:center;
+  border-right:1px solid var(--stall-border);
+}
+.stall-profile-stats>div:last-child{border-right:0}
+.stall-profile-stats strong{
+  display:block;
+  font:900 30px/1 "Barlow Condensed",sans-serif;
+}
+.stall-profile-stats small{
+  display:block;
+  margin-top:5px;
+  color:#82787b;
+  font-size:6px;
+  font-weight:900;
+  line-height:1.25;
+}
+.stall-bio-card{
+  margin-top:12px;
+  padding:14px;
+  border:1px solid var(--stall-border);
+  border-radius:11px;
+  background:linear-gradient(145deg,#0f0e12,#09090b);
+}
+.stall-card-title{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:flex-start;
+}
+.stall-card-title h2,.stall-card-title h3{
+  margin:2px 0 0;
+  font:900 18px/1 "Barlow Condensed",sans-serif;
+}
+.stall-card-title small,.stall-card-title>span{
+  color:#81777a;
+  font-size:7px;
+  font-weight:900;
+}
+.stall-bio-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 105px;
+  gap:12px;
+  align-items:end;
+  margin-top:11px;
+}
+.stall-bio-card dl{margin:0}
+.stall-bio-card dl>div{
+  display:grid;
+  grid-template-columns:88px minmax(0,1fr);
+  gap:8px;
+  padding:5px 0;
+}
+.stall-bio-card dt{color:#81777a;font-size:7px}
+.stall-bio-card dd{
+  margin:0;
+  color:#ded7d9;
+  font-size:8px;
+  font-weight:900;
+}
+.profile-status-dot{
+  display:inline-block;
+  width:6px;height:6px;
+  margin-right:5px;
+  border-radius:50%;
+  background:#39dc78;
+  box-shadow:0 0 8px rgba(57,220,120,.4);
+}
+.stall-bio-avatar{
+  height:155px;
+  overflow:hidden;
+  display:grid;
+  place-items:end center;
+  border-radius:9px;
+  background:radial-gradient(circle at 50% 78%,rgba(241,38,112,.28),transparent 55%);
+  color:#6f6669;
+  font:900 22px/1 "Barlow Condensed",sans-serif;
+}
+.stall-bio-avatar img{
+  width:100%;height:100%;
+  object-fit:contain;
+  filter:drop-shadow(0 9px 10px rgba(0,0,0,.6));
+}
+.stall-tab-card{
+  min-height:250px;
+  padding:13px;
+  border:1px solid var(--stall-border);
+  border-radius:10px;
+  background:#0a0a0c;
+}
+.stall-tab-card h3{
+  margin:0 0 10px;
+  font:900 19px/1 "Barlow Condensed",sans-serif;
+}
+.stall-tab-card p{color:#9d9295;font-size:9px;line-height:1.55}
+.profile-scout-line{
+  padding:9px 0;
+  border-bottom:1px solid rgba(255,255,255,.05);
+}
+.profile-scout-line:last-child{border-bottom:0}
+.profile-scout-line small{color:#df4f82;font-size:6px;font-weight:900}
+.profile-scout-line p{margin:4px 0 0;color:#a99fa2;font-size:8px;line-height:1.5}
+
+.stall-dashboard-grid{
+  display:grid;
+  grid-template-columns:1.05fr .82fr 1.08fr 1.05fr;
+  gap:10px;
+}
+.stall-dashboard-card{
+  min-width:0;
+  min-height:245px;
+  padding:14px;
+  border:1px solid var(--stall-border);
+  border-radius:12px;
+  background:linear-gradient(145deg,#111014,#09090b);
+  box-shadow:0 11px 26px rgba(0,0,0,.22);
+}
+.stall-dashboard-card h2{
+  margin:3px 0 0;
+  font:900 19px/1 "Barlow Condensed",sans-serif;
+}
+.recent-stat-list{
+  display:grid;
+  margin-top:10px;
+}
+.recent-stat-list>div{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  padding:7px 2px;
+  border-bottom:1px solid rgba(255,255,255,.045);
+  font-size:8px;
+}
+.recent-stat-list>div:last-child{border-bottom:0}
+.recent-stat-list span{color:#958a8d}
+.recent-stat-list b{color:#f3ecee}
+.weekly-performance-chart{
+  height:185px;
+  margin-top:12px;
+}
+.weekly-chart-empty{
+  height:100%;
+  display:grid;
+  place-items:center;
+  border:1px dashed rgba(241,38,112,.14);
+  border-radius:9px;
+  color:#71676a;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.09em;
+}
+.weekly-bars{
+  height:100%;
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:8px;
+  align-items:end;
+  padding:8px 2px 0;
+}
+.weekly-bar-item{
+  min-width:0;
+  text-align:center;
+}
+.weekly-bar-track{
+  position:relative;
+  width:100%;
+  height:116px;
+  display:flex;
+  align-items:end;
+  justify-content:center;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  background:repeating-linear-gradient(to top,rgba(255,255,255,.025) 0 1px,transparent 1px 29px);
+}
+.weekly-bar-track i{
+  display:block;
+  width:55%;
+  min-height:8px;
+  border-radius:4px 4px 1px 1px;
+  background:linear-gradient(180deg,#ff4b8a,#c70e52);
+  box-shadow:0 0 14px rgba(241,38,112,.18);
+}
+.weekly-bar-item b{
+  display:block;
+  margin-top:5px;
+  font:900 10px/1 "Barlow Condensed",sans-serif;
+}
+.weekly-bar-item small{
+  display:block;
+  margin-top:2px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  color:#776d70;
+  font-size:6px;
+}
+.stall-note-stack{display:grid;gap:7px;margin-top:11px}
+.stall-note{
+  display:grid;
+  grid-template-columns:25px 1fr;
+  gap:8px;
+  align-items:start;
+  padding:8px;
+  border:1px solid rgba(255,255,255,.045);
+  border-radius:8px;
+  background:#0a0a0c;
+}
+.stall-note i{
+  width:22px;height:22px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,.12);
+}
+.stall-note i:before{font-size:11px;font-style:normal;font-weight:900}
+.stall-note.good i{color:#4be18a;border-color:rgba(75,225,138,.3);background:rgba(75,225,138,.06)}
+.stall-note.good i:before{content:"↑"}
+.stall-note.focus i{color:#f0b74b;border-color:rgba(240,183,75,.3);background:rgba(240,183,75,.06)}
+.stall-note.focus i:before{content:"◎"}
+.stall-note.neutral i{color:#ddd1d5}
+.stall-note.neutral i:before{content:"="}
+.stall-note b{font-size:8px}
+.stall-note p{margin:3px 0 0;color:#978d90;font-size:7px;line-height:1.45}
+.player-tool-list{display:grid;margin-top:10px}
+.player-tool-list button{
+  display:grid;
+  grid-template-columns:28px 1fr 12px;
+  gap:8px;
+  align-items:center;
+  width:100%;
+  padding:9px 0;
+  border:0;
+  border-bottom:1px solid rgba(255,255,255,.045);
+  background:transparent;
+  color:#fff;
+  text-align:left;
+  cursor:pointer;
+}
+.player-tool-list button:last-child{border-bottom:0}
+.player-tool-list button>span{
+  width:27px;height:27px;
+  display:grid;place-items:center;
+  border-radius:8px;
+  background:rgba(241,38,112,.09);
+  border:1px solid rgba(241,38,112,.15);
+}
+.player-tool-list b{display:block;font-size:8px}
+.player-tool-list small{display:block;margin-top:2px;color:#796f72;font-size:6px}
+.player-tool-list i{color:#8c8285;font-size:16px}
+.compact-ratings-panel{margin-top:0}
+
+.stall-tab-panel .locker-edit-box{
+  padding-top:0;
+  border-top:0;
+}
+.stall-tab-panel .locker-edit-box h3{
+  font-size:20px;
+}
+.player-panel{
+  border-radius:12px;
+}
+.player-side-nav a:first-child{
+  color:#fff;
+  background:rgba(241,38,112,.07);
+  box-shadow:inset 3px 0 var(--stall-pink);
+}
+
+@media(max-width:1320px){
+  .stall-dashboard-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:1080px){
+  .hitmen-player-locker-page .player-shell{grid-template-columns:1fr}
+  .player-sidebar{position:static;grid-template-columns:1fr 2fr}
+  .player-side-nav{grid-template-columns:repeat(3,1fr)}
+  .player-side-note{display:none}
+}
+@media(max-width:900px){
+  .stall-dashboard-hero{grid-template-columns:1fr}
+  .stall-dashboard-locker{border-right:0;border-bottom:1px solid var(--stall-border)}
+  .stall-dashboard-locker .player-stall-photo,
+  .stall-dashboard-locker .player-stall-photo .hs-stall{min-height:620px}
+  .stall-player-profile{padding:18px}
+}
+@media(max-width:680px){
+  .hitmen-player-locker-page .player-shell{width:min(100% - 10px,1660px)}
+  .player-sidebar{grid-template-columns:1fr}
+  .player-side-nav{grid-template-columns:1fr 1fr}
+  .stall-dashboard-locker .player-stall-photo,
+  .stall-dashboard-locker .player-stall-photo .hs-stall{min-height:520px}
+  .stall-dashboard-grid{grid-template-columns:1fr}
+  .stall-profile-stats strong{font-size:25px}
+  .stall-bio-layout{grid-template-columns:1fr 88px}
+  .stall-bio-avatar{height:128px}
+  .stall-player-profile>h1{font-size:42px}
+  .stall-profile-tabs button{font-size:6px;padding-inline:6px}
+  .weekly-performance-chart{height:170px}
+}
+@media(max-width:480px){
+  .stall-profile-stats{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .stall-profile-stats>div{padding:11px 2px}
+  .stall-profile-stats strong{font-size:22px}
+  .stall-bio-card dl>div{grid-template-columns:78px 1fr}
+  .stall-flip-controls{bottom:12px;width:152px}
+}
