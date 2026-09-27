@@ -1,19 +1,6 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex,nofollow">
-  <title>Calgary Hitmen Front Office</title>
-  <meta http-equiv="refresh" content="0;url=/calgary?tab=pool#hitmen-scouting">
-  <script>
-    (() => {
-      const tab=new URLSearchParams(location.search).get('tab');
-      const allowed=['pool','targets','reports','bids'];
-      const next=allowed.includes(tab)?tab:(tab==='bidding'?'bids':'pool');
-      location.replace('/calgary?tab='+encodeURIComponent(next)+'#hitmen-scouting');
-    })();
-  </script>
-</head>
-<body></body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>Calgary Hitmen Team Operations</title>
+<meta http-equiv="refresh" content="0;url=hitmen-workspace.html">
+<script>location.replace('hitmen-workspace.html');</script>
+</head><body></body></html>
