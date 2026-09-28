@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#060607">
+<title>Game Breakdown | Calgary Hitmen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css">
+<link rel="stylesheet" href="hitmen-game-center.css?v=20260928-playeraccess1">
+<link rel="stylesheet" href="hitmen-game-report.css?v=20260928-1">
+</head>
+<body class="wildman-site hitmen-game-center-page hitmen-game-report-page">
+<section class="gc-access-shell">
+  <section id="accountPanel" class="panel account-panel"></section>
+  <div id="gameReportLocked" class="gc-locked"><b>Calgary Hitmen team access required.</b><p>Sign in with the Discord account linked to your Season 55 roster spot.</p></div>
+</section>
+
+<div id="gameReportApp" class="gc-app" hidden>
+  <aside class="gc-sidebar">
+    <a class="gc-brand" href="hitmen-game-center.html"><span class="gc-crest">H</span><strong>CALGARY<br>HITMEN</strong></a>
+    <nav class="gc-side-nav">
+      <a href="hitmen-game-center.html"><span>⌂</span><b>Game Center</b></a>
+      <a href="hitmen-team-locker.html"><span>◎</span><b>Roster</b></a>
+      <a href="hitmen-player-locker.html"><span>▣</span><b>My Stall</b></a>
+      <a href="hitmen-game-center.html#schedule"><span>□</span><b>Schedule</b></a>
+      <a class="active" href="#"><span>▥</span><b>Game Breakdown</b></a>
+      <a href="hitmen-player-locker.html#weekly"><span>↗</span><b>Development</b></a>
+    </nav>
+  </aside>
+
+  <div class="gc-content">
+    <header class="gc-topbar">
+      <nav class="gc-top-tabs"><a href="hitmen-game-center.html">GAME CENTER</a><a href="hitmen-team-locker.html">ROSTER</a><a href="hitmen-player-locker.html">MY STALL</a><a href="hitmen-game-center.html#results">RESULTS</a><a class="active" href="#">BREAKDOWN</a></nav>
+      <div class="gc-top-profile"><span>SEASON 55</span><div class="gc-avatar">H</div></div>
+    </header>
+    <main class="gc-main">
+      <a class="hgr-back" href="hitmen-game-center.html#results">← Back to Recent Results</a>
+      <section id="hgrHero" class="hgr-hero"><div class="gc-empty">Loading game breakdown…</div></section>
+      <section id="hgrAnalyst" class="hgr-grid"></section>
+      <section class="hgr-card">
+        <div class="gc-card-head"><div><small>CALGARY HITMEN</small><h2>PLAYER BOX SCORE</h2></div><span id="hgrSourceBadge">STATS</span></div>
+        <div id="hgrPlayers" class="hgr-table-wrap"><div class="gc-empty">Loading player stats…</div></div>
+      </section>
+      <section id="hgrSourcePanel" class="hgr-card hgr-source-panel" hidden>
+        <div class="gc-card-head"><div><small>MANAGEMENT</small><h2>PUBLIC STATS SOURCE</h2></div><span>OWNER / GM / AGM</span></div>
+        <p>Paste a public LeagueGaming game page or ChelStats game API link. The importer only matches Calgary roster gamertags and stores the game stats used by this breakdown.</p>
+        <div class="hgr-source-form"><input id="hgrSourceUrl" class="field" type="url" placeholder="https://www.leaguegaming.com/... or https://chelstats.app/api/clubs/.../games/..."><button id="hgrPullSource" class="gc-primary" type="button">Pull Stats</button></div>
+        <small id="hgrSourceStatus"></small>
+      </section>
+      <p id="hgrStatus" class="gc-status"></p>
+    </main>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js?v=20260928-playeraccess3"></script><script src="script.js"></script>
+<script src="hitmen-game-report.js?v=20260928-1"></script>
+</body></html>
