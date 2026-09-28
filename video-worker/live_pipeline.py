@@ -235,6 +235,9 @@ def create_review_job(item, source_path, duration, periods=None, period_diagnost
         'live_period_diagnostics': period_diagnostics or {},
         'media_queue_id': str(item['id']),
         'automatic_live_capture': True,
+        'intake_mode': str(item.get('intake_mode') or 'scout'),
+        'scouting_analysis_requested': bool(item.get('scouting_analysis_requested')),
+        'postgame_media_requested': bool(item.get('postgame_media_requested')),
     }
     with worker.WRITE_LOCK, worker.connect() as db:
         db.execute(
@@ -342,6 +345,14 @@ def monitor_review(queue_id, job_id):
 def handle_item(item):
     folder = ROOT / 'live-captures' / str(item['id'])
     try:
+        scout_job = (
+            item.get('source_kind') == 'team_game'
+            and str(item.get('intake_mode') or '').lower() == 'scout'
+            and bool(item.get('scouting_analysis_requested'))
+        )
+        if not scout_job:
+            queue_update(item['id'], 'cancelled', error=None)
+            return
         if item.get('provider') != 'twitch':
             queue_update(item['id'], 'failed', error='Automatic capture currently supports Twitch only.')
             return
