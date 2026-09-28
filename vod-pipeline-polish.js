@@ -45,7 +45,7 @@
     const stages=[
       {icon:'🎥',label:'1 · Source',name:'Game Review',done:Boolean(r)},
       {icon:'⏱',label:'2 · Split',name:'Periods',done:periods.length>=3},
-      {icon:'☁',label:'3 · Retrieve',name:'Recording',done:Boolean(r?.worker_job_id)&&worker!=='retrieving'},
+      {icon:'☁',label:'3 · Retrieve',name:'Recording',done:Boolean(r?.worker_job_id)&&!['retrieving','failed','expired'].includes(worker)},
       {icon:'🧠',label:'4 · Analyze',name:'AI Review',done:analysisDone,blocked},
       {icon:'🔎',label:'5 · Verify',name:'Human Review',done:allComplete,active:analysisDone&&!allComplete},
       {icon:'✍',label:'6 · Publish',name:'Write-Up',done:writeup&&allComplete,active:allReviewed&&!writeup}
@@ -57,6 +57,7 @@
     else if(worker==='needs_periods')next='Automatic detection needs help: open Manual period times, save the period boundaries, then press Continue / Retry.';
     else if(worker==='retrieving')next='Retrieving the saved Twitch replay. You can leave this page and return to check progress.';
     else if(blocked)next='Blocked only at AI: the video is validated and reusable. Connect the AI API on Railway, then press Retry AI. No re-upload.';
+    else if(worker==='failed')next='Retrieval failed. Press Continue / Retry to run the saved Twitch game window through the current Railway retrievers. MP4/MOV is only the last-resort fallback.';
     else if(r?.worker_job_id&&!analysisDone)next=`Next: let Railway finish. Current status: ${String(worker||'processing').replaceAll('_',' ')}.`;
     else if(analysisDone&&!allComplete)next='Next: review the imported period notes and markers. Correct anything questionable, then mark each segment complete.';
     else if(allComplete&&!writeup)next='Next: build the full-game rollup, edit the write-up, then save it.';
