@@ -40,6 +40,22 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(replay.resolve(self.review, 'owner')['id'], jobs[0]['id'])
         self.assertIsNone(replay.resolve(self.review, 'other-owner'))
 
+    def test_review_window_and_context_are_saved_in_job_metadata(self):
+        review = dict(self.review, source_start_seconds=600, source_end_seconds=1500,
+                      game_format='6s', scouting_context='Calgary lineup')
+        job = replay.resolve(review, 'owner', True)
+        meta = job['metadata']
+        self.assertEqual(meta['source_start_seconds'], 600)
+        self.assertEqual(meta['source_end_seconds'], 1500)
+        self.assertEqual(meta['vod_offset_seconds'], 600)
+        self.assertEqual(meta['game_format'], '6s')
+        self.assertEqual(meta['players'], 'Calgary lineup')
+
+    def test_rejects_invalid_review_window(self):
+        review = dict(self.review, source_start_seconds=900, source_end_seconds=300)
+        with self.assertRaises(worker.Problem):
+            replay.resolve(review, 'owner', True)
+
     def test_saved_capture_reused_without_replay_link(self):
         job = replay.resolve(self.review, 'owner', True)
         review = dict(self.review, id=str(uuid4()), vod_url='https://twitch.tv/channel', worker_job_id=job['id'])
@@ -103,11 +119,17 @@ class ReplayTests(unittest.TestCase):
         fixture = worker.ROOT / 'fixture.ts'
         worker.command(['ffmpeg', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=320x180:rate=5', '-t', '2', '-c:v', 'mpeg2video', str(fixture)])
         executable = worker.ROOT / 'streamlink'
-        executable.write_text('#!' + sys.executable + '\nimport shutil,sys\nshutil.copyfile(' + repr(str(fixture)) + ', sys.argv[sys.argv.index("-o")+1])\n')
+        args_file = worker.ROOT / 'streamlink-args.json'
+        executable.write_text('#!' + sys.executable + '\nimport json,shutil,sys\nopen(' + repr(str(args_file)) + ', "w").write(json.dumps(sys.argv))\nshutil.copyfile(' + repr(str(fixture)) + ', sys.argv[sys.argv.index("-o")+1])\n')
         executable.chmod(0o755)
-        job = replay.resolve(self.review, 'owner', True)
+        review = dict(self.review, source_start_seconds=120, source_end_seconds=240)
+        job = replay.resolve(review, 'owner', True)
         with patch.dict(os.environ, {'PATH': str(worker.ROOT) + os.pathsep + os.environ['PATH']}):
             replay.retrieve(job['id'])
+        argv = json.loads(args_file.read_text())
+        self.assertEqual(argv[argv.index('--hls-start-offset') + 1], '120.0')
+        self.assertEqual(argv[argv.index('--stream-segmented-duration') + 1], '120.0')
+        self.assertEqual(argv[-1], '360p,480p,worst')
         self.assertEqual(worker.get_job(job['id'])['status'], 'queued')
         self.assertGreater(worker.probe(worker.ROOT / job['id'] / 'source.mp4'), 0)
         self.assertFalse((worker.ROOT / job['id'] / 'replay.ts').exists())
