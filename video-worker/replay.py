@@ -203,9 +203,9 @@ def retrieve(job_id):
             if time.monotonic() > deadline or worker.STOP.wait(1):
                 raise worker.Problem(504, 'Replay retrieval timed out. Try Analyze Game again or upload the recording.')
 
-    # First attempt is deliberately anonymous. A stale saved Twitch cookie must not
-    # poison otherwise-public VOD playback. If Twitch rejects that request, retry once
-    # with a fresh client-integrity token and the saved account token when available.
+    # Three-stage retrieval. Public playback gets both normal and fresh-integrity
+    # attempts before a saved account token is ever used, so a stale Twitch cookie
+    # cannot poison an otherwise-public VOD.
     proc = launch_streamlink(False, False)
     try:
         wait_for_streamlink(proc)
@@ -214,7 +214,14 @@ def retrieve(job_id):
             if proc.poll() is None:
                 proc.terminate()
                 proc.wait(timeout=5)
-            proc = launch_streamlink(True, bool(twitch_token))
+            proc = launch_streamlink(True, False)
+            wait_for_streamlink(proc)
+
+        if (proc.returncode or not source.exists() or not source.stat().st_size) and twitch_token:
+            if proc.poll() is None:
+                proc.terminate()
+                proc.wait(timeout=5)
+            proc = launch_streamlink(True, True)
             wait_for_streamlink(proc)
 
         if proc.returncode or not source.exists() or not source.stat().st_size:
@@ -228,8 +235,8 @@ def retrieve(job_id):
             if any(term in detail for term in ('subscriber', 'authentication', 'unauthorized', 'forbidden', '403', 'restricted')):
                 raise worker.Problem(422, 'Twitch rejected authenticated playback for this VOD. Refresh the Twitch auth-token connection and try again.')
             if not twitch_token:
-                raise worker.Problem(422, 'Twitch blocked public replay playback even after a fresh client-integrity check. Authenticated Twitch retrieval is optional fallback, not the primary path.')
-            raise worker.Problem(422, 'Twitch did not provide a playable replay after public playback plus the authenticated integrity fallback. The saved Twitch token may be stale.')
+                raise worker.Problem(422, 'Twitch blocked public replay playback after both normal and fresh-integrity attempts. The MP4 control is only a fallback, not the required workflow.')
+            raise worker.Problem(422, 'Twitch blocked the replay after public normal, public fresh-integrity, and authenticated fallback attempts. The MP4 control is only a fallback.')
         if source.stat().st_size > worker.MAX_UPLOAD:
             raise worker.Problem(413, 'Replay exceeds the video size limit.')
         worker.probe(source)
