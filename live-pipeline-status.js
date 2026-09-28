@@ -29,8 +29,11 @@
     const section=document.createElement('section');
     section.id='livePipelineStatus';
     section.className='live-pipeline-panel';
-    section.innerHTML=`<div class="live-pipeline-head"><div><div class="eyebrow">AUTOMATIC MEDIA PIPELINE</div><h3>Live Capture & Review Queue</h3><p>Paste the stream once. Wildman follows the game from LIVE through capture, VOD review and report prep.</p></div><div class="live-pipeline-health" id="livePipelineHealth">CHECKING</div></div><div id="livePipelineRows" class="live-pipeline-rows"><div class="live-pipeline-empty">Loading media queue…</div></div>`;
-    if(page()==='hitmen-workspace.html'||page()==='hitmen'){
+    const hitmenPage=page()==='hitmen-workspace.html'||page()==='hitmen';
+    section.innerHTML=hitmenPage
+      ? `<div class="live-pipeline-head"><div><div class="eyebrow">CALGARY FULL SCOUTING PIPELINE</div><h3>Live Capture · VOD Review · AI Scouting</h3><p>Calgary Hitmen games are the only automatic live streams that enter the deep video-analysis pipeline. Capture, period review, AI scouting, player reports and postgame write-ups all stay connected here.</p></div><div class="live-pipeline-health" id="livePipelineHealth">CHECKING</div></div><div id="livePipelineRows" class="live-pipeline-rows"><div class="live-pipeline-empty">Loading Calgary scouting queue…</div></div>`
+      : `<div class="live-pipeline-head"><div><div class="eyebrow">MEDIA-ONLY EVENT WORKFLOW</div><h3>Public Stats + Postgame Write-ups</h3><p>Tournament games do not enter the Calgary scouting/VOD pipeline. Media packages are built from verified scores, LeagueGaming Public Log data and imported tournament stats.</p></div></div><div class="live-pipeline-rows"><div class="live-pipeline-empty">No deep video scouting is scheduled for this event.</div></div>`;
+    if(hitmenPage){
       const target=shell.querySelector('#hitmen-live-session')||shell.lastElementChild;
       target?.insertAdjacentElement('beforebegin',section);
     }else{
@@ -56,6 +59,7 @@
   async function load(){
     if(!db()||!state().user)return;
     const root=host(); if(!root)return;
+    if(!(page()==='hitmen-workspace.html'||page()==='hitmen'))return;
     try{
       let q=db().from('media_pipeline_queue').select('*').order('updated_at',{ascending:false}).limit(8);
       q=await teamFilter(q);
@@ -85,7 +89,8 @@
 
   function render(rows,reviews){
     const el=document.getElementById('livePipelineRows');if(!el)return;
-    if(!rows.length){el.innerHTML='<div class="live-pipeline-empty">No active media jobs yet. Add the Twitch URL to the game/session and the pipeline will arm automatically.</div>';return;}
+    rows=(rows||[]).filter(r=>r.source_kind==='team_game'&&r.intake_mode==='scout'&&r.scouting_analysis_requested===true);
+    if(!rows.length){el.innerHTML='<div class="live-pipeline-empty">No Calgary scouting jobs are active yet. Start a Hitmen game with the Twitch stream attached and the full pipeline will arm automatically.</div>';return;}
     el.innerHTML=rows.map(r=>{
       const [title,desc]=labels[r.status]||[String(r.status||'UNKNOWN').toUpperCase(),'Pipeline state updated.'];
       const review=reviews.get(r.id);
