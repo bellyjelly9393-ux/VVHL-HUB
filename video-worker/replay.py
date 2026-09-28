@@ -81,6 +81,18 @@ def read_review(review_id, authorization):
     return review
 
 
+def review_window(review):
+    try:
+        start = float(review.get('source_start_seconds') or 0)
+        raw_end = review.get('source_end_seconds')
+        end = None if raw_end in (None, '') else float(raw_end)
+    except (TypeError, ValueError):
+        raise worker.Problem(422, 'Saved VOD game window is invalid.')
+    if start < 0 or start > 86400 or (end is not None and (end <= start or end > 86400)):
+        raise worker.Problem(422, 'Saved VOD game window is invalid.')
+    return start, end
+
+
 def resolve(review, owner, create=False):
     """The caller supplies a review read through RLS, never unverified body fields."""
     with worker.WRITE_LOCK, worker.connect() as db:
@@ -94,7 +106,15 @@ def resolve(review, owner, create=False):
                     continue
                 # A failed download can be retried with Analyze after the saved link is corrected.
                 if create and job['status'] == 'failed' and meta.get('source_kind') == 'twitch_replay' and not (worker.ROOT / row['id'] / 'source.mp4').exists():
-                    meta['vod_url'] = replay_url(review.get('vod_url'))
+                    start, end = review_window(review)
+                    meta.update({
+                        'vod_url': replay_url(review.get('vod_url')),
+                        'players': str(review.get('scouting_context') or '')[:2000],
+                        'game_format': str(review.get('game_format') or '6s')[:20],
+                        'vod_offset_seconds': start,
+                        'source_start_seconds': start,
+                        'source_end_seconds': end,
+                    })
                     db.execute("UPDATE jobs SET metadata=?,status='retrieving',error='' WHERE id=?", (json.dumps(meta), row['id']))
                     db.commit()
                     job = worker.get_job(row['id'], owner)
@@ -121,8 +141,14 @@ def resolve(review, owner, create=False):
         if active >= 3:
             raise worker.Problem(429, 'Finish existing video jobs before starting another.')
         job_id = str(uuid4())
-        metadata = {'review_id': review['id'], 'game_id': review['id'], 'title': review.get('title', ''),
-                    'vod_url': url, 'players': '', 'periods': [], 'source_kind': 'twitch_replay'}
+        start, end = review_window(review)
+        metadata = {
+            'review_id': review['id'], 'game_id': review['id'], 'title': review.get('title', ''),
+            'vod_url': url, 'players': str(review.get('scouting_context') or '')[:2000],
+            'game_format': str(review.get('game_format') or '6s')[:20],
+            'vod_offset_seconds': start, 'source_start_seconds': start, 'source_end_seconds': end,
+            'periods': [], 'source_kind': 'twitch_replay'
+        }
         db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)', (job_id, owner, time.time(), 'retrieving', json.dumps(metadata), '{}', ''))
         db.commit()
         return worker.get_job(job_id, owner)
@@ -131,6 +157,12 @@ def resolve(review, owner, create=False):
 def retrieve(job_id):
     job = worker.get_job(job_id)
     url = replay_url(job['metadata']['vod_url'])
+    start = float(job['metadata'].get('source_start_seconds') or 0)
+    raw_end = job['metadata'].get('source_end_seconds')
+    end = None if raw_end in (None, '') else float(raw_end)
+    if start < 0 or (end is not None and end <= start):
+        raise worker.Problem(422, 'Saved VOD game window is invalid.')
+    duration = None if end is None else end - start
     folder = worker.ROOT / job_id
     folder.mkdir(exist_ok=True)
     source = folder / 'replay.ts'
@@ -146,11 +178,15 @@ def retrieve(job_id):
     def launch_streamlink(force_integrity=False):
         source.unlink(missing_ok=True)
         args = ['streamlink', '--stream-timeout', '20', '--retry-streams', '0']
+        if start:
+            args.extend(['--hls-start-offset', str(start)])
+        if duration is not None:
+            args.extend(['--stream-segmented-duration', str(duration)])
         if twitch_token:
             args.append('--twitch-api-header=Authorization=OAuth ' + twitch_token)
         if force_integrity:
             args.extend(['--twitch-force-client-integrity', '--twitch-purge-client-integrity'])
-        args.extend(['-o', str(source), url, '480p,360p,best'])
+        args.extend(['-o', str(source), url, '360p,480p,worst'])
         with diagnostic.open('wb') as err:
             return subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=err)
 
@@ -159,7 +195,7 @@ def retrieve(job_id):
         while proc.poll() is None:
             size = source.stat().st_size if source.exists() else 0
             if size > worker.MAX_UPLOAD or worker.disk_used() + size + 150 * 1024**2 > worker.MAX_STORAGE:
-                raise worker.Problem(413, 'Replay exceeds the video storage limit. Use a game-sized recording instead.')
+                raise worker.Problem(413, 'This game window exceeds the video storage limit. Shorten the saved VOD start/end range or use the upload fallback.')
             if time.monotonic() > deadline or worker.STOP.wait(1):
                 raise worker.Problem(504, 'Replay retrieval timed out. Try Analyze Game again or upload the recording.')
 
