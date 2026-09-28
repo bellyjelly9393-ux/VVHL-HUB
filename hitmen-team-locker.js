@@ -40,16 +40,25 @@ function stall(l){
 async function load(){
  if(!allowed()||!DB())return;
  syncNav();
- const [lr,sr,rr,gr,lines]=await Promise.all([
-  DB().from('team_player_lockers').select('id,team_id,season,roster_snapshot_id,user_id,gamertag,position,management_role,jersey_number,jersey_name,roster_class').eq('team_id',TEAM).eq('season',SEASON).order('gamertag'),
-  DB().from('hitmen_roster_snapshot').select('id,acquisition,lg_slot').eq('team_id',TEAM).eq('season',SEASON).eq('active',true).order('lg_slot'),
-  DB().from('hitmen_player_reports').select('id,player_key').eq('team_id',TEAM).eq('season',SEASON),
-  DB().from('team_player_game_reports').select('id,locker_id').eq('team_id',TEAM).eq('season',SEASON),
-  DB().from('team_line_weekly_reports').select('week,line_label,summary,record,goals_for,goals_against').eq('team_id',TEAM).eq('season',SEASON).order('week',{ascending:false}).limit(12)
- ]);
- const err=[lr,sr,rr,gr,lines].find(x=>x.error)?.error;
- if(err){console.error(err);E('lockerRoster').innerHTML='<div class="locker-empty">'+esc(err.message||'Could not load locker room.')+'</div>';return}
- lockers=lr.data||[];snapshots=sr.data||[];playerReports=rr.data||[];gameReports=gr.data||[];lineReports=lines.data||[];
+ const baseLocker=DB().from('team_player_lockers').select('id,team_id,season,roster_snapshot_id,user_id,gamertag,position,management_role,jersey_number,jersey_name,roster_class').eq('team_id',TEAM).eq('season',SEASON).order('gamertag');
+ const lineQuery=DB().from('team_line_weekly_reports').select('week,line_label,summary,record,goals_for,goals_against').eq('team_id',TEAM).eq('season',SEASON).order('week',{ascending:false}).limit(12);
+ if(playerView()){
+   const [lr,lines]=await Promise.all([baseLocker,lineQuery]);
+   const err=[lr,lines].find(x=>x.error)?.error;
+   if(err){console.error(err);E('lockerRoster').innerHTML='<div class="locker-empty">'+esc(err.message||'Could not load locker room.')+'</div>';return}
+   lockers=lr.data||[];snapshots=[];playerReports=[];gameReports=[];lineReports=lines.data||[];
+ }else{
+   const [lr,sr,rr,gr,lines]=await Promise.all([
+    baseLocker,
+    DB().from('hitmen_roster_snapshot').select('id,acquisition,lg_slot').eq('team_id',TEAM).eq('season',SEASON).eq('active',true).order('lg_slot'),
+    DB().from('hitmen_player_reports').select('id,player_key').eq('team_id',TEAM).eq('season',SEASON),
+    DB().from('team_player_game_reports').select('id,locker_id').eq('team_id',TEAM).eq('season',SEASON),
+    lineQuery
+   ]);
+   const err=[lr,sr,rr,gr,lines].find(x=>x.error)?.error;
+   if(err){console.error(err);E('lockerRoster').innerHTML='<div class="locker-empty">'+esc(err.message||'Could not load locker room.')+'</div>';return}
+   lockers=lr.data||[];snapshots=sr.data||[];playerReports=rr.data||[];gameReports=gr.data||[];lineReports=lines.data||[];
+ }
  const order={LW:1,C:2,RW:3,LD:4,RD:5,G:6};
  lockers.sort((a,b)=>(a.roster_class==='tc')-(b.roster_class==='tc')||(order[a.position]||9)-(order[b.position]||9)||a.gamertag.localeCompare(b.gamertag));
  const active=lockers.filter(l=>l.roster_class!=='tc'),tc=lockers.filter(l=>l.roster_class==='tc');
