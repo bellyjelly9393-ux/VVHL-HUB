@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg tesseract-ocr chromium && rm -rf /var/lib/apt/lists/*
-RUN python -m pip install --no-cache-dir streamlink
+RUN python -m pip install --no-cache-dir streamlink yt-dlp
 WORKDIR /app
 COPY . /app/
 RUN useradd --create-home worker && mkdir -p /data && chown worker:worker /data
