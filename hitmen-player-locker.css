@@ -1580,3 +1580,11 @@
 }
 #profileSaveStatus,#jerseySaveStatus{margin-left:8px;color:#9b9093;font-size:7px}
 @media(max-width:560px){.profile-settings-grid{grid-template-columns:1fr}}
+
+/* HITMEN GAME STAT LINES V1 */
+.player-report-statline{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding:9px;border:1px solid rgba(215,25,45,.09);border-radius:9px;background:rgba(215,25,45,.025)}
+.player-report-statline span{min-width:54px;padding:6px 8px;border-right:1px solid rgba(255,255,255,.045)}
+.player-report-statline span:last-child{border-right:0}
+.player-report-statline small{display:block;color:#786d70;font-size:6px;font-weight:900;letter-spacing:.08em}
+.player-report-statline b{display:block;margin-top:2px;color:#e5cc85;font:900 15px/1 "Barlow Condensed",sans-serif}
+@media(max-width:700px){.player-report-statline span{min-width:48px;flex:1 1 48px}}
