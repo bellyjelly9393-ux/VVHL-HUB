@@ -39,6 +39,7 @@ async function loadBackendState() {
   backendState.user = user || null;
   backendState.profile = null;
   backendState.memberships = [];
+  backendState.hitmenLockerClaim = null;
   const { data: teams } = await vvhlDb
     .from("teams")
     .select("id,name,logo_url,league_id")
