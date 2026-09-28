@@ -50,7 +50,7 @@ function upcoming(){
 }
 function results(){
  const rows=schedule.filter(g=>g.status==='final').sort((a,b)=>new Date(b.scheduled_at)-new Date(a.scheduled_at)).slice(0,6);
- E('gcResults').innerHTML=rows.length?rows.map(g=>{const win=Number(g.calgary_score)>Number(g.opponent_score);return '<div class="gc-list-item"><div><b>'+esc(win?'WIN':'LOSS')+' · vs '+esc(g.opponent_name)+'</b><small>'+esc(fmtDate(g.scheduled_at))+(g.overtime?' · OT':'')+'</small></div><strong>'+esc(g.calgary_score)+'-'+esc(g.opponent_score)+'</strong></div>'}).join(''):'<div class="gc-empty">No final results yet.</div>';
+ E('gcResults').innerHTML=rows.length?rows.map(g=>{const win=Number(g.calgary_score)>Number(g.opponent_score);return '<a class="gc-list-item" href="hitmen-game-report.html?game='+encodeURIComponent(g.id)+'"><div><b>'+esc(win?'WIN':'LOSS')+' · vs '+esc(g.opponent_name)+'</b><small>'+esc(fmtDate(g.scheduled_at))+(g.overtime?' · OT':'')+' · OPEN BREAKDOWN</small></div><strong>'+esc(g.calgary_score)+'-'+esc(g.opponent_score)+'</strong></a>'}).join(''):'<div class="gc-empty">No final results yet.</div>';
 }
 function streams(){
  const rows=sessions.filter(s=>s.stream_url).sort((a,b)=>new Date(b.scheduled_at||b.created_at)-new Date(a.scheduled_at||a.created_at)).slice(0,6);
