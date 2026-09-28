@@ -28,9 +28,13 @@ def read_twitch_auth():
         return ''
 
 def save_twitch_auth(token):
-    value = str(token or '').strip()
+    value = str(token or '').strip().strip('"').strip("'")
+    for prefix in ('auth-token=', 'OAuth ', 'oauth '):
+        if value.startswith(prefix):
+            value = value[len(prefix):].strip().strip('"').strip("'")
+            break
     if not re.fullmatch(r'[A-Za-z0-9]{20,200}', value):
-        raise worker.Problem(422, 'That does not look like a Twitch web auth token.')
+        raise worker.Problem(422, 'Paste only the Twitch auth-token value, or the full auth-token=VALUE cookie.')
     TWITCH_AUTH_FILE.write_text(value)
     os.chmod(TWITCH_AUTH_FILE, 0o600)
 
@@ -175,14 +179,14 @@ def retrieve(job_id):
     twitch_token = read_twitch_auth()
     diagnostic = folder / 'streamlink-error.log'
 
-    def launch_streamlink(force_integrity=False):
+    def launch_streamlink(force_integrity=False, use_auth=False):
         source.unlink(missing_ok=True)
         args = ['streamlink', '--stream-timeout', '20', '--retry-streams', '0']
         if start:
             args.extend(['--hls-start-offset', str(start)])
         if duration is not None:
             args.extend(['--stream-segmented-duration', str(duration)])
-        if twitch_token:
+        if use_auth and twitch_token:
             args.append('--twitch-api-header=Authorization=OAuth ' + twitch_token)
         if force_integrity:
             args.extend(['--twitch-force-client-integrity', '--twitch-purge-client-integrity'])
@@ -199,18 +203,18 @@ def retrieve(job_id):
             if time.monotonic() > deadline or worker.STOP.wait(1):
                 raise worker.Problem(504, 'Replay retrieval timed out. Try Analyze Game again or upload the recording.')
 
-    proc = launch_streamlink(False)
+    # First attempt is deliberately anonymous. A stale saved Twitch cookie must not
+    # poison otherwise-public VOD playback. If Twitch rejects that request, retry once
+    # with a fresh client-integrity token and the saved account token when available.
+    proc = launch_streamlink(False, False)
     try:
         wait_for_streamlink(proc)
 
-        # Some Twitch VODs reject even authenticated playback until Streamlink obtains
-        # a fresh browser/client-integrity token. Chromium is included in the worker
-        # image, so make one clean retry that explicitly forces and purges integrity.
-        if (proc.returncode or not source.exists() or not source.stat().st_size) and twitch_token:
+        if proc.returncode or not source.exists() or not source.stat().st_size:
             if proc.poll() is None:
                 proc.terminate()
                 proc.wait(timeout=5)
-            proc = launch_streamlink(True)
+            proc = launch_streamlink(True, bool(twitch_token))
             wait_for_streamlink(proc)
 
         if proc.returncode or not source.exists() or not source.stat().st_size:
@@ -224,8 +228,8 @@ def retrieve(job_id):
             if any(term in detail for term in ('subscriber', 'authentication', 'unauthorized', 'forbidden', '403', 'restricted')):
                 raise worker.Problem(422, 'Twitch rejected authenticated playback for this VOD. Refresh the Twitch auth-token connection and try again.')
             if not twitch_token:
-                raise worker.Problem(422, 'Twitch blocked anonymous replay playback. Connect Twitch Retrieval in VOD Lab, then Analyze Game again.')
-            raise worker.Problem(422, 'Twitch still did not provide a playable replay after authenticated playback and a fresh browser integrity check. Use the local recording fallback for this VOD.')
+                raise worker.Problem(422, 'Twitch blocked public replay playback even after a fresh client-integrity check. Authenticated Twitch retrieval is optional fallback, not the primary path.')
+            raise worker.Problem(422, 'Twitch did not provide a playable replay after public playback plus the authenticated integrity fallback. The saved Twitch token may be stale.')
         if source.stat().st_size > worker.MAX_UPLOAD:
             raise worker.Problem(413, 'Replay exceeds the video size limit.')
         worker.probe(source)
