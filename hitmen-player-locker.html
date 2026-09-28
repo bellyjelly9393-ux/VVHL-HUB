@@ -16,8 +16,8 @@
 <link rel="stylesheet" href="wildman.css">
 <link rel="stylesheet" href="network-v2.css">
 <link rel="stylesheet" href="hitmen-team-locker.css">
-<link rel="stylesheet" href="hitmen-player-locker.css?v=20260928-playerhub1">
-<link rel="stylesheet" href="hitmen-stall-scene.css?v=20260928-playerhub1">
+<link rel="stylesheet" href="hitmen-player-locker.css?v=20260928-playeraccess2">
+<link rel="stylesheet" href="hitmen-stall-scene.css?v=20260928-playeraccess2">
 </head>
 <body class="wildman-site hitmen-player-locker-page hitmen-reference-ui">
 
@@ -29,18 +29,17 @@
 <div data-locker-content hidden class="hitmen-app">
 
   <aside class="hitmen-app-sidebar">
-    <a class="hitmen-app-brand" href="hitmen-workspace.html">
+    <a class="hitmen-app-brand" href="hitmen-game-center.html">
       <div class="hitmen-app-crest"><span>H</span></div>
       <strong>CALGARY<br>HITMEN</strong>
     </a>
 
     <nav class="hitmen-app-side-nav">
-      <a href="hitmen-workspace.html"><span class="rail-glyph">⌂</span><b>Team Hub</b></a>
+      <a href="hitmen-game-center.html"><span class="rail-glyph">⌂</span><b>Game Center</b></a>
       <a href="hitmen-team-locker.html"><span class="rail-glyph">◎</span><b>Roster</b></a>
       <a class="active" href="hitmen-player-locker.html"><span class="rail-glyph">▣</span><b>Locker Room</b></a>
-      <a href="hitmen-workspace.html#schedule"><span class="rail-glyph">□</span><b>Game Schedule</b></a>
+      <a href="hitmen-game-center.html#schedule"><span class="rail-glyph">□</span><b>Game Schedule</b></a>
       <a href="#performance"><span class="rail-glyph">▥</span><b>Stats & Analytics</b></a>
-      <a href="vod-lab.html?team=calgary-hitmen"><span class="rail-glyph">▷</span><b>VOD Review</b></a>
       <a href="#scouting"><span class="rail-glyph">⌁</span><b>Scouting</b></a>
       <a href="#weekly"><span class="rail-glyph">↗</span><b>Development</b></a>
       <a href="#profile"><span class="rail-glyph">⚙</span><b>Settings</b></a>
@@ -57,14 +56,12 @@
   <div class="hitmen-app-content">
     <header class="hitmen-app-topbar">
       <nav class="hitmen-top-tabs">
-        <a href="hitmen-workspace.html">DASHBOARD</a>
+        <a href="hitmen-game-center.html">GAME CENTER</a>
         <a href="hitmen-team-locker.html">ROSTER</a>
         <a class="active" href="hitmen-player-locker.html">LOCKER ROOM</a>
-        <a href="hitmen-workspace.html#schedule">SCHEDULE</a>
+        <a href="hitmen-game-center.html#schedule">SCHEDULE</a>
         <a href="#performance">STATS</a>
-        <a href="vod-lab.html?team=calgary-hitmen">VOD</a>
         <a href="#scouting">SCOUTING</a>
-        <a href="hitmen-workspace.html">MANAGEMENT</a>
       </nav>
       <div class="hitmen-top-actions">
         <div class="hitmen-search">⌕ <span>Search players, games, or settings…</span></div>
@@ -99,7 +96,6 @@
           <nav class="stall-profile-tabs reference-tabs" aria-label="Player sections">
             <button class="active" type="button" data-stall-tab="overview">OVERVIEW</button>
             <button type="button" data-stall-tab="stats">STATS</button>
-            <button type="button" data-stall-tab="vod">VOD</button>
             <button type="button" data-stall-tab="scouting">SCOUTING</button>
             <button type="button" data-stall-tab="settings">SETTINGS</button>
           </nav>
@@ -132,9 +128,6 @@
 
           <div class="stall-tab-panel" data-stall-panel="stats">
             <div class="stall-tab-card"><h3>SEASON STAT PROFILE</h3><div id="profileStatsTab"></div></div>
-          </div>
-          <div class="stall-tab-panel" data-stall-panel="vod">
-            <div class="stall-tab-card"><h3>VOD REVIEW</h3><p id="profileVodSummary">Game review evidence will populate here as VOD reports are attached.</p><a class="small-btn" href="vod-lab.html?team=calgary-hitmen">OPEN VOD LAB</a></div>
           </div>
           <div class="stall-tab-panel" data-stall-panel="scouting">
             <div class="stall-tab-card"><h3>SCOUTING & DEVELOPMENT</h3><div id="profileScoutingTab"></div></div>
@@ -224,9 +217,9 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
-<script src="backend.js?v=20260928-playerhub1"></script>
+<script src="backend.js?v=20260928-playeraccess2"></script>
 <script src="script.js"></script>
-<script src="hitmen-stall-scene.js?v=20260928-playerhub1"></script>
-<script src="hitmen-player-locker.js?v=20260928-playerhub1"></script>
+<script src="hitmen-stall-scene.js?v=20260928-playeraccess2"></script>
+<script src="hitmen-player-locker.js?v=20260928-playeraccess2"></script>
 </body>
 </html>
