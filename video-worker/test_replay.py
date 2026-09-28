@@ -24,6 +24,11 @@ class ReplayTests(unittest.TestCase):
         self.root.stop()
         self.tmp.cleanup()
 
+    def test_twitch_auth_accepts_cookie_or_header_shapes(self):
+        for raw in ['auth-token=' + 'a'*30, 'OAuth ' + 'b'*30, 'c'*30]:
+            replay.save_twitch_auth(raw)
+            self.assertEqual(len(replay.read_twitch_auth()), 30)
+
     def test_rejects_channels_private_hosts_credentials_and_spoofed_domains(self):
         for url in ['https://twitch.tv/chelmachine', 'http://twitch.tv/videos/1',
                     'https://127.0.0.1/videos/1', 'https://twitch.tv.evil.com/videos/1',
