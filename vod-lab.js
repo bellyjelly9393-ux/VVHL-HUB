@@ -114,14 +114,18 @@
     empty.hidden=true;detail.hidden=false;
     $("vodDetailTeam").textContent=`${teamName()} · ${String(r.intake_mode||"scout").toUpperCase()} · ${String(r.game_type||"review").replaceAll("_"," ")}`;
     $("vodDetailTitle").textContent=r.title;
-    $("vodDetailMeta").textContent=`${r.opponent_label||"Opponent not labeled"} · ${r.game_date?new Date(r.game_date).toLocaleString():"No date"} · ${r.duration_seconds!=null?fmtTime(r.duration_seconds):"length not set"}`;
-    const link=$("vodOpenLink"); link.href=r.vod_url||"#"; link.style.display=r.vod_url?"inline-flex":"none";
+    const sourceStart=Math.max(0,Number(r.source_start_seconds)||0);
+    const sourceEnd=r.source_end_seconds==null?null:Number(r.source_end_seconds);
+    const sourceWindow=sourceEnd!=null?`VOD ${fmtTime(sourceStart)} → ${fmtTime(sourceEnd)}`:(sourceStart?`VOD from ${fmtTime(sourceStart)}`:"full VOD");
+    $("vodDetailMeta").textContent=`${r.opponent_label||"Opponent not labeled"} · ${r.game_date?new Date(r.game_date).toLocaleString():"No date"} · ${r.duration_seconds!=null?fmtTime(r.duration_seconds):"length not set"} · ${sourceWindow}`;
+    const link=$("vodOpenLink"); link.href=r.vod_url?timestampUrl(r.vod_url,sourceStart):"#"; link.style.display=r.vod_url?"inline-flex":"none";
     const manualBuilder=$("manualPeriodBuilder");
     if(manualBuilder){
       const hasWorker=Boolean(r.worker_job_id);
       manualBuilder.hidden=hasWorker && r.worker_status!=="needs_periods";
     }
-    $("periodVodEnd").value=r.duration_seconds!=null?fmtTime(r.duration_seconds):"";
+    const absoluteEnd=sourceEnd!=null?sourceEnd:(r.duration_seconds!=null?sourceStart+Number(r.duration_seconds):null);
+    $("periodVodEnd").value=absoluteEnd!=null?fmtTime(absoluteEnd):"";
     const segs=reviewSegments();
     const p=(i)=>segs.find(s=>s.segment_type==="period"&&s.segment_index===i);
     if(p(1)) $("period1Start").value=fmtTime(p(1).start_seconds);
@@ -181,7 +185,9 @@
     const title=$("newVodTitle").value.trim();
     const rawUrl=$("newVodUrl").value.trim();
     const provider=detectProvider(rawUrl);
-    const duration=parseTime($("newVodDuration").value);
+    let duration=parseTime($("newVodDuration").value);
+    const sourceStart=parseTime($("newVodSourceStart")?.value||"0:00") ?? 0;
+    const sourceEnd=parseTime($("newVodSourceEnd")?.value);
     const user=auth().user;
     let url=rawUrl;
 
@@ -195,7 +201,11 @@
     }
 
     if(!title) return setStatus("Give the VOD review a title first.","error");
-    if($("newVodDuration").value.trim()&&duration==null) return setStatus("VOD length must look like 45:20 or 1:32:10.","error");
+    if($("newVodDuration").value.trim()&&duration==null) return setStatus("Game window length must look like 45:20 or 1:32:10.","error");
+    if($("newVodSourceStart")?.value.trim()&&parseTime($("newVodSourceStart").value)==null) return setStatus("Game start must look like 12:30 or 1:02:15.","error");
+    if($("newVodSourceEnd")?.value.trim()&&sourceEnd==null) return setStatus("Game end must look like 38:45 or 1:22:10.","error");
+    if(sourceEnd!=null&&sourceEnd<=sourceStart) return setStatus("Game end must be after the game start.","error");
+    if(sourceEnd!=null) duration=sourceEnd-sourceStart;
     const dateVal=$("newVodDate").value;
     const intakeMode=$("newVodIntakeMode")?.value||"scout";
     const payload={
@@ -206,7 +216,11 @@
       opponent_label:$("newVodOpponent").value.trim()||null,
       game_type:$("newVodType").value,
       intake_mode:intakeMode,
+      game_format:$("newVodFormat")?.value||"6s",
+      scouting_context:$("newVodPlayers")?.value.trim()||null,
       game_date:dateVal?new Date(dateVal).toISOString():new Date().toISOString(),
+      source_start_seconds:sourceStart,
+      source_end_seconds:sourceEnd,
       duration_seconds:duration,
       created_by:user?.id||null,
       status:intakeMode==="archive"?"ready":"queued"
@@ -220,6 +234,10 @@
     $("newVodOpponent").value="";
     $("newVodUrl").value="";
     $("newVodDuration").value="";
+    if($("newVodSourceStart")) $("newVodSourceStart").value="0:00";
+    if($("newVodSourceEnd")) $("newVodSourceEnd").value="";
+    if($("newVodPlayers")) $("newVodPlayers").value="";
+    if($("newVodFormat")) $("newVodFormat").value="6s";
     await loadData();
     setStatus(
       intakeMode==="scout"&&provider==="twitch"
@@ -257,13 +275,18 @@
     const {error}=await db().from("vod_review_segments").upsert(payload,{onConflict:"review_id,segment_type,segment_index"}); if(error)return setStatus(error.message,"error");
     let del=db().from("vod_review_segments").delete().eq("review_id",r.id).eq("segment_type","overtime");
     if(otStarts.length) del=del.gt("segment_index",otStarts.length); const dres=await del; if(dres.error)return setStatus(dres.error.message,"error");
-    const {error:uerr}=await db().from("vod_review_sessions").update({duration_seconds:vodEnd,status:"reviewing",overtime_count:otStarts.length,updated_at:new Date().toISOString()}).eq("id",r.id); if(uerr)return setStatus(uerr.message,"error");
+    const sourceStart=Math.max(0,Number(r.source_start_seconds)||0);
+    const reviewDuration=vodEnd!=null?Math.max(0,vodEnd-sourceStart):r.duration_seconds;
+    const updateReview={duration_seconds:reviewDuration,status:"reviewing",overtime_count:otStarts.length,updated_at:new Date().toISOString()};
+    if(vodEnd!=null)updateReview.source_end_seconds=vodEnd;
+    const {error:uerr}=await db().from("vod_review_sessions").update(updateReview).eq("id",r.id); if(uerr)return setStatus(uerr.message,"error");
     await loadData(); const first=reviewSegments(r.id)[0]; state.selectedSegmentId=first?.id||"";renderAll(); setStatus(`Built ${defs.length} review segment${defs.length===1?"":"s"}.`,"success");
   }
 
   async function addCustomSegment(){
     const r=currentReview(); if(!r)return; const existing=reviewSegments().filter(s=>s.segment_type==="custom"); const idx=Math.max(0,...existing.map(s=>s.segment_index))+1;
-    const {data,error}=await db().from("vod_review_segments").insert({review_id:r.id,team_id:state.teamId,segment_type:"custom",segment_index:idx,label:`Custom ${idx}`,start_seconds:0,status:"queued"}).select().single();
+    const sourceStart=Math.max(0,Number(r.source_start_seconds)||0);
+    const {data,error}=await db().from("vod_review_segments").insert({review_id:r.id,team_id:state.teamId,segment_type:"custom",segment_index:idx,label:`Custom ${idx}`,start_seconds:sourceStart,status:"queued"}).select().single();
     if(error)return setStatus(error.message,"error"); await loadData(); state.selectedSegmentId=data.id;renderAll();setStatus("Custom segment added. Set its timestamps and review it independently.","success");
   }
 
