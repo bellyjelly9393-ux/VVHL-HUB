@@ -7,7 +7,9 @@ const role=()=>{
  if(['admin','commissioner'].includes(pr))return pr;
  return String((s.memberships||[]).find(m=>m.team_id===TEAM&&m.active!==false)?.role||'').toLowerCase();
 };
-const allowed=()=>Boolean(ST().user&&['admin','commissioner','owner','gm','agm','scout'].includes(role()));
+const allowed=()=>Boolean(ST().user&&['admin','commissioner','owner','gm','agm','scout','player'].includes(role()));
+const playerView=()=>role()==='player';
+function syncNav(){document.querySelectorAll('[data-management-nav]').forEach(el=>{el.hidden=playerView();});}
 let lockers=[],snapshots=[],lineReports=[],playerReports=[],gameReports=[];
 
 function jersey(l){
@@ -24,22 +26,26 @@ function stall(l){
  const s=snap(l),tc=l.roster_class==='tc'||String(s.acquisition||'').toLowerCase()==='prospect';
  const displayName=esc((l.jersey_name||l.gamertag).toUpperCase()),displayNum=esc(l.jersey_number||'');
  const roleLabel=l.management_role?esc(l.management_role.toUpperCase()):(tc?'TC':'ROSTER');
- const linked=l.user_id?'<span class="stall-claimed">DISCORD/ACCOUNT LINKED</span>':'<span class="stall-unclaimed">UNCLAIMED</span>';
- const reportCount=reportsFor(l);
- return '<a class="locker-stall locker-preview-v2 '+(tc?'is-tc':'')+'" href="hitmen-player-locker.html?player='+encodeURIComponent(l.id)+'">'+
+ const mine=Boolean(ST().user&&l.user_id===ST().user.id);
+ const shellStart=playerView()&&!mine?'<div class="locker-stall locker-preview-v2 '+(tc?'is-tc':'')+'">':'<a class="locker-stall locker-preview-v2 '+(tc?'is-tc':'')+'" href="hitmen-player-locker.html?player='+encodeURIComponent(l.id)+'">';
+ const shellEnd=playerView()&&!mine?'</div>':'</a>';
+ const footer=playerView()
+   ?'<small><span class="stall-position">'+esc(l.position||'—')+'</span> · '+roleLabel+'</small><b>'+(mine?'OPEN MY STALL →':'TEAMMATE')+'</b>'
+   :'<small><span class="stall-position">'+esc(l.position||'—')+'</span> · '+roleLabel+' · '+reportsFor(l)+' REPORT'+(reportsFor(l)===1?'':'S')+'</small><small>'+(l.user_id?'ACCOUNT LINKED':'UNCLAIMED')+'</small><b>OPEN DOSSIER →</b>';
+ return shellStart+
    '<div class="stall-nameplate stall-nameplate-v2"><span class="stall-name-num">'+displayNum+'</span><strong>'+displayName+'</strong><span class="stall-name-num">'+displayNum+'</span></div>'+
    '<div class="stall-interior stall-preview-scene">'+jersey(l)+'</div>'+
-   '<div class="stall-footer stall-footer-v2"><small><span class="stall-position">'+esc(l.position||'—')+'</span> · '+roleLabel+' · '+reportCount+' REPORT'+(reportCount===1?'':'S')+'</small><small>'+linked+'</small><b>OPEN DOSSIER →</b></div>'+
- '</a>';
+   '<div class="stall-footer stall-footer-v2">'+footer+'</div>'+shellEnd;
 }
 async function load(){
  if(!allowed()||!DB())return;
+ syncNav();
  const [lr,sr,rr,gr,lines]=await Promise.all([
-  DB().from('team_player_lockers').select('*').eq('team_id',TEAM).eq('season',SEASON).order('gamertag'),
-  DB().from('hitmen_roster_snapshot').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('active',true).order('lg_slot'),
-  DB().from('hitmen_player_reports').select('id,player_key,summary,strengths,concerns,created_at').eq('team_id',TEAM).eq('season',SEASON),
+  DB().from('team_player_lockers').select('id,team_id,season,roster_snapshot_id,user_id,gamertag,position,management_role,jersey_number,jersey_name,roster_class').eq('team_id',TEAM).eq('season',SEASON).order('gamertag'),
+  DB().from('hitmen_roster_snapshot').select('id,acquisition,lg_slot').eq('team_id',TEAM).eq('season',SEASON).eq('active',true).order('lg_slot'),
+  DB().from('hitmen_player_reports').select('id,player_key').eq('team_id',TEAM).eq('season',SEASON),
   DB().from('team_player_game_reports').select('id,locker_id').eq('team_id',TEAM).eq('season',SEASON),
-  DB().from('team_line_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).order('week',{ascending:false}).limit(12)
+  DB().from('team_line_weekly_reports').select('week,line_label,summary,record,goals_for,goals_against').eq('team_id',TEAM).eq('season',SEASON).order('week',{ascending:false}).limit(12)
  ]);
  const err=[lr,sr,rr,gr,lines].find(x=>x.error)?.error;
  if(err){console.error(err);E('lockerRoster').innerHTML='<div class="locker-empty">'+esc(err.message||'Could not load locker room.')+'</div>';return}
@@ -53,6 +59,6 @@ async function load(){
  E('lockerTcRoster').innerHTML=tc.map(stall).join('')||'<div class="locker-empty">No TC stalls loaded.</div>';
  E('lockerLineReports').innerHTML=lineReports.length?lineReports.slice(0,6).map(r=>'<article class="line-report-card"><div class="eyebrow">WEEK '+esc(r.week)+'</div><h3>'+esc(r.line_label)+'</h3><p>'+esc(r.summary||'Weekly line report will populate after games are reviewed.')+'</p><div class="line-meta"><span>'+esc(r.record||'0-0-0')+'</span><span>GF '+esc(r.goals_for??'—')+'</span><span>GA '+esc(r.goals_against??'—')+'</span></div></article>').join(''):'<div class="locker-empty">Line reports will populate once saved units have game evidence.</div>';
 }
-window.addEventListener('vvhl-auth-change',()=>{if(allowed())load()});
+window.addEventListener('vvhl-auth-change',()=>{syncNav();if(allowed())load()});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{if(allowed())load()});else if(allowed())load();
 })();
