@@ -1,0 +1,34 @@
+.hitmen-game-report-page{background:#070709;color:#f5f5f2}
+.hgr-back{display:inline-flex;margin:8px 0 20px;color:#d7b16d;font-weight:800;text-decoration:none;letter-spacing:.03em}
+.hgr-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:end;padding:28px;border:1px solid rgba(255,255,255,.08);border-radius:22px;background:radial-gradient(circle at 80% 20%,rgba(220,28,101,.18),transparent 36%),linear-gradient(145deg,#0e0e12,#09090b)}
+.hgr-kicker{font:800 13px/1 Inter,sans-serif;letter-spacing:.16em;color:#d7b16d;text-transform:uppercase}
+.hgr-title{font:900 clamp(42px,7vw,86px)/.9 "Barlow Condensed",sans-serif;margin:8px 0 12px;text-transform:uppercase}
+.hgr-title em{font-style:normal;color:#e91e63}
+.hgr-meta{display:flex;gap:12px;flex-wrap:wrap;color:#aaa}
+.hgr-scorebox{text-align:right;min-width:220px}
+.hgr-scorebox small{display:block;color:#aaa;font-weight:700;letter-spacing:.12em}
+.hgr-scorebox strong{display:block;font:900 clamp(54px,9vw,96px)/.9 "Barlow Condensed",sans-serif}
+.hgr-scorebox span{display:inline-flex;margin-top:10px;padding:6px 10px;border-radius:999px;background:#202024;font-weight:900}
+.hgr-scorebox span.win{background:#163c26;color:#8ef0ad}.hgr-scorebox span.loss{background:#471923;color:#ff9cab}
+.hgr-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;margin:18px 0}
+.hgr-card{border:1px solid rgba(255,255,255,.08);border-radius:18px;background:#0d0d11;padding:20px;margin-bottom:18px}
+.hgr-card h2{margin:2px 0 0;font:800 30px/1 "Barlow Condensed",sans-serif}
+.hgr-analyst-copy{font-size:15px;line-height:1.7;color:#ddd}
+.hgr-analyst-copy p{margin:0 0 12px}
+.hgr-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.hgr-metric{background:#141419;border:1px solid rgba(255,255,255,.06);border-radius:13px;padding:14px}
+.hgr-metric small{display:block;color:#888;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
+.hgr-metric strong{display:block;margin-top:4px;font:900 28px/1 "Barlow Condensed",sans-serif}
+.hgr-table-wrap{overflow-x:auto}
+.hgr-table{width:100%;border-collapse:collapse;min-width:920px}
+.hgr-table th,.hgr-table td{padding:11px 10px;border-bottom:1px solid rgba(255,255,255,.07);text-align:right;white-space:nowrap}
+.hgr-table th:first-child,.hgr-table td:first-child,.hgr-table th:nth-child(2),.hgr-table td:nth-child(2){text-align:left}
+.hgr-table th{color:#85858d;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.hgr-table td:first-child{font-weight:900;color:#fff}.hgr-table .hot{color:#d7b16d;font-weight:900}
+.hgr-notes{display:grid;gap:10px}
+.hgr-note{border-left:3px solid #d7b16d;background:#131318;padding:12px 14px;border-radius:10px}
+.hgr-note small{display:block;color:#d7b16d;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.hgr-note p{margin:5px 0 0;color:#ddd;line-height:1.5}
+.hgr-source-panel p{color:#aaa;max-width:850px}
+.hgr-source-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+#hgrSourceStatus{display:block;margin-top:10px;color:#9ff4bc}
+@media(max-width:900px){.hgr-hero,.hgr-grid{grid-template-columns:1fr}.hgr-scorebox{text-align:left;min-width:0}.hgr-source-form{grid-template-columns:1fr}.hgr-metrics{grid-template-columns:1fr 1fr}}
