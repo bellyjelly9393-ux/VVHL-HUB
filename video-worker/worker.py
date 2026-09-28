@@ -323,17 +323,35 @@ def extract_frames(source, folder, start, end, frame_step=FRAME_STEP):
     return frames
 
 
+def ai_config():
+    """Choose credentials only for the explicitly selected provider."""
+    provider = os.getenv('AI_PROVIDER', 'openrouter' if os.getenv('OPENROUTER_API_KEY') else 'openai').strip().lower()
+    if provider == 'openrouter':
+        return ('OpenRouter', os.getenv('OPENROUTER_API_KEY', ''),
+                os.getenv('OPENROUTER_MODEL', ''), 'https://openrouter.ai/api/v1/responses')
+    if provider == 'openai':
+        return ('OpenAI', os.getenv('OPENAI_API_KEY', ''),
+                os.getenv('OPENAI_MODEL', ''), 'https://api.openai.com/v1/responses')
+    raise Problem(503, 'Unsupported AI_PROVIDER. Use openrouter or openai.')
+
+
+def ai_configured():
+    _, key, model, _ = ai_config()
+    return bool(key and model)
+
+
 def request_ai(request_payload):
     """Use the same bounded provider recovery for chunks and the final report."""
-    key = os.getenv('OPENAI_API_KEY')
-    if not key:
+    provider, key, model, endpoint = ai_config()
+    if not key or not model:
         raise Problem(503, 'AI connection is not configured.')
     request_payload = dict(request_payload)
+    request_payload['model'] = model
     result = None
     for attempt in range(3):
         try:
             result = http_json(
-                'https://api.openai.com/v1/responses',
+                endpoint,
                 {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
                 request_payload
             )
@@ -346,6 +364,8 @@ def request_ai(request_payload):
             raise Problem(502, 'AI output was incomplete. Completed analysis is saved; retry to continue.')
         except urllib.error.HTTPError as exc:
             code = ''
+            if exc.code == 402:
+                raise Problem(402, f'{provider} credits or spending allowance exhausted. Check provider billing.')
             if exc.code == 429:
                 try:
                     payload = json.loads(exc.read().decode('utf-8', 'ignore'))
@@ -353,8 +373,8 @@ def request_ai(request_payload):
                                (payload.get('error') or {}).get('type') or '')
                 except Exception:
                     pass
-                if code in ('insufficient_quota', 'billing_hard_limit_reached'):
-                    raise Problem(429, 'OpenAI API quota/billing is not available for this key. Add API billing/credits, then retry.')
+                if code in ('insufficient_quota', 'billing_hard_limit_reached', 'credit_balance_exhausted', 'organization_usage_limit_exceeded', 'organization_spend_limit_exceeded', 'project_spend_limit_exceeded'):
+                    raise Problem(402, f'{provider} API quota/billing is unavailable. Check credits and spending limits.')
                 if attempt < 2:
                     try:
                         retry_after = float(exc.headers.get('Retry-After', '0') or 0)
@@ -365,12 +385,12 @@ def request_ai(request_payload):
                         raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
                     continue
                 if code in ('rate_limit_exceeded', 'tokens'):
-                    raise Problem(429, 'OpenAI API rate limit reached after automatic backoff. Retry later.')
-                raise Problem(429, 'OpenAI API returned HTTP 429 after automatic backoff. Check API usage limits.')
+                    raise Problem(429, f'{provider} API rate limit reached after automatic backoff. Retry later.')
+                raise Problem(429, f'{provider} API returned HTTP 429 after automatic backoff. Check provider limits.')
             if exc.code in (401, 403):
-                raise Problem(502, 'AI review authorization failed. Check the OpenAI API key and model access.')
+                raise Problem(502, f'{provider} authorization failed. Check its API key and model access.')
             if exc.code == 404:
-                raise Problem(502, 'AI review model was not found. Check OPENAI_MODEL.')
+                raise Problem(502, f'{provider} model was not found. Check the configured model ID.')
             if exc.code >= 500 and attempt < 2:
                 if STOP.wait(10 * (attempt + 1)):
                     raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
@@ -388,7 +408,7 @@ def request_ai(request_payload):
 
 
 def analyze(frames, chunk, metadata, frame_step=FRAME_STEP):
-    key, model = os.getenv('OPENAI_API_KEY'), os.getenv('OPENAI_MODEL')
+    _, key, model, _ = ai_config()
     if not key or not model:
         raise Problem(503, 'AI connection is not configured.')
     prompt = '''Act as an elite professional hockey video scout and EA Sports hockey analyst.
@@ -545,7 +565,7 @@ def build_rollup(chunks):
     }
     if not chunks:
         return empty
-    key, model = os.getenv('OPENAI_API_KEY'), os.getenv('OPENAI_MODEL')
+    _, key, model, _ = ai_config()
     if not key or not model:
         empty['summary'] = ' '.join(
             (c.get('review') or {}).get('summary', '')
@@ -691,7 +711,7 @@ def process(job_id):
     })
     result.setdefault('chunks', [])
     update(job_id, 'processing', result)
-    if not os.getenv('OPENAI_API_KEY') or not os.getenv('OPENAI_MODEL'):
+    if not ai_configured():
         result['plan'] = plan
         update(job_id, 'awaiting_ai', result, 'Recording validated. Connect an AI API model, then retry.')
         return
@@ -775,7 +795,7 @@ def schedule_rate_limit_retry(job_id, message):
         db.execute(
             "UPDATE jobs SET metadata=?,status='queued',error=? WHERE id=?",
             (json.dumps(meta),
-             f'OpenAI rate limit cooling down. Automatic retry {tries}/{AI_RATE_RETRY_LIMIT} in about {int(delay)} seconds.',
+             f'{ai_config()[0]} rate limit cooling down. Automatic retry {tries}/{AI_RATE_RETRY_LIMIT} in about {int(delay)} seconds.',
              job_id)
         )
     return delay
@@ -798,7 +818,7 @@ def work_loop():
             if exc.status == 429 and ('rate limit' in exc.message.lower() or 'http 429' in exc.message.lower()):
                 delay = schedule_rate_limit_retry(row['id'], exc.message)
                 if delay is None:
-                    update(row['id'], 'failed', error='OpenAI rate limit persisted after automatic retries. Check API project limits or retry later.')
+                    update(row['id'], 'failed', error=exc.message + ' Automatic retry limit reached.')
                 elif STOP.wait(delay):
                     continue
             else:
@@ -858,7 +878,7 @@ class Handler(BaseHTTPRequestHandler):
         self.connection.settimeout(180)
         path = urlsplit(self.path).path.rstrip('/')
         if path == '/health' and self.command == 'GET':
-            return self.reply(200, {'status': 'ok', 'aiConfigured': bool(os.getenv('OPENAI_API_KEY') and os.getenv('OPENAI_MODEL')),
+            return self.reply(200, {'status': 'ok', 'aiConfigured': ai_configured(),
                                     'maxUploadBytes': MAX_UPLOAD, 'liveIngestion': False,
                                     'reviewVersion': REVIEW_VERSION,
                                     'frameStepSeconds': FRAME_STEP,
@@ -1016,3 +1036,4 @@ if __name__ == '__main__':
     initialize()
     threading.Thread(target=work_loop, daemon=True).start()
     ThreadingHTTPServer(('0.0.0.0', int(os.getenv('PORT', '8080'))), Handler).serve_forever()
+

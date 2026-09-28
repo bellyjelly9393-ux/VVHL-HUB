@@ -19,7 +19,9 @@ class Handler(worker.Handler):
                 'revision': os.getenv('RAILWAY_GIT_COMMIT_SHA', 'unknown'),
                 'frameStepSeconds': worker.FRAME_STEP,
                 'retentionHours': worker.RETENTION / 3600,
-                'aiConfigured': bool(os.getenv('OPENAI_API_KEY') and os.getenv('OPENAI_MODEL')),
+                'aiConfigured': worker.ai_configured(),
+                'aiProvider': worker.ai_config()[0],
+                'aiModel': worker.ai_config()[2],
                 'maxUploadBytes': worker.MAX_UPLOAD,
                 'liveIngestion': live_pipeline.configured(),
                 'liveProvider': 'twitch' if live_pipeline.configured() else None,
@@ -38,3 +40,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
