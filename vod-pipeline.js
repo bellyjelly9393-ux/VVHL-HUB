@@ -22,6 +22,18 @@
       return m?`https://www.twitch.tv/videos/${m[1]}`:'';
     }catch{return '';}
   }
+  function parseClock(value){
+    const s=String(value??'').trim();if(!s)return null;
+    if(/^\d+$/.test(s))return Number(s);
+    const parts=s.split(':').map(Number);if(parts.some(Number.isNaN)||parts.length>3)return null;
+    if(parts.length===2)return parts[0]*60+parts[1];
+    if(parts.length===3)return parts[0]*3600+parts[1]*60+parts[2];
+    return null;
+  }
+  function fmtClock(seconds){
+    const n=Math.max(0,Math.floor(Number(seconds)||0)),h=Math.floor(n/3600),m=Math.floor((n%3600)/60),s=n%60;
+    return h?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`;
+  }
 
   async function token(){
     const {data,error}=await db().auth.getSession();
@@ -72,7 +84,7 @@
     panel.id='vodPipelinePanel'; panel.className='analysis-note'; panel.style.marginTop='16px';
     panel.innerHTML=`<div class="eyebrow">GAME ANALYSIS</div><h3 style="margin:6px 0 8px">Retrieve Recording · Detect Periods · Analyze</h3><p>Analyze Game reuses this game's capture or retrieves its saved Twitch replay. Existing jobs resume without starting again.</p><div class="vod-actions"><button id="vodAnalyzeGame" class="small-btn primary" type="button">Analyze Game</button><button id="vodCheckPipeline" class="small-btn" type="button">Check Status</button><button id="vodRetryPipeline" class="small-btn" type="button">Continue / Retry</button><button id="vodEliteReanalyze" class="small-btn" type="button">Re-run Elite Scout</button></div>
     <details id="vodTwitchConnect" style="margin-top:12px"><summary>Twitch Retrieval Connection <span id="vodTwitchAuthBadge" class="status-pill" style="margin-left:8px">CHECKING</span></summary><p><strong>Only needed when Twitch blocks anonymous VOD playback.</strong> Paste the Twitch website <code>auth-token</code> here, never into chat. It is stored privately on the Railway worker and is not written to logs.</p><div class="vod-form"><label class="wide">Twitch web auth-token<input id="vodTwitchToken" class="field mono" type="password" autocomplete="off" placeholder="Private token · not your password"></label></div><div class="vod-actions"><button id="vodSaveTwitchAuth" class="small-btn primary" type="button">Connect Twitch Retrieval</button><button id="vodClearTwitchAuth" class="small-btn" type="button">Disconnect</button><span id="vodTwitchAuthMsg" class="copy-feedback"></span></div><small>This token can grant broad Twitch account access. Use it only on this private management page and revoke it from Twitch Security if you no longer want the worker connected.</small></details>
-    <details style="margin-top:12px"><summary>Recording source / upload fallback</summary><p>A Twitch replay link identifies the recording. Channel links alone cannot identify a past game. Use a recording containing one game.</p><label>Saved Twitch replay URL<input id="vodReplayUrl" class="field" type="url" placeholder="https://www.twitch.tv/videos/..."></label><button id="vodSaveReplay" class="small-btn" type="button">Save replay link</button><p>Or upload an MP4 / MOV recording:</p><input id="vodPipelineFile" class="field" type="file" accept="video/mp4,video/quicktime,.mp4,.mov"><button id="vodStartPipeline" class="small-btn" type="button">Upload & Start Pipeline</button></details><small id="vodPipelineStatus">Press Analyze Game to retrieve the saved recording.</small>`;
+    <details style="margin-top:12px" open><summary>Recording source / game window / upload fallback</summary><p>Use the exact Twitch replay plus the start and end of this game inside the full broadcast. Railway will retrieve only that window instead of swallowing the entire VOD like a very stupid pelican.</p><div class="vod-form"><label class="wide">Saved Twitch replay URL<input id="vodReplayUrl" class="field" type="url" placeholder="https://www.twitch.tv/videos/..."></label><label>Game starts in full VOD<input id="vodSourceStart" class="field mono" placeholder="0:00"></label><label>Game ends in full VOD<input id="vodSourceEnd" class="field mono" placeholder="28:40"></label><label>Game format<select id="vodGameFormat" class="select-field"><option value="6s">6s</option><option value="4s">4s</option><option value="3s">3s</option><option value="HUT">HUT</option><option value="unknown">Unknown</option></select></label><label class="wide">Lineup / scouting context<textarea id="vodScoutingContext" class="text-input" placeholder="Calgary: LW ..., C ..., RW ..., LD ..., RD ..., G ...&#10;Opponent: ..."></textarea></label></div><button id="vodSaveReplay" class="small-btn" type="button">Save source + game window</button><p>Or upload an MP4 / MOV recording containing this game:</p><input id="vodPipelineFile" class="field" type="file" accept="video/mp4,video/quicktime,.mp4,.mov"><button id="vodStartPipeline" class="small-btn" type="button">Upload & Start Pipeline</button></details><small id="vodPipelineStatus">Press Analyze Game to retrieve the saved recording.</small>`;
     anchor.insertAdjacentElement('afterend',panel);
     document.getElementById('vodStartPipeline')?.addEventListener('click',start);
     document.getElementById('vodCheckPipeline')?.addEventListener('click',checkSelected);
@@ -129,10 +141,24 @@
       const raw=document.getElementById('vodReplayUrl').value.trim();
       const url=normalizeTwitchReplay(raw);
       if(!url)throw new Error('Paste a Twitch replay link such as twitch.tv/videos/123… or a Twitch share link such as twitch.tv/channel/v/123…');
-      const {data,error}=await db().from('vod_review_sessions').update({vod_url:url,source_provider:'twitch',updated_at:new Date().toISOString()}).eq('id',review.id).select('id');
-      if(error)throw error;if(!data?.length)throw new Error('Replay link was not saved. Check your access.');
+      const start=parseClock(document.getElementById('vodSourceStart')?.value||'0:00');
+      const end=parseClock(document.getElementById('vodSourceEnd')?.value);
+      if(start==null||start<0)throw new Error('Game start must look like 12:30 or 1:02:15.');
+      if(document.getElementById('vodSourceEnd')?.value.trim()&&end==null)throw new Error('Game end must look like 38:45 or 1:22:10.');
+      if(end!=null&&end<=start)throw new Error('Game end must be after game start.');
+      const changedWindow=start!==sourceOffset(review)||(end??null)!==(review.source_end_seconds==null?null:Number(review.source_end_seconds));
+      if(changedWindow&&review.worker_job_id&&review.worker_status)throw new Error('This review already started processing. Create a fresh review before changing its source game window.');
+      const payload={
+        vod_url:url,source_provider:'twitch',source_start_seconds:start,source_end_seconds:end,
+        duration_seconds:end!=null?end-start:review.duration_seconds,
+        game_format:document.getElementById('vodGameFormat')?.value||review.game_format||'6s',
+        scouting_context:document.getElementById('vodScoutingContext')?.value.trim()||null,
+        updated_at:new Date().toISOString()
+      };
+      const {data,error}=await db().from('vod_review_sessions').update(payload).eq('id',review.id).select('id');
+      if(error)throw error;if(!data?.length)throw new Error('Replay source was not saved. Check your access.');
       document.getElementById('vodReplayUrl').value=url;
-      setStatus('Replay link saved. Press Analyze Game.','good');
+      setStatus(end!=null?`Source saved. Railway will retrieve only ${fmtClock(start)} → ${fmtClock(end)}. Press Analyze Game.`:'Replay link saved. Add a game end before Analyze Game if this VOD contains more than one game.','good');
     }catch(e){setStatus(e.message,'bad');}
   }
 
@@ -399,6 +425,10 @@
       const review=await currentReview(); if(!review)return;
       if(selectedReviewId()!==review.id)return;
       const source=document.getElementById('vodReplayUrl');if(source)source.value=review.vod_url||'';
+      const start=document.getElementById('vodSourceStart');if(start)start.value=fmtClock(sourceOffset(review));
+      const end=document.getElementById('vodSourceEnd');if(end)end.value=review.source_end_seconds==null?'':fmtClock(review.source_end_seconds);
+      const format=document.getElementById('vodGameFormat');if(format)format.value=review.game_format||'6s';
+      const context=document.getElementById('vodScoutingContext');if(context)context.value=review.scouting_context||'';
       if(review.worker_job_id){
         const extra=review.source_file_name?` · ${review.source_file_name}`:'';
         setStatus(`Saved pipeline: ${String(review.worker_status||'unknown').replaceAll('_',' ')}${extra}`);
