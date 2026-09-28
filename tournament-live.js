@@ -3,7 +3,7 @@
   const KEY='sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
   const db=window.VVHLBackend?.db || (window.supabase?window.supabase.createClient(URL,KEY):null);
   if(!db) return;
-  const S={events:[],teams:[],players:[],games:[],sources:[],teamStats:[],playerStats:[],eventTeams:[],rosters:[],rankings:[]};
+  const S={events:[],teams:[],players:[],games:[],sources:[],teamStats:[],playerStats:[],eventTeams:[],rosters:[],rankings:[],selectedBroadcastKey:sessionStorage.getItem('wildman-live-channel')||''};
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[c]);
   const team=id=>S.teams.find(x=>x.id===id);
@@ -51,12 +51,40 @@
         event_id:s.event_id,
         stream_url:s.url,
         stream_provider:s.provider||'external',
-        broadcast_title:s.display_label||s.metadata?.title||'Wildman Club Live',
+        broadcast_title:s.display_label||s.metadata?.title||'Live Channel',
         status:'live',
         scheduled_at:s.created_at,
-        intake_mode:s.intake_mode||'media'
+        intake_mode:s.intake_mode||'media',
+        channel_key:s.metadata?.channel_key||'',
+        channel_group:s.metadata?.channel_group||'',
+        channel_kind:s.metadata?.channel_kind||''
       }))
-      .sort((a,b)=>new Date(b.scheduled_at||0)-new Date(a.scheduled_at||0));
+      .sort((a,b)=>(Number(S.sources.find(x=>x.id===a.id)?.slot_order||99)-Number(S.sources.find(x=>x.id===b.id)?.slot_order||99))||new Date(b.scheduled_at||0)-new Date(a.scheduled_at||0));
+  }
+
+  function renderChannelPicker(){
+    const root=$('broadcastChannelPicker'); if(!root)return;
+    const sources=publicSources();
+    if(!sources.length){root.innerHTML='<div class="empty-state">No public live channels are configured.</div>';return;}
+    if(!S.selectedBroadcastKey||!sources.some(s=>s._key===S.selectedBroadcastKey)){
+      const wild=sources.find(s=>s.channel_key==='wildman')||sources[0];
+      S.selectedBroadcastKey=wild._key;
+      sessionStorage.setItem('wildman-live-channel',S.selectedBroadcastKey);
+    }
+    root.innerHTML=sources.map(s=>`<div class="broadcast-channel-card ${S.selectedBroadcastKey===s._key?'active':''}">
+      <button type="button" data-channel-key="${esc(s._key)}">
+        <span class="broadcast-channel-live">LIVE CHANNEL</span>
+        <strong>${esc(s.broadcast_title)}</strong>
+        <small>${esc(s.channel_group||event(s.event_id)?.name||'Wildman Network')} · ${esc(String(s.stream_provider||'stream').toUpperCase())}</small>
+      </button>
+      <a href="live-channel.html?source=${encodeURIComponent(s.id)}">OPEN CHANNEL →</a>
+    </div>`).join('');
+    root.querySelectorAll('[data-channel-key]').forEach(btn=>btn.onclick=()=>{
+      S.selectedBroadcastKey=btn.dataset.channelKey;
+      sessionStorage.setItem('wildman-live-channel',S.selectedBroadcastKey);
+      renderChannelPicker();
+      renderFeatured();
+    });
   }
 
   function featuredCopy(g){
@@ -64,7 +92,7 @@
       return {
         key:g._key,
         title:g.broadcast_title||'Wildman Club Live',
-        subtitle:(event(g.event_id)?.name||'Wildman Esports')+' · Live Twitch broadcast',
+        subtitle:(g.channel_group||event(g.event_id)?.name||'Wildman Esports')+' · Live '+String(g.stream_provider||'stream').toUpperCase()+' broadcast',
         status:'LIVE NOW',
         detail:'Public club stream',
         provider:String(g.stream_provider||'stream').toUpperCase(),
@@ -88,10 +116,12 @@
   function renderFeatured(){
     const root=$('featuredBroadcast'); if(!root)return;
     const rows=[...S.games].sort((a,b)=>(statusRank[a.status]??9)-(statusRank[b.status]??9)||new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));
-    const source=publicSources()[0];
-    const g=rows.find(x=>x.featured&&x.status==='live'&&x.stream_url)||
+    const sources=publicSources();
+    const selected=sources.find(x=>x._key===S.selectedBroadcastKey);
+    const source=selected||sources.find(x=>x.channel_key==='wildman')||sources[0];
+    const g=source||
+            rows.find(x=>x.featured&&x.status==='live'&&x.stream_url)||
             rows.find(x=>x.status==='live'&&x.stream_url)||
-            source||
             rows.find(x=>x.featured&&x.stream_url)||
             rows.find(x=>x.status==='scheduled'&&x.stream_url);
     if(!g){
@@ -292,7 +322,7 @@
       teamStats:teamStats.data||[],playerStats:playerStats.data||[],eventTeams:eventTeams.data||[],
       rosters:rosters.data||[],rankings:rankings.data||[]
     });
-    renderFeatured();renderBoard();renderSchedule();renderStories();renderStandings();renderLeaderboard();renderCounts();
+    renderChannelPicker();renderFeatured();renderBoard();renderSchedule();renderStories();renderStandings();renderLeaderboard();renderCounts();
     const stamp=$('liveRefreshStamp'); if(stamp)stamp.textContent=`Updated ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})}`;
   }
   load();
