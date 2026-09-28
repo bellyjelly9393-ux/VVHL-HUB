@@ -67,16 +67,21 @@
   const add=(o,k)=>Number(o?.[k]||0);
 
   function aggregate(){
-    const t={games:reports.length,goals:0,assists:0,points:0,plus_minus:0,shots:0,hits:0,takeaways:0,giveaways:0,pim:0,blocks:0,faceoff_pct:0,passing_pct:0,foN:0,passN:0};
+    const t={games:reports.length,goals:0,assists:0,points:0,plus_minus:0,shots:0,hits:0,takeaways:0,giveaways:0,pim:0,blocks:0,faceoff_pct:0,passing_pct:0,foN:0,passN:0,saves:0,shots_faced:0,goals_against:0,save_pct:0};
     reports.forEach(r=>{
       const s=r.stats||{};
-      ['goals','assists','plus_minus','shots','hits','takeaways','giveaways','pim','blocks'].forEach(k=>t[k]+=add(s,k));
+      ['goals','assists','plus_minus','shots','hits','takeaways','giveaways','pim'].forEach(k=>t[k]+=add(s,k));
+      t.blocks+=s.blocks!=null?add(s,'blocks'):add(s,'blocked_shots');
+      t.saves+=add(s,'saves');
+      t.shots_faced+=add(s,'shots_faced');
+      t.goals_against+=add(s,'goals_against');
       if(s.faceoff_pct!=null){t.faceoff_pct+=Number(s.faceoff_pct);t.foN++;}
       if(s.passing_pct!=null){t.passing_pct+=Number(s.passing_pct);t.passN++;}
     });
     t.points=t.goals+t.assists;
     if(t.foN)t.faceoff_pct/=t.foN;
     if(t.passN)t.passing_pct/=t.passN;
+    if(t.shots_faced)t.save_pct=(t.saves/t.shots_faced)*100;
     return t;
   }
 
@@ -162,6 +167,18 @@
     ).join('')+'</div>';
   }
 
+  function reportStatLine(r){
+    const s=r.stats||{};
+    const pos=String(r.position_played||locker?.position||'').toUpperCase();
+    const goalie=pos==='G'||s.shots_faced!=null||s.saves!=null;
+    const items=goalie
+      ?[['SV',s.saves??0],['SA',s.shots_faced??0],['GA',s.goals_against??0],['SV%',s.save_pct_derived!=null?Number(s.save_pct_derived).toFixed(1)+'%':(Number(s.shots_faced||0)?((Number(s.saves||0)/Number(s.shots_faced))*100).toFixed(1)+'%':'—')]]
+      :[['G',s.goals??0],['A',s.assists??0],['PTS',s.points??(Number(s.goals||0)+Number(s.assists||0))],['+/-',s.plus_minus??0],['S',s.shots??0],['TA',s.takeaways??0],['GV',s.giveaways??0],['BLK',s.blocks??s.blocked_shots??0]];
+    if(!goalie&&s.passing_pct!=null)items.push(['PASS',Number(s.passing_pct).toFixed(1)+'%']);
+    if(!goalie&&s.faceoff_pct!=null)items.push(['FO',Number(s.faceoff_pct).toFixed(1)+'%']);
+    return '<div class="player-report-statline">'+items.map(([k,v])=>'<span><small>'+esc(k)+'</small><b>'+esc(v)+'</b></span>').join('')+'</div>';
+  }
+
   function renderReports(){
     const box=E('playerGameReports');
     if(!box)return;
@@ -170,7 +187,7 @@
       return;
     }
     box.innerHTML=reports.map(r=>
-      '<article class="player-report"><div class="player-report-head"><div><small>'+esc(r.game_date?new Date(r.game_date).toLocaleDateString():'GAME REPORT')+'</small><h3>'+esc(r.opponent_name||'Opponent')+(r.result?' · '+esc(r.result):'')+'</h3></div><small>'+esc(r.position_played||locker.position||'')+(r.line_label?' · '+esc(r.line_label):'')+'</small></div><div class="player-report-grid"><div class="report-note"><small>WHAT WORKED</small><p>'+esc(r.strengths||'Pending review.')+'</p></div><div class="report-note"><small>NEXT IMPROVEMENT</small><p>'+esc(r.improvements||'Pending review.')+'</p></div><div class="report-note"><small>TACTICAL NOTES</small><p>'+esc(r.tactical_notes||'No tactical notes yet.')+'</p></div><div class="report-note"><small>COACH SUMMARY</small><p>'+esc(r.coach_summary||'Report is still being built.')+'</p></div></div></article>'
+      '<article class="player-report"><div class="player-report-head"><div><small>'+esc(r.game_date?new Date(r.game_date).toLocaleDateString():'GAME REPORT')+'</small><h3>'+esc(r.opponent_name||'Opponent')+(r.result?' · '+esc(r.result):'')+'</h3></div><small>'+esc(r.position_played||locker.position||'')+(r.line_label?' · '+esc(r.line_label):'')+'</small></div>'+reportStatLine(r)+'<div class="player-report-grid"><div class="report-note"><small>WHAT WORKED</small><p>'+esc(r.strengths||'Pending VOD review.')+'</p></div><div class="report-note"><small>NEXT IMPROVEMENT</small><p>'+esc(r.improvements||'Pending VOD review.')+'</p></div><div class="report-note"><small>TACTICAL NOTES</small><p>'+esc(r.tactical_notes||'Pending VOD review.')+'</p></div><div class="report-note"><small>COACH SUMMARY</small><p>'+esc(r.coach_summary||'Pending VOD review.')+'</p></div></div></article>'
     ).join('');
   }
 
@@ -255,26 +272,29 @@
     if(E('profileCountryInput'))E('profileCountryInput').value=locker.country_code||'';
     if(E('profileSecondaryInput'))E('profileSecondaryInput').value=locker.secondary_position||'';
 
-    if(E('offenseMetrics'))E('offenseMetrics').innerHTML=
-      metric('Games',t.games)+metric('Goals',t.goals)+metric('Assists',t.assists)+
-      metric('Points / Game',t.games?(t.points/t.games).toFixed(2):'0.00')+metric('Shots',t.shots);
+    const goalie=String(locker.position||'').toUpperCase()==='G';
+    if(E('offenseMetrics'))E('offenseMetrics').innerHTML=goalie
+      ?metric('Games',t.games)+metric('Saves',t.saves)+metric('Shots Faced',t.shots_faced)+metric('Save %',t.shots_faced?t.save_pct.toFixed(1)+'%':'—')
+      :metric('Games',t.games)+metric('Goals',t.goals)+metric('Assists',t.assists)+metric('Points / Game',t.games?(t.points/t.games).toFixed(2):'0.00')+metric('Shots',t.shots);
 
-    if(E('defenseMetrics'))E('defenseMetrics').innerHTML=
-      metric('+ / -',t.plus_minus)+metric('Hits',t.hits)+metric('Takeaways',t.takeaways)+
-      metric('Giveaways',t.giveaways)+metric('Turnover Diff',t.takeaways-t.giveaways)+metric('Blocks',t.blocks);
+    if(E('defenseMetrics'))E('defenseMetrics').innerHTML=goalie
+      ?metric('Goals Against',t.goals_against)+metric('Saves / Game',t.games?(t.saves/t.games).toFixed(1):'0.0')+metric('GA / Game',t.games?(t.goals_against/t.games).toFixed(2):'0.00')
+      :metric('+ / -',t.plus_minus)+metric('Hits',t.hits)+metric('Takeaways',t.takeaways)+metric('Giveaways',t.giveaways)+metric('Turnover Diff',t.takeaways-t.giveaways)+metric('Blocks',t.blocks);
 
-    if(E('teamMetrics'))E('teamMetrics').innerHTML=
-      metric('PIM',t.pim)+metric('Faceoff %',t.foN?t.faceoff_pct.toFixed(1)+'%':'—')+
-      metric('Passing %',t.passN?t.passing_pct.toFixed(1)+'%':'—')+metric('Position',locker.position||'—');
+    if(E('teamMetrics'))E('teamMetrics').innerHTML=goalie
+      ?metric('Position','G')+metric('Games',t.games)+metric('Save %',t.shots_faced?t.save_pct.toFixed(1)+'%':'—')
+      :metric('PIM',t.pim)+metric('Faceoff %',t.foN?t.faceoff_pct.toFixed(1)+'%':'—')+metric('Passing %',t.passN?t.passing_pct.toFixed(1)+'%':'—')+metric('Position',locker.position||'—');
 
-    H('profileStatsTab',
-      metric('Games',t.games)+metric('Goals',t.goals)+metric('Assists',t.assists)+metric('Points',t.points)+
-      metric('Points / Game',t.games?(t.points/t.games).toFixed(2):'0.00')+metric('Shots',t.shots)+
-      metric('Hits',t.hits)+metric('Takeaways',t.takeaways)+metric('Giveaways',t.giveaways)+metric('Blocks',t.blocks)+metric('PIM',t.pim)
+    H('profileStatsTab',goalie
+      ?metric('Games',t.games)+metric('Saves',t.saves)+metric('Shots Faced',t.shots_faced)+metric('Goals Against',t.goals_against)+metric('Save %',t.shots_faced?t.save_pct.toFixed(1)+'%':'—')
+      :metric('Games',t.games)+metric('Goals',t.goals)+metric('Assists',t.assists)+metric('Points',t.points)+metric('Points / Game',t.games?(t.points/t.games).toFixed(2):'0.00')+metric('Shots',t.shots)+metric('Hits',t.hits)+metric('Takeaways',t.takeaways)+metric('Giveaways',t.giveaways)+metric('Blocks',t.blocks)+metric('PIM',t.pim)
     );
 
     H('profileScoutingTab',scoutingSummaryHtml());
-    T('profileVodSummary',reports.length?reports.length+' reviewed game'+(reports.length===1?'':'s')+' currently feed this player profile.':'Game review evidence will populate here as VOD reports are attached.');
+    const vodReviewed=reports.filter(r=>r.coach_summary||r.tactical_notes||r.strengths||r.improvements||String(r.evidence?.vod_status||'').toLowerCase()==='complete').length;
+    T('profileVodSummary',vodReviewed
+      ?vodReviewed+' VOD-reviewed game'+(vodReviewed===1?'':'s')+' currently feed this player profile.'
+      :reports.length?reports.length+' game stat line'+(reports.length===1?' is':'s are')+' loaded. VOD scouting is pending.':'Game review evidence will populate here as VOD reports are attached.');
 
     renderDashboardScouting();
     renderWeeklyPerformance();
