@@ -203,6 +203,60 @@ def retrieve(job_id):
             if time.monotonic() > deadline or worker.STOP.wait(1):
                 raise worker.Problem(504, 'Replay retrieval timed out. Try Analyze Game again or upload the recording.')
 
+
+    def clock_value(seconds):
+        value = max(0, int(seconds or 0))
+        hours, remainder = divmod(value, 3600)
+        minutes, secs = divmod(remainder, 60)
+        return f'{hours}:{minutes:02d}:{secs:02d}' if hours else f'{minutes}:{secs:02d}'
+
+    def launch_ytdlp(use_auth=False):
+        for item in folder.glob('ytdlp.*'):
+            item.unlink(missing_ok=True)
+        args = [
+            'yt-dlp', '--no-playlist', '--no-part', '--retries', '2',
+            '--fragment-retries', '2', '--socket-timeout', '20',
+            '-f', 'best[height<=480]/worst',
+            '-o', str(folder / 'ytdlp.%(ext)s')
+        ]
+        if end is not None:
+            args.extend(['--download-sections', f'*{clock_value(start)}-{clock_value(end)}'])
+        elif start:
+            args.extend(['--download-sections', f'*{clock_value(start)}-inf'])
+        cookie_file = folder / 'twitch-cookies.txt'
+        if use_auth and twitch_token:
+            cookie_file.write_text(
+                '# Netscape HTTP Cookie File\n'
+                f'.twitch.tv\tTRUE\t/\tTRUE\t2147483647\tauth-token\t{twitch_token}\n'
+            )
+            os.chmod(cookie_file, 0o600)
+            args.extend(['--cookies', str(cookie_file)])
+        with (folder / 'ytdlp-error.log').open('wb') as err:
+            return subprocess.Popen(args + [url], stdout=subprocess.DEVNULL, stderr=err)
+
+    def wait_for_ytdlp(proc):
+        deadline = time.monotonic() + 1800
+        while proc.poll() is None:
+            size = sum(p.stat().st_size for p in folder.glob('ytdlp.*') if p.is_file())
+            if size > worker.MAX_UPLOAD or worker.disk_used() + size + 100 * 1024**2 > worker.MAX_STORAGE:
+                raise worker.Problem(413, 'This game window exceeds the video storage limit.')
+            if time.monotonic() > deadline or worker.STOP.wait(1):
+                raise worker.Problem(504, 'Alternate Twitch retrieval timed out.')
+
+    def finish_ytdlp():
+        candidates = [p for p in folder.glob('ytdlp.*') if p.is_file() and not p.name.endswith('.part')]
+        if not candidates:
+            return False
+        candidate = max(candidates, key=lambda p: p.stat().st_size)
+        if candidate.stat().st_size <= 0:
+            return False
+        worker.probe(candidate)
+        worker.command(['ffmpeg', '-v', 'error', '-i', str(candidate),
+                        '-map', '0:v:0', '-map', '0:a?', '-c', 'copy',
+                        '-y', str(folder / 'source.mp4')], 300)
+        worker.probe(folder / 'source.mp4')
+        return True
+
     # Three-stage retrieval. Public playback gets both normal and fresh-integrity
     # attempts before a saved account token is ever used, so a stale Twitch cookie
     # cannot poison an otherwise-public VOD.
@@ -224,25 +278,27 @@ def retrieve(job_id):
             proc = launch_streamlink(True, True)
             wait_for_streamlink(proc)
 
-        if proc.returncode or not source.exists() or not source.stat().st_size:
-            detail = ''
-            try:
-                detail = diagnostic.read_text(errors='ignore')[-6000:].lower()
-            except OSError:
-                pass
-            if any(term in detail for term in ('client-integrity', 'client integrity', 'webbrowser', 'chromium')):
-                raise worker.Problem(422, 'Twitch browser integrity verification failed for this VOD. The worker tried both authenticated playback and a fresh Chromium integrity check.')
-            if any(term in detail for term in ('subscriber', 'authentication', 'unauthorized', 'forbidden', '403', 'restricted')):
-                raise worker.Problem(422, 'Twitch rejected authenticated playback for this VOD. Refresh the Twitch auth-token connection and try again.')
-            if not twitch_token:
-                raise worker.Problem(422, 'Twitch blocked public replay playback after both normal and fresh-integrity attempts. The MP4 control is only a fallback, not the required workflow.')
-            raise worker.Problem(422, 'Twitch blocked the replay after public normal, public fresh-integrity, and authenticated fallback attempts. The MP4 control is only a fallback.')
-        if source.stat().st_size > worker.MAX_UPLOAD:
-            raise worker.Problem(413, 'Replay exceeds the video size limit.')
-        worker.probe(source)
-        worker.command(['ffmpeg', '-v', 'error', '-protocol_whitelist', 'file', '-i', str(source),
-                        '-map', '0:v:0', '-map', '0:a?', '-c', 'copy', '-y', str(folder / 'source.mp4')], 300)
-        worker.probe(folder / 'source.mp4')
+        streamlink_ok = not proc.returncode and source.exists() and source.stat().st_size > 0
+        if streamlink_ok:
+            if source.stat().st_size > worker.MAX_UPLOAD:
+                raise worker.Problem(413, 'Replay exceeds the video size limit.')
+            worker.probe(source)
+            worker.command(['ffmpeg', '-v', 'error', '-protocol_whitelist', 'file', '-i', str(source),
+                            '-map', '0:v:0', '-map', '0:a?', '-c', 'copy', '-y', str(folder / 'source.mp4')], 300)
+            worker.probe(folder / 'source.mp4')
+        else:
+            # Streamlink can be rejected by Twitch even for a VOD that is playable in a
+            # normal browser. Use yt-dlp as a second independent Twitch resolver and
+            # keep the same saved game-window cut so the full broadcast is never pulled.
+            ytdlp = launch_ytdlp(False)
+            wait_for_ytdlp(ytdlp)
+            ytdlp_ok = ytdlp.returncode == 0 and finish_ytdlp()
+            if not ytdlp_ok and twitch_token:
+                ytdlp = launch_ytdlp(True)
+                wait_for_ytdlp(ytdlp)
+                ytdlp_ok = ytdlp.returncode == 0 and finish_ytdlp()
+            if not ytdlp_ok:
+                raise worker.Problem(422, 'Twitch blocked both Streamlink and the alternate Twitch VOD retriever. The MP4/MOV control remains only a last-resort fallback.')
         worker.update(job_id, 'queued')
     except Exception:
         (folder / 'source.mp4').unlink(missing_ok=True)
@@ -257,3 +313,7 @@ def retrieve(job_id):
                 proc.wait()
         source.unlink(missing_ok=True)
         diagnostic.unlink(missing_ok=True)
+        (folder / 'twitch-cookies.txt').unlink(missing_ok=True)
+        (folder / 'ytdlp-error.log').unlink(missing_ok=True)
+        for item in folder.glob('ytdlp.*'):
+            item.unlink(missing_ok=True)
