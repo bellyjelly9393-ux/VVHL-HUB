@@ -1,11 +1,6 @@
 (() => {
   const TEAM_NAME = 'Calgary Hitmen';
   const SEASON = 'Season 55';
-  const STAFF = [
-    { role: 'Owner', gamertag: 'IMONA_PLAIN', number: '16' },
-    { role: 'GM', gamertag: 'Bad News Kells', number: '5' },
-    { role: 'AGM', gamertag: 'Smokoli', number: '83' }
-  ];
   const db = () => window.VVHLBackend?.db;
   const auth = () => window.VVHLBackend?.state || {};
   const $ = id => document.getElementById(id);
@@ -40,23 +35,6 @@
     return enforceHitmenAccess();
   }
 
-  function configureTeamPanel(){
-    const root=$('hitmenPlayerList');
-    const panel=root?.closest('.hitmen-panel');
-    if(panel){
-      const eyebrow=panel.querySelector('.eyebrow'); if(eyebrow) eyebrow.textContent='CALGARY HITMEN';
-      const title=panel.querySelector('h3'); if(title) title.textContent='Team Management';
-      panel.querySelector('.hitmen-toolbar')?.remove();
-      panel.querySelector('.scout-section-title')?.remove();
-      panel.querySelector('.hitmen-add-player')?.remove();
-    }
-    const detailPanel=$('hitmenEmpty')?.closest('.hitmen-panel');
-    if(detailPanel) detailPanel.style.display='none';
-  }
-  function renderStaff(){
-    const root=$('hitmenPlayerList'); if(!root)return;
-    root.innerHTML=STAFF.map(s=>`<div class="hitmen-player"><span><strong>${esc(s.gamertag)}</strong><small>Calgary Hitmen · ${esc(SEASON)} · #${esc(s.number)}</small></span><b>${esc(s.role.toUpperCase())}</b></div>`).join('');
-  }
 
   async function loadAll(){
     if(S.loading||!db()||!auth().user)return;
@@ -89,9 +67,9 @@
   function renderActiveSession(){
     const root=$('activeSession');if(!root)return;
     const s=S.sessions.find(x=>x.status!=='complete')||S.sessions[0];
-    if(!s){root.innerHTML='<div class="scout-empty compact">No scouting series yet. Create tonight’s BO3 above.</div>';return;}
+    if(!s){root.innerHTML='<div class="scout-empty compact">No game-night series yet. Create tonight’s BO3 above.</div>';return;}
     const games=sessionGames(s.id), need=Math.floor(n(s.best_of)/2)+1;
-    root.innerHTML=`<div class="session-card"><div class="session-head"><div><small>${esc(s.status.toUpperCase())} · BEST OF ${n(s.best_of)} · FIRST TO ${need}</small><h4>${esc(s.label)}</h4></div><div class="series-score">HITMEN ${n(s.team_wins)}–${n(s.opponent_wins)} OPP</div></div>${s.opponent_label?`<p>Opponent / lobby: <strong>${esc(s.opponent_label)}</strong></p>`:''}<div class="hitmen-actions">${streamLink(s.stream_url)}${s.status!=='complete'?`<button class="small-btn" type="button" data-pause-session="${s.id}">${s.status==='paused'?'Resume':'Pause'} Session</button>`:''}</div><div class="session-games">${games.map(g=>`<div class="session-game ${g.status==='not_required'?'not_required':''}"><span><strong>Game ${g.game_number}</strong><small class="game-status ${g.status}">${esc(g.status.replace('_',' '))}</small></span><span>${g.status==='not_required'?'Series already clinched':'Actual scouting game'}</span><input class="field" type="number" min="0" value="${n(g.team_score)}" aria-label="Hitmen score" data-team-score="${g.id}" ${['final','not_required'].includes(g.status)?'disabled':''}><input class="field" type="number" min="0" value="${n(g.opponent_score)}" aria-label="Opponent score" data-opp-score="${g.id}" ${['final','not_required'].includes(g.status)?'disabled':''}>${g.status==='scheduled'?`<button class="small-btn" type="button" data-start-game="${g.id}">Start</button>`:''}${g.status==='live'?`<button class="small-btn primary" type="button" data-final-game="${g.id}">Final</button>`:''}${g.status==='final'?'<b>✓</b>':''}</div>`).join('')}</div></div>`;
+    root.innerHTML=`<div class="session-card"><div class="session-head"><div><small>${esc(s.status.toUpperCase())} · BEST OF ${n(s.best_of)} · FIRST TO ${need}</small><h4>${esc(s.label)}</h4></div><div class="series-score">HITMEN ${n(s.team_wins)}–${n(s.opponent_wins)} OPP</div></div>${s.opponent_label?`<p>Opponent / lobby: <strong>${esc(s.opponent_label)}</strong></p>`:''}<div class="hitmen-actions">${streamLink(s.stream_url)}${s.status!=='complete'?`<button class="small-btn" type="button" data-pause-session="${s.id}">${s.status==='paused'?'Resume':'Pause'} Session</button>`:''}</div><div class="session-games">${games.map(g=>`<div class="session-game ${g.status==='not_required'?'not_required':''}"><span><strong>Game ${g.game_number}</strong><small class="game-status ${g.status}">${esc(g.status.replace('_',' '))}</small></span><span>${g.status==='not_required'?'Series already clinched':'Game-night matchup'}</span><input class="field" type="number" min="0" value="${n(g.team_score)}" aria-label="Hitmen score" data-team-score="${g.id}" ${['final','not_required'].includes(g.status)?'disabled':''}><input class="field" type="number" min="0" value="${n(g.opponent_score)}" aria-label="Opponent score" data-opp-score="${g.id}" ${['final','not_required'].includes(g.status)?'disabled':''}>${g.status==='scheduled'?`<button class="small-btn" type="button" data-start-game="${g.id}">Start</button>`:''}${g.status==='live'?`<button class="small-btn primary" type="button" data-final-game="${g.id}">Final</button>`:''}${g.status==='final'?'<b>✓</b>':''}</div>`).join('')}</div></div>`;
     root.querySelectorAll('[data-start-game]').forEach(b=>b.addEventListener('click',()=>startGame(b.dataset.startGame)));
     root.querySelectorAll('[data-final-game]').forEach(b=>b.addEventListener('click',()=>finalGame(b.dataset.finalGame)));
     root.querySelectorAll('[data-pause-session]').forEach(b=>b.addEventListener('click',()=>togglePause(s)));
@@ -102,20 +80,20 @@
     root.innerHTML=S.sessions.slice(0,12).map(s=>`<div class="session-history-row"><span><strong>${esc(s.label)}</strong><small>${esc(s.season_label)} · BO${n(s.best_of)} · ${esc(s.status)}</small></span><b>${n(s.team_wins)}–${n(s.opponent_wins)}</b></div>`).join('');
   }
   async function createSession(){
-    const bestOf=Number($('sessionBestOf').value)||3, label=$('sessionLabel').value.trim()||'Calgary Hitmen Scouting Night';
+    const bestOf=Number($('sessionBestOf').value)||3, label=$('sessionLabel').value.trim()||'Calgary Hitmen Game Night';
     try{
-      const r=await db().from('team_competitive_sessions').insert({team_id:S.team.id,season_label:SEASON,session_type:'scouting',label,opponent_label:$('sessionOpponent').value.trim()||null,best_of:bestOf,stream_url:$('sessionStream').value.trim()||null,status:'scheduled',created_by:auth().user.id}).select('id').single();
+      const r=await db().from('team_competitive_sessions').insert({team_id:S.team.id,season_label:SEASON,session_type:'regular',label,opponent_label:$('sessionOpponent').value.trim()||null,best_of:bestOf,stream_url:$('sessionStream').value.trim()||null,status:'scheduled',created_by:auth().user.id}).select('id').single();
       if(r.error)throw r.error;
       const games=Array.from({length:bestOf},(_,i)=>({session_id:r.data.id,game_number:i+1,status:'scheduled'}));
       const g=await db().from('team_competitive_games').insert(games);if(g.error)throw g.error;
-      await loadAll();setStatus(`BO${bestOf} scouting series created. Use the real stream and actual game results tonight.`,'success');
-    }catch(e){setStatus(e.message||'Could not create scouting series.','error');}
+      await loadAll();setStatus(`BO${bestOf} game-night series created. Use the real stream and actual game results tonight.`,'success');
+    }catch(e){setStatus(e.message||'Could not create game-night series.','error');}
   }
   async function startGame(id){
     try{
       const r=await db().from('team_competitive_games').update({status:'live',started_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id);
       if(r.error)throw r.error;
-      await loadAll();setStatus('Scouting game marked LIVE.','success');
+      await loadAll();setStatus('Game marked LIVE.','success');
     }catch(e){setStatus(e.message||'Could not start game.','error');}
   }
   async function finalGame(id){
@@ -137,7 +115,6 @@
     }catch(e){setStatus(e.message||'Could not change session status.','error');}
   }
   function renderKpis(){
-    if($('hitmenWatchCount')) $('hitmenWatchCount').textContent=STAFF.length;
     if($('hitmenReportCount')) $('hitmenReportCount').textContent=S.reports.length;
     if($('hitmenRosterCount')) $('hitmenRosterCount').textContent=S.lockers.filter(x=>x.roster_class!=='tc').length;
     if($('hitmenTcCount')) $('hitmenTcCount').textContent=S.lockers.filter(x=>x.roster_class==='tc').length;
@@ -145,11 +122,8 @@
     const finals=S.games.filter(g=>g.status==='final');
     const w=finals.filter(g=>n(g.team_score)>n(g.opponent_score)).length,l=finals.filter(g=>n(g.opponent_score)>n(g.team_score)).length;
     if($('hitmenRecord')) $('hitmenRecord').textContent=`${w}-${l}`;
-    const cards=document.querySelectorAll('.hitmen-kpi small');
-    if(cards[0]) cards[0].textContent='Management';
-    if(cards[1]) cards[1].textContent='Scouting Reports';
   }
-  function render(){configureTeamPanel();renderStaff();renderKpis();renderActiveSession();renderHistory();}
+  function render(){renderKpis();renderActiveSession();renderHistory();}
   function bind(){$('createSession')?.addEventListener('click',createSession);}
   bind();
   window.addEventListener('vvhl-auth-change',()=>loadAll());
