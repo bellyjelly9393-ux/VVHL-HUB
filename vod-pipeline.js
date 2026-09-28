@@ -58,6 +58,11 @@
     if(error)throw error;
     return (data||[]).filter(s=>s.end_seconds!=null).map(s=>({id:s.id,label:s.label,start:Number(s.start_seconds),end:Number(s.end_seconds)}));
   }
+  const sourceOffset=review=>Math.max(0,Number(review?.source_start_seconds)||0);
+  const workerPeriods=(review,periods)=>{
+    const offset=sourceOffset(review);
+    return periods.map(p=>({label:p.label,start:Math.max(0,p.start-offset),end:Math.max(0,p.end-offset)}));
+  };
 
   function install(){
     const detail=document.getElementById('vodDetail');
@@ -165,6 +170,7 @@
       if(!review)throw new Error('Select a VOD review first.');
       ensureScoutMode(review);
       const periods=await periodsFor(review.id);
+      const localPeriods=workerPeriods(review,periods);
       const file=document.getElementById('vodPipelineFile')?.files?.[0];
       if(!file)throw new Error('Choose the MP4 or MOV recording first.');
       const healthResponse=await fetch(WORKER+'/health',{cache:'no-store'});
@@ -172,7 +178,7 @@
       const health=await healthResponse.json();
       if(file.size>health.maxUploadBytes)throw new Error(`This recording exceeds the current ${Math.floor(health.maxUploadBytes/1024/1024)} MB limit.`);
       setStatus('Creating secure video job…');
-      const job=await workerFetch('/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game_id:review.id,title:review.title||'Game VOD',vod_url:review.vod_url||'',players:'',periods:periods.length>=3?periods.map(p=>({label:p.label,start:p.start,end:p.end})):[]})});
+      const job=await workerFetch('/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game_id:review.id,title:review.title||'Game VOD',vod_url:review.vod_url||'',players:review.scouting_context||'',game_format:review.game_format||'6s',vod_offset_seconds:sourceOffset(review),periods:localPeriods.length>=3?localPeriods:[]})});
       await db().from('vod_review_sessions').update({worker_job_id:job.id,worker_status:job.status,source_file_name:file.name,worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',review.id);
       setStatus(`Uploading ${file.name}… keep this tab open until the upload finishes.`);
       const uploaded=await workerFetch(`/jobs/${encodeURIComponent(job.id)}/upload`,{method:'PUT',headers:{'Content-Type':'application/octet-stream'},body:file});
@@ -197,7 +203,7 @@
       if(review.worker_status==='needs_periods'){
         const periods=await periodsFor(review.id);
         if(periods.length<3)throw new Error('Automatic detection needs help. Mark P1, P2 and P3 below, press Build / Update Periods, then press Continue / Retry. The video stays uploaded.');
-        const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/periods`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({periods:periods.map(p=>({label:p.label,start:p.start,end:p.end}))})});
+        const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/periods`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({periods:workerPeriods(review,periods)})});
         await db().from('vod_review_sessions').update({worker_status:job.status,worker_updated_at:new Date().toISOString()}).eq('id',review.id);
         setStatus('Manual period correction accepted. Reusing the uploaded video now.','good');
         beginPoll(review.worker_job_id,review.id);
@@ -256,9 +262,10 @@
     const {data:existing,error:existingError}=await db().from('vod_review_segments').select('id').eq('review_id',reviewId).limit(1);
     if(existingError)throw existingError;
     if(existing?.length)return false;
-    const {data:review,error:rerr}=await db().from('vod_review_sessions').select('team_id').eq('id',reviewId).maybeSingle();
+    const {data:review,error:rerr}=await db().from('vod_review_sessions').select('team_id,source_start_seconds').eq('id',reviewId).maybeSingle();
     if(rerr)throw rerr;if(!review?.team_id)return false;
-    const payload=periods.map((p,i)=>({review_id:reviewId,team_id:review.team_id,segment_type:'period',segment_index:i+1,label:p.label||`Period ${i+1}`,start_seconds:Number(p.start),end_seconds:Number(p.end),status:'queued',confidence:'preliminary'}));
+    const offset=sourceOffset(review);
+    const payload=periods.map((p,i)=>({review_id:reviewId,team_id:review.team_id,segment_type:'period',segment_index:i+1,label:p.label||`Period ${i+1}`,start_seconds:offset+Number(p.start),end_seconds:offset+Number(p.end),status:'queued',confidence:'preliminary'}));
     const {error}=await db().from('vod_review_segments').upsert(payload,{onConflict:'review_id,segment_type,segment_index'});if(error)throw error;
     await db().from('vod_review_sessions').update({duration_seconds:Number(job.result?.duration)||null,overtime_count:0,updated_at:new Date().toISOString()}).eq('id',reviewId);
     return true;
@@ -305,17 +312,18 @@
 
   async function ingest(job,reviewId){
     const chunks=job?.result?.chunks||[]; if(!chunks.length)return;
+    const {data:review,error:reviewError}=await db().from('vod_review_sessions').select('team_id,source_start_seconds').eq('id',reviewId).maybeSingle();
+    if(reviewError)throw reviewError;if(!review?.team_id)throw new Error('VOD review team is missing.');
+    const offset=sourceOffset(review);
     let {data:segments,error}=await db().from('vod_review_segments').select('*').eq('review_id',reviewId).order('start_seconds');
     if(error)throw error;
 
     const fallbackFullGame=job?.result?.period_detection==='full_game_fallback';
     if((!segments||!segments.length)&&fallbackFullGame){
-      const {data:review,error:rerr}=await db().from('vod_review_sessions').select('team_id').eq('id',reviewId).maybeSingle();
-      if(rerr)throw rerr;
       const duration=Number(job?.result?.duration)||Math.max(...chunks.map(c=>Number(c.end)||0));
       const {data:created,error:cerr}=await db().from('vod_review_segments').insert({
         review_id:reviewId,team_id:review.team_id,segment_type:'custom',segment_index:1,label:'Full Game',
-        start_seconds:0,end_seconds:duration,status:'queued',confidence:'preliminary'
+        start_seconds:offset,end_seconds:offset+duration,status:'queued',confidence:'preliminary'
       }).select('*').single();
       if(cerr)throw cerr;
       segments=[created];
@@ -332,7 +340,7 @@
       const observationPlayers=matched.flatMap(c=>(c.review?.observations||[]).filter(o=>o.player).map(o=>`${o.player} — ${o.note}`));
       const evaluatedPlayers=matched.flatMap(c=>(c.review?.player_evaluations||[]).map(p=>{
         const pos=p.position?` (${p.position})`:'';
-        const stamps=(p.evidence_timestamps||[]).map(x=>Math.floor(Number(x)||0)).filter(Number.isFinite);
+        const stamps=(p.evidence_timestamps||[]).map(x=>offset+Math.floor(Number(x)||0)).filter(Number.isFinite);
         const evidence=stamps.length?` [evidence: ${stamps.join(', ')}s]`:'';
         return `${p.player}${pos} — Strengths: ${p.strengths||'—'} | Concerns: ${p.concerns||'—'} | Habits: ${p.habits||'—'} | Coach: ${p.coach_note||'—'} | Confidence: ${p.confidence||'low'}${evidence}`;
       }));
@@ -358,9 +366,10 @@
         const category=String(o.category||'general').replaceAll('_',' ');
         const impact=o.impact?` · ${o.impact}`:'';
         const note=`[AI ${String(o.source||'gameplay').replaceAll('_',' ')} · ${category}${impact}] ${o.note}`;
-        const key=`${Math.round(Number(o.timestamp)||0)}|${note}`;
+        const absoluteTimestamp=offset+(Number(o.timestamp)||0);
+        const key=`${Math.round(absoluteTimestamp)}|${note}`;
         if(seen.has(key))continue; seen.add(key);
-        markers.push({review_id:reviewId,segment_id:seg.id,team_id:seg.team_id,timestamp_seconds:Number(o.timestamp)||0,category:'general',player_label:o.player||null,note,created_by:auth().user?.id||null});
+        markers.push({review_id:reviewId,segment_id:seg.id,team_id:seg.team_id,timestamp_seconds:absoluteTimestamp,category:'general',player_label:o.player||null,note,created_by:auth().user?.id||null});
       }
     }
     if(markers.length){const {error:merr}=await db().from('vod_review_markers').insert(markers);if(merr)throw merr;}
