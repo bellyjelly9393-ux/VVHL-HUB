@@ -31,6 +31,9 @@
     return (state.memberships || []).some((membership) => {
       const role = String(membership.role || "").toLowerCase();
       if (membership.active === false) return false;
+      if (page === "hitmen-team-locker.html") {
+        return membership.team_id === HITMEN_TEAM_ID && (hitmenRoles.has(role) || role === "player");
+      }
       if (hitmenPage) return membership.team_id === HITMEN_TEAM_ID && hitmenRoles.has(role);
       return managementRoles.has(role);
     });
@@ -53,9 +56,12 @@
       if (!state.user) {
         lockedMessage.innerHTML =
           "<b>Management sign-in required.</b><p>This workspace is restricted to authorized management accounts.</p>";
+      } else if (page === "hitmen-team-locker.html") {
+        lockedMessage.innerHTML =
+          "<b>Calgary Hitmen team access not assigned.</b><p>Use the Discord account linked to an active Season 55 roster spot.</p>";
       } else if (hitmenPage) {
         lockedMessage.innerHTML =
-          "<b>Calgary Hitmen access not assigned.</b><p>Your account is signed in, but it does not currently have an active Owner, GM, AGM or Scout membership for the Calgary Hitmen.</p>";
+          "<b>Calgary Hitmen management access not assigned.</b><p>This page is restricted to authorized Owner, GM, AGM or Scout accounts.</p>";
       } else {
         lockedMessage.innerHTML =
           "<b>Management access not assigned.</b><p>Your account is signed in, but it is not currently assigned an Owner, GM, AGM, Commissioner or Admin role.</p>";
