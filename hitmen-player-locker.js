@@ -13,6 +13,7 @@
   let weekly=[];
   let lineReports=[];
   let signedImage=null;
+  let lockerClaimAttempted=false;
 
   const isAdmin=()=>String(ST().profile?.role||'').toLowerCase()==='admin';
   const member=()=> (ST().memberships||[]).find(m=>m.team_id===TEAM&&m.active!==false);
@@ -33,34 +34,48 @@
   }
 
   async function chooseLocker(){
-    const uid=ST().user?.id;
+    const authUser=(await DB().auth.getUser()).data?.user;
+    const uid=authUser?.id||ST().user?.id;
     if(!uid)return null;
     const wanted=new URLSearchParams(location.search).get('player');
     const base=()=>DB().from('team_player_lockers').select('*').eq('team_id',TEAM).eq('season',SEASON);
 
-    const mine=await base().eq('user_id',uid).limit(1).maybeSingle();
-    if(mine.error)throw mine.error;
+    const findMine=async()=>{
+      const mine=await base().eq('user_id',uid).limit(1).maybeSingle();
+      if(mine.error)throw mine.error;
+      return mine.data||null;
+    };
+
+    let mine=await findMine();
 
     if(wanted){
       const target=await base().eq('id',wanted).maybeSingle();
       if(target.error)throw target.error;
       if(target.data && (canManage() || target.data.user_id===uid))return target.data;
-      if(mine.data)return mine.data;
+      if(mine)return mine;
     }
 
-    if(mine.data)return mine.data;
+    if(mine)return mine;
 
-    let claim=ST().hitmenLockerClaim||null;
-    if(!claim?.locker_id){
+    // Self-heal Discord roster linkage on every fresh locker visit when needed.
+    // This avoids a stale browser/auth state leaving a correctly pre-linked player
+    // staring at "NO STALL LINKED" until management touches the database again.
+    if(!lockerClaimAttempted){
+      lockerClaimAttempted=true;
       const cr=await DB().rpc('claim_my_hitmen_discord_locker');
       if(cr.error)console.warn('Discord locker claim failed',cr.error);
-      else claim=cr.data||null;
+      else if(cr.data?.matched===true && cr.data?.claimed===true){
+        await new Promise(resolve=>setTimeout(resolve,180));
+        mine=await findMine();
+        if(mine)return mine;
+        if(cr.data?.locker_id){
+          const claimed=await base().eq('id',cr.data.locker_id).maybeSingle();
+          if(claimed.error)throw claimed.error;
+          if(claimed.data && claimed.data.user_id===uid)return claimed.data;
+        }
+      }
     }
-    if(claim?.matched===true && claim?.claimed===true && claim?.locker_id){
-      const claimed=await base().eq('id',claim.locker_id).maybeSingle();
-      if(claimed.error)throw claimed.error;
-      if(claimed.data && claimed.data.user_id===uid)return claimed.data;
-    }
+
     return null;
   }
 
@@ -309,6 +324,15 @@
     try{
       locker=await chooseLocker();
       if(!locker){
+        // One delayed re-check covers OAuth redirects where the identity/membership
+        // finishes settling a fraction after the first auth-change event.
+        if(!load._rechecked){
+          load._rechecked=true;
+          setTimeout(()=>load(),650);
+          T('playerTitle','LINKING LOCKER…');
+          T('profileStatusText','Checking your Discord roster link.');
+          return;
+        }
         T('playerTitle','NO STALL LINKED');
         T('profileStatusText','Discord account is signed in, but no roster locker is linked.');
         T('profileAvailability','LINK NEEDED');
