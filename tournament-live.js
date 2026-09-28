@@ -3,7 +3,7 @@
   const KEY='sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
   const db=window.VVHLBackend?.db || (window.supabase?window.supabase.createClient(URL,KEY):null);
   if(!db) return;
-  const S={events:[],teams:[],players:[],games:[],teamStats:[],playerStats:[],eventTeams:[],rosters:[],rankings:[]};
+  const S={events:[],teams:[],players:[],games:[],sources:[],teamStats:[],playerStats:[],eventTeams:[],rosters:[],rankings:[]};
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[c]);
   const team=id=>S.teams.find(x=>x.id===id);
@@ -41,13 +41,80 @@
     return `<a class="game-row ${live?'is-live':''} ${g.featured?'is-featured':''}" href="${gameHref(g)}"><div><strong>${live?'LIVE':esc(extra)}</strong><small style="display:block">${esc(g.stage||g.round_label||event(g.event_id)?.name||'Tournament')}</small></div><div><strong>${esc(h)} vs ${esc(a)}</strong><small style="display:block">${esc(event(g.event_id)?.name||'Esports Event')}${g.commentary_status==='live'?' · WILDMAN COMMENTARY':''}</small></div><div class="game-score">${esc(score(g))}</div><div class="game-result">${live?'WATCH LIVE':g.status==='final'?'FINAL':'OPEN'} →</div></a>`;
   }
 
+  function publicSources(){
+    return S.sources
+      .filter(s=>s.active!==false&&s.public_visible===true&&s.url)
+      .map(s=>({
+        _kind:'source',
+        _key:'source:'+s.id,
+        id:s.id,
+        event_id:s.event_id,
+        stream_url:s.url,
+        stream_provider:s.provider||'external',
+        broadcast_title:s.display_label||s.metadata?.title||'Wildman Club Live',
+        status:'live',
+        scheduled_at:s.created_at,
+        intake_mode:s.intake_mode||'media'
+      }))
+      .sort((a,b)=>new Date(b.scheduled_at||0)-new Date(a.scheduled_at||0));
+  }
+
+  function featuredCopy(g){
+    if(g._kind==='source'){
+      return {
+        key:g._key,
+        title:g.broadcast_title||'Wildman Club Live',
+        subtitle:(event(g.event_id)?.name||'Wildman Esports')+' · Live Twitch broadcast',
+        status:'LIVE NOW',
+        detail:'Public club stream',
+        provider:String(g.stream_provider||'stream').toUpperCase(),
+        primaryHref:g.stream_url,
+        primaryLabel:'Open on Twitch'
+      };
+    }
+    const h=team(g.home_team_id)?.name||'TBD',a=team(g.away_team_id)?.name||'TBD';
+    return {
+      key:'game:'+g.id,
+      title:h+' vs '+a,
+      subtitle:(event(g.event_id)?.name||'Tournament')+' · '+(g.broadcast_title||g.round_label||g.stage||'Featured matchup'),
+      status:g.status==='live'?'LIVE NOW':String(g.status||'scheduled').toUpperCase(),
+      detail:(score(g))+' · '+(g.status==='live'&&g.period?('Period '+g.period+(g.clock?' · '+g.clock:'')):fmt(g.scheduled_at)),
+      provider:String(g.stream_provider||'TBD').toUpperCase(),
+      primaryHref:gameHref(g),
+      primaryLabel:'Open Game Page'
+    };
+  }
+
   function renderFeatured(){
     const root=$('featuredBroadcast'); if(!root)return;
     const rows=[...S.games].sort((a,b)=>(statusRank[a.status]??9)-(statusRank[b.status]??9)||new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));
-    const g=rows.find(x=>x.featured&&x.status==='live')||rows.find(x=>x.featured)||rows.find(x=>x.status==='live'&&x.stream_url)||rows.find(x=>x.status==='live')||rows.find(x=>x.status==='scheduled'&&x.stream_url);
-    if(!g){root.innerHTML='<div class="featured-placeholder"><div><strong>No featured broadcast yet</strong><p>The broadcast desk can feature any tournament matchup as soon as the schedule and stream are assigned.</p></div></div>';return;}
-    const h=team(g.home_team_id)?.name||'TBD',a=team(g.away_team_id)?.name||'TBD',embed=streamEmbed(g);
-    root.innerHTML=`<div class="featured-stage">${embed||`<div class="featured-placeholder"><div><strong>${g.stream_url?'Open broadcast':'Stream pending'}</strong><p>${g.stream_url?'This provider opens from the game page.':'A stream has not been attached to this matchup yet.'}</p>${g.stream_url?`<a class="btn btn-primary" href="${esc(g.stream_url)}" target="_blank" rel="noopener">Open Stream</a>`:''}</div></div>`}<div class="featured-meta"><span class="live-chip">${g.status==='live'?'LIVE NOW':esc(g.status.toUpperCase())}</span><h3>${esc(h)} ${g.status==='scheduled'?'vs':g.home_score??0} ${g.status==='scheduled'?'':`- ${g.away_score??0}`} ${g.status==='scheduled'?esc(a):esc(a)}</h3><p>${esc(event(g.event_id)?.name||'Tournament')} · ${esc(g.broadcast_title||g.round_label||g.stage||'Featured matchup')}</p></div></div><aside class="live-sidecard"><div class="eyebrow">FEATURED GAME</div><h3>${esc(h)} vs ${esc(a)}</h3><p><b>${esc(score(g))}</b> · ${g.status==='live'&&g.period?`Period ${g.period}${g.clock?` · ${esc(g.clock)}`:''}`:esc(fmt(g.scheduled_at))}</p><p>Commentary: <b>${esc((g.commentary_status||'none').toUpperCase())}</b></p><p>Stream: <b>${esc(g.stream_provider||'TBD')}</b></p><a class="btn btn-primary" href="${gameHref(g)}">Open Game Page</a><a class="btn btn-secondary" href="multiview.html" style="margin-top:8px">Open Multiview</a></aside>`;
+    const source=publicSources()[0];
+    const g=rows.find(x=>x.featured&&x.status==='live'&&x.stream_url)||
+            rows.find(x=>x.status==='live'&&x.stream_url)||
+            source||
+            rows.find(x=>x.featured&&x.stream_url)||
+            rows.find(x=>x.status==='scheduled'&&x.stream_url);
+    if(!g){
+      if(root.dataset.broadcastKey!=='empty'){
+        root.dataset.broadcastKey='empty';
+        root.innerHTML='<div class="featured-placeholder"><div><strong>No live broadcast attached</strong><p>Add a public Twitch source or attach a stream to a game. The player will stay mounted while the data board refreshes.</p></div></div>';
+      }
+      return;
+    }
+    const copy=featuredCopy(g),embed=streamEmbed(g);
+    const same=root.dataset.broadcastKey===copy.key;
+    if(!same){
+      root.dataset.broadcastKey=copy.key;
+      root.innerHTML=`<div class="featured-stage">${embed||`<div class="featured-placeholder"><div><strong>Open broadcast</strong><p>This provider opens externally.</p><a class="btn btn-primary" href="${esc(g.stream_url)}" target="_blank" rel="noopener">Open Stream</a></div></div>`}<div class="featured-meta"><span class="live-chip" data-feature-status></span><h3 data-feature-title></h3><p data-feature-subtitle></p></div></div><aside class="live-sidecard"><div class="eyebrow">MAIN BROADCAST</div><h3 data-feature-side-title></h3><p data-feature-detail></p><p>Stream: <b data-feature-provider></b></p><a class="btn btn-primary" data-feature-primary></a><a class="btn btn-secondary" href="multiview.html" style="margin-top:8px">Open Multiview</a></aside>`;
+    }
+    root.querySelector('[data-feature-status]')?.replaceChildren(document.createTextNode(copy.status));
+    root.querySelector('[data-feature-title]')?.replaceChildren(document.createTextNode(copy.title));
+    root.querySelector('[data-feature-subtitle]')?.replaceChildren(document.createTextNode(copy.subtitle));
+    root.querySelector('[data-feature-side-title]')?.replaceChildren(document.createTextNode(copy.title));
+    root.querySelector('[data-feature-detail]')?.replaceChildren(document.createTextNode(copy.detail));
+    root.querySelector('[data-feature-provider]')?.replaceChildren(document.createTextNode(copy.provider));
+    const primary=root.querySelector('[data-feature-primary]');
+    if(primary){primary.href=copy.primaryHref;primary.textContent=copy.primaryLabel;if(g._kind==='source'){primary.target='_blank';primary.rel='noopener';}else{primary.removeAttribute('target');primary.removeAttribute('rel');}}
   }
 
   function renderBoard(){
@@ -202,25 +269,26 @@
   }
   function renderCounts(){
     const e=roadEvent(); if(!e)return; const games=S.games.filter(g=>g.event_id===e.id); const set=(id,v)=>{if($(id))$(id).textContent=v;};
-    set('proGameCount',games.length); set('liveBroadcastCount',games.filter(g=>g.status==='live').length);
+    set('proGameCount',games.length); set('liveBroadcastCount',games.filter(g=>g.status==='live'&&g.stream_url).length+publicSources().length);
   }
 
   async function load(){
-    const [events,teams,players,games,teamStats,playerStats,eventTeams,rosters,rankings]=await Promise.all([
+    const [events,teams,players,games,sources,teamStats,playerStats,eventTeams,rosters,rankings]=await Promise.all([
       db.from('esports_events').select('*').eq('active',true),
       db.from('esports_teams').select('*').eq('active',true),
       db.from('esports_players').select('*').eq('active',true),
       db.from('esports_games').select('*'),
+      db.from('tournament_automation_sources').select('*').eq('active',true).eq('public_visible',true).order('slot_order'),
       db.from('esports_team_event_stats').select('*'),
       db.from('esports_player_event_stats').select('*'),
       db.from('esports_event_teams').select('*'),
       db.from('esports_event_rosters').select('*').eq('active',true),
       db.from('esports_event_rankings').select('*')
     ]);
-    const all=[events,teams,players,games,teamStats,playerStats,eventTeams,rosters,rankings];
+    const all=[events,teams,players,games,sources,teamStats,playerStats,eventTeams,rosters,rankings];
     if(all.some(x=>x.error)){console.error('Tournament live refresh failed',all.map(x=>x.error));return;}
     Object.assign(S,{
-      events:events.data||[],teams:teams.data||[],players:players.data||[],games:games.data||[],
+      events:events.data||[],teams:teams.data||[],players:players.data||[],games:games.data||[],sources:sources.data||[],
       teamStats:teamStats.data||[],playerStats:playerStats.data||[],eventTeams:eventTeams.data||[],
       rosters:rosters.data||[],rankings:rankings.data||[]
     });
