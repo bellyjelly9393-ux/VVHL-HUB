@@ -3,6 +3,7 @@
   const KEY='sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
   const db=window.VVHLBackend?.db || (window.supabase?window.supabase.createClient(URL,KEY):null);
   if(!db) return;
+  let requestedChannel=new URLSearchParams(location.search).get('channel')||'';
   const S={events:[],teams:[],players:[],games:[],sources:[],teamStats:[],playerStats:[],eventTeams:[],rosters:[],rankings:[],selectedBroadcastKey:sessionStorage.getItem('wildman-live-channel')||''};
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[c]);
@@ -66,6 +67,14 @@
     const root=$('broadcastChannelPicker'); if(!root)return;
     const sources=publicSources();
     if(!sources.length){root.innerHTML='<div class="empty-state">No public live channels are configured.</div>';return;}
+    if(requestedChannel){
+      const wanted=sources.find(s=>String(s.channel_key||'').toLowerCase()===String(requestedChannel).toLowerCase());
+      if(wanted){
+        S.selectedBroadcastKey=wanted._key;
+        sessionStorage.setItem('wildman-live-channel',S.selectedBroadcastKey);
+      }
+      requestedChannel='';
+    }
     if(!S.selectedBroadcastKey||!sources.some(s=>s._key===S.selectedBroadcastKey)){
       const wild=sources.find(s=>s.channel_key==='wildman')||sources[0];
       S.selectedBroadcastKey=wild._key;
@@ -119,6 +128,12 @@
     const sources=publicSources();
     const selected=sources.find(x=>x._key===S.selectedBroadcastKey);
     const source=selected||sources.find(x=>x.channel_key==='wildman')||sources[0];
+    const heading=document.querySelector('#featured .section-heading h2');
+    const intro=document.querySelector('#featured .live-channel-intro');
+    if(heading)heading.textContent=source?.channel_key==='hitmen'?'CALGARY HITMEN LIVE':'WILDMAN NETWORK LIVE';
+    if(intro)intro.textContent=source?.channel_key==='hitmen'
+      ?'Calgary Hitmen LGCHL coverage. Switch back to Wildman for tournament and network broadcasts, or use Multiview for both.'
+      :'Wildman tournament and esports-network coverage. Switch to Calgary Hitmen for the dedicated LGCHL team feed, or open Multiview for both.';
     const g=source||
             rows.find(x=>x.featured&&x.status==='live'&&x.stream_url)||
             rows.find(x=>x.status==='live'&&x.stream_url)||
