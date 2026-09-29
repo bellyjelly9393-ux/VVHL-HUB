@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#050505">
+  <title>Broadcast Studio | Wildman Hockey</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="wildman.css">
+  <link rel="stylesheet" href="management.css">
+  <link rel="stylesheet" href="network-v2.css">
+  <link rel="stylesheet" href="obs-control.css?v=20260929a">
+</head>
+<body class="wildman-site management-protected obs-control-page">
+<header class="site-header">
+  <a class="brand" href="index.html"><span class="wm-brand-mark">W</span><span class="brand-copy wm-brand-copy">WILDMAN HOCKEY<br><b>BROADCAST STUDIO</b></span></a>
+  <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <nav class="main-nav">
+    <a href="index.html">Home</a>
+    <a href="game-center.html">Game Center</a>
+    <a href="multiview.html">Multiview</a>
+    <a href="tournament-control.html">Tournament Ops</a>
+    <a href="management.html">Management</a>
+  </nav>
+</header>
+
+<main>
+  <section class="section-shell section-block management-login-shell">
+    <div class="section-heading">
+      <div><div class="eyebrow">PRIVATE · LIVE PRODUCTION</div><h2>BROADCAST STUDIO ACCESS</h2></div>
+      <div id="managementAccessStatus" class="status-pill">PRIVATE · MANAGEMENT ONLY</div>
+    </div>
+    <section id="accountPanel" class="panel account-panel"><div><div class="eyebrow">SECURE ACCESS</div><h3>Loading account…</h3></div></section>
+    <div id="managementLockedMessage" class="wm-card" style="margin-top:16px"><b>Management sign-in required.</b><p>Broadcast controls are restricted to authorized Wildman or team management.</p></div>
+  </section>
+
+  <div data-management-content hidden>
+    <section class="section-shell obs-studio-hero">
+      <div>
+        <div class="eyebrow">WILDMAN NETWORK · OBS</div>
+        <h1>LIVE<br><span>BROADCAST STUDIO.</span></h1>
+        <p>One permanent Browser Source. Change scenes, score, clock, matchup and player graphics here and OBS updates automatically.</p>
+      </div>
+      <div class="obs-hero-status">
+        <small>CHANNEL</small><strong id="heroChannel">WILDMAN-MAIN</strong>
+        <span id="publishStatus">READY</span>
+      </div>
+    </section>
+
+    <section class="section-shell section-block">
+      <div class="obs-layout">
+        <article class="obs-control-card">
+          <div class="obs-card-head">
+            <div><div class="eyebrow">1 · CONTROL CHANNEL</div><h2>Production Desk</h2></div>
+            <span id="stateUpdated" class="status-pill">WAITING</span>
+          </div>
+
+          <div class="obs-field-grid two">
+            <label>Team / Brand<select id="obsTeamSelect" class="select-field"></select></label>
+            <label>Event<input id="obsEvent" class="field" placeholder="LGCHL Season 55"></label>
+          </div>
+
+          <div class="obs-scene-strip" id="obsSceneStrip">
+            <button type="button" data-scene="game">Game</button>
+            <button type="button" data-scene="starting">Starting Soon</button>
+            <button type="button" data-scene="intermission">Intermission</button>
+            <button type="button" data-scene="final">Final</button>
+            <button type="button" data-scene="player">Player ID</button>
+            <button type="button" data-scene="brb">BRB</button>
+          </div>
+
+          <div class="obs-score-editor">
+            <div class="obs-score-side">
+              <label>Home Team<input id="obsHomeName" class="field" placeholder="Wildman Hockey"></label>
+              <div class="obs-score-stepper">
+                <button type="button" data-score="home" data-delta="-1">−</button>
+                <strong id="homeScoreDisplay">0</strong>
+                <button type="button" data-score="home" data-delta="1">+</button>
+              </div>
+              <input id="obsHomeScore" type="number" min="0" value="0" hidden>
+            </div>
+            <div class="obs-score-vs">VS</div>
+            <div class="obs-score-side">
+              <label>Away Team<input id="obsAwayName" class="field" placeholder="Opponent"></label>
+              <div class="obs-score-stepper">
+                <button type="button" data-score="away" data-delta="-1">−</button>
+                <strong id="awayScoreDisplay">0</strong>
+                <button type="button" data-score="away" data-delta="1">+</button>
+              </div>
+              <input id="obsAwayScore" type="number" min="0" value="0" hidden>
+            </div>
+          </div>
+
+          <div class="obs-field-grid three">
+            <label>Period<input id="obsPeriod" class="field" placeholder="1ST"></label>
+            <label>Clock<input id="obsClock" class="field" placeholder="20:00"></label>
+            <label>Record<input id="obsRecord" class="field" placeholder="2-1-0"></label>
+          </div>
+
+          <label>Scene Message<input id="obsMessage" class="field" placeholder="Tonight's matchup / intermission note / final note"></label>
+
+          <div class="obs-player-editor">
+            <div class="eyebrow">PLAYER LOWER THIRD</div>
+            <div class="obs-field-grid three">
+              <label>Name<input id="obsPlayerName" class="field" placeholder="Bad News Kells"></label>
+              <label>Number<input id="obsPlayerNumber" class="field" placeholder="5"></label>
+              <label>Role<input id="obsPlayerRole" class="field" placeholder="GM · RW"></label>
+            </div>
+          </div>
+
+          <div class="obs-actions">
+            <button id="publishObsState" class="small-btn primary" type="button">Publish Changes</button>
+            <button id="reloadObsState" class="small-btn" type="button">Reload Saved State</button>
+          </div>
+        </article>
+
+        <article class="obs-preview-card">
+          <div class="obs-card-head">
+            <div><div class="eyebrow">2 · LIVE PREVIEW</div><h2>OBS Output</h2></div>
+            <span class="status-pill">16:9 · 1920×1080</span>
+          </div>
+          <div class="obs-preview-frame">
+            <iframe id="obsPreview" title="OBS overlay preview" src="obs-overlay.html?channel=wildman-main&preview=1"></iframe>
+          </div>
+          <p class="obs-preview-note">The checkerboard is preview-only. In OBS the unused parts of the page are transparent.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section-shell section-block">
+      <article class="obs-source-card">
+        <div>
+          <div class="eyebrow">3 · OBS BROWSER SOURCE</div>
+          <h2>Permanent Source URL</h2>
+          <p>Add this once in OBS at <b>1920 × 1080</b>. Leave it in the scene collection and run the graphics from this control room.</p>
+        </div>
+        <div class="obs-source-row">
+          <input id="obsSourceUrl" class="field" readonly>
+          <button id="copyObsUrl" class="small-btn primary" type="button">Copy URL</button>
+          <a id="openObsUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Overlay</a>
+        </div>
+        <div class="obs-setup-grid">
+          <div><small>OBS SOURCE</small><strong>Browser</strong><span>Paste the permanent URL.</span></div>
+          <div><small>WIDTH</small><strong>1920</strong><span>Base canvas width.</span></div>
+          <div><small>HEIGHT</small><strong>1080</strong><span>Base canvas height.</span></div>
+          <div><small>REFRESH</small><strong>Automatic</strong><span>Realtime plus polling fallback.</span></div>
+        </div>
+      </article>
+    </section>
+  </div>
+</main>
+
+<footer><div class="section-shell footer-inner"><div><b>WILDMAN BROADCAST STUDIO</b><span>OBS overlays · team branding · live graphics</span></div><p>Private production controls</p></div></footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js"></script>
+<script src="management-guard.js"></script>
+<script src="script.js"></script>
+<script src="obs-control.js?v=20260929a"></script>
+</body>
+</html>

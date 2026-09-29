@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Wildman Broadcast Overlay</title>
+  <link rel="stylesheet" href="obs-overlay.css?v=20260929a">
+</head>
+<body data-brand="wildman" data-scene="game">
+  <main id="obsRoot" class="obs-root" aria-live="polite">
+    <div class="obs-safe-grid" aria-hidden="true"></div>
+
+    <section class="obs-corner-bug">
+      <div class="obs-brand-mark">
+        <img id="brandLogo" src="assets/wildman/logo.webp" alt="">
+        <span id="brandLetter">W</span>
+      </div>
+      <div class="obs-bug-copy">
+        <small id="bugEyebrow">WILDMAN HOCKEY</small>
+        <strong id="bugTitle">ESPORTS NETWORK</strong>
+      </div>
+      <span class="obs-live-dot">LIVE</span>
+    </section>
+
+    <section class="obs-scorebar">
+      <div class="obs-score-event">
+        <small id="scoreEvent">LIVE GAME</small>
+        <span id="scorePeriod">1ST</span>
+        <b id="scoreClock">20:00</b>
+      </div>
+      <div class="obs-team obs-team-home">
+        <span id="homeName">WILDMAN HOCKEY</span>
+        <strong id="homeScore">0</strong>
+      </div>
+      <div class="obs-score-divider">:</div>
+      <div class="obs-team obs-team-away">
+        <strong id="awayScore">0</strong>
+        <span id="awayName">OPPONENT</span>
+      </div>
+    </section>
+
+    <section class="obs-full-card">
+      <div class="obs-full-brand">
+        <div class="obs-full-mark">
+          <img id="fullBrandLogo" src="assets/wildman/logo.webp" alt="">
+          <span id="fullBrandLetter">W</span>
+        </div>
+        <div>
+          <small id="fullEyebrow">WILDMAN HOCKEY ESPORTS NETWORK</small>
+          <h1 id="sceneTitle">STARTING SOON</h1>
+        </div>
+      </div>
+
+      <div class="obs-matchup">
+        <div>
+          <small>HOME</small>
+          <strong id="fullHomeName">WILDMAN HOCKEY</strong>
+          <b id="fullHomeScore">0</b>
+        </div>
+        <span>VS</span>
+        <div>
+          <small>AWAY</small>
+          <strong id="fullAwayName">OPPONENT</strong>
+          <b id="fullAwayScore">0</b>
+        </div>
+      </div>
+
+      <p id="sceneMessage">WILDMAN HOCKEY ESPORTS NETWORK</p>
+      <div class="obs-full-footer">
+        <span id="fullEvent">LIVE GAME</span>
+        <b id="fullRecord"></b>
+      </div>
+    </section>
+
+    <section class="obs-lower-third">
+      <div class="obs-lt-accent"></div>
+      <div class="obs-lt-number">#<span id="playerNumber">00</span></div>
+      <div class="obs-lt-copy">
+        <small id="playerRole">RW</small>
+        <strong id="playerName">PLAYER</strong>
+      </div>
+      <div class="obs-lt-brand" id="playerBrand">WILDMAN HOCKEY</div>
+    </section>
+
+    <div id="obsStatus" class="obs-status">CONNECTING</div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+  <script src="obs-overlay.js?v=20260929a"></script>
+</body>
+</html>

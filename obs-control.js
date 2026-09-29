@@ -1,0 +1,166 @@
+(function(){
+  'use strict';
+  var PRODUCTION_ORIGIN='https://wildmanhockey-elitechelmedia.app';
+  var TEAM_CONFIG={
+    '5f36117c-7a51-4514-bf70-d4c672b41e48':{name:'Wildman Hockey',brand:'wildman',channel:'wildman-main'},
+    'b0bcbdda-da9d-419d-8f61-b34937966d49':{name:'Calgary Hitmen',brand:'hitmen',channel:'hitmen-main'}
+  };
+  var currentTeamId='';
+  var currentScene='game';
+  var initialized=false;
+  var stateRef=null;
+
+  function byId(id){return document.getElementById(id);}
+  function val(id){return (byId(id)?.value||'').trim();}
+  function numberVal(id){var n=parseInt(byId(id)?.value||'0',10);return Number.isFinite(n)&&n>=0?n:0;}
+  function setStatus(message,isError){
+    var status=byId('publishStatus');
+    var pill=byId('stateUpdated');
+    if(status) status.textContent=message;
+    if(pill){pill.textContent=message;pill.style.color=isError?'#ff8a9b':'';}
+  }
+  function config(){return TEAM_CONFIG[currentTeamId]||TEAM_CONFIG['5f36117c-7a51-4514-bf70-d4c672b41e48'];}
+  function sourceUrl(){return PRODUCTION_ORIGIN+'/obs-overlay.html?channel='+encodeURIComponent(config().channel);}
+  function updateSourceLinks(){
+    var url=sourceUrl();
+    byId('obsSourceUrl').value=url;
+    byId('openObsUrl').href=url;
+    byId('heroChannel').textContent=config().channel.toUpperCase();
+    byId('obsPreview').src='obs-overlay.html?channel='+encodeURIComponent(config().channel)+'&preview=1&t='+Date.now();
+  }
+  function allowedTeamIds(state){
+    var role=String(state.profile?.role||'').toLowerCase();
+    if(role==='admin'||role==='commissioner') return Object.keys(TEAM_CONFIG);
+    var ids=(state.memberships||[])
+      .filter(function(m){return m.active!==false&&['owner','gm','agm'].includes(String(m.role||'').toLowerCase());})
+      .map(function(m){return m.team_id;});
+    return Object.keys(TEAM_CONFIG).filter(function(id){return ids.includes(id);});
+  }
+  function populateTeams(state){
+    var select=byId('obsTeamSelect');
+    var ids=allowedTeamIds(state);
+    if(!ids.length) return false;
+    select.innerHTML=ids.map(function(id){return '<option value="'+id+'">'+TEAM_CONFIG[id].name+'</option>';}).join('');
+    var preferred=ids.includes(state.teamId)?state.teamId:ids[0];
+    select.value=preferred;
+    currentTeamId=preferred;
+    return true;
+  }
+  function updateScoreDisplay(){
+    byId('homeScoreDisplay').textContent=numberVal('obsHomeScore');
+    byId('awayScoreDisplay').textContent=numberVal('obsAwayScore');
+  }
+  function setSceneButtons(){
+    document.querySelectorAll('#obsSceneStrip [data-scene]').forEach(function(button){
+      button.classList.toggle('active',button.dataset.scene===currentScene);
+    });
+  }
+  function fill(row){
+    if(!row) return;
+    var p=row.payload||{};
+    currentScene=row.scene||'game';
+    byId('obsEvent').value=p.event||'';
+    byId('obsHomeName').value=p.homeName||config().name;
+    byId('obsAwayName').value=p.awayName||'OPPONENT';
+    byId('obsHomeScore').value=Number(p.homeScore||0);
+    byId('obsAwayScore').value=Number(p.awayScore||0);
+    byId('obsPeriod').value=p.period||'1ST';
+    byId('obsClock').value=p.clock||'20:00';
+    byId('obsRecord').value=p.record||'';
+    byId('obsMessage').value=p.message||'';
+    byId('obsPlayerName').value=p.playerName||'PLAYER';
+    byId('obsPlayerNumber').value=p.playerNumber||'00';
+    byId('obsPlayerRole').value=p.playerRole||'PLAYER';
+    updateScoreDisplay();
+    setSceneButtons();
+    byId('stateUpdated').textContent=row.updated_at?'SYNCED':'READY';
+  }
+  function collectPayload(){
+    return {
+      event:val('obsEvent'),
+      homeName:val('obsHomeName')||config().name,
+      awayName:val('obsAwayName')||'OPPONENT',
+      homeScore:numberVal('obsHomeScore'),
+      awayScore:numberVal('obsAwayScore'),
+      period:val('obsPeriod')||'1ST',
+      clock:val('obsClock')||'20:00',
+      record:val('obsRecord'),
+      message:val('obsMessage'),
+      playerName:val('obsPlayerName')||'PLAYER',
+      playerNumber:val('obsPlayerNumber')||'00',
+      playerRole:val('obsPlayerRole')||'PLAYER'
+    };
+  }
+  async function loadState(){
+    if(!currentTeamId||!window.VVHLBackend?.db) return;
+    setStatus('LOADING');
+    var result=await window.VVHLBackend.db.from('obs_broadcast_state').select('*').eq('channel',config().channel).maybeSingle();
+    if(result.error){setStatus(result.error.message,true);return;}
+    fill(result.data);
+    setStatus('READY');
+  }
+  async function publish(sceneOverride){
+    if(!currentTeamId||!stateRef?.user) return;
+    currentScene=sceneOverride||currentScene||'game';
+    setSceneButtons();
+    setStatus('PUBLISHING');
+    var row={
+      channel:config().channel,
+      team_id:currentTeamId,
+      brand:config().brand,
+      scene:currentScene,
+      payload:collectPayload(),
+      is_public:true,
+      updated_by:stateRef.user.id,
+      updated_at:new Date().toISOString()
+    };
+    var result=await window.VVHLBackend.db.from('obs_broadcast_state').upsert(row,{onConflict:'channel'}).select().single();
+    if(result.error){setStatus(result.error.message,true);return;}
+    fill(result.data);
+    setStatus('LIVE');
+    setTimeout(function(){if(byId('publishStatus')?.textContent==='LIVE') setStatus('READY');},1200);
+  }
+  function wire(){
+    byId('obsTeamSelect').addEventListener('change',async function(e){
+      currentTeamId=e.target.value;
+      window.localStorage.setItem('vvhl-team-context',currentTeamId);
+      updateSourceLinks();
+      await loadState();
+    });
+    document.querySelectorAll('#obsSceneStrip [data-scene]').forEach(function(button){
+      button.addEventListener('click',function(){publish(button.dataset.scene);});
+    });
+    document.querySelectorAll('[data-score][data-delta]').forEach(function(button){
+      button.addEventListener('click',async function(){
+        var id=button.dataset.score==='home'?'obsHomeScore':'obsAwayScore';
+        var input=byId(id);
+        input.value=Math.max(0,numberVal(id)+parseInt(button.dataset.delta,10));
+        updateScoreDisplay();
+        await publish();
+      });
+    });
+    byId('publishObsState').addEventListener('click',function(){publish();});
+    byId('reloadObsState').addEventListener('click',loadState);
+    byId('copyObsUrl').addEventListener('click',async function(){
+      var url=sourceUrl();
+      try{await navigator.clipboard.writeText(url);setStatus('URL COPIED');}
+      catch(err){byId('obsSourceUrl').select();document.execCommand('copy');setStatus('URL COPIED');}
+    });
+  }
+  async function init(state){
+    stateRef=state||window.VVHLBackend?.state||{};
+    if(!window.VVHLManagementGuard?.hasAccess(stateRef)) return;
+    if(!initialized){
+      if(!populateTeams(stateRef)) return;
+      wire();
+      initialized=true;
+    }else{
+      populateTeams(stateRef);
+    }
+    updateSourceLinks();
+    await loadState();
+  }
+  window.addEventListener('vvhl-auth-change',function(event){init(event.detail);});
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){init(window.VVHLBackend?.state);});
+  else init(window.VVHLBackend?.state);
+})();

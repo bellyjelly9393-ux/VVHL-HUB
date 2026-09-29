@@ -1,0 +1,131 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@500;600;700;800&display=swap");
+
+:root{
+  --accent:#d9a63b;
+  --accent-2:#ffd87a;
+  --accent-soft:rgba(217,166,59,.22);
+  --panel:rgba(3,3,5,.92);
+  --panel-2:rgba(12,10,14,.94);
+  --text:#fff;
+  --muted:#c5c0c8;
+  --line:rgba(255,255,255,.15);
+  --brand-rgb:217,166,59;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important}
+body{font-family:Inter,system-ui,sans-serif;color:var(--text)}
+body[data-brand="hitmen"]{
+  --accent:#be1e3d;
+  --accent-2:#ff637f;
+  --accent-soft:rgba(190,30,61,.24);
+  --panel:rgba(6,3,4,.94);
+  --panel-2:rgba(18,5,8,.95);
+  --brand-rgb:190,30,61;
+}
+.obs-root{position:relative;width:100vw;height:100vh;overflow:hidden}
+.obs-safe-grid{display:none;position:absolute;inset:0;z-index:-5;background:
+  linear-gradient(45deg,#252525 25%,transparent 25%) 0 0/48px 48px,
+  linear-gradient(45deg,transparent 75%,#252525 75%) 0 0/48px 48px,
+  linear-gradient(45deg,transparent 75%,#252525 75%) 24px -24px/48px 48px,
+  linear-gradient(45deg,#252525 25%,#171717 25%) 24px -24px/48px 48px}
+body.obs-preview .obs-safe-grid{display:block}
+.obs-corner-bug{
+  position:absolute;top:34px;left:38px;display:flex;align-items:center;gap:12px;
+  min-width:325px;padding:10px 14px 10px 10px;border:1px solid var(--line);border-radius:14px;
+  background:linear-gradient(120deg,var(--panel),rgba(7,7,9,.72));
+  box-shadow:0 18px 44px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)
+}
+.obs-brand-mark,.obs-full-mark{
+  width:52px;height:52px;border-radius:12px;display:grid;place-items:center;overflow:hidden;
+  border:1px solid rgba(var(--brand-rgb),.6);background:radial-gradient(circle,var(--accent-soft),#09090b 72%);
+  box-shadow:0 0 28px rgba(var(--brand-rgb),.18)
+}
+.obs-brand-mark img,.obs-full-mark img{width:100%;height:100%;object-fit:cover}
+.obs-brand-mark span,.obs-full-mark span{display:none;color:#fff;font:900 33px/1 "Barlow Condensed",sans-serif}
+body[data-brand="hitmen"] .obs-brand-mark img,
+body[data-brand="hitmen"] .obs-full-mark img{display:none}
+body[data-brand="hitmen"] .obs-brand-mark span,
+body[data-brand="hitmen"] .obs-full-mark span{display:block}
+.obs-bug-copy{display:flex;flex-direction:column;line-height:1}
+.obs-bug-copy small{font:800 11px/1 Inter,sans-serif;letter-spacing:.15em;color:var(--accent-2)}
+.obs-bug-copy strong{margin-top:6px;font:900 22px/.95 "Barlow Condensed",sans-serif;letter-spacing:.03em}
+.obs-live-dot{margin-left:auto;padding:6px 8px;border-radius:7px;background:var(--accent);color:#fff;font-size:9px;font-weight:900;letter-spacing:.12em}
+body[data-brand="wildman"] .obs-live-dot{color:#090704}
+
+.obs-scorebar{
+  position:absolute;left:50%;bottom:34px;transform:translateX(-50%);
+  display:grid;grid-template-columns:190px minmax(280px,1fr) 34px minmax(280px,1fr);
+  align-items:stretch;width:min(1180px,calc(100vw - 80px));
+  border:1px solid var(--line);border-radius:16px;overflow:hidden;
+  background:linear-gradient(120deg,var(--panel),var(--panel-2));
+  box-shadow:0 24px 70px rgba(0,0,0,.44),0 0 40px rgba(var(--brand-rgb),.08);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)
+}
+.obs-score-event{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;align-items:center;column-gap:10px;padding:12px 16px;border-right:1px solid var(--line)}
+.obs-score-event small{grid-column:1/-1;color:var(--accent-2);font-size:9px;font-weight:900;letter-spacing:.14em}
+.obs-score-event span{font:900 20px/1 "Barlow Condensed",sans-serif}
+.obs-score-event b{font-size:13px;color:var(--muted)}
+.obs-team{display:flex;align-items:center;gap:18px;padding:12px 20px}
+.obs-team span{flex:1;font:900 clamp(22px,2vw,31px)/.95 "Barlow Condensed",sans-serif;text-transform:uppercase}
+.obs-team strong{font:900 48px/.85 "Barlow Condensed",sans-serif;color:var(--accent-2)}
+.obs-team-home{text-align:right}
+.obs-team-away{text-align:left}
+.obs-score-divider{display:grid;place-items:center;font:900 27px/1 "Barlow Condensed",sans-serif;color:var(--accent);background:rgba(var(--brand-rgb),.06)}
+
+.obs-full-card{
+  position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;padding:8vh 8vw;
+  text-align:center;background:
+    radial-gradient(circle at 50% 35%,rgba(var(--brand-rgb),.24),transparent 28%),
+    linear-gradient(135deg,rgba(2,2,3,.97),rgba(8,7,10,.94));
+}
+.obs-full-card:before{content:"";position:absolute;inset:4.5vh 4vw;border:1px solid rgba(var(--brand-rgb),.26);border-radius:28px;box-shadow:inset 0 0 80px rgba(var(--brand-rgb),.05)}
+.obs-full-card:after{content:"";position:absolute;left:8vw;right:8vw;bottom:8vh;height:3px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.obs-full-brand{position:relative;z-index:2;display:flex;align-items:center;gap:20px;text-align:left}
+.obs-full-mark{width:88px;height:88px;border-radius:20px}
+.obs-full-brand small{display:block;color:var(--accent-2);font-size:12px;font-weight:900;letter-spacing:.18em}
+.obs-full-brand h1{margin:5px 0 0;font:900 clamp(68px,8vw,138px)/.78 "Barlow Condensed",sans-serif;letter-spacing:-.03em;text-transform:uppercase}
+.obs-matchup{position:relative;z-index:2;display:grid;grid-template-columns:minmax(280px,1fr) 90px minmax(280px,1fr);align-items:center;width:min(1260px,90vw);margin:55px auto 25px}
+.obs-matchup>div{display:grid;gap:8px}
+.obs-matchup>div:first-child{text-align:right}.obs-matchup>div:last-child{text-align:left}
+.obs-matchup small{color:var(--accent-2);font-size:10px;font-weight:900;letter-spacing:.14em}
+.obs-matchup strong{font:900 clamp(32px,4vw,62px)/.9 "Barlow Condensed",sans-serif;text-transform:uppercase}
+.obs-matchup b{font:900 clamp(60px,7vw,110px)/.8 "Barlow Condensed",sans-serif;color:var(--accent-2)}
+.obs-matchup>span{font:900 28px/1 "Barlow Condensed",sans-serif;color:var(--muted)}
+.obs-full-card p{position:relative;z-index:2;max-width:900px;margin:18px auto;color:#d4d0d6;font-size:18px;line-height:1.55}
+.obs-full-footer{position:relative;z-index:2;margin-top:30px;display:flex;gap:22px;align-items:center;color:var(--muted);font-size:12px;font-weight:900;letter-spacing:.12em}
+.obs-full-footer b{color:var(--accent-2)}
+
+.obs-lower-third{
+  position:absolute;left:55px;bottom:62px;display:none;align-items:stretch;min-width:650px;height:112px;
+  border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  background:linear-gradient(110deg,var(--panel),rgba(9,9,11,.9));
+  box-shadow:0 24px 60px rgba(0,0,0,.45)
+}
+.obs-lt-accent{width:9px;background:var(--accent)}
+.obs-lt-number{display:grid;place-items:center;min-width:105px;padding:0 15px;color:var(--accent-2);font:900 54px/1 "Barlow Condensed",sans-serif;border-right:1px solid var(--line)}
+.obs-lt-copy{display:flex;flex-direction:column;justify-content:center;min-width:300px;padding:0 25px}
+.obs-lt-copy small{color:var(--accent-2);font-size:10px;font-weight:900;letter-spacing:.16em}
+.obs-lt-copy strong{margin-top:4px;font:900 38px/.9 "Barlow Condensed",sans-serif;text-transform:uppercase}
+.obs-lt-brand{display:grid;place-items:center;padding:0 22px;border-left:1px solid var(--line);color:var(--muted);font:900 15px/1 "Barlow Condensed",sans-serif;letter-spacing:.08em}
+
+.obs-status{display:none;position:absolute;right:20px;top:20px;padding:8px 10px;border-radius:8px;background:#111;color:#bbb;font-size:10px;font-weight:800;letter-spacing:.1em}
+body.obs-preview .obs-status{display:block}
+body[data-scene="game"] .obs-corner-bug,
+body[data-scene="game"] .obs-scorebar{display:flex}
+body[data-scene="game"] .obs-scorebar{display:grid}
+body[data-scene="starting"] .obs-full-card,
+body[data-scene="intermission"] .obs-full-card,
+body[data-scene="final"] .obs-full-card,
+body[data-scene="brb"] .obs-full-card{display:flex}
+body[data-scene="player"] .obs-corner-bug,
+body[data-scene="player"] .obs-lower-third{display:flex}
+body:not([data-scene="game"]):not([data-scene="player"]) .obs-corner-bug,
+body:not([data-scene="game"]) .obs-scorebar{display:none}
+
+@media(max-width:1000px){
+  .obs-scorebar{grid-template-columns:135px 1fr 22px 1fr;width:94vw}
+  .obs-team{padding:10px 12px;gap:10px}.obs-team strong{font-size:38px}.obs-team span{font-size:20px}
+  .obs-score-event{padding:10px}.obs-score-event span{font-size:16px}
+  .obs-lower-third{left:30px;min-width:560px}
+}
