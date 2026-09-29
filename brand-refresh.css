@@ -136,3 +136,49 @@ body.elite-media-page{
   .wm-home-official-logo{width:190px;margin-bottom:14px}
   .elite-media-logo{width:190px;max-height:230px;margin-bottom:14px}
 }
+
+
+/* NETWORK BRAND DROPDOWNS V1 */
+.wildman-site:not(.management-protected) .main-nav{align-items:stretch}
+.wildman-site:not(.management-protected) .nav-menu{position:relative;display:flex;align-items:stretch}
+.wildman-site:not(.management-protected) .nav-menu-trigger{
+  display:flex;align-items:center;gap:5px;padding:10px 12px;border:0;border-radius:10px;
+  background:transparent;color:#c8c4c8;font:800 11px/1 inherit;text-transform:uppercase;
+  letter-spacing:.075em;cursor:pointer
+}
+.wildman-site:not(.management-protected) .nav-menu-trigger span{font-size:10px;transition:transform .18s ease}
+.wildman-site:not(.management-protected) .nav-menu:hover .nav-menu-trigger,
+.wildman-site:not(.management-protected) .nav-menu.open .nav-menu-trigger,
+.wildman-site:not(.management-protected) .nav-menu.active-nav-group .nav-menu-trigger{
+  color:#c8edff;background:rgba(49,160,238,.07);box-shadow:inset 0 -2px #4ebcff
+}
+.wildman-site:not(.management-protected) .nav-menu.open .nav-menu-trigger span{transform:rotate(180deg)}
+.wildman-site:not(.management-protected) .nav-menu-panel{
+  position:absolute;z-index:120;top:calc(100% + 8px);left:50%;transform:translateX(-50%) translateY(-5px);
+  width:250px;padding:8px;border:1px solid rgba(89,191,255,.22);border-radius:13px;
+  background:rgba(3,7,11,.98);box-shadow:0 22px 60px rgba(0,0,0,.58);
+  opacity:0;visibility:hidden;pointer-events:none;transition:.16s ease
+}
+.wildman-site:not(.management-protected) .nav-menu:hover .nav-menu-panel,
+.wildman-site:not(.management-protected) .nav-menu:focus-within .nav-menu-panel,
+.wildman-site:not(.management-protected) .nav-menu.open .nav-menu-panel{
+  opacity:1;visibility:visible;pointer-events:auto;transform:translateX(-50%) translateY(0)
+}
+.wildman-site:not(.management-protected) .nav-menu-panel a{
+  display:grid;gap:3px;padding:11px 12px!important;border-radius:9px!important;
+  text-transform:none!important;letter-spacing:0!important;box-shadow:none!important
+}
+.wildman-site:not(.management-protected) .nav-menu-panel a:hover{background:rgba(71,178,246,.1)!important}
+.wildman-site:not(.management-protected) .nav-menu-panel b{font-size:11px;color:#edf8ff}
+.wildman-site:not(.management-protected) .nav-menu-panel small{font-size:8px;color:#7f929e;font-weight:600}
+@media(max-width:680px){
+  .wildman-site:not(.management-protected) .nav-menu{display:block}
+  .wildman-site:not(.management-protected) .nav-menu-trigger{width:100%;justify-content:space-between;padding:11px 14px;font-size:11px}
+  .wildman-site:not(.management-protected) .nav-menu-panel{
+    position:static;width:100%;transform:none!important;margin:0;padding:0 8px;max-height:0;overflow:hidden;
+    border:0;background:transparent;box-shadow:none;opacity:1;visibility:visible;pointer-events:none;transition:max-height .2s ease
+  }
+  .wildman-site:not(.management-protected) .nav-menu.open .nav-menu-panel{max-height:180px;padding:5px 8px 8px;pointer-events:auto}
+  .wildman-site:not(.management-protected) .nav-menu:not(.open) .nav-menu-panel{max-height:0}
+  .wildman-site:not(.management-protected) .nav-menu-panel a{padding:10px!important;background:rgba(255,255,255,.025)}
+}
