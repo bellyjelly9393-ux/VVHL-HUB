@@ -23,7 +23,11 @@
     return `${d} · ${h} vs ${a}`;
   };
   const currentEventRosters = () => S.rosters.filter(r=>r.event_id===S.eventId && r.active!==false);
-  const currentEventGames = () => S.games.filter(g=>g.event_id===S.eventId).sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));
+  const currentEventGames = () => {
+    const all=S.games.filter(g=>g.event_id===S.eventId);
+    const playoffs=all.filter(g=>g.stage==='Playoffs');
+    return (playoffs.length?playoffs:all).sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0)||(a.series_game_number||0)-(b.series_game_number||0));
+  };
 
   async function loadData(){
     const [events,teams,players,eventTeams,rosters,games,gameStats,backlog] = await Promise.all([
@@ -428,7 +432,7 @@
     $('broadcastStatus').value=g.status||'scheduled'; $('broadcastProvider').value=g.stream_provider||'';
     $('broadcastHomeScore').value=g.home_score??0; $('broadcastAwayScore').value=g.away_score??0;
     $('broadcastPeriod').value=g.period??''; $('broadcastClock').value=g.clock||''; $('broadcastCommentary').value=g.commentary_status||'none';
-    $('broadcastStreamUrl').value=g.stream_url||''; $('broadcastTitle').value=g.broadcast_title||''; $('broadcastVodUrl').value=g.vod_url||'';
+    $('broadcastStreamUrl').value=g.stream_url||''; $('broadcastTitle').value=g.broadcast_title||'';
     $('broadcastFeatured').checked=!!g.featured; $('broadcastOvertime').checked=!!g.overtime;
   }
 
@@ -437,9 +441,12 @@
       const id=$('broadcastGameSelect').value; const g=gameById(id); if(!g) throw new Error('Choose a game first.');
       msg('broadcastMessage','Publishing…');
       if($('broadcastFeatured').checked){ const clear=await db.from('esports_games').update({featured:false}).eq('event_id',g.event_id).neq('id',id); if(clear.error) throw clear.error; }
-      const update={status:$('broadcastStatus').value,stream_provider:$('broadcastProvider').value||null,stream_url:$('broadcastStreamUrl').value.trim()||null,broadcast_title:$('broadcastTitle').value.trim()||null,commentary_status:$('broadcastCommentary').value,home_score:num('broadcastHomeScore'),away_score:num('broadcastAwayScore'),period:$('broadcastPeriod').value?num('broadcastPeriod'):null,clock:$('broadcastClock').value.trim()||null,featured:$('broadcastFeatured').checked,overtime:$('broadcastOvertime').checked,vod_url:$('broadcastVodUrl').value.trim()||null,updated_at:new Date().toISOString()};
+      const update={status:$('broadcastStatus').value,stream_provider:$('broadcastProvider').value||null,stream_url:$('broadcastStreamUrl').value.trim()||null,broadcast_title:$('broadcastTitle').value.trim()||null,commentary_status:$('broadcastCommentary').value,home_score:num('broadcastHomeScore'),away_score:num('broadcastAwayScore'),period:$('broadcastPeriod').value?num('broadcastPeriod'):null,clock:$('broadcastClock').value.trim()||null,featured:$('broadcastFeatured').checked,overtime:$('broadcastOvertime').checked,updated_at:new Date().toISOString()};
+      const scoringChanged=update.status==='final'&&(g.status!=='final'||Number(g.home_score||0)!==update.home_score||Number(g.away_score||0)!==update.away_score||!!g.overtime!==!!update.overtime);
       const res=await db.from('esports_games').update(update).eq('id',id); if(res.error) throw res.error;
-      msg('broadcastMessage','Published. Public Game Center will pick up the update automatically.'); await rebuildEventStats(g.event_id); await loadData();
+      msg('broadcastMessage','Published. Stream changes go straight to Live + Multiview. Pro Series stays media-only and does not enter the scouting VOD pipeline.');
+      if(scoringChanged) await rebuildEventStats(g.event_id);
+      await loadData();
     }catch(e){console.error(e);msg('broadcastMessage',e.message||'Broadcast update failed.',true);}
   }
 
