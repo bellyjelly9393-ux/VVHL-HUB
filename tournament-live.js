@@ -4,7 +4,7 @@
   const db=window.VVHLBackend?.db || (window.supabase?window.supabase.createClient(URL,KEY):null);
   if(!db) return;
   let requestedChannel=new URLSearchParams(location.search).get('channel')||'';
-  const S={events:[],teams:[],players:[],games:[],sources:[],teamStats:[],playerStats:[],eventTeams:[],rosters:[],rankings:[],selectedBroadcastKey:sessionStorage.getItem('wildman-live-channel')||''};
+  const S={events:[],teams:[],players:[],games:[],series:[],sources:[],teamStats:[],playerStats:[],eventTeams:[],rosters:[],rankings:[],selectedBroadcastKey:sessionStorage.getItem('wildman-live-channel')||''};
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[c]);
   const team=id=>S.teams.find(x=>x.id===id);
@@ -175,16 +175,38 @@
   }
 
   function roadEvent(){return S.events.find(e=>e.slug==='road-to-pro-2026');}
+  function playoffSeries(e){
+    return S.series.filter(s=>s.event_id===e?.id&&s.stage==='Playoffs'&&s.round_label==='Round 1')
+      .sort((a,b)=>Number(String(a.session_label||'').match(/Matchup\s+(\d+)/i)?.[1]||99)-Number(String(b.session_label||'').match(/Matchup\s+(\d+)/i)?.[1]||99));
+  }
+  function playoffGameRows(e){
+    const rows=S.games.filter(g=>g.event_id===e?.id&&g.stage==='Playoffs'&&g.round_label==='Round 1'&&!['cancelled','postponed'].includes(g.status));
+    return rows.sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0)||(a.series_game_number||0)-(b.series_game_number||0)||(a.broadcast_order||0)-(b.broadcast_order||0));
+  }
+  function renderPlayoffs(){
+    const root=$('proPlayoffBracket'),e=roadEvent(); if(!root||!e)return;
+    const rows=playoffSeries(e);
+    if(!rows.length){root.innerHTML='<div class="empty-state">Round 1 bracket has not been loaded yet.</div>';return;}
+    root.innerHTML=`<div class="pro-playoff-grid">${rows.map((s,i)=>{
+      const home=team(s.home_team_id),away=team(s.away_team_id);
+      const homeEt=eventTeam(e.id,s.home_team_id),awayEt=eventTeam(e.id,s.away_team_id);
+      const games=S.games.filter(g=>g.series_id===s.id).sort((a,b)=>(a.series_game_number||0)-(b.series_game_number||0));
+      const wild=home?.slug==='wildman-hockey'||away?.slug==='wildman-hockey';
+      const seedLabel=String(s.session_label||'').split('·').slice(1).join('·').trim()||'Round 1';
+      return `<article class="pro-playoff-series ${wild?'is-wildman':''}">
+        <div class="pro-playoff-head"><span>MATCHUP ${i+1}</span><strong>${esc(seedLabel.toUpperCase())}</strong></div>
+        <div class="pro-playoff-team"><div>${teamLogo(away)}<span><b>${esc(away?.name||'TBD')}</b><small>Seed ${esc(awayEt?.playoff_seed??'—')} · ${esc(awayEt?.group_play_record||teamRecord(e.id,away?.id))}</small></span></div><em>${s.away_wins||0}</em></div>
+        <div class="pro-playoff-team"><div>${teamLogo(home)}<span><b>${esc(home?.name||'TBD')}</b><small>Seed ${esc(homeEt?.playoff_seed??'—')} · ${esc(homeEt?.group_play_record||teamRecord(e.id,home?.id))}</small></span></div><em>${s.home_wins||0}</em></div>
+        <div class="pro-playoff-games">${games.map(g=>`<a href="${gameHref(g)}"><span>G${g.series_game_number}${g.if_necessary?' · IF NEC.':''}</span><b>${esc(fmtTime(g.scheduled_at))}</b>${g.stream_url?'<i>STREAM</i>':''}</a>`).join('')}</div>
+      </article>`;
+    }).join('')}</div>`;
+  }
   function renderSchedule(){
     const root=$('proSeriesSchedule'),e=roadEvent(); if(!root||!e)return;
+    const playoffs=playoffGameRows(e);
     const seen=new Set();
-    const rows=S.games
-      .filter(g=>g.event_id===e.id&&!['cancelled','postponed'].includes(g.status))
-      .filter(g=>{
-        const key=g.external_game_id||g.id;
-        if(seen.has(key))return false;
-        seen.add(key);return true;
-      })
+    const rows=(playoffs.length?playoffs:S.games.filter(g=>g.event_id===e.id&&!['cancelled','postponed'].includes(g.status)))
+      .filter(g=>{const key=g.external_game_id||g.id;if(seen.has(key))return false;seen.add(key);return true;})
       .sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0)||(a.broadcast_order||0)-(b.broadcast_order||0));
     if(!rows.length){root.innerHTML='<div class="empty-state">Official schedule has not been imported yet.</div>';return;}
     const groups=[];
@@ -195,9 +217,10 @@
       bucket.rows.push(g);
     }
     const finalCount=rows.filter(g=>g.status==='final').length;
+    const playoffMode=playoffs.length>0;
     root.innerHTML=`
       <div class="pro-time-tabs">${groups.map((g,i)=>`<button type="button" class="${i===0?'active':''}" data-pro-slot="${esc(g.key)}">${esc(g.label)}</button>`).join('')}</div>
-      <div class="pro-schedule-meta"><strong>SEASON 14 · GROUP PLAY</strong><span>${finalCount} finals · ${rows.length} official matchups loaded</span></div>
+      <div class="pro-schedule-meta"><strong>${playoffMode?'SEASON 14 · ROUND 1 PLAYOFFS':'SEASON 14 · GROUP PLAY'}</strong><span>${finalCount} finals · ${rows.length} official game slots loaded${playoffMode?' · best-of-5 series':''}</span></div>
       ${groups.map((g,i)=>`<div class="pro-matchup-grid" data-pro-slot-panel="${esc(g.key)}" ${i?'hidden':''}>${g.rows.map(game=>{
         const home=team(game.home_team_id),away=team(game.away_team_id);
         const wild=home?.slug==='wildman-hockey'||away?.slug==='wildman-hockey';
@@ -206,9 +229,9 @@
         const homeWin=final&&Number(game.home_score)>Number(game.away_score);
         return `<a class="pro-matchup-card ${wild?'is-wildman':''}" href="${gameHref(game)}">
           <div class="pro-match-team ${awayWin?'is-winner':''}">${teamLogo(away)}<span>${esc(away?.name||'TBD')}</span></div>
-          <div class="pro-match-mid"><b>${final?`${game.away_score??0}–${game.home_score??0}`:'@'}</b><small>${esc(fmtTime(game.scheduled_at))}</small></div>
+          <div class="pro-match-mid"><b>${final?`${game.away_score??0}–${game.home_score??0}`:'@'}</b><small>G${game.series_game_number||1} · ${esc(fmtTime(game.scheduled_at))}${game.if_necessary?' · IF NEC.':''}</small></div>
           <div class="pro-match-team home ${homeWin?'is-winner':''}">${teamLogo(home)}<span>${esc(home?.name||'TBD')}</span></div>
-          <em>${game.status==='scheduled'?'GAME CENTER →':game.status==='live'?'LIVE NOW →':'FINAL →'}</em>
+          <em>${game.stream_url?'STREAM · ':''}${game.status==='scheduled'?'GAME CENTER →':game.status==='live'?'LIVE NOW →':'FINAL →'}</em>
         </a>`;
       }).join('')}</div>`).join('')}`;
     root.querySelectorAll('[data-pro-slot]').forEach(btn=>btn.onclick=()=>{
@@ -269,14 +292,16 @@
   function renderStandings(){
     const root=$('proStandings'),divRoot=$('proDivisions'),e=roadEvent(); if(!e)return;
     if(root){
-      const races=['Race 1','Race 2','Race 3','Race 4'];
-      root.innerHTML=`<div class="pro-race-grid">${races.map(race=>{
-        const ids=S.eventTeams.filter(x=>x.event_id===e.id&&x.group_name===race).map(x=>x.team_id);
-        const rows=S.teamStats.filter(x=>x.event_id===e.id&&ids.includes(x.team_id)).sort((a,b)=>b.points-a.points||b.wins-a.wins||((b.goals_for-b.goals_against)-(a.goals_for-a.goals_against))||(a.seed??99)-(b.seed??99));
-        return `<section class="pro-race-card"><div class="pro-race-head"><small>REGULAR SEASON</small><h3>${esc(race)}</h3></div><div class="wm-table-wrap"><table class="wm-table standings-table"><thead><tr><th>#</th><th>Team</th><th>GP</th><th>W</th><th>L</th><th>OTL</th><th>GD</th><th>PTS</th></tr></thead><tbody>${rows.map((r,i)=>{
-          const t=team(r.team_id); return `<tr class="${t?.slug==='wildman-hockey'?'is-wildman':''}"><td>${i+1}</td><td><a class="pro-stand-team" href="${teamHref(t)}">${teamLogo(t)}<span>${esc(t?.name||'Team')}</span></a></td><td>${r.games_played}</td><td>${r.wins}</td><td>${r.losses}</td><td>${r.ot_losses}</td><td>${r.goals_for-r.goals_against}</td><td><b>${r.points}</b></td></tr>`;
-        }).join('')}</tbody></table></div></section>`;
-      }).join('')}</div>`;
+      const playoffRows=S.eventTeams
+        .filter(x=>x.event_id===e.id&&x.status==='playoffs')
+        .sort((a,b)=>(a.playoff_matchup??99)-(b.playoff_matchup??99)||(a.playoff_seed??99)-(b.playoff_seed??99));
+      if(playoffRows.length){
+        root.innerHTML=`<div class="pro-playoff-field-head"><strong>ROUND 1 PLAYOFF FIELD</strong><span>${playoffRows.length} qualified · ${S.eventTeams.filter(x=>x.event_id===e.id&&x.status==='eliminated').length} eliminated after group play</span></div>
+        <div class="wm-table-wrap"><table class="wm-table standings-table"><thead><tr><th>Matchup</th><th>Seed</th><th>Team</th><th>Group Record</th><th>Status</th></tr></thead><tbody>${playoffRows.map(r=>{
+          const t=team(r.team_id);
+          return `<tr class="${t?.slug==='wildman-hockey'?'is-wildman':''}"><td>R1 · M${r.playoff_matchup??'—'}</td><td><b>#${r.playoff_seed??'—'}</b></td><td><a class="pro-stand-team" href="${teamHref(t)}">${teamLogo(t)}<span>${esc(t?.name||'Team')}</span></a></td><td><b>${esc(r.group_play_record||teamRecord(e.id,r.team_id))}</b></td><td>PLAYOFFS</td></tr>`;
+        }).join('')}</tbody></table></div>`;
+      }else root.innerHTML='<div class="empty-state">Playoff field has not been loaded yet.</div>';
     }
     if(divRoot){
       const divisions=[1,2,3];
@@ -313,16 +338,17 @@
     }
   }
   function renderCounts(){
-    const e=roadEvent(); if(!e)return; const games=S.games.filter(g=>g.event_id===e.id); const set=(id,v)=>{if($(id))$(id).textContent=v;};
+    const e=roadEvent(); if(!e)return; const playoffGames=playoffGameRows(e); const games=playoffGames.length?playoffGames:S.games.filter(g=>g.event_id===e.id); const set=(id,v)=>{if($(id))$(id).textContent=v;};
     set('proGameCount',games.length); set('liveBroadcastCount',games.filter(g=>g.status==='live'&&g.stream_url).length+publicSources().length);
   }
 
   async function load(){
-    const [events,teams,players,games,sources,teamStats,playerStats,eventTeams,rosters,rankings]=await Promise.all([
+    const [events,teams,players,games,series,sources,teamStats,playerStats,eventTeams,rosters,rankings]=await Promise.all([
       db.from('esports_events').select('*').eq('active',true),
       db.from('esports_teams').select('*').eq('active',true),
       db.from('esports_players').select('*').eq('active',true),
       db.from('esports_games').select('*'),
+      db.from('esports_series').select('*'),
       db.from('tournament_automation_sources').select('*').eq('active',true).eq('public_visible',true).order('slot_order'),
       db.from('esports_team_event_stats').select('*'),
       db.from('esports_player_event_stats').select('*'),
@@ -330,14 +356,14 @@
       db.from('esports_event_rosters').select('*').eq('active',true),
       db.from('esports_event_rankings').select('*')
     ]);
-    const all=[events,teams,players,games,sources,teamStats,playerStats,eventTeams,rosters,rankings];
+    const all=[events,teams,players,games,series,sources,teamStats,playerStats,eventTeams,rosters,rankings];
     if(all.some(x=>x.error)){console.error('Tournament live refresh failed',all.map(x=>x.error));return;}
     Object.assign(S,{
-      events:events.data||[],teams:teams.data||[],players:players.data||[],games:games.data||[],sources:sources.data||[],
+      events:events.data||[],teams:teams.data||[],players:players.data||[],games:games.data||[],series:series.data||[],sources:sources.data||[],
       teamStats:teamStats.data||[],playerStats:playerStats.data||[],eventTeams:eventTeams.data||[],
       rosters:rosters.data||[],rankings:rankings.data||[]
     });
-    renderChannelPicker();renderFeatured();renderBoard();renderSchedule();renderStories();renderStandings();renderLeaderboard();renderCounts();
+    renderChannelPicker();renderFeatured();renderBoard();renderPlayoffs();renderSchedule();renderStories();renderStandings();renderLeaderboard();renderCounts();
     const stamp=$('liveRefreshStamp'); if(stamp)stamp.textContent=`Updated ${new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit',second:'2-digit'})}`;
   }
   load();
