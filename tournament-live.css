@@ -34,3 +34,19 @@
 .channel-meta small{display:block;color:#8e8791;font-size:9px}
 .channel-meta strong{display:block;margin-top:2px;font:900 22px/1 'Barlow Condensed',sans-serif}
 @media(max-width:650px){.broadcast-channel-card{grid-template-columns:1fr}.broadcast-channel-card>a{border-left:0;border-top:1px solid rgba(255,255,255,.07);padding:10px}.channel-page-head,.channel-meta{align-items:flex-start;flex-direction:column}}
+
+.pro-playoff-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.pro-playoff-series{padding:15px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:linear-gradient(145deg,#111015,#0a090d);box-shadow:0 18px 38px rgba(0,0,0,.18)}
+.pro-playoff-series.is-wildman{border-color:rgba(227,196,112,.45);box-shadow:inset 3px 0 #d8b866,0 20px 40px rgba(0,0,0,.24)}
+.pro-playoff-head{display:flex;justify-content:space-between;gap:10px;align-items:center;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,.06)}
+.pro-playoff-head span{font-size:8px;font-weight:900;letter-spacing:.12em;color:#85808a}.pro-playoff-head strong{font-size:10px;color:#dfc677}
+.pro-playoff-team{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.pro-playoff-team>div{display:flex;align-items:center;gap:10px;min-width:0}.pro-playoff-team img{width:38px;height:38px;object-fit:contain}.pro-playoff-team span{display:grid;gap:2px;min-width:0}
+.pro-playoff-team b{font:900 21px/1 "Barlow Condensed",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pro-playoff-team small{color:#89818a;font-size:8px}
+.pro-playoff-team em{font:900 28px/1 "Barlow Condensed",sans-serif;font-style:normal;color:#f4f0e9}
+.pro-playoff-games{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-top:10px}.pro-playoff-games a{display:grid;gap:2px;padding:7px;border:1px solid rgba(255,255,255,.05);border-radius:8px;background:#09090b;text-decoration:none;color:#ddd}
+.pro-playoff-games span{font-size:7px;color:#7f7880}.pro-playoff-games b{font-size:9px}.pro-playoff-games i{font-style:normal;font-size:7px;color:#7ff3a8}
+.pro-playoff-field-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px;padding:11px 13px;border:1px solid rgba(255,255,255,.06);border-radius:10px;background:#0b0a0d}
+.pro-playoff-field-head strong{font:900 20px/1 "Barlow Condensed",sans-serif}.pro-playoff-field-head span{color:#8d858e;font-size:9px}
+@media(max-width:850px){.pro-playoff-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.pro-playoff-games{grid-template-columns:repeat(3,1fr)}.pro-playoff-field-head{align-items:flex-start;flex-direction:column}}

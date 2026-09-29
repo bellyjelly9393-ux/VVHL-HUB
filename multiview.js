@@ -12,8 +12,19 @@
   function youtubeId(raw){try{const u=new URL(raw);if(u.hostname.includes('youtu.be'))return u.pathname.slice(1);if(u.searchParams.get('v'))return u.searchParams.get('v');const p=u.pathname.split('/').filter(Boolean),i=p.findIndex(x=>x==='embed'||x==='live');return i>=0?p[i+1]||'':'';}catch{return '';}}
   function embed(g){const p=String(g.stream_provider||'').toLowerCase();if(p==='twitch'){const ref=twitchRef(g.stream_url),q=ref.video?`video=${encodeURIComponent(ref.video)}`:`channel=${encodeURIComponent(ref.channel||'')}`;return (ref.video||ref.channel)?`<iframe src="https://player.twitch.tv/?${q}&parent=${encodeURIComponent(location.hostname)}&autoplay=false" allowfullscreen title="Twitch stream"></iframe>`:'';}if(p==='youtube'){const id=youtubeId(g.stream_url);return id?`<iframe src="https://www.youtube.com/embed/${encodeURIComponent(id)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="YouTube stream"></iframe>`:'';}return '';}
   function label(g){if(g._kind==='source')return g.broadcast_title||'Tournament Stream';return `${team(g.home_team_id)?.name||'TBD'} vs ${team(g.away_team_id)?.name||'TBD'}`;}
-  function stateText(g){if(g._kind==='source')return `${String(g.intake_mode||'media').toUpperCase()} SOURCE`;if(g.status==='live')return `LIVE${g.period?` · P${g.period}`:''}${g.clock?` · ${g.clock}`:''}`;if(g.status==='final')return `FINAL · ${g.home_score}-${g.away_score}`;return fmt(g.scheduled_at);}
-  function eligible(){const games=S.games.filter(g=>g.stream_url&&['live','scheduled'].includes(g.status)).map(g=>({...g,_kind:'game',_key:`game:${g.id}`}));const sources=S.sources.filter(s=>s.active!==false&&s.public_visible===true&&s.url).map(s=>({_kind:'source',_key:`source:${s.id}`,id:s.id,event_id:s.event_id,stream_url:s.url,stream_provider:s.provider||'external',broadcast_title:s.display_label||s.metadata?.title||'Wildman Club Live',intake_mode:s.intake_mode||'media',status:'live',scheduled_at:s.created_at,featured:false}));return [...games,...sources].sort((a,b)=>(a._kind==='source'?0:(a.status==='live'?0:1))-(b._kind==='source'?0:(b.status==='live'?0:1))||Number(b.featured)-Number(a.featured)||new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));}
+  function stateText(g){if(g._kind==='source')return 'LIVE CHANNEL';if(g.status==='live')return `LIVE${g.period?` · P${g.period}`:''}${g.clock?` · ${g.clock}`:''}`;if(g.status==='final')return `FINAL · ${g.home_score}-${g.away_score}`;return fmt(g.scheduled_at);}
+  function eligible(){
+    const sources=S.sources.filter(s=>s.active!==false&&s.public_visible===true&&s.url).map(s=>({_kind:'source',_key:`source:${s.id}`,id:s.id,event_id:s.event_id,stream_url:s.url,stream_provider:s.provider||'external',broadcast_title:s.display_label||s.metadata?.title||'Wildman Club Live',intake_mode:s.intake_mode||'media',status:'live',scheduled_at:s.created_at,featured:false}));
+    const used=new Set(sources.map(s=>String(s.stream_url||'').trim().toLowerCase()).filter(Boolean));
+    const games=[];
+    for(const g of S.games.filter(g=>g.stream_url&&['live','scheduled'].includes(g.status)).sort((a,b)=>(a.status==='live'?0:1)-(b.status==='live'?0:1)||new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0))){
+      const key=String(g.stream_url||'').trim().toLowerCase();
+      if(!key||used.has(key))continue;
+      used.add(key);
+      games.push({...g,_kind:'game',_key:`game:${g.id}`});
+    }
+    return [...sources,...games].sort((a,b)=>(a._kind==='source'?0:(a.status==='live'?0:1))-(b._kind==='source'?0:(b.status==='live'?0:1))||Number(b.featured)-Number(a.featured)||new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));
+  }
   function setFromQuery(){const q=new URLSearchParams(location.search),raw=q.get('streams')||q.get('games')||'';raw.split(',').filter(Boolean).slice(0,8).forEach(id=>S.selected.add(id.includes(':')?id:`game:${id}`));}
   function syncQuery(){const ids=[...S.selected];const u=new URL(location.href);if(ids.length)u.searchParams.set('streams',ids.join(','));else u.searchParams.delete('streams');u.searchParams.delete('games');history.replaceState(null,'',u);}
   function render(){
