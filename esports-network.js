@@ -69,14 +69,43 @@
       return `<span class="pro-roster-chip"><b>${esc(pos)}</b><em>${esc(p?.gamertag || "Player")}</em></span>`;
     }).join("");
   };
-  const playerVisual = (player) => {
+  const playerVisual = (player, team = null) => {
     const src = coreImages[lower(player?.gamertag)];
-    return src
-      ? `<img src="${esc(src)}" alt="${esc(player.gamertag)}">`
-      : `<div class="directory-avatar">${esc(initials(player?.gamertag))}</div>`;
+    if (src) return `<img class="directory-player-art" src="${esc(src)}" alt="${esc(player.gamertag)}">`;
+    if (team?.logo_url) return `<div class="directory-team-avatar"><img src="${esc(team.logo_url)}" alt="${esc(team.name)} logo"><span>${esc(team.abbreviation || team.name)}</span></div>`;
+    return `<div class="directory-avatar">${esc(initials(player?.gamertag))}</div>`;
   };
   const permanentMemberships = (playerId) => state.teamPlayers.filter(x => x.player_id === playerId && x.active !== false);
   const eventMemberships = (playerId) => state.eventRosters.filter(x => x.player_id === playerId && x.active !== false);
+  const playerDirectoryKey = (player) => lower(player?.gamertag || player?.display_name || "").replace(/[^a-z0-9]+/g,"");
+  const playerRichness = (player) => {
+    const pid=player?.id;
+    return (player?.platform ? 12 : 0)
+      + (player?.source_player_id ? 9 : 0)
+      + permanentMemberships(pid).length * 10
+      + eventMemberships(pid).length * 14
+      + state.stats.filter(s => s.player_id === pid).length * 4
+      + state.gamePlayerStats.filter(s => s.player_id === pid).length * 2;
+  };
+  const directoryEntries = () => {
+    const groups=new Map();
+    state.players.filter(p=>p.active!==false).forEach(p=>{
+      const key=playerDirectoryKey(p) || String(p.id);
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(p);
+    });
+    return [...groups.values()].map(group=>{
+      group.sort((a,b)=>playerRichness(b)-playerRichness(a) || String(a.gamertag||"").localeCompare(String(b.gamertag||"")));
+      const player=group[0],ids=new Set(group.map(p=>p.id));
+      const permanent=state.teamPlayers.filter(x=>ids.has(x.player_id)&&x.active!==false);
+      const events=state.eventRosters.filter(x=>ids.has(x.player_id)&&x.active!==false);
+      const liveEvents=events.filter(r=>["live","upcoming"].includes(lower(eventById(r.event_id)?.status)));
+      const membership=liveEvents[0] || permanent[0] || events[0] || null;
+      const team=membership ? teamById(membership.team_id) : null;
+      const pos=membership?.position || player.primary_position || group.find(p=>p.primary_position)?.primary_position || "TBD";
+      return {player,group,ids,permanent,events,membership,team,pos};
+    }).sort((a,b)=>String(a.player.gamertag||"").localeCompare(String(b.player.gamertag||"")));
+  };
   const rosterForTeam = (teamId, eventId = null) => eventId
     ? state.eventRosters.filter(r => r.team_id === teamId && r.event_id === eventId && r.active !== false)
     : state.teamPlayers.filter(r => r.team_id === teamId && r.active !== false);
@@ -114,7 +143,7 @@
     const eventCount = document.getElementById("networkEventCount");
     const gameCount = document.getElementById("networkGameCount");
     if (teamCount) teamCount.textContent = state.teams.filter(t => t.active !== false).length;
-    if (playerCount) playerCount.textContent = state.players.filter(p => p.active !== false).length;
+    if (playerCount) playerCount.textContent = directoryEntries().length;
     if (eventCount) eventCount.textContent = state.events.filter(e => e.active !== false).length;
     if (gameCount) gameCount.textContent = state.games.length;
 
@@ -145,10 +174,12 @@
           return;
         }
         const teamRows = state.teams.filter(t => lower(`${t.name} ${t.abbreviation}`).includes(q)).slice(0,8).map(t => ({type:"TEAM", title:t.name, meta:t.team_type === "external" ? "Tournament Team" : "Wildman", href:teamHref(t)}));
-        const playerRows = state.players.filter(p => lower(`${p.gamertag} ${p.display_name} ${p.primary_position}`).includes(q)).slice(0,12).map(p => {
-          const membership = permanentMemberships(p.id)[0] || eventMemberships(p.id)[0];
-          const team = membership ? teamById(membership.team_id) : null;
-          return {type:"PLAYER", title:p.gamertag, meta:`${p.primary_position || membership?.position || "POS TBD"}${team ? ` · ${team.name}` : ""}`, href:playerHref(p)};
+        const playerRows = directoryEntries().filter(entry => {
+          const p=entry.player;
+          return lower(`${p.gamertag} ${p.display_name} ${entry.pos} ${entry.team?.name||""}`).includes(q);
+        }).slice(0,12).map(entry => {
+          const p=entry.player,team=entry.team;
+          return {type:"PLAYER", title:p.gamertag, meta:`${entry.pos || "POS TBD"}${team ? ` · ${team.name}` : ""}`, href:playerHref(p)};
         });
         const eventRows = state.events.filter(e => lower(`${e.name} ${e.organizer} ${e.game_title}`).includes(q)).slice(0,5).map(e => ({type:"EVENT", title:e.name, meta:`${e.organizer || "Tournament"} · ${e.status}`, href:e.slug === "road-to-pro-2026" ? "pro-series.html" : "esports-hub.html"}));
         const rows = [...teamRows, ...playerRows, ...eventRows];
@@ -168,26 +199,82 @@
     const draw = () => {
       const q = lower(search?.value).trim();
       const filter = pool?.value || "all";
-      const rows = state.players.filter(player => {
-        const permanent = permanentMemberships(player.id);
-        const events = eventMemberships(player.id);
+      const rows = directoryEntries().filter(entry => {
+        const {player,permanent,events,team,pos}=entry;
         const teamIds = new Set([...permanent, ...events].map(x => x.team_id));
         const teamSlugs = [...teamIds].map(id => teamById(id)?.slug).filter(Boolean);
         const matchesPool = filter === "all" || teamSlugs.includes(filter) || (filter === "tournament" && events.length > 0);
-        const matchesText = !q || lower(`${player.gamertag} ${player.display_name} ${player.primary_position} ${teamSlugs.join(" ")}`).includes(q);
-        return player.active !== false && matchesPool && matchesText;
+        const matchesText = !q || lower(`${player.gamertag} ${player.display_name} ${pos} ${team?.name||""} ${teamSlugs.join(" ")}`).includes(q);
+        return matchesPool && matchesText;
       });
       if (count) count.textContent = `${rows.length} PLAYER${rows.length === 1 ? "" : "S"}`;
-      grid.innerHTML = rows.length ? rows.map(player => {
-        const membership = permanentMemberships(player.id)[0] || eventMemberships(player.id)[0];
-        const team = membership ? teamById(membership.team_id) : null;
-        const pos = player.primary_position || membership?.position || "TBD";
-        return `<a class="directory-card" href="${esc(playerHref(player))}">${playerVisual(player)}<div class="directory-card-body"><small>${esc(team?.name || "Esports Player")}</small><h3>${esc(player.gamertag)}</h3><div class="directory-meta"><span class="directory-pill">POS ${esc(pos)}</span><span class="directory-pill">${esc(player.platform || "Platform TBD")}</span>${eventMemberships(player.id).length ? `<span class="directory-pill">Tournament</span>` : ""}</div><p>${team ? `${esc(team.name)} player profile and event stats hub.` : "Player profile ready for roster and tournament data."}</p><b class="ops-link">Open Profile →</b></div></a>`;
+      grid.innerHTML = rows.length ? rows.map(entry => {
+        const {player,team,pos,events}=entry;
+        return `<a class="directory-card directory-card-logo" href="${esc(playerHref(player))}">
+          <div class="directory-visual">${playerVisual(player,team)}</div>
+          <div class="directory-card-body">
+            <small>${esc(team?.name || "Esports Player")}</small>
+            <h3>${esc(player.gamertag)}</h3>
+            <div class="directory-meta">
+              <span class="directory-pill">POS ${esc(pos)}</span>
+              <span class="directory-pill">${esc(player.platform || "Platform TBD")}</span>
+              ${events.length ? `<span class="directory-pill">Tournament</span>` : ""}
+            </div>
+            <p>${team ? `${esc(team.name)} player profile and event stats hub.` : "Player profile ready for roster and tournament data."}</p>
+            <b class="ops-link">Open Profile →</b>
+          </div>
+        </a>`;
       }).join("") : `<div class="empty-state">No players match this search yet.</div>`;
     };
     if (search) search.oninput = draw;
     if (pool) pool.onchange = draw;
     draw();
+  }
+
+  function renderWildmanTeamHome() {
+    const cards=document.getElementById("wildmanActiveRosterCards");
+    const table=document.getElementById("wildmanActiveRosterRows");
+    const count=document.getElementById("wildmanActiveRosterCount");
+    if(!cards && !table) return;
+    const team=state.teams.find(t=>t.slug==="wildman-hockey");
+    if(!team) return;
+    const eventRows=state.eventRosters.filter(r=>r.team_id===team.id&&r.active!==false);
+    const eventIds=[...new Set(eventRows.map(r=>r.event_id))];
+    const current=eventIds.map(id=>eventById(id)).filter(Boolean).sort((a,b)=>{
+      const statusScore=s=>lower(s)==="live"?3:lower(s)==="upcoming"?2:1;
+      return statusScore(b.status)-statusScore(a.status) || new Date(b.starts_on||0)-new Date(a.starts_on||0);
+    })[0];
+    const roster=current?rosterForTeam(team.id,current.id):rosterForTeam(team.id);
+    const seen=new Set();
+    const unique=roster.filter(r=>{
+      const p=playerById(r.player_id);
+      const k=playerDirectoryKey(p)||r.player_id;
+      if(seen.has(k))return false;seen.add(k);return true;
+    }).sort((a,b)=>{
+      const order={LW:1,C:2,RW:3,LD:4,RD:5,G:6,UTL:7};
+      return (order[a.position]||99)-(order[b.position]||99) || String(playerById(a.player_id)?.gamertag||"").localeCompare(String(playerById(b.player_id)?.gamertag||""));
+    });
+    if(count) count.textContent=`${unique.length} ACTIVE`;
+    if(cards) cards.innerHTML=unique.map(r=>{
+      const p=playerById(r.player_id); if(!p)return "";
+      const image=coreImages[lower(p.gamertag)];
+      const visual=image
+        ? `<img src="${esc(image)}" alt="${esc(p.gamertag)}">`
+        : `<div class="wm-roster-logo-wrap">${teamMark(team)}</div>`;
+      return `<a class="wm-player-card wm-live-roster-card" href="${esc(playerHref(p))}">
+        ${visual}
+        <div class="wm-player-meta">
+          <small>${esc(roleLabel(r.roster_role)||String(r.roster_role||"Player").toUpperCase())} · ${esc(r.position||p.primary_position||"TBD")}</small>
+          <h3>${esc(p.gamertag)}</h3>
+          <p>${esc(current?.name||"Wildman Hockey")} · active competitive roster.</p>
+          <span class="wm-captain-badge">Open Player Profile →</span>
+        </div>
+      </a>`;
+    }).join("");
+    if(table) table.innerHTML=unique.map(r=>{
+      const p=playerById(r.player_id);if(!p)return "";
+      return `<tr><td><span class="network-team-inline">${teamMini(team)}<a href="${esc(playerHref(p))}">${esc(p.gamertag)}</a></span></td><td>${esc(r.position||p.primary_position||"TBD")}</td><td>${esc(roleLabel(r.roster_role)||String(r.roster_role||"Player").toUpperCase())}</td><td><a href="${esc(playerHref(p))}">OPEN →</a></td></tr>`;
+    }).join("");
   }
 
   function renderProSeries() {
@@ -546,6 +633,7 @@
     state.teamStats = (teamStats.data || []).filter(s => !privateTeamIds.has(s.team_id));
     renderNetworkHub();
     renderPlayerDirectory();
+    renderWildmanTeamHome();
     renderProSeries();
     renderGameCenter();
     renderTeamDetail();
