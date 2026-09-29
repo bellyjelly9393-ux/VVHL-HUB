@@ -210,15 +210,18 @@ def retrieve(job_id):
         minutes, secs = divmod(remainder, 60)
         return f'{hours}:{minutes:02d}:{secs:02d}' if hours else f'{minutes}:{secs:02d}'
 
-    def launch_ytdlp(use_auth=False):
+    def launch_ytdlp(use_auth=False, impersonate=False):
         for item in folder.glob('ytdlp.*'):
-            item.unlink(missing_ok=True)
+            if item.name != 'ytdlp-error.log':
+                item.unlink(missing_ok=True)
         args = [
             'yt-dlp', '--no-playlist', '--no-part', '--retries', '2',
             '--fragment-retries', '2', '--socket-timeout', '20',
             '-f', 'best[height<=480]/worst',
             '-o', str(folder / 'ytdlp.%(ext)s')
         ]
+        if impersonate:
+            args.extend(['--impersonate', 'chrome'])
         if end is not None:
             args.extend(['--download-sections', f'*{clock_value(start)}-{clock_value(end)}'])
         elif start:
@@ -244,7 +247,8 @@ def retrieve(job_id):
                 raise worker.Problem(504, 'Alternate Twitch retrieval timed out.')
 
     def finish_ytdlp():
-        candidates = [p for p in folder.glob('ytdlp.*') if p.is_file() and not p.name.endswith('.part')]
+        candidates = [p for p in folder.glob('ytdlp.*')
+                      if p.is_file() and not p.name.endswith('.part') and p.name != 'ytdlp-error.log']
         if not candidates:
             return False
         candidate = max(candidates, key=lambda p: p.stat().st_size)
@@ -290,15 +294,19 @@ def retrieve(job_id):
             # Streamlink can be rejected by Twitch even for a VOD that is playable in a
             # normal browser. Use yt-dlp as a second independent Twitch resolver and
             # keep the same saved game-window cut so the full broadcast is never pulled.
-            ytdlp = launch_ytdlp(False)
+            ytdlp = launch_ytdlp(False, False)
             wait_for_ytdlp(ytdlp)
             ytdlp_ok = ytdlp.returncode == 0 and finish_ytdlp()
+            if not ytdlp_ok:
+                ytdlp = launch_ytdlp(False, True)
+                wait_for_ytdlp(ytdlp)
+                ytdlp_ok = ytdlp.returncode == 0 and finish_ytdlp()
             if not ytdlp_ok and twitch_token:
-                ytdlp = launch_ytdlp(True)
+                ytdlp = launch_ytdlp(True, True)
                 wait_for_ytdlp(ytdlp)
                 ytdlp_ok = ytdlp.returncode == 0 and finish_ytdlp()
             if not ytdlp_ok:
-                raise worker.Problem(422, 'Twitch blocked both Streamlink and the alternate Twitch VOD retriever. The MP4/MOV control remains only a last-resort fallback.')
+                raise worker.Problem(422, 'Twitch blocked Streamlink and all yt-dlp replay fallbacks. Retrieval diagnostics were kept on the private worker volume for troubleshooting.')
         worker.update(job_id, 'queued')
     except Exception:
         (folder / 'source.mp4').unlink(missing_ok=True)
@@ -312,8 +320,11 @@ def retrieve(job_id):
                 proc.kill()
                 proc.wait()
         source.unlink(missing_ok=True)
-        diagnostic.unlink(missing_ok=True)
+        success = (folder / 'source.mp4').exists()
+        if success:
+            diagnostic.unlink(missing_ok=True)
+            (folder / 'ytdlp-error.log').unlink(missing_ok=True)
         (folder / 'twitch-cookies.txt').unlink(missing_ok=True)
-        (folder / 'ytdlp-error.log').unlink(missing_ok=True)
         for item in folder.glob('ytdlp.*'):
-            item.unlink(missing_ok=True)
+            if item.name != 'ytdlp-error.log' or success:
+                item.unlink(missing_ok=True)
