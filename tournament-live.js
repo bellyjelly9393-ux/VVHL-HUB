@@ -168,7 +168,11 @@
     if(eFilter&&eFilter.options.length<=1){S.events.forEach(e=>eFilter.insertAdjacentHTML('beforeend',`<option value="${e.id}">${esc(e.name)}</option>`));}
     const draw=()=>{
       const eid=eFilter?.value||'all',st=sFilter?.value||'all';
-      const rows=S.games.filter(g=>(eid==='all'||g.event_id===eid)&&(st==='all'||g.status===st)).sort((a,b)=>(statusRank[a.status]??9)-(statusRank[b.status]??9)||new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));
+      const road=roadEvent(),roadHasPlayoffs=road&&S.games.some(g=>g.event_id===road.id&&g.stage==='Playoffs');
+      const rows=S.games
+        .filter(g=>!(roadHasPlayoffs&&g.event_id===road.id&&g.stage!=='Playoffs'))
+        .filter(g=>(eid==='all'||g.event_id===eid)&&(st==='all'||g.status===st))
+        .sort((a,b)=>(statusRank[a.status]??9)-(statusRank[b.status]??9)||new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));
       root.innerHTML=rows.length?rows.map(gameCard).join(''):'<div class="empty-state">No games match this view yet.</div>';
     };
     if(eFilter&&!eFilter.dataset.liveBound){eFilter.dataset.liveBound='1';eFilter.addEventListener('change',draw);} if(sFilter&&!sFilter.dataset.liveBound){sFilter.dataset.liveBound='1';sFilter.addEventListener('change',draw);} draw();
