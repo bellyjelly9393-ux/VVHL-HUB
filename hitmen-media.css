@@ -1,0 +1,42 @@
+:root{--hm-pink:#f12670;--hm-pink-soft:#ff77a7;--hm-red:#a80f43;--hm-bg:#050506;--hm-line:rgba(241,38,112,.24)}
+body.hitmen-media-page{
+  background:
+    radial-gradient(circle at 82% 10%,rgba(241,38,112,.13),transparent 27%),
+    radial-gradient(circle at 13% 8%,rgba(160,18,62,.09),transparent 25%),
+    linear-gradient(180deg,#040304 0%,#080609 48%,#020203 100%)!important;
+}
+.hitmen-media-page .eyebrow{color:#ff6c9f!important}
+.hitmen-media-page .status-pill{border-color:rgba(241,38,112,.35)!important;background:rgba(241,38,112,.08)!important;color:#ff9abd!important}
+.hm-hero{
+  position:relative;min-height:610px;margin-top:18px;overflow:hidden;border:1px solid var(--hm-line);border-radius:26px;
+  background:
+    linear-gradient(90deg,rgba(3,3,4,.99) 0%,rgba(8,5,7,.95) 34%,rgba(7,5,7,.58) 62%,rgba(3,3,4,.18) 100%),
+    url("hitmen-stall-empty.webp") center 45%/cover no-repeat;
+  box-shadow:0 32px 90px rgba(0,0,0,.58),0 0 42px rgba(241,38,112,.07)
+}
+.hm-hero-shade{position:absolute;inset:0;background:radial-gradient(circle at 77% 45%,rgba(241,38,112,.13),transparent 28%),linear-gradient(180deg,transparent 62%,rgba(0,0,0,.38))}
+.hm-hero-copy{position:relative;z-index:2;width:min(650px,62%);min-height:610px;display:flex;flex-direction:column;justify-content:center;padding:56px clamp(24px,5vw,70px)}
+.hm-crest{width:105px;height:94px;margin-bottom:20px;display:grid;place-items:center;clip-path:polygon(12% 0,88% 0,100% 20%,88% 100%,12% 100%,0 20%);background:linear-gradient(145deg,#3b0e20,#0b090b 68%);border:1px solid rgba(241,38,112,.45);filter:drop-shadow(0 13px 22px rgba(0,0,0,.55))}
+.hm-crest span{font:900 56px/1 "Barlow Condensed",sans-serif;color:#f5edf0;text-shadow:0 3px #9d113f}
+.hm-hero h1{margin:8px 0 20px;font:900 clamp(70px,9vw,126px)/.78 "Barlow Condensed",sans-serif;letter-spacing:-.035em;text-transform:uppercase}
+.hm-hero h1 span{color:#ff3d81}
+.hm-hero-copy>p{max-width:590px;color:#c0b5b9;line-height:1.68;font-size:15px}
+.hm-hero-badge{position:absolute;z-index:3;right:38px;bottom:34px;min-width:210px;padding:18px;border:1px solid rgba(241,38,112,.26);border-radius:14px;background:rgba(5,5,7,.83);backdrop-filter:blur(9px);text-align:right}
+.hm-hero-badge small{display:block;color:#9c8990;font-size:8px;font-weight:900;letter-spacing:.14em}
+.hm-hero-badge strong{display:block;margin:3px 0;font:900 43px/1 "Barlow Condensed",sans-serif;color:#ff4c8b}
+.hm-hero-badge span{color:#d2c8cb;font-size:9px;font-weight:800}
+.hitmen-media-page .small-btn{border-color:rgba(241,38,112,.4)!important;background:linear-gradient(180deg,rgba(241,38,112,.09),rgba(28,6,14,.18))!important;color:#ffc0d6!important}
+.hitmen-media-page .small-btn.hm-primary{background:linear-gradient(180deg,#ef3a7a,#a60e42)!important;color:#fff!important;border-color:#f85b91!important}
+.hm-media-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:15px}
+.hm-feature,.hm-stack>a,.hm-scope-card{border:1px solid var(--hm-line);border-radius:18px;color:inherit;text-decoration:none;background:linear-gradient(145deg,#111014,#070708)}
+.hm-feature{min-height:360px;padding:30px;display:flex;flex-direction:column;justify-content:end;background:linear-gradient(0deg,rgba(3,3,4,.98),rgba(3,3,4,.28)),radial-gradient(circle at 72% 24%,rgba(241,38,112,.2),transparent 38%),url("hitmen-stall-front.webp") center/cover no-repeat}
+.hm-feature h3{margin:9px 0;font:900 clamp(40px,5vw,72px)/.86 "Barlow Condensed",sans-serif;text-transform:uppercase}
+.hm-feature p{max-width:650px;color:#b6aaae}.hm-feature b{margin-top:9px;color:#ff6d9f}
+.hm-stack{display:grid;gap:12px}.hm-stack>a{padding:20px;display:flex;flex-direction:column;justify-content:center;min-height:106px}
+.hm-stack small,.hm-scope-card small{color:#ee558b;font-size:9px;font-weight:900;letter-spacing:.11em}.hm-stack h3{margin:6px 0;font-size:20px}.hm-stack p{margin:0;color:#93888b;font-size:11px;line-height:1.5}
+.hm-scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.hm-scope-card{padding:26px;min-height:220px}.hm-scope-card.is-hitmen{background:radial-gradient(circle at 90% 10%,rgba(241,38,112,.15),transparent 38%),linear-gradient(145deg,#151015,#080709)}
+.hm-scope-card h3{margin:8px 0 12px;font:900 32px/1 "Barlow Condensed",sans-serif}.hm-scope-card p{color:#a79ca0;line-height:1.6}.hm-scope-card a{color:#ff77a7;font-weight:900;text-decoration:none;font-size:10px}
+.hm-pipeline{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}.hm-pipeline>div{padding:18px 10px;border:1px solid rgba(241,38,112,.18);border-radius:13px;background:linear-gradient(145deg,rgba(241,38,112,.055),rgba(255,255,255,.012));text-align:center;color:#eadde1;font-size:9px;font-weight:900;letter-spacing:.06em}
+.hm-pipeline-note{margin:15px 0 0;color:#897d81;font-size:10px}.hm-switch{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:30px!important;border:1px solid rgba(241,38,112,.18);border-radius:20px;background:linear-gradient(120deg,rgba(241,38,112,.05),rgba(70,150,210,.035)),#08080a}.hm-switch h2{margin:4px 0;font:900 clamp(35px,5vw,58px)/.9 "Barlow Condensed",sans-serif}.hm-switch p{max-width:700px;color:#93898c}
+@media(max-width:900px){.hm-hero{min-height:560px}.hm-hero-copy{width:76%;min-height:560px}.hm-media-grid,.hm-scope-grid{grid-template-columns:1fr}.hm-pipeline{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:680px){.hm-hero{min-height:600px;border-radius:18px;background-position:58% 45%}.hm-hero-copy{width:100%;min-height:600px;padding:36px 20px;background:linear-gradient(90deg,rgba(3,3,4,.96),rgba(3,3,4,.72) 65%,rgba(3,3,4,.28))}.hm-crest{width:78px;height:70px}.hm-crest span{font-size:42px}.hm-hero h1{font-size:clamp(62px,19vw,92px)}.hm-hero-badge{right:16px;bottom:15px;min-width:160px;padding:12px}.hm-hero-badge strong{font-size:32px}.hm-pipeline{grid-template-columns:repeat(2,1fr)}.hm-switch{align-items:flex-start;flex-direction:column;padding:22px!important}}
