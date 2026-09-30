@@ -1,5 +1,6 @@
 """Single-instance, persistent video review worker. Python stdlib + FFmpeg only."""
 import base64
+import hmac
 import json
 import math
 import os
@@ -23,6 +24,7 @@ MAX_STORAGE = int(os.getenv('MAX_STORAGE_MB', '1800')) * 1024**2
 STORAGE_HEADROOM = int(os.getenv('STORAGE_HEADROOM_MB', '64')) * 1024**2
 MAX_ACTIVE_JOBS = max(1, int(os.getenv('MAX_ACTIVE_JOBS', '8')))
 AUTO_RELEASE_TWITCH_MEDIA = os.getenv('AUTO_RELEASE_TWITCH_MEDIA', '1').strip().lower() not in ('0', 'false', 'no', 'off')
+REPLAY_ADMIN_TOKEN = os.getenv('REPLAY_ADMIN_TOKEN', '').strip()
 RETENTION = int(os.getenv('MEDIA_RETENTION_HOURS', '24')) * 3600
 ORIGINS = {x.strip() for x in os.getenv('ALLOWED_ORIGINS', '').split(',') if x.strip()}
 ORIGINS.update({
@@ -953,6 +955,61 @@ class Handler(BaseHTTPRequestHandler):
                                     'maxActiveJobs': MAX_ACTIVE_JOBS,
                                     'autoReleaseTwitchMedia': AUTO_RELEASE_TWITCH_MEDIA,
                                     'storage': storage_status()})
+        if path == '/internal/replay-test':
+            if self.command != 'POST':
+                raise Problem(405, 'Method not allowed')
+            supplied = self.headers.get('X-Replay-Admin', '')
+            if not REPLAY_ADMIN_TOKEN or not hmac.compare_digest(supplied, REPLAY_ADMIN_TOKEN):
+                raise Problem(404, 'Not found')
+            from replay import replay_url
+            data = self.body()
+            try:
+                owner = str(UUID(str(data.get('owner') or '')))
+                review_id = str(UUID(str(data.get('review_id') or '')))
+                start = float(data.get('source_start_seconds'))
+                end = float(data.get('source_end_seconds'))
+            except (TypeError, ValueError):
+                raise Problem(400, 'Invalid replay-test identifiers or window.')
+            if not 0 <= start < end <= 86400:
+                raise Problem(400, 'Invalid replay-test window.')
+            url = replay_url(data.get('vod_url'))
+            title = str(data.get('title') or 'Replay test')[:200]
+            game_format = str(data.get('game_format') or '6s')[:20]
+            players = str(data.get('players') or '')[:2000]
+            metadata = {
+                'review_id': review_id, 'game_id': review_id, 'title': title,
+                'vod_url': url, 'players': players, 'game_format': game_format,
+                'vod_offset_seconds': start, 'source_start_seconds': start,
+                'source_end_seconds': end, 'periods': [], 'source_kind': 'twitch_replay'
+            }
+            with WRITE_LOCK, connect() as db:
+                rows = db.execute('SELECT id,metadata FROM jobs WHERE owner=? ORDER BY created DESC', (owner,)).fetchall()
+                existing_id = None
+                for row in rows:
+                    try:
+                        old = json.loads(row['metadata'])
+                    except (TypeError, ValueError):
+                        continue
+                    if old.get('review_id') == review_id or old.get('game_id') == review_id:
+                        existing_id = row['id']
+                        break
+                if existing_id:
+                    source = ROOT / existing_id / 'source.mp4'
+                    db.execute(
+                        'UPDATE jobs SET metadata=?,status=?,error=? WHERE id=?',
+                        (json.dumps(metadata), 'queued' if source.exists() else 'retrieving', '', existing_id)
+                    )
+                    job_id = existing_id
+                else:
+                    active = db.execute("SELECT count(*) FROM jobs WHERE status IN ('retrieving','awaiting_upload','uploading','queued','processing','awaiting_ai')").fetchone()[0]
+                    if active >= MAX_ACTIVE_JOBS:
+                        raise Problem(429, f'Video queue is full ({MAX_ACTIVE_JOBS} active jobs).', 'queue_full')
+                    job_id = str(uuid4())
+                    db.execute(
+                        'INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',
+                        (job_id, owner, time.time(), 'retrieving', json.dumps(metadata), '{}', '')
+                    )
+            return self.reply(202, {'job': get_job(job_id), 'storage': storage_status()})
         origin = self.headers.get('Origin')
         if origin and not origin_allowed(origin):
             raise Problem(403, 'Origin not allowed')

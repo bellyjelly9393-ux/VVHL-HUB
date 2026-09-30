@@ -25,6 +25,7 @@ class Handler(worker.Handler):
                 'maxUploadBytes': worker.MAX_UPLOAD,
                 'maxActiveJobs': worker.MAX_ACTIVE_JOBS,
                 'autoReleaseTwitchMedia': worker.AUTO_RELEASE_TWITCH_MEDIA,
+                'replayAdminEnabled': bool(worker.REPLAY_ADMIN_TOKEN),
                 'storage': worker.storage_status(),
                 'liveIngestion': live_pipeline.configured(),
                 'liveProvider': 'twitch' if live_pipeline.configured() else None,
