@@ -3,6 +3,7 @@ import json
 import os
 import re
 import subprocess
+import threading
 import time
 import urllib.error
 from urllib.parse import urlsplit
@@ -86,6 +87,35 @@ def seed_replay_test_batch():
     for item in queued:
         print(f"Replay test seed {item['status']}: {item['review_id']} -> {item['job_id']}", flush=True)
     return queued
+
+
+def start_seed_status_monitor(seeded):
+    job_ids = [item.get('job_id') for item in (seeded or []) if item.get('job_id')]
+    if not job_ids:
+        return
+    terminal = {'ready_for_review', 'failed', 'expired', 'awaiting_ai', 'needs_periods'}
+    def monitor():
+        previous = {}
+        deadline = time.time() + 1800
+        while not worker.STOP.is_set() and time.time() < deadline:
+            all_terminal = True
+            for job_id in job_ids:
+                try:
+                    job = worker.get_job(job_id)
+                except worker.Problem:
+                    continue
+                state = (job.get('status'), job.get('error', ''))
+                if previous.get(job_id) != state:
+                    safe_error = str(job.get('error') or '').replace('\n', ' ')[:400]
+                    failure_code = str((job.get('result') or {}).get('failure_code') or '')
+                    print(f"Replay test status: {job_id} status={job.get('status')} code={failure_code} error={safe_error}", flush=True)
+                    previous[job_id] = state
+                if job.get('status') not in terminal:
+                    all_terminal = False
+            if all_terminal:
+                return
+            worker.STOP.wait(5)
+    threading.Thread(target=monitor, daemon=True, name='replay-test-status').start()
 
 def twitch_auth_configured():
     try:
