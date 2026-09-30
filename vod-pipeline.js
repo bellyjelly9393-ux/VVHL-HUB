@@ -329,7 +329,8 @@
 
   async function importDetectedPeriods(reviewId,job){
     const periods=job?.result?.detected_periods||[];
-    if(job?.result?.period_detection!=='auto'||periods.length<3)return false;
+    const automaticModes=new Set(['auto','live_scoreboard','replay_scoreboard']);
+    if(!automaticModes.has(job?.result?.period_detection)||periods.length<3)return false;
     const {data:existing,error:existingError}=await db().from('vod_review_segments').select('id').eq('review_id',reviewId).limit(1);
     if(existingError)throw existingError;
     if(existing?.length)return false;
@@ -379,7 +380,13 @@
         }
       }
       else if(job.status==='queued'&&/rate limit|cooling down/i.test(job.error||''))setStatus(job.error,'warn');
-      else setStatus(`Pipeline: ${String(job.status).replaceAll('_',' ')}${job.result?.total_chunks?` · ${job.result.chunks?.length||0}/${job.result.total_chunks} chunks`:''}`,'good');
+      else {
+        const stageLabels={watching_game_clock:'Watching game clock / period',analyzing_period_slice:'Analyzing current period slice',checking_period_sequences:'Reviewing key sequences',retrieving_next_period_slice:'Retrieving next period slice',writing_report:'Building full-game report',preparing_video:'Preparing video',analyzing_video:'Analyzing video',checking_sequences:'Reviewing key sequences'};
+        const stage=stageLabels[job.result?.stage]||String(job.status).replaceAll('_',' ');
+        const slice=job.result?.stream_unit_count?` · slice ${Number(job.result.stream_unit_index||0)+1}/${job.result.stream_unit_count}`:'';
+        const chunks=job.result?.total_chunks?` · ${job.result.chunks?.length||0}/${job.result.total_chunks} chunks`:'';
+        setStatus(`Pipeline: ${stage}${slice}${chunks}`,'good');
+      }
       if(done){clearInterval(pollTimer);pollTimer=null;}
       if(loud&&job.status==='ready_for_review')document.getElementById('refreshVod')?.click();
     }catch(e){setStatus(e.message||'Could not reach video worker. Retrying…','bad');}
