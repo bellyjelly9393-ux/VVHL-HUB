@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="wildman.css">
   <link rel="stylesheet" href="management.css">
   <link rel="stylesheet" href="network-v2.css">
-  <link rel="stylesheet" href="obs-control.css?v=20260929a">
+  <link rel="stylesheet" href="obs-control.css?v=20260930b">
 </head>
 <body class="wildman-site management-protected obs-control-page">
 <header class="site-header">
@@ -60,6 +60,28 @@
           <div class="obs-field-grid two">
             <label>Team / Brand<select id="obsTeamSelect" class="select-field"></select></label>
             <label>Event<input id="obsEvent" class="field" placeholder="LGCHL Season 55"></label>
+          </div>
+
+          <div class="obs-feed-editor">
+            <div class="eyebrow">LIVE STREAM FEED</div>
+            <h3>Attach the gameplay source</h3>
+            <p>Paste the Twitch or YouTube link from the player whose feed you are using. The combined OBS Stage puts this feed underneath the Hitmen/Wildman graphics.</p>
+            <div class="obs-field-grid two">
+              <label>Stream URL<input id="obsStreamUrl" class="field" type="url" placeholder="https://www.twitch.tv/channel"></label>
+              <label>Provider<select id="obsStreamProvider" class="select-field">
+                <option value="auto">Auto detect</option>
+                <option value="twitch">Twitch</option>
+                <option value="youtube">YouTube</option>
+                <option value="video">Direct MP4</option>
+              </select></label>
+            </div>
+            <label class="obs-audio-toggle"><input id="obsStreamMuted" type="checkbox"> Mute stream audio on the OBS Stage</label>
+            <div class="obs-actions">
+              <button id="attachStreamFeed" class="small-btn primary" type="button">Attach / Update Feed</button>
+              <button id="clearStreamFeed" class="small-btn" type="button">Clear Feed</button>
+              <a id="openCombinedStage" class="small-btn" href="#" target="_blank" rel="noopener">Open Combined Stage</a>
+            </div>
+            <span id="streamFeedStatus" class="obs-feed-status">No feed attached yet.</span>
           </div>
 
           <div class="obs-scene-strip" id="obsSceneStrip">
@@ -122,9 +144,9 @@
             <span class="status-pill">16:9 · 1920×1080</span>
           </div>
           <div class="obs-preview-frame">
-            <iframe id="obsPreview" title="OBS overlay preview" src="obs-overlay.html?channel=wildman-main&preview=1"></iframe>
+            <iframe id="obsPreview" title="OBS combined stage preview" src="obs-stage.html?channel=wildman-main&preview=1"></iframe>
           </div>
-          <p class="obs-preview-note">The checkerboard is preview-only. In OBS the unused parts of the page are transparent.</p>
+          <p class="obs-preview-note">This is the combined stage: attached gameplay feed underneath, broadcast graphics above it. Preview audio is muted here to prevent echo.</p>
         </article>
       </div>
     </section>
@@ -133,13 +155,21 @@
       <article class="obs-source-card">
         <div>
           <div class="eyebrow">3 · OBS BROWSER SOURCE</div>
-          <h2>Permanent Source URL</h2>
-          <p>Add this once in OBS at <b>1920 × 1080</b>. Leave it in the scene collection and run the graphics from this control room.</p>
+          <h2>Combined Broadcast Stage</h2>
+          <p>Add this once in OBS at <b>1920 × 1080</b>. It carries the attached stream and your live broadcast graphics together.</p>
         </div>
         <div class="obs-source-row">
           <input id="obsSourceUrl" class="field" readonly>
           <button id="copyObsUrl" class="small-btn primary" type="button">Copy URL</button>
-          <a id="openObsUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Overlay</a>
+          <a id="openObsUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Stage</a>
+        </div>
+        <div class="obs-overlay-only">
+          <small>OVERLAY ONLY</small>
+          <div class="obs-source-row">
+            <input id="obsOverlayOnlyUrl" class="field" readonly>
+            <button id="copyOverlayUrl" class="small-btn" type="button">Copy Overlay URL</button>
+            <a id="openOverlayUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Overlay</a>
+          </div>
         </div>
         <div class="obs-setup-grid">
           <div><small>OBS SOURCE</small><strong>Browser</strong><span>Paste the permanent URL.</span></div>
@@ -158,6 +188,6 @@
 <script src="backend.js"></script>
 <script src="management-guard.js"></script>
 <script src="script.js"></script>
-<script src="obs-control.js?v=20260929a"></script>
+<script src="obs-control.js?v=20260930b"></script>
 </body>
 </html>

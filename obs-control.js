@@ -20,13 +20,33 @@
     if(pill){pill.textContent=message;pill.style.color=isError?'#ff8a9b':'';}
   }
   function config(){return TEAM_CONFIG[currentTeamId]||TEAM_CONFIG['5f36117c-7a51-4514-bf70-d4c672b41e48'];}
-  function sourceUrl(){return PRODUCTION_ORIGIN+'/obs-overlay.html?channel='+encodeURIComponent(config().channel);}
+  function stageUrl(){return PRODUCTION_ORIGIN+'/obs-stage.html?channel='+encodeURIComponent(config().channel);}
+  function overlayUrl(){return PRODUCTION_ORIGIN+'/obs-overlay.html?channel='+encodeURIComponent(config().channel);}
+  function providerFor(url,provided){
+    var p=String(provided||'').toLowerCase();
+    if(p&&p!=='auto')return p;
+    var raw=String(url||'').toLowerCase();
+    if(raw.includes('twitch.tv'))return 'twitch';
+    if(raw.includes('youtube.com')||raw.includes('youtu.be'))return 'youtube';
+    if(/\.mp4(?:$|\?)/i.test(raw))return 'video';
+    return 'external';
+  }
+  function feedSummary(){
+    var url=val('obsStreamUrl');
+    var status=byId('streamFeedStatus');
+    if(!status)return;
+    if(!url){status.textContent='No feed attached yet.';return;}
+    status.textContent='Attached · '+providerFor(url,val('obsStreamProvider')).toUpperCase()+(byId('obsStreamMuted')?.checked?' · MUTED':' · AUDIO ON');
+  }
   function updateSourceLinks(){
-    var url=sourceUrl();
-    byId('obsSourceUrl').value=url;
-    byId('openObsUrl').href=url;
+    var stage=stageUrl(),overlay=overlayUrl();
+    byId('obsSourceUrl').value=stage;
+    byId('openObsUrl').href=stage;
+    byId('obsOverlayOnlyUrl').value=overlay;
+    byId('openOverlayUrl').href=overlay;
+    byId('openCombinedStage').href=stage;
     byId('heroChannel').textContent=config().channel.toUpperCase();
-    byId('obsPreview').src='obs-overlay.html?channel='+encodeURIComponent(config().channel)+'&preview=1&t='+Date.now();
+    byId('obsPreview').src='obs-stage.html?channel='+encodeURIComponent(config().channel)+'&preview=1&t='+Date.now();
   }
   function allowedTeamIds(state){
     var role=String(state.profile?.role||'').toLowerCase();
@@ -71,11 +91,17 @@
     byId('obsPlayerName').value=p.playerName||'PLAYER';
     byId('obsPlayerNumber').value=p.playerNumber||'00';
     byId('obsPlayerRole').value=p.playerRole||'PLAYER';
+    byId('obsStreamUrl').value=p.streamUrl||'';
+    byId('obsStreamProvider').value=['auto','twitch','youtube','video'].includes(String(p.streamProvider||'auto'))?String(p.streamProvider||'auto'):'auto';
+    byId('obsStreamMuted').checked=p.streamMuted===true;
     updateScoreDisplay();
     setSceneButtons();
+    feedSummary();
     byId('stateUpdated').textContent=row.updated_at?'SYNCED':'READY';
   }
   function collectPayload(){
+    var streamUrl=val('obsStreamUrl');
+    var selectedProvider=val('obsStreamProvider')||'auto';
     return {
       event:val('obsEvent'),
       homeName:val('obsHomeName')||config().name,
@@ -88,7 +114,10 @@
       message:val('obsMessage'),
       playerName:val('obsPlayerName')||'PLAYER',
       playerNumber:val('obsPlayerNumber')||'00',
-      playerRole:val('obsPlayerRole')||'PLAYER'
+      playerRole:val('obsPlayerRole')||'PLAYER',
+      streamUrl:streamUrl,
+      streamProvider:selectedProvider==='auto'?providerFor(streamUrl,'auto'):selectedProvider,
+      streamMuted:Boolean(byId('obsStreamMuted')?.checked)
     };
   }
   async function loadState(){
@@ -120,6 +149,10 @@
     setStatus('LIVE');
     setTimeout(function(){if(byId('publishStatus')?.textContent==='LIVE') setStatus('READY');},1200);
   }
+  async function copyText(inputId,value){
+    try{await navigator.clipboard.writeText(value);setStatus('URL COPIED');}
+    catch(err){var input=byId(inputId);input.select();document.execCommand('copy');setStatus('URL COPIED');}
+  }
   function wire(){
     byId('obsTeamSelect').addEventListener('change',async function(e){
       currentTeamId=e.target.value;
@@ -139,13 +172,21 @@
         await publish();
       });
     });
+    byId('obsStreamUrl').addEventListener('input',feedSummary);
+    byId('obsStreamProvider').addEventListener('change',feedSummary);
+    byId('obsStreamMuted').addEventListener('change',feedSummary);
+    byId('attachStreamFeed').addEventListener('click',function(){publish();});
+    byId('clearStreamFeed').addEventListener('click',async function(){
+      byId('obsStreamUrl').value='';
+      byId('obsStreamProvider').value='auto';
+      byId('obsStreamMuted').checked=false;
+      feedSummary();
+      await publish();
+    });
     byId('publishObsState').addEventListener('click',function(){publish();});
     byId('reloadObsState').addEventListener('click',loadState);
-    byId('copyObsUrl').addEventListener('click',async function(){
-      var url=sourceUrl();
-      try{await navigator.clipboard.writeText(url);setStatus('URL COPIED');}
-      catch(err){byId('obsSourceUrl').select();document.execCommand('copy');setStatus('URL COPIED');}
-    });
+    byId('copyObsUrl').addEventListener('click',function(){copyText('obsSourceUrl',stageUrl());});
+    byId('copyOverlayUrl').addEventListener('click',function(){copyText('obsOverlayOnlyUrl',overlayUrl());});
   }
   async function init(state){
     stateRef=state||window.VVHLBackend?.state||{};
