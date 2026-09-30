@@ -48,7 +48,12 @@
     const headers={...(options.headers||{}),Authorization:`Bearer ${t}`};
     const res=await fetch(WORKER+path,{...options,headers});
     let body={}; try{body=await res.json();}catch{}
-    if(!res.ok)throw new Error(body.error||`Video worker returned HTTP ${res.status}`);
+    if(!res.ok){
+      const error=new Error(body.error||`Video worker returned HTTP ${res.status}`);
+      error.code=body.code||"";
+      error.httpStatus=res.status;
+      throw error;
+    }
     return body;
   }
 
@@ -188,6 +193,46 @@
     finally{busy=false;button.disabled=false;}
   }
 
+  async function queueBatchReviews(reviewIds){
+    const ids=[...new Set((reviewIds||[]).filter(Boolean))].slice(0,8);
+    if(!ids.length)return;
+    const status=document.getElementById('batchVodStatus');
+    let queued=0,failed=0;
+    try{
+      const healthResponse=await fetch(WORKER+'/health',{cache:'no-store'});
+      const health=healthResponse.ok?await healthResponse.json():null;
+      if(status&&health?.storage){
+        const free=Math.max(0,Math.floor(Number(health.storage.usableBytes||0)/1024/1024));
+        status.textContent=`Worker ready · ${free} MB usable temporary space · queueing ${ids.length} games…`;
+      }
+    }catch{}
+    for(let i=0;i<ids.length;i++){
+      const reviewId=ids[i];
+      try{
+        if(status)status.textContent=`Queueing game ${i+1}/${ids.length}…`;
+        const {job}=await workerFetch(`/reviews/${encodeURIComponent(reviewId)}/analyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+        if(!job)throw new Error('No recording job was created.');
+        const {error}=await db().from('vod_review_sessions').update({
+          worker_job_id:job.id||null,
+          worker_status:job.status,
+          worker_updated_at:new Date().toISOString(),
+          updated_at:new Date().toISOString()
+        }).eq('id',reviewId);
+        if(error)throw error;
+        queued++;
+      }catch(e){
+        failed++;
+        console.error('Batch VOD queue failed',reviewId,e);
+      }
+    }
+    if(status){
+      status.textContent=failed
+        ?`Queued ${queued}/${ids.length} games. ${failed} could not enter the queue; use Continue / Retry on those reviews.`
+        :`Queued all ${queued} games. Railway will retrieve, analyze and release each Twitch clip as it finishes.`;
+    }
+    document.getElementById('refreshVod')?.click();
+  }
+
   async function start(){
     if(busy)return; busy=true;
     const button=document.getElementById('vodStartPipeline'); if(button)button.disabled=true;
@@ -320,7 +365,11 @@
         else{setStatus('AI period review finished. Importing results into VOD Lab…','good');await ingest(job,reviewId);}
       }
       else if(job.status==='failed'||job.status==='expired'){
-        const msg=job.error||`Pipeline ${job.status}.`;
+        const code=job.result?.failure_code||'';
+        let msg=job.error||`Pipeline ${job.status}.`;
+        if(code==='storage_limit_exceeded')msg='Temporary storage cap reached before this clip could fit. Completed Twitch clips are released automatically; press Continue / Retry after the older job finishes.';
+        if(code==='clip_size_exceeded')msg='This game window is larger than the configured clip-size cap. Shorten the saved start/end window, then create a fresh review for that game.';
+        if(code==='queue_full')msg='The video queue is full. Let an older game finish, then press Continue / Retry.';
         setStatus(msg,'bad');
         if(/twitch.*(blocked|authenticated|authentication)|anonymous replay playback/i.test(msg)){
           const details=document.getElementById('vodTwitchConnect');
@@ -447,6 +496,13 @@
     history.replaceState(null,'',url);
     setTimeout(()=>document.getElementById('vodAnalyzeGame')?.click(),500);
   }
+  window.addEventListener('vvhl-vod-batch-created',event=>{
+    queueBatchReviews(event.detail?.reviewIds||[]).catch(error=>{
+      const status=document.getElementById('batchVodStatus');
+      if(status)status.textContent=error.message||'Could not queue the game batch.';
+    });
+  });
+
   const observer=new MutationObserver(()=>{
     install();
     const id=selectedReviewId();

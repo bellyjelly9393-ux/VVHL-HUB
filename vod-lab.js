@@ -254,6 +254,58 @@
     }
   }
 
+  async function createBatchReviews(){
+    const status=$("batchVodStatus");
+    const rawUrl=$("batchVodUrl")?.value.trim()||"";
+    const url=normalizeTwitchReplay(rawUrl);
+    const rawLines=($("batchVodWindows")?.value||"").split("\n").map(x=>x.trim()).filter(Boolean);
+    if(!url){if(status)status.textContent="Paste a Twitch replay link such as twitch.tv/videos/123…";return;}
+    if(!rawLines.length){if(status)status.textContent="Add at least one game window.";return;}
+    if(rawLines.length>8){if(status)status.textContent="Use at most eight games per batch.";return;}
+    const windows=[];
+    for(let i=0;i<rawLines.length;i++){
+      const parts=rawLines[i].split("|").map(x=>x.trim());
+      if(parts.length<3||parts.length>4){if(status)status.textContent=`Line ${i+1} must be: Title | Start | End | Opponent`;return;}
+      const [title,startText,endText,opponent=""]=parts;
+      const start=parseTime(startText),end=parseTime(endText);
+      if(!title||start==null||end==null||end<=start){if(status)status.textContent=`Line ${i+1} has an invalid title or time window.`;return;}
+      windows.push({title,start,end,opponent});
+    }
+    const user=auth().user;
+    const dateVal=$("batchVodDate")?.value;
+    const gameDate=dateVal?new Date(dateVal).toISOString():new Date().toISOString();
+    const gameType=$("batchVodType")?.value||"regular";
+    const gameFormat=$("batchVodFormat")?.value||"6s";
+    const context=$("batchVodPlayers")?.value.trim()||null;
+    const payload=windows.map((game,index)=>({
+      team_id:state.teamId,
+      title:game.title||`Game ${index+1}`,
+      vod_url:url,
+      source_provider:"twitch",
+      opponent_label:game.opponent||null,
+      game_type:gameType,
+      intake_mode:"scout",
+      game_format:gameFormat,
+      scouting_context:context,
+      game_date:gameDate,
+      source_start_seconds:game.start,
+      source_end_seconds:game.end,
+      duration_seconds:game.end-game.start,
+      created_by:user?.id||null,
+      status:"queued"
+    }));
+    if(status)status.textContent=`Creating ${payload.length} game reviews…`;
+    const {data,error}=await db().from("vod_review_sessions").insert(payload).select("id,title");
+    if(error){if(status)status.textContent=error.message;return;}
+    const ids=(data||[]).map(x=>x.id);
+    state.selectedReviewId=ids[0]||"";
+    state.selectedSegmentId="";
+    $("batchVodUrl").value=url;
+    await loadData();
+    if(status)status.textContent=`Created ${ids.length} games. Sending them to the video queue…`;
+    window.dispatchEvent(new CustomEvent("vvhl-vod-batch-created",{detail:{reviewIds:ids}}));
+  }
+
   async function buildSegments(){
     const r=currentReview(); if(!r)return;
     const p1=parseTime($("period1Start").value),p2=parseTime($("period2Start").value),p3=parseTime($("period3Start").value),vodEnd=parseTime($("periodVodEnd").value);
@@ -348,7 +400,7 @@
 
   function bind(){
     $("vodTeam")?.addEventListener("change",e=>{state.teamId=e.target.value;state.selectedReviewId="";state.selectedSegmentId="";loadData();});
-    $("refreshVod")?.addEventListener("click",loadData); $("createVod")?.addEventListener("click",createReview); $("buildSegments")?.addEventListener("click",buildSegments); $("addCustomSegment")?.addEventListener("click",addCustomSegment);
+    $("refreshVod")?.addEventListener("click",loadData); $("createVod")?.addEventListener("click",createReview); $("batchCreateVod")?.addEventListener("click",createBatchReviews); $("buildSegments")?.addEventListener("click",buildSegments); $("addCustomSegment")?.addEventListener("click",addCustomSegment);
     $("saveSegment")?.addEventListener("click",saveSegment); $("addMarker")?.addEventListener("click",addMarker); $("openSegment")?.addEventListener("click",()=>currentSegment()&&openSegmentById(currentSegment().id)); $("copySegmentPacket")?.addEventListener("click",copySegmentPacket);
     $("buildRollup")?.addEventListener("click",buildRollup); $("saveRollup")?.addEventListener("click",saveRollup); $("archiveVod")?.addEventListener("click",archiveReview); $("deleteVod")?.addEventListener("click",deleteReview);
   }
