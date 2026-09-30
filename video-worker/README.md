@@ -48,12 +48,16 @@ rather than guessing where a user's own edits end.
   storage used/free/headroom, active-queue capacity and whether successful Twitch media is
   auto-released. Code defaults are 700 MiB upload, 1800 MiB disk, 64 MiB working headroom,
   eight queued/active jobs and 24-hour retention for non-replay media.
-- Twitch replay jobs request only the saved game window, prefer 480p when storage allows,
-  fall back to 360p on small caps, avoid a duplicate remux copy, and release temporary
-  replay media after a successful report. Under storage pressure the worker can also reclaim
-  old failed/completed Twitch clips because those windows are safely re-downloadable. The
-  SQLite report/evidence remains available. A fresh Elite Scout pass re-retrieves the same
-  game window when the old clip was released.
+- Twitch replay jobs with longer saved game windows are streamed in small sequential slices
+  (240 seconds by default) at 360p by default. Each slice reuses the live scoreboard watcher:
+  local Tesseract reads period text and the game clock, and a conservative clock reset can
+  confirm P1/P2/P3 even when a period label is missed. Each slice is analyzed and deleted
+  before the next one is fetched, so a full game never needs to fit under the clip-size cap.
+- Short replay jobs can still use the single-window path. Under storage pressure the worker can
+  reclaim old failed/completed Twitch clips because those windows are safely re-downloadable.
+  The SQLite report/evidence remains available. Tune replay streaming with
+  `REPLAY_STREAM_WINDOW_SECONDS`, `REPLAY_STREAM_HEIGHT`, and
+  `REPLAY_PERIOD_SCAN_SECONDS`.
 - Keep proxy limits compatible with uploads. Configure API spend limits independently
   of this app. Never expose keys in frontend code.
 

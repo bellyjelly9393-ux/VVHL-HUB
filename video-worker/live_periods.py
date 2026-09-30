@@ -15,6 +15,7 @@ import time
 
 INTERVAL = max(8, int(os.getenv('LIVE_PERIOD_WATCH_SECONDS', '20')))
 CONFIRM_READS = max(2, int(os.getenv('LIVE_PERIOD_CONFIRM_READS', '2')))
+REPLAY_INTERVAL = max(6, int(os.getenv('REPLAY_PERIOD_SCAN_SECONDS', '12')))
 LEFT = float(os.getenv('LIVE_SCOREBOARD_CROP_LEFT', '0.30'))
 TOP = float(os.getenv('LIVE_SCOREBOARD_CROP_TOP', '0.00'))
 WIDTH = float(os.getenv('LIVE_SCOREBOARD_CROP_WIDTH', '0.40'))
@@ -34,6 +35,140 @@ def parse_period(text):
         if any(re.search(p, compact) for p in patterns):
             return period
     return None
+
+
+def parse_clock(text):
+    raw = str(text or '').upper().replace('.', ':')
+    candidates = []
+    for match in re.finditer(r'(?<!\d)(\d{1,2})\s*:\s*([0-5]\d)(?!\d)', raw):
+        minutes, seconds = int(match.group(1)), int(match.group(2))
+        if 0 <= minutes <= 20:
+            candidates.append(minutes * 60 + seconds)
+    return candidates[0] if candidates else None
+
+
+def infer_period_ranges(reads, duration, initial_period=1, confirm_reads=2, interval=REPLAY_INTERVAL):
+    try:
+        duration = float(duration)
+    except (TypeError, ValueError):
+        return {'ranges': [], 'current_period': initial_period or 1, 'boundaries': []}
+    if duration <= 0:
+        return {'ranges': [], 'current_period': initial_period or 1, 'boundaries': []}
+
+    current = max(1, int(initial_period or 1))
+    boundaries = [{'period': current, 'at': 0.0, 'reason': 'carry'}]
+    candidate = None
+    streak = 0
+    candidate_at = None
+    previous_clock = None
+
+    for item in reads:
+        at = max(0.0, min(duration, float(item.get('at') or 0)))
+        observed = item.get('period')
+        clock = item.get('clock_seconds')
+        reason = 'period_ocr'
+        if (observed is None and previous_clock is not None and clock is not None
+                and current < 8 and previous_clock <= 6 * 60 and clock >= 14 * 60
+                and clock - previous_clock >= 8 * 60):
+            observed = current + 1
+            reason = 'clock_reset'
+        if clock is not None:
+            previous_clock = clock
+        try:
+            observed = int(observed) if observed is not None else None
+        except (TypeError, ValueError):
+            observed = None
+        if observed is None or observed == current:
+            candidate = None
+            streak = 0
+            candidate_at = None
+            continue
+        if observed < current or observed > current + 1:
+            candidate = None
+            streak = 0
+            candidate_at = None
+            continue
+        if reason == 'clock_reset':
+            boundary_at = max(0.0, at - interval / 2)
+            current = observed
+            boundaries.append({'period': current, 'at': round(boundary_at, 1), 'reason': reason})
+            candidate = None
+            streak = 0
+            candidate_at = None
+            continue
+        if candidate == observed:
+            streak += 1
+        else:
+            candidate = observed
+            streak = 1
+            candidate_at = at
+        if streak >= max(1, int(confirm_reads)):
+            boundary_at = max(0.0, float(candidate_at or at) - interval / 2)
+            current = observed
+            boundaries.append({'period': current, 'at': round(boundary_at, 1), 'reason': reason})
+            candidate = None
+            streak = 0
+            candidate_at = None
+
+    clean = []
+    for item in boundaries:
+        if clean and item['period'] == clean[-1]['period']:
+            continue
+        if clean and item['at'] <= clean[-1]['at']:
+            item = dict(item, at=round(min(duration, clean[-1]['at'] + 0.1), 1))
+        clean.append(item)
+
+    ranges = []
+    for index, item in enumerate(clean):
+        start = max(0.0, min(duration, float(item['at'])))
+        end = duration if index + 1 == len(clean) else max(start, min(duration, float(clean[index + 1]['at'])))
+        if end - start < 1:
+            continue
+        period = int(item['period'])
+        label = f'Period {period}' if period <= 3 else ('Overtime' if period == 4 else f'Overtime {period - 3}')
+        ranges.append({'label': label, 'period': period, 'start': round(start, 1), 'end': round(end, 1)})
+    return {'ranges': ranges, 'current_period': current, 'boundaries': clean}
+
+
+def scan_recording_periods(source, duration, initial_period=1, interval=REPLAY_INTERVAL):
+    source = Path(source)
+    folder = source.parent / 'replay-period-watch'
+    shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True, exist_ok=True)
+    crop = f'fps=1/{interval},crop=iw*{WIDTH}:ih*{HEIGHT}:iw*{LEFT}:ih*{TOP},scale=960:-1'
+    reads = []
+    try:
+        subprocess.run([
+            'ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
+            '-i', str(source), '-vf', crop, '-q:v', '4', str(folder / '%04d.jpg')
+        ], check=True, timeout=180)
+        for index, frame in enumerate(sorted(folder.glob('*.jpg'))):
+            run = subprocess.run(
+                ['tesseract', str(frame), 'stdout', '--psm', '11'],
+                capture_output=True, check=False, timeout=10
+            )
+            raw = run.stdout.decode('utf-8', 'ignore')
+            reads.append({
+                'at': round(min(float(duration), index * interval + interval / 2), 1),
+                'period': parse_period(raw),
+                'clock_seconds': parse_clock(raw),
+                'ocr': raw[:240],
+            })
+        inferred = infer_period_ranges(reads, duration, initial_period, CONFIRM_READS, interval)
+        inferred['reads'] = reads[-30:]
+        inferred['interval_seconds'] = interval
+        return inferred
+    except Exception:
+        label = f'Period {int(initial_period or 1)}'
+        return {
+            'ranges': [{'label': label, 'period': int(initial_period or 1), 'start': 0.0, 'end': round(float(duration), 1)}],
+            'current_period': int(initial_period or 1),
+            'boundaries': [],
+            'reads': [],
+            'interval_seconds': interval,
+        }
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
 
 
 class LivePeriodWatcher:

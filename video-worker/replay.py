@@ -12,6 +12,8 @@ from uuid import UUID, uuid4
 import worker
 
 TWITCH_AUTH_FILE = worker.ROOT / '.twitch-auth-token'
+REPLAY_STREAM_WINDOW = max(90, int(os.getenv('REPLAY_STREAM_WINDOW_SECONDS', '240')))
+REPLAY_STREAM_HEIGHT = max(240, min(480, int(os.getenv('REPLAY_STREAM_HEIGHT', '360'))))
 
 def seed_replay_test_batch():
     raw = os.getenv('REPLAY_TEST_SEED', '').strip()
@@ -247,8 +249,8 @@ def resolve(review, owner, create=False):
             return None
         url = replay_url(review.get('vod_url'))
         active = db.execute("SELECT count(*) FROM jobs WHERE status IN ('retrieving','awaiting_upload','uploading','queued','processing','awaiting_ai')").fetchone()[0]
-        if active >= 3:
-            raise worker.Problem(429, 'Finish existing video jobs before starting another.')
+        if active >= worker.MAX_ACTIVE_JOBS:
+            raise worker.Problem(429, f'Video queue is full ({worker.MAX_ACTIVE_JOBS} active jobs). Let the oldest games finish first.', 'queue_full')
         job_id = str(uuid4())
         start, end = review_window(review)
         metadata = {
@@ -272,6 +274,33 @@ def retrieve(job_id):
     if start < 0 or (end is not None and end <= start):
         raise worker.Problem(422, 'Saved VOD game window is invalid.')
     duration = None if end is None else end - start
+    full_start, full_duration = start, duration
+    metadata = dict(job['metadata'])
+    if full_duration is not None and full_duration > REPLAY_STREAM_WINDOW:
+        units = metadata.get('stream_units') or []
+        if not units:
+            cursor = 0.0
+            while cursor < full_duration:
+                finish = min(full_duration, cursor + REPLAY_STREAM_WINDOW)
+                units.append({'start': round(cursor, 3), 'end': round(finish, 3)})
+                cursor = finish
+            metadata.update({
+                'streamed_replay': True,
+                'stream_units': units,
+                'stream_unit_index': 0,
+                'stream_current_period': int(metadata.get('stream_current_period') or 1),
+                'period_source': 'replay_scoreboard_clock',
+            })
+        unit_index = max(0, int(metadata.get('stream_unit_index') or 0))
+        if unit_index >= len(units):
+            raise worker.Problem(409, 'Replay stream units are already complete.')
+        unit = units[unit_index]
+        metadata['active_stream_unit'] = unit
+        start = full_start + float(unit['start'])
+        end = full_start + float(unit['end'])
+        duration = end - start
+        with worker.connect() as db:
+            db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(metadata), job_id))
     folder = worker.ROOT / job_id
     folder.mkdir(exist_ok=True)
     source = folder / 'replay.ts'
@@ -288,9 +317,9 @@ def retrieve(job_id):
             )
 
     def preferred_height():
+        if metadata.get('streamed_replay'):
+            return REPLAY_STREAM_HEIGHT
         usable = worker.storage_status()['usableBytes']
-        # Stay conservative on small caps. A 200 MiB upload budget should never
-        # start by asking Twitch for a 480p file that has little chance of fitting.
         return 360 if worker.MAX_UPLOAD <= 300 * 1024**2 or usable <= 350 * 1024**2 else 480
 
     ensure_storage()
@@ -366,7 +395,7 @@ def retrieve(job_id):
         while proc.poll() is None:
             size = sum(p.stat().st_size for p in folder.glob('ytdlp.*') if p.is_file())
             if size > worker.MAX_UPLOAD:
-                raise worker.Problem(413, 'This game window exceeds the configured clip-size limit.', 'clip_size_exceeded')
+                raise worker.Problem(413, 'This replay slice exceeds the configured clip-size limit even at the storage-safe quality.', 'clip_size_exceeded')
             ensure_storage()
             if time.monotonic() > deadline or worker.STOP.wait(1):
                 raise worker.Problem(504, 'Alternate Twitch retrieval timed out.')

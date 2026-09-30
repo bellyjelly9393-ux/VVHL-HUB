@@ -36,5 +36,28 @@ class LivePeriodTests(unittest.TestCase):
         self.assertEqual(w.period_ranges(1000),[])
 
 
+    def test_game_clock_reset_can_confirm_next_period(self):
+        reads = [
+            {'at': 12, 'period': 1, 'clock_seconds': 18 * 60},
+            {'at': 192, 'period': None, 'clock_seconds': 70},
+            {'at': 204, 'period': None, 'clock_seconds': 19 * 60 + 20},
+            {'at': 216, 'period': 2, 'clock_seconds': 18 * 60 + 40},
+        ]
+        inferred = live_periods.infer_period_ranges(reads, 300, initial_period=1, confirm_reads=2, interval=12)
+        self.assertEqual(inferred['current_period'], 2)
+        self.assertEqual([r['label'] for r in inferred['ranges']], ['Period 1', 'Period 2'])
+        self.assertTrue(any(b['reason'] == 'clock_reset' for b in inferred['boundaries']))
+
+    def test_period_ocr_requires_confirmation(self):
+        reads = [
+            {'at': 12, 'period': 1, 'clock_seconds': 1100},
+            {'at': 120, 'period': 2, 'clock_seconds': 1190},
+            {'at': 132, 'period': 2, 'clock_seconds': 1170},
+        ]
+        inferred = live_periods.infer_period_ranges(reads, 240, initial_period=1, confirm_reads=2, interval=12)
+        self.assertEqual(inferred['current_period'], 2)
+        self.assertEqual(len(inferred['ranges']), 2)
+
+
 if __name__=='__main__':
     unittest.main()

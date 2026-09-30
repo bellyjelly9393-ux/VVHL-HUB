@@ -164,6 +164,18 @@ def update(job_id, status, result=None, error=''):
                        (status, json.dumps(result), error, job_id))
 
 
+def update_metadata(job_id, metadata, status=None, result=None, error=''):
+    with connect() as db:
+        if status is None:
+            db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(metadata), job_id))
+        elif result is None:
+            db.execute('UPDATE jobs SET metadata=?,status=?,error=? WHERE id=?',
+                       (json.dumps(metadata), status, error, job_id))
+        else:
+            db.execute('UPDATE jobs SET metadata=?,status=?,result=?,error=? WHERE id=?',
+                       (json.dumps(metadata), status, json.dumps(result), error, job_id))
+
+
 def http_json(url, headers, payload=None):
     req = urllib.request.Request(url, headers=headers,
         data=None if payload is None else json.dumps(payload).encode())
@@ -721,8 +733,162 @@ Any section without evidence must explicitly say insufficient evidence, never fi
         raise Problem(502, 'AI returned an invalid scouting rollup.')
     return parsed
 
+def merge_period_spans(existing, additions):
+    spans = [dict(x) for x in (existing or []) if x.get('label') and x.get('end') is not None]
+    for item in additions or []:
+        current = {'label': str(item['label']), 'start': round(float(item['start']), 3), 'end': round(float(item['end']), 3)}
+        if spans and spans[-1]['label'] == current['label'] and current['start'] <= spans[-1]['end'] + 1.0:
+            spans[-1]['end'] = max(spans[-1]['end'], current['end'])
+        else:
+            spans.append(current)
+    return spans
+
+
+def process_streamed_replay(job_id):
+    import live_periods
+    job = get_job(job_id)
+    metadata = dict(job['metadata'])
+    directory = ROOT / job_id
+    source = directory / 'source.mp4'
+    unit = metadata.get('active_stream_unit') or {}
+    units = metadata.get('stream_units') or []
+    unit_index = max(0, int(metadata.get('stream_unit_index') or 0))
+    if not source.exists():
+        raise Problem(410, 'Temporary replay slice is missing. Retry Analyze Game to fetch it again.')
+    if not units or unit_index >= len(units):
+        raise Problem(422, 'Replay streaming state is invalid.')
+
+    unit_base = float(unit.get('start') or units[unit_index].get('start') or 0)
+    duration = probe(source)
+    retry_count = int(metadata.get('ai_rate_limit_retries', 0) or 0)
+    frame_step = min(12, FRAME_STEP + retry_count * 2)
+    result = job['result']
+    result['stage'] = 'watching_game_clock'
+    result['stream_unit_index'] = unit_index
+    result['stream_unit_count'] = len(units)
+    result['frame_step_seconds'] = frame_step
+    result['review_version'] = REVIEW_VERSION
+    update(job_id, 'processing', result)
+
+    initial_period = max(1, int(metadata.get('stream_current_period') or 1))
+    scan = live_periods.scan_recording_periods(source, duration, initial_period)
+    local_ranges = scan.get('ranges') or [{
+        'label': f'Period {initial_period}', 'period': initial_period, 'start': 0.0, 'end': duration
+    }]
+    current_period = max(initial_period, int(scan.get('current_period') or initial_period))
+    global_ranges = [{
+        'label': p['label'],
+        'start': round(unit_base + float(p['start']), 3),
+        'end': round(unit_base + float(p['end']), 3),
+    } for p in local_ranges]
+    result['period_spans'] = merge_period_spans(result.get('period_spans'), global_ranges)
+    result['detected_periods'] = list(result['period_spans'])
+    result['period_detection'] = 'replay_scoreboard'
+    result['period_note'] = 'Storage-safe replay slices were classified by scoreboard period OCR plus conservative game-clock reset detection.'
+    diagnostics = result.setdefault('replay_period_diagnostics', [])
+    diagnostics.append({
+        'unit': unit_index + 1, 'start': unit_base, 'end': unit_base + duration,
+        'boundaries': scan.get('boundaries') or [], 'reads': (scan.get('reads') or [])[-12:]
+    })
+    if len(diagnostics) > 24:
+        del diagnostics[:-24]
+
+    plan = segments([{'label': p['label'], 'start': float(p['start']), 'end': float(p['end'])} for p in local_ranges], duration)
+    result.setdefault('chunks', [])
+    total_duration = max(float(units[-1].get('end') or 0), 1.0)
+    result['total_chunks'] = max(len(result['chunks']) + len(plan), int(math.ceil(total_duration / max(1, CHUNK - OVERLAP))))
+    result['stage'] = 'analyzing_period_slice'
+    update(job_id, 'processing', result)
+
+    if not ai_configured():
+        result['plan'] = plan
+        update(job_id, 'awaiting_ai', result, 'Replay slice is ready. Connect the AI model, then retry.')
+        return
+
+    def saved_chunk(global_chunk):
+        for item in result['chunks']:
+            if (item.get('label') == global_chunk['label']
+                    and abs(float(item.get('start', -1)) - global_chunk['start']) < .5
+                    and abs(float(item.get('end', -1)) - global_chunk['end']) < .5):
+                return item
+        return None
+
+    for local in plan:
+        global_chunk = {'label': local['label'], 'start': round(unit_base + float(local['start']), 3),
+                        'end': round(unit_base + float(local['end']), 3)}
+        if saved_chunk(global_chunk):
+            continue
+        frame_dir = directory / 'frames'
+        shutil.rmtree(frame_dir, ignore_errors=True)
+        try:
+            frames = extract_frames(source, frame_dir, local['start'], local['end'], frame_step)
+            context = dict(metadata)
+            context['previous_chunk'] = result['chunks'][-1]['review'] if result['chunks'] else None
+            context['ai_rate_limit_retries'] = retry_count
+            review = analyze(frames, global_chunk, context, frame_step)
+            seen = {(o['source'], round(o['timestamp']), o['note']) for c in result['chunks'] for o in c['review']['observations']}
+            review['observations'] = [o for o in review['observations'] if (o['source'], round(o['timestamp']), o['note']) not in seen]
+            result['chunks'].append({**global_chunk, 'review': review, 'frame_step_seconds': frame_step, 'review_version': REVIEW_VERSION})
+            update(job_id, 'processing', result)
+            if AI_CHUNK_PAUSE > 0:
+                STOP.wait(AI_CHUNK_PAUSE)
+        finally:
+            shutil.rmtree(frame_dir, ignore_errors=True)
+
+    result['stage'] = 'checking_period_sequences'
+    update(job_id, 'processing', result)
+    unit_end = unit_base + duration
+    for saved in result['chunks']:
+        if saved.get('sequence_checked'):
+            continue
+        if float(saved.get('start', -1)) < unit_base - .1 or float(saved.get('end', -1)) > unit_end + .1:
+            continue
+        window = sequence_window(saved['review'], saved)
+        if window:
+            local_start = max(0.0, float(window['start']) - unit_base)
+            local_end = min(duration, float(window['end']) - unit_base)
+            if local_end > local_start:
+                frame_dir = directory / 'sequence-frames'
+                shutil.rmtree(frame_dir, ignore_errors=True)
+                try:
+                    frames = extract_frames(source, frame_dir, local_start, local_end, .5)
+                    context = {**metadata, 'review_pass': 'closer gameplay sequence', 'ai_rate_limit_retries': retry_count}
+                    detail = analyze(frames, window, context, .5)
+                    saved['sequence_review'] = {**window, 'frame_step_seconds': .5, 'review': detail}
+                finally:
+                    shutil.rmtree(frame_dir, ignore_errors=True)
+        saved['sequence_checked'] = True
+        update(job_id, 'processing', result)
+        if window and AI_CHUNK_PAUSE > 0:
+            STOP.wait(AI_CHUNK_PAUSE)
+
+    result.pop('plan', None)
+    metadata['stream_current_period'] = current_period
+    metadata['stream_unit_index'] = unit_index + 1
+    metadata.pop('active_stream_unit', None)
+    if unit_index + 1 < len(units):
+        result['stage'] = 'retrieving_next_period_slice'
+        update_metadata(job_id, metadata, 'retrieving', result, '')
+        source.unlink(missing_ok=True)
+        return
+
+    result['stage'] = 'writing_report'
+    update(job_id, 'processing', result)
+    result['game_rollup'] = build_rollup(result['chunks'])
+    result['stage'] = 'report_ready'
+    result.pop('failure_code', None)
+    update_metadata(job_id, metadata, 'ready_for_review', result, '')
+    if AUTO_RELEASE_TWITCH_MEDIA:
+        release_job_media(job_id)
+        metadata = dict(get_job(job_id)['metadata'])
+        metadata['media_released_at'] = time.time()
+        update_metadata(job_id, metadata)
+
+
 def process(job_id):
     job = get_job(job_id)
+    if job['metadata'].get('streamed_replay'):
+        return process_streamed_replay(job_id)
     directory = ROOT / job_id
     source = directory / 'source.mp4'
     if not source.exists():
