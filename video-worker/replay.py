@@ -72,11 +72,19 @@ def seed_replay_test_batch():
                 queued.append({'review_id': review_id, 'job_id': existing_id, 'status': 'already_seeded'})
                 continue
             if existing_id:
+                # REPLAY_TEST_SEED is an explicit one-time production test harness.
+                # A new seed token means run the saved replay cleanly from the beginning,
+                # rather than mixing evidence from an older pipeline revision.
                 source = worker.ROOT / existing_id / 'source.mp4'
-                next_status = 'queued' if source.exists() else 'retrieving'
+                if source.parent.exists():
+                    worker.release_job_media(existing_id)
+                metadata.update({
+                    'period_pipeline_version': 2,
+                    'replay_phase': 'scan_periods',
+                })
                 db.execute(
-                    'UPDATE jobs SET metadata=?,status=?,error=? WHERE id=?',
-                    (json.dumps(metadata), next_status, '', existing_id)
+                    'UPDATE jobs SET metadata=?,status=?,result=?,error=? WHERE id=?',
+                    (json.dumps(metadata), 'retrieving', '{}', '', existing_id)
                 )
                 job_id = existing_id
             else:
