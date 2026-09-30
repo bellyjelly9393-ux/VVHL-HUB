@@ -131,31 +131,69 @@ def infer_period_ranges(reads, duration, initial_period=1, confirm_reads=2, inte
 
 
 def scan_recording_periods(source, duration, initial_period=1, interval=REPLAY_INTERVAL):
+    """Replay-specific local scoreboard scan.
+
+    Use a wide top scoreboard band first. If that OCR cannot read a period/clock,
+    fall back to the full frame. This remains entirely local and makes no AI call.
+    """
     source = Path(source)
     folder = source.parent / 'replay-period-watch'
     shutil.rmtree(folder, ignore_errors=True)
     folder.mkdir(parents=True, exist_ok=True)
-    crop = f'fps=1/{interval},crop=iw*{WIDTH}:ih*{HEIGHT}:iw*{LEFT}:ih*{TOP},scale=960:-1'
     reads = []
     try:
+        # Wide top band catches alternate EA/broadcast scoreboard placements that
+        # the narrower live crop can miss. Keep source low-res; upscale only the
+        # OCR crop locally because Tesseract benefits from larger glyphs.
         subprocess.run([
             'ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
-            '-i', str(source), '-vf', crop, '-q:v', '4', str(folder / '%04d.jpg')
+            '-i', str(source),
+            '-vf', f'fps=1/{interval},crop=iw:ih*0.30:0:0,scale=1280:-1',
+            '-q:v', '4', str(folder / 'top_%04d.jpg')
         ], check=True, timeout=180)
-        for index, frame in enumerate(sorted(folder.glob('*.jpg'))):
-            run = subprocess.run(
-                ['tesseract', str(frame), 'stdout', '--psm', '11'],
-                capture_output=True, check=False, timeout=10
-            )
-            raw = run.stdout.decode('utf-8', 'ignore')
+        subprocess.run([
+            'ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
+            '-i', str(source),
+            '-vf', f'fps=1/{interval},scale=960:-1',
+            '-q:v', '5', str(folder / 'full_%04d.jpg')
+        ], check=True, timeout=180)
+
+        top_frames = sorted(folder.glob('top_*.jpg'))
+        full_frames = sorted(folder.glob('full_*.jpg'))
+        count = max(len(top_frames), len(full_frames))
+        for index in range(count):
+            top_raw = ''
+            full_raw = ''
+            if index < len(top_frames):
+                run = subprocess.run(
+                    ['tesseract', str(top_frames[index]), 'stdout', '--psm', '11'],
+                    capture_output=True, check=False, timeout=10
+                )
+                top_raw = run.stdout.decode('utf-8', 'ignore')
+            period = parse_period(top_raw)
+            clock = parse_clock(top_raw)
+
+            if (period is None or clock is None) and index < len(full_frames):
+                run = subprocess.run(
+                    ['tesseract', str(full_frames[index]), 'stdout', '--psm', '11'],
+                    capture_output=True, check=False, timeout=10
+                )
+                full_raw = run.stdout.decode('utf-8', 'ignore')
+                if period is None:
+                    period = parse_period(full_raw)
+                if clock is None:
+                    clock = parse_clock(full_raw)
+
+            raw = (top_raw + '\n' + full_raw).strip()
             reads.append({
                 'at': round(min(float(duration), index * interval + interval / 2), 1),
-                'period': parse_period(raw),
-                'clock_seconds': parse_clock(raw),
-                'ocr': raw[:240],
+                'period': period,
+                'clock_seconds': clock,
+                'ocr': raw[:320],
             })
+
         inferred = infer_period_ranges(reads, duration, initial_period, CONFIRM_READS, interval)
-        inferred['reads'] = reads[-30:]
+        inferred['reads'] = reads[-40:]
         inferred['interval_seconds'] = interval
         return inferred
     except Exception:
@@ -164,7 +202,7 @@ def scan_recording_periods(source, duration, initial_period=1, interval=REPLAY_I
             'ranges': [{'label': label, 'period': int(initial_period or 1), 'start': 0.0, 'end': round(float(duration), 1)}],
             'current_period': int(initial_period or 1),
             'boundaries': [],
-            'reads': [],
+            'reads': reads[-20:],
             'interval_seconds': interval,
         }
     finally:
