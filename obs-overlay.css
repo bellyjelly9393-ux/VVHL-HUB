@@ -129,3 +129,107 @@ body:not([data-scene="game"]) .obs-scorebar{display:none}
   .obs-score-event{padding:10px}.obs-score-event span{font-size:16px}
   .obs-lower-third{left:30px;min-width:560px}
 }
+
+/* Wildman broadcast identity */
+body[data-brand="wildman"]{
+  --accent:#d8ad55;
+  --accent-2:#f3d693;
+  --accent-soft:rgba(216,173,85,.22);
+  --panel:rgba(5,4,7,.94);
+  --panel-2:rgba(13,10,16,.95);
+  --brand-rgb:216,173,85;
+}
+body[data-brand="wildman"] .obs-corner-bug{
+  border-color:rgba(216,173,85,.32);
+  background:
+    linear-gradient(110deg,rgba(8,6,10,.96),rgba(18,13,22,.88)),
+    radial-gradient(circle at 18% 50%,rgba(216,173,85,.12),transparent 38%);
+  box-shadow:0 18px 50px rgba(0,0,0,.42),0 0 28px rgba(216,173,85,.07);
+}
+body[data-brand="wildman"] .obs-brand-mark{
+  border-color:rgba(216,173,85,.52);
+  background:#070609;
+  box-shadow:0 0 30px rgba(216,173,85,.16);
+}
+body[data-brand="wildman"] .obs-scorebar{
+  border-color:rgba(216,173,85,.28);
+  background:
+    linear-gradient(90deg,rgba(5,4,7,.97),rgba(15,11,18,.96) 50%,rgba(5,4,7,.97));
+  box-shadow:0 26px 70px rgba(0,0,0,.48),0 0 35px rgba(216,173,85,.08);
+}
+body[data-brand="wildman"] .obs-scorebar:before{
+  content:"";position:absolute;left:15%;right:15%;top:0;height:2px;
+  background:linear-gradient(90deg,transparent,#d8ad55,#f3d693,#d8ad55,transparent);
+}
+body[data-brand="wildman"] .obs-score-event{background:linear-gradient(135deg,rgba(216,173,85,.08),transparent)}
+body[data-brand="wildman"] .obs-team strong{color:#f3d693;text-shadow:0 0 20px rgba(216,173,85,.16)}
+body[data-brand="wildman"] .obs-score-divider{background:rgba(216,173,85,.07);color:#d8ad55}
+
+.obs-wildman-atmosphere{display:none}
+body[data-brand="wildman"] .obs-wildman-atmosphere{display:block;position:absolute;inset:0;overflow:hidden;pointer-events:none}
+body[data-brand="wildman"] .obs-full-card{
+  background:
+    radial-gradient(circle at 50% 38%,rgba(216,173,85,.13),transparent 26%),
+    radial-gradient(circle at 20% 70%,rgba(76,117,145,.09),transparent 31%),
+    radial-gradient(circle at 80% 22%,rgba(99,52,128,.08),transparent 28%),
+    linear-gradient(135deg,rgba(2,2,3,.985),rgba(8,6,10,.97) 52%,rgba(3,3,4,.985));
+}
+body[data-brand="wildman"] .obs-full-card:before{
+  inset:3.8vh 3.2vw;
+  border-color:rgba(216,173,85,.24);
+  border-radius:30px;
+  box-shadow:
+    inset 0 0 100px rgba(216,173,85,.035),
+    0 0 80px rgba(0,0,0,.34);
+}
+body[data-brand="wildman"] .obs-full-card:after{
+  left:7vw;right:7vw;bottom:6.5vh;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(216,173,85,.3),#f2d18d,rgba(216,173,85,.3),transparent);
+  box-shadow:0 0 20px rgba(216,173,85,.15);
+}
+.obs-wm-crest-halo{
+  position:absolute;left:50%;top:43%;width:650px;height:650px;transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(216,173,85,.11),rgba(216,173,85,.035) 32%,transparent 66%);
+  filter:blur(2px);
+}
+.obs-wm-ghost-logo{
+  position:absolute;left:50%;top:42%;width:min(43vw,720px);height:min(43vw,720px);
+  transform:translate(-50%,-50%);object-fit:contain;opacity:.085;filter:grayscale(.15) contrast(1.1) saturate(.8);
+}
+.obs-wm-rail{
+  position:absolute;color:rgba(242,209,141,.5);font:800 11px/1 Inter,sans-serif;letter-spacing:.34em;
+  text-transform:uppercase;white-space:nowrap
+}
+.obs-wm-rail-left{left:5vw;top:50%;transform:translate(-44%,-50%) rotate(-90deg)}
+.obs-wm-rail-right{right:5vw;top:50%;transform:translate(44%,-50%) rotate(90deg)}
+.obs-wm-ice-line{position:absolute;height:1px;background:linear-gradient(90deg,transparent,rgba(216,173,85,.2),transparent);filter:drop-shadow(0 0 8px rgba(216,173,85,.16))}
+.obs-wm-ice-line-a{left:3vw;right:42vw;top:18%;transform:rotate(-11deg)}
+.obs-wm-ice-line-b{left:42vw;right:3vw;bottom:20%;transform:rotate(-10deg)}
+
+body[data-brand="wildman"] .obs-full-brand{gap:22px}
+body[data-brand="wildman"] .obs-full-mark{
+  width:102px;height:102px;border-radius:24px;border-color:rgba(216,173,85,.5);
+  box-shadow:0 0 50px rgba(216,173,85,.12),inset 0 0 20px rgba(255,255,255,.025);
+}
+body[data-brand="wildman"] .obs-full-brand small{color:#d8ad55;letter-spacing:.22em}
+body[data-brand="wildman"] .obs-full-brand h1{
+  color:#fff;
+  text-shadow:0 7px 0 rgba(216,173,85,.08),0 18px 55px rgba(0,0,0,.7);
+}
+body[data-brand="wildman"] .obs-matchup{
+  margin-top:48px;padding:24px 30px;border-top:1px solid rgba(216,173,85,.16);border-bottom:1px solid rgba(216,173,85,.16);
+  background:linear-gradient(90deg,transparent,rgba(216,173,85,.035),rgba(216,173,85,.05),rgba(216,173,85,.035),transparent);
+}
+body[data-brand="wildman"] .obs-matchup small{color:#b99b61}
+body[data-brand="wildman"] .obs-matchup strong{letter-spacing:.015em}
+body[data-brand="wildman"] .obs-matchup b{color:#f2d18d;text-shadow:0 0 26px rgba(216,173,85,.12)}
+body[data-brand="wildman"] .obs-full-card p{color:#c9c3cc;letter-spacing:.03em}
+body[data-brand="wildman"] .obs-full-footer{
+  padding:10px 16px;border:1px solid rgba(216,173,85,.12);border-radius:999px;background:rgba(0,0,0,.28)
+}
+body[data-brand="wildman"] .obs-lower-third{
+  border-color:rgba(216,173,85,.3);
+  background:linear-gradient(105deg,rgba(5,4,7,.97),rgba(15,11,18,.94));
+  box-shadow:0 26px 70px rgba(0,0,0,.46),0 0 36px rgba(216,173,85,.08);
+}
