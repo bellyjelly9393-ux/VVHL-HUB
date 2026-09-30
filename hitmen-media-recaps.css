@@ -1,0 +1,42 @@
+/* Hitmen Media: published game recaps (hitmen-media-recaps.js) */
+.hm-recap-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
+.hm-recap{display:flex;flex-direction:column;gap:10px;padding:22px;border:1px solid var(--hm-line,rgba(241,38,112,.24));border-radius:18px;background:radial-gradient(circle at 92% 0%,rgba(241,38,112,.1),transparent 36%),linear-gradient(145deg,#111014,#070708);min-width:0}
+.hm-recap[hidden]{display:none}
+.hm-recap-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.hm-recap-meta{display:flex;flex-wrap:wrap;gap:6px 10px;color:#ee558b;font-size:9px;font-weight:900;letter-spacing:.11em}
+.hm-recap-score{display:flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(255,255,255,.03);white-space:nowrap}
+.hm-recap-score b{font:900 13px/1 "Barlow Condensed",sans-serif;color:#9d9195}
+.hm-recap-score strong{font:900 24px/1 "Barlow Condensed",sans-serif;color:#eee3e7}
+.hm-recap-score.is-win{border-color:rgba(241,38,112,.5);background:rgba(241,38,112,.1)}
+.hm-recap-score.is-win b{color:#ff4c8b}
+.hm-recap-opp{margin:0;color:#9c8f94;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.hm-recap h3{margin:0;font:900 clamp(24px,2.3vw,30px)/.98 "Barlow Condensed",sans-serif;color:#f6eef1;text-transform:uppercase;overflow-wrap:anywhere}
+.hm-recap-dek{margin:-2px 0 0;color:#e7dade;font-size:13px;font-weight:700;line-height:1.45;overflow-wrap:anywhere}
+.hm-recap-lede,.hm-recap-more p{margin:0;color:#c0b5b9;font-size:13px;line-height:1.62;overflow-wrap:anywhere}
+.hm-recap-more .hm-recap-sub{margin:16px 0 6px;font:900 17px/1 "Barlow Condensed",sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#ff77a7}
+.hm-recap-stars{padding:12px 14px;border:1px solid rgba(241,38,112,.16);border-radius:13px;background:rgba(241,38,112,.04)}
+.hm-recap-stars small{display:block;margin-bottom:8px;color:#ee558b;font-size:9px;font-weight:900;letter-spacing:.12em}
+.hm-recap-stars ol{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+.hm-recap-stars li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:baseline;gap:8px;font-size:12px}
+.hm-recap-stars li b{font:900 15px/1 "Barlow Condensed",sans-serif;color:#ff4c8b}
+.hm-recap-stars li span{color:#f1e7ea;font-weight:800;overflow-wrap:anywhere}
+.hm-recap-stars li span small{display:inline;margin:0 0 0 6px;color:#8f8388;font-size:9px;letter-spacing:.08em}
+.hm-recap-stars li em{font-style:normal;color:#b2a6aa;font-size:11px;text-align:right}
+.hm-recap-more{border-top:1px solid rgba(255,255,255,.07);padding-top:10px}
+.hm-recap-more summary{cursor:pointer;color:#ff77a7;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;list-style:none}
+.hm-recap-more summary::-webkit-details-marker{display:none}
+.hm-recap-more summary::after{content:" +"}
+.hm-recap-more[open] summary::after{content:" −"}
+.hm-recap-more[open] summary{margin-bottom:10px}
+.hm-recap-more p+p{margin-top:10px}
+.hm-recap-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.hm-recap-stats div{padding:9px 10px;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(255,255,255,.02)}
+.hm-recap-stats small{display:block;color:#8f8388;font-size:8px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.hm-recap-stats strong{display:block;margin-top:3px;color:#eee3e7;font-size:13px}
+.hm-recap-more .hm-recap-note{margin-top:8px;color:#7d7176;font-size:10px}
+.hm-recap-empty{grid-column:1/-1;padding:26px;border:1px dashed rgba(241,38,112,.25);border-radius:16px;color:#978b90;text-align:center;font-size:13px}
+.hm-recap-actions{display:flex;justify-content:center;margin-top:16px}
+@media(max-width:1000px){.hm-recap-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.hm-recap-grid{grid-template-columns:1fr}.hm-recap{padding:18px}}
+.hm-recap-more>summary+.hm-recap-sub{margin-top:4px}
+.hm-recap-more .hm-recap-sub+p{margin-top:0}
