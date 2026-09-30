@@ -12,6 +12,81 @@ import worker
 
 TWITCH_AUTH_FILE = worker.ROOT / '.twitch-auth-token'
 
+def seed_replay_test_batch():
+    raw = os.getenv('REPLAY_TEST_SEED', '').strip()
+    token = os.getenv('REPLAY_TEST_SEED_TOKEN', '').strip()
+    if not raw or not token:
+        return []
+    try:
+        games = json.loads(raw)
+    except ValueError:
+        print('Replay test seed ignored: invalid JSON.', flush=True)
+        return []
+    if not isinstance(games, list):
+        print('Replay test seed ignored: expected a list.', flush=True)
+        return []
+    queued = []
+    for item in games[:8]:
+        try:
+            owner = str(UUID(str(item.get('owner') or '')))
+            review_id = str(UUID(str(item.get('review_id') or '')))
+            start = float(item.get('source_start_seconds'))
+            end = float(item.get('source_end_seconds'))
+            if not 0 <= start < end <= 86400:
+                raise ValueError()
+            url = replay_url(item.get('vod_url'))
+        except (TypeError, ValueError, worker.Problem):
+            print('Replay test seed skipped one invalid game.', flush=True)
+            continue
+        metadata = {
+            'review_id': review_id, 'game_id': review_id,
+            'title': str(item.get('title') or 'Replay test')[:200],
+            'vod_url': url,
+            'players': str(item.get('players') or '')[:2000],
+            'game_format': str(item.get('game_format') or '6s')[:20],
+            'vod_offset_seconds': start,
+            'source_start_seconds': start,
+            'source_end_seconds': end,
+            'periods': [],
+            'source_kind': 'twitch_replay',
+            'replay_test_seed_token': token,
+        }
+        with worker.WRITE_LOCK, worker.connect() as db:
+            rows = db.execute('SELECT id,metadata,status FROM jobs WHERE owner=? ORDER BY created DESC', (owner,)).fetchall()
+            existing_id = None
+            already_seeded = False
+            for row in rows:
+                try:
+                    old = json.loads(row['metadata'])
+                except (TypeError, ValueError):
+                    continue
+                if old.get('review_id') == review_id or old.get('game_id') == review_id:
+                    existing_id = row['id']
+                    if old.get('replay_test_seed_token') == token:
+                        already_seeded = True
+                    break
+            if already_seeded:
+                queued.append({'review_id': review_id, 'job_id': existing_id, 'status': 'already_seeded'})
+                continue
+            if existing_id:
+                source = worker.ROOT / existing_id / 'source.mp4'
+                next_status = 'queued' if source.exists() else 'retrieving'
+                db.execute(
+                    'UPDATE jobs SET metadata=?,status=?,error=? WHERE id=?',
+                    (json.dumps(metadata), next_status, '', existing_id)
+                )
+                job_id = existing_id
+            else:
+                job_id = str(uuid4())
+                db.execute(
+                    'INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',
+                    (job_id, owner, time.time(), 'retrieving', json.dumps(metadata), '{}', '')
+                )
+            queued.append({'review_id': review_id, 'job_id': job_id, 'status': 'queued'})
+    for item in queued:
+        print(f"Replay test seed {item['status']}: {item['review_id']} -> {item['job_id']}", flush=True)
+    return queued
+
 def twitch_auth_configured():
     try:
         return bool(os.getenv('TWITCH_AUTH_TOKEN', '').strip()) or (TWITCH_AUTH_FILE.exists() and bool(TWITCH_AUTH_FILE.read_text().strip()))

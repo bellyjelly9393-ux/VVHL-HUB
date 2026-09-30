@@ -37,6 +37,7 @@ class Handler(worker.Handler):
 
 def main():
     worker.initialize()
+    replay.seed_replay_test_batch()
     threading.Thread(target=worker.work_loop, daemon=True, name='wildman-vod-review').start()
     live_pipeline.start()
     ThreadingHTTPServer(('0.0.0.0', int(os.getenv('PORT', '8080'))), Handler).serve_forever()
