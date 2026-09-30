@@ -277,27 +277,51 @@ def retrieve(job_id):
     full_start, full_duration = start, duration
     metadata = dict(job['metadata'])
     if full_duration is not None and full_duration > REPLAY_STREAM_WINDOW:
-        units = metadata.get('stream_units') or []
-        if not units:
-            cursor = 0.0
-            while cursor < full_duration:
-                finish = min(full_duration, cursor + REPLAY_STREAM_WINDOW)
-                units.append({'start': round(cursor, 3), 'end': round(finish, 3)})
-                cursor = finish
-            metadata.update({
-                'streamed_replay': True,
-                'stream_units': units,
-                'stream_unit_index': 0,
-                'stream_current_period': int(metadata.get('stream_current_period') or 1),
-                'period_source': 'replay_scoreboard_clock',
-            })
-        unit_index = max(0, int(metadata.get('stream_unit_index') or 0))
-        if unit_index >= len(units):
-            raise worker.Problem(409, 'Replay stream units are already complete.')
-        unit = units[unit_index]
-        metadata['active_stream_unit'] = unit
-        start = full_start + float(unit['start'])
-        end = full_start + float(unit['end'])
+        # Period-first replay pipeline:
+        # 1) storage-safe 360p scan slices, local OCR only, no AI
+        # 2) lock P1/P2/P3 boundaries
+        # 3) fetch/analyze/delete one whole period at a time
+        metadata['streamed_replay'] = True
+        metadata['period_pipeline_version'] = 2
+        phase = metadata.get('replay_phase') or 'scan_periods'
+        metadata['replay_phase'] = phase
+
+        if phase == 'scan_periods':
+            units = metadata.get('scan_units') or []
+            if not units:
+                cursor = 0.0
+                while cursor < full_duration:
+                    finish = min(full_duration, cursor + REPLAY_STREAM_WINDOW)
+                    units.append({'start': round(cursor, 3), 'end': round(finish, 3)})
+                    cursor = finish
+                metadata['scan_units'] = units
+                metadata['scan_unit_index'] = 0
+                metadata['scan_current_period'] = 1
+            unit_index = max(0, int(metadata.get('scan_unit_index') or 0))
+            if unit_index >= len(units):
+                raise worker.Problem(409, 'Replay period scan is already complete.')
+            unit = units[unit_index]
+            metadata['active_replay_unit'] = {
+                'kind': 'scan', 'label': 'Period scan',
+                'start': float(unit['start']), 'end': float(unit['end'])
+            }
+
+        elif phase == 'analyze_periods':
+            units = metadata.get('period_units') or []
+            unit_index = max(0, int(metadata.get('period_unit_index') or 0))
+            if unit_index >= len(units):
+                raise worker.Problem(409, 'Replay period analysis is already complete.')
+            unit = units[unit_index]
+            metadata['active_replay_unit'] = {
+                'kind': 'period', 'label': str(unit['label']),
+                'start': float(unit['start']), 'end': float(unit['end'])
+            }
+        else:
+            raise worker.Problem(422, 'Replay period pipeline state is invalid.')
+
+        active = metadata['active_replay_unit']
+        start = full_start + float(active['start'])
+        end = full_start + float(active['end'])
         duration = end - start
         with worker.connect() as db:
             db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(metadata), job_id))
@@ -318,7 +342,7 @@ def retrieve(job_id):
 
     def preferred_height():
         if metadata.get('streamed_replay'):
-            return REPLAY_STREAM_HEIGHT
+            return min(360, REPLAY_STREAM_HEIGHT)
         usable = worker.storage_status()['usableBytes']
         return 360 if worker.MAX_UPLOAD <= 300 * 1024**2 or usable <= 350 * 1024**2 else 480
 

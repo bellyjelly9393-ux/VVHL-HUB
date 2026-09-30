@@ -48,11 +48,13 @@ rather than guessing where a user's own edits end.
   storage used/free/headroom, active-queue capacity and whether successful Twitch media is
   auto-released. Code defaults are 700 MiB upload, 1800 MiB disk, 64 MiB working headroom,
   eight queued/active jobs and 24-hour retention for non-replay media.
-- Twitch replay jobs with longer saved game windows are streamed in small sequential slices
-  (240 seconds by default) at 360p by default. Each slice reuses the live scoreboard watcher:
-  local Tesseract reads period text and the game clock, and a conservative clock reset can
-  confirm P1/P2/P3 even when a period label is missed. Each slice is analyzed and deleted
-  before the next one is fetched, so a full game never needs to fit under the clip-size cap.
+- Twitch replay jobs with longer saved game windows use a strict period-first flow. Small
+  360p scan slices first reuse the live scoreboard watcher locally (no AI calls) to lock
+  P1/P2/P3 from period text and conservative game-clock resets. Only after all three
+  boundaries are known does the worker fetch Period 1, analyze it at 640x360, save a
+  period report, delete the video, then repeat for Period 2 and Period 3. A final game
+  report is synthesized from the three saved period analyses. The full game is never
+  stored or sent to AI as one giant recording.
 - Short replay jobs can still use the single-window path. Under storage pressure the worker can
   reclaim old failed/completed Twitch clips because those windows are safely re-downloadable.
   The SQLite report/evidence remains available. Tune replay streaming with

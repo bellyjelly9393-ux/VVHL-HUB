@@ -377,12 +377,12 @@ def segments(periods, duration):
     return out
 
 
-def extract_frames(source, folder, start, end, frame_step=FRAME_STEP):
+def extract_frames(source, folder, start, end, frame_step=FRAME_STEP, max_size='1280:720'):
     folder.mkdir(exist_ok=True)
     command(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin', '-y',
              '-protocol_whitelist', 'file', '-ss', str(start), '-i', str(source),
              '-t', str(end-start), '-map', '0:v:0', '-an',
-             '-vf', f'fps=1/{frame_step},scale=1280:720:force_original_aspect_ratio=decrease',
+             '-vf', f'fps=1/{frame_step},scale={max_size}:force_original_aspect_ratio=decrease',
              '-frames:v', '60', '-q:v', '4', str(folder / '%04d.jpg')])
     frames = sorted(folder.glob('*.jpg'))
     if not frames:
@@ -736,7 +736,11 @@ Any section without evidence must explicitly say insufficient evidence, never fi
 def merge_period_spans(existing, additions):
     spans = [dict(x) for x in (existing or []) if x.get('label') and x.get('end') is not None]
     for item in additions or []:
-        current = {'label': str(item['label']), 'start': round(float(item['start']), 3), 'end': round(float(item['end']), 3)}
+        current = {
+            'label': str(item['label']),
+            'start': round(float(item['start']), 3),
+            'end': round(float(item['end']), 3)
+        }
         if spans and spans[-1]['label'] == current['label'] and current['start'] <= spans[-1]['end'] + 1.0:
             spans[-1]['end'] = max(spans[-1]['end'], current['end'])
         else:
@@ -744,132 +748,222 @@ def merge_period_spans(existing, additions):
     return spans
 
 
+def normalize_regulation_periods(spans, total_duration):
+    """Return exactly P1/P2/P3 when the scoreboard scan found them in order."""
+    found = {}
+    for span in spans or []:
+        label = str(span.get('label') or '')
+        if label not in ('Period 1', 'Period 2', 'Period 3'):
+            continue
+        start = max(0.0, float(span.get('start') or 0))
+        end = min(float(total_duration), float(span.get('end') or total_duration))
+        if end <= start:
+            continue
+        if label not in found:
+            found[label] = {'label': label, 'start': start, 'end': end}
+        else:
+            found[label]['start'] = min(found[label]['start'], start)
+            found[label]['end'] = max(found[label]['end'], end)
+    ordered = [found.get('Period 1'), found.get('Period 2'), found.get('Period 3')]
+    if any(x is None for x in ordered):
+        return []
+    # Make boundaries contiguous at detected transitions so intermission/menu frames
+    # cannot leave holes or cause the same footage to be analyzed twice.
+    p1, p2, p3 = ordered
+    b12 = max(p1['start'], min(p1['end'], p2['start']))
+    b23 = max(p2['start'], min(p2['end'], p3['start']))
+    if not (0 < b12 < b23 < total_duration):
+        return []
+    return [
+        {'label': 'Period 1', 'start': round(p1['start'], 3), 'end': round(b12, 3)},
+        {'label': 'Period 2', 'start': round(b12, 3), 'end': round(b23, 3)},
+        {'label': 'Period 3', 'start': round(b23, 3), 'end': round(float(total_duration), 3)},
+    ]
+
+
 def process_streamed_replay(job_id):
+    """First find periods with local OCR. Only then analyze P1, P2 and P3 one at a time."""
     import live_periods
+
     job = get_job(job_id)
     metadata = dict(job['metadata'])
+    result = job['result']
     directory = ROOT / job_id
     source = directory / 'source.mp4'
-    unit = metadata.get('active_stream_unit') or {}
-    units = metadata.get('stream_units') or []
-    unit_index = max(0, int(metadata.get('stream_unit_index') or 0))
+    active = metadata.get('active_replay_unit') or {}
+    phase = metadata.get('replay_phase') or 'scan_periods'
     if not source.exists():
         raise Problem(410, 'Temporary replay slice is missing. Retry Analyze Game to fetch it again.')
-    if not units or unit_index >= len(units):
-        raise Problem(422, 'Replay streaming state is invalid.')
 
-    unit_base = float(unit.get('start') or units[unit_index].get('start') or 0)
     duration = probe(source)
+
+    # PHASE 1: local scoreboard/game-clock scan only. No AI calls.
+    if phase == 'scan_periods':
+        scan_units = metadata.get('scan_units') or []
+        index = max(0, int(metadata.get('scan_unit_index') or 0))
+        if not scan_units or index >= len(scan_units):
+            raise Problem(422, 'Replay period scan state is invalid.')
+        unit = scan_units[index]
+        unit_base = float(unit['start'])
+        initial_period = max(1, int(metadata.get('scan_current_period') or 1))
+
+        result['stage'] = 'scanning_period_boundaries'
+        result['scan_unit_index'] = index
+        result['scan_unit_count'] = len(scan_units)
+        result['period_detection'] = 'replay_scoreboard'
+        result['review_version'] = REVIEW_VERSION
+        update(job_id, 'processing', result)
+
+        scan = live_periods.scan_recording_periods(source, duration, initial_period)
+        local_ranges = scan.get('ranges') or [{
+            'label': f'Period {initial_period}', 'period': initial_period,
+            'start': 0.0, 'end': duration
+        }]
+        global_ranges = [{
+            'label': p['label'],
+            'start': round(unit_base + float(p['start']), 3),
+            'end': round(unit_base + float(p['end']), 3),
+        } for p in local_ranges]
+        result['period_spans'] = merge_period_spans(result.get('period_spans'), global_ranges)
+        result['detected_periods'] = list(result['period_spans'])
+        diagnostics = result.setdefault('replay_period_diagnostics', [])
+        diagnostics.append({
+            'scan': index + 1,
+            'start': unit_base,
+            'end': unit_base + duration,
+            'boundaries': scan.get('boundaries') or [],
+            'reads': (scan.get('reads') or [])[-12:]
+        })
+        if len(diagnostics) > 24:
+            del diagnostics[:-24]
+
+        metadata['scan_current_period'] = max(initial_period, int(scan.get('current_period') or initial_period))
+        metadata['scan_unit_index'] = index + 1
+        metadata.pop('active_replay_unit', None)
+        source.unlink(missing_ok=True)
+
+        if index + 1 < len(scan_units):
+            result['stage'] = 'scanning_next_clock_slice'
+            update_metadata(job_id, metadata, 'retrieving', result, '')
+            return
+
+        total_duration = float(metadata.get('source_end_seconds') or 0) - float(metadata.get('source_start_seconds') or 0)
+        periods = normalize_regulation_periods(result.get('period_spans'), total_duration)
+        if len(periods) != 3:
+            result['stage'] = 'needs_period_boundaries'
+            result['failure_code'] = 'period_detection_failed'
+            update_metadata(
+                job_id, metadata, 'failed', result,
+                'The game-clock scan could not confidently lock all three periods. No AI analysis was run.'
+            )
+            return
+
+        metadata['period_units'] = periods
+        metadata['period_unit_index'] = 0
+        metadata['periods'] = periods
+        metadata['period_source'] = 'replay_scoreboard'
+        metadata['replay_phase'] = 'analyze_periods'
+        result['detected_periods'] = periods
+        result['period_note'] = 'P1/P2/P3 were locked before AI review using local scoreboard period/game-clock OCR.'
+        result['stage'] = 'period_boundaries_locked'
+        result.pop('failure_code', None)
+        update_metadata(job_id, metadata, 'retrieving', result, '')
+        return
+
+    # PHASE 2: fetch exactly one detected period, analyze it, save the report, delete it.
+    if phase != 'analyze_periods':
+        raise Problem(422, 'Replay period pipeline state is invalid.')
+
+    periods = metadata.get('period_units') or []
+    period_index = max(0, int(metadata.get('period_unit_index') or 0))
+    if period_index >= len(periods):
+        raise Problem(422, 'Replay period index is invalid.')
+    period = periods[period_index]
+    label = str(period['label'])
+    period_base = float(period['start'])
     retry_count = int(metadata.get('ai_rate_limit_retries', 0) or 0)
     frame_step = min(12, FRAME_STEP + retry_count * 2)
-    result = job['result']
-    result['stage'] = 'watching_game_clock'
-    result['stream_unit_index'] = unit_index
-    result['stream_unit_count'] = len(units)
+
+    result['stage'] = 'analyzing_period'
+    result['current_period'] = label
+    result['period_index'] = period_index
+    result['period_count'] = len(periods)
     result['frame_step_seconds'] = frame_step
     result['review_version'] = REVIEW_VERSION
-    update(job_id, 'processing', result)
-
-    initial_period = max(1, int(metadata.get('stream_current_period') or 1))
-    scan = live_periods.scan_recording_periods(source, duration, initial_period)
-    local_ranges = scan.get('ranges') or [{
-        'label': f'Period {initial_period}', 'period': initial_period, 'start': 0.0, 'end': duration
-    }]
-    current_period = max(initial_period, int(scan.get('current_period') or initial_period))
-    global_ranges = [{
-        'label': p['label'],
-        'start': round(unit_base + float(p['start']), 3),
-        'end': round(unit_base + float(p['end']), 3),
-    } for p in local_ranges]
-    result['period_spans'] = merge_period_spans(result.get('period_spans'), global_ranges)
-    result['detected_periods'] = list(result['period_spans'])
-    result['period_detection'] = 'replay_scoreboard'
-    result['period_note'] = 'Storage-safe replay slices were classified by scoreboard period OCR plus conservative game-clock reset detection.'
-    diagnostics = result.setdefault('replay_period_diagnostics', [])
-    diagnostics.append({
-        'unit': unit_index + 1, 'start': unit_base, 'end': unit_base + duration,
-        'boundaries': scan.get('boundaries') or [], 'reads': (scan.get('reads') or [])[-12:]
-    })
-    if len(diagnostics) > 24:
-        del diagnostics[:-24]
-
-    plan = segments([{'label': p['label'], 'start': float(p['start']), 'end': float(p['end'])} for p in local_ranges], duration)
     result.setdefault('chunks', [])
-    total_duration = max(float(units[-1].get('end') or 0), 1.0)
-    result['total_chunks'] = max(len(result['chunks']) + len(plan), int(math.ceil(total_duration / max(1, CHUNK - OVERLAP))))
-    result['stage'] = 'analyzing_period_slice'
+    result.setdefault('period_reports', [])
     update(job_id, 'processing', result)
 
     if not ai_configured():
-        result['plan'] = plan
-        update(job_id, 'awaiting_ai', result, 'Replay slice is ready. Connect the AI model, then retry.')
+        update(job_id, 'awaiting_ai', result, f'{label} is ready. Connect the AI model, then retry.')
         return
 
-    def saved_chunk(global_chunk):
-        for item in result['chunks']:
-            if (item.get('label') == global_chunk['label']
-                    and abs(float(item.get('start', -1)) - global_chunk['start']) < .5
-                    and abs(float(item.get('end', -1)) - global_chunk['end']) < .5):
-                return item
-        return None
-
-    for local in plan:
-        global_chunk = {'label': local['label'], 'start': round(unit_base + float(local['start']), 3),
-                        'end': round(unit_base + float(local['end']), 3)}
-        if saved_chunk(global_chunk):
+    local_plan = segments([{'label': label, 'start': 0.0, 'end': duration}], duration)
+    period_chunks = []
+    for local in local_plan:
+        global_chunk = {
+            'label': label,
+            'start': round(period_base + float(local['start']), 3),
+            'end': round(period_base + float(local['end']), 3)
+        }
+        saved = next((
+            c for c in result['chunks']
+            if c.get('label') == label
+            and abs(float(c.get('start', -1)) - global_chunk['start']) < .5
+            and abs(float(c.get('end', -1)) - global_chunk['end']) < .5
+        ), None)
+        if saved:
+            period_chunks.append(saved)
             continue
+
         frame_dir = directory / 'frames'
         shutil.rmtree(frame_dir, ignore_errors=True)
         try:
-            frames = extract_frames(source, frame_dir, local['start'], local['end'], frame_step)
+            # The replay is already <=360p. Keep AI frames at 640x360 instead of
+            # wasting tokens by upscaling them to 720p.
+            frames = extract_frames(source, frame_dir, local['start'], local['end'], frame_step, '640:360')
             context = dict(metadata)
+            context['current_period'] = label
             context['previous_chunk'] = result['chunks'][-1]['review'] if result['chunks'] else None
             context['ai_rate_limit_retries'] = retry_count
             review = analyze(frames, global_chunk, context, frame_step)
-            seen = {(o['source'], round(o['timestamp']), o['note']) for c in result['chunks'] for o in c['review']['observations']}
-            review['observations'] = [o for o in review['observations'] if (o['source'], round(o['timestamp']), o['note']) not in seen]
-            result['chunks'].append({**global_chunk, 'review': review, 'frame_step_seconds': frame_step, 'review_version': REVIEW_VERSION})
+            seen = {
+                (o['source'], round(o['timestamp']), o['note'])
+                for c in result['chunks'] for o in c['review']['observations']
+            }
+            review['observations'] = [
+                o for o in review['observations']
+                if (o['source'], round(o['timestamp']), o['note']) not in seen
+            ]
+            saved = {
+                **global_chunk, 'review': review,
+                'frame_step_seconds': frame_step, 'review_version': REVIEW_VERSION
+            }
+            result['chunks'].append(saved)
+            period_chunks.append(saved)
             update(job_id, 'processing', result)
             if AI_CHUNK_PAUSE > 0:
                 STOP.wait(AI_CHUNK_PAUSE)
         finally:
             shutil.rmtree(frame_dir, ignore_errors=True)
 
-    result['stage'] = 'checking_period_sequences'
-    update(job_id, 'processing', result)
-    unit_end = unit_base + duration
-    for saved in result['chunks']:
-        if saved.get('sequence_checked'):
-            continue
-        if float(saved.get('start', -1)) < unit_base - .1 or float(saved.get('end', -1)) > unit_end + .1:
-            continue
-        window = sequence_window(saved['review'], saved)
-        if window:
-            local_start = max(0.0, float(window['start']) - unit_base)
-            local_end = min(duration, float(window['end']) - unit_base)
-            if local_end > local_start:
-                frame_dir = directory / 'sequence-frames'
-                shutil.rmtree(frame_dir, ignore_errors=True)
-                try:
-                    frames = extract_frames(source, frame_dir, local_start, local_end, .5)
-                    context = {**metadata, 'review_pass': 'closer gameplay sequence', 'ai_rate_limit_retries': retry_count}
-                    detail = analyze(frames, window, context, .5)
-                    saved['sequence_review'] = {**window, 'frame_step_seconds': .5, 'review': detail}
-                finally:
-                    shutil.rmtree(frame_dir, ignore_errors=True)
-        saved['sequence_checked'] = True
+    # One synthesis per period. This is the durable "put it through" result before
+    # we delete that period's temporary video.
+    existing_report = next((p for p in result['period_reports'] if p.get('label') == label), None)
+    if not existing_report:
+        result['stage'] = 'writing_period_report'
         update(job_id, 'processing', result)
-        if window and AI_CHUNK_PAUSE > 0:
-            STOP.wait(AI_CHUNK_PAUSE)
+        report = build_rollup(period_chunks)
+        result['period_reports'].append({'label': label, 'report': report})
+        update(job_id, 'processing', result)
 
-    result.pop('plan', None)
-    metadata['stream_current_period'] = current_period
-    metadata['stream_unit_index'] = unit_index + 1
-    metadata.pop('active_stream_unit', None)
-    if unit_index + 1 < len(units):
-        result['stage'] = 'retrieving_next_period_slice'
+    source.unlink(missing_ok=True)
+    metadata['period_unit_index'] = period_index + 1
+    metadata.pop('active_replay_unit', None)
+
+    if period_index + 1 < len(periods):
+        result['stage'] = 'retrieving_next_period'
         update_metadata(job_id, metadata, 'retrieving', result, '')
-        source.unlink(missing_ok=True)
         return
 
     result['stage'] = 'writing_report'
@@ -883,6 +977,7 @@ def process_streamed_replay(job_id):
         metadata = dict(get_job(job_id)['metadata'])
         metadata['media_released_at'] = time.time()
         update_metadata(job_id, metadata)
+
 
 
 def process(job_id):
