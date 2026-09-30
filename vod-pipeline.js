@@ -381,11 +381,14 @@
       }
       else if(job.status==='queued'&&/rate limit|cooling down/i.test(job.error||''))setStatus(job.error,'warn');
       else {
-        const stageLabels={watching_game_clock:'Watching game clock / period',analyzing_period_slice:'Analyzing current period slice',checking_period_sequences:'Reviewing key sequences',retrieving_next_period_slice:'Retrieving next period slice',writing_report:'Building full-game report',preparing_video:'Preparing video',analyzing_video:'Analyzing video',checking_sequences:'Reviewing key sequences'};
+        const stageLabels={scanning_period_boundaries:'Finding P1 / P2 / P3 from game clock',scanning_next_clock_slice:'Scanning next clock section',period_boundaries_locked:'P1 / P2 / P3 locked',analyzing_period:'Analyzing current period',writing_period_report:'Saving current period report',retrieving_next_period:'Retrieving next period',needs_period_boundaries:'Period detection needs review',watching_game_clock:'Watching game clock / period',analyzing_period_slice:'Analyzing current period slice',checking_period_sequences:'Reviewing key sequences',retrieving_next_period_slice:'Retrieving next period slice',writing_report:'Building full-game report',preparing_video:'Preparing video',analyzing_video:'Analyzing video',checking_sequences:'Reviewing key sequences'};
         const stage=stageLabels[job.result?.stage]||String(job.status).replaceAll('_',' ');
+        const scan=job.result?.scan_unit_count?` · clock scan ${Number(job.result.scan_unit_index||0)+1}/${job.result.scan_unit_count}`:'';
+        const period=job.result?.period_count?` · period ${Number(job.result.period_index||0)+1}/${job.result.period_count}`:'';
         const slice=job.result?.stream_unit_count?` · slice ${Number(job.result.stream_unit_index||0)+1}/${job.result.stream_unit_count}`:'';
+
         const chunks=job.result?.total_chunks?` · ${job.result.chunks?.length||0}/${job.result.total_chunks} chunks`:'';
-        setStatus(`Pipeline: ${stage}${slice}${chunks}`,'good');
+        setStatus(`Pipeline: ${stage}${scan}${period}${slice}${chunks}`,'good');
       }
       if(done){clearInterval(pollTimer);pollTimer=null;}
       if(loud&&job.status==='ready_for_review')document.getElementById('refreshVod')?.click();
