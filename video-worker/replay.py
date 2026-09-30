@@ -171,8 +171,23 @@ def retrieve(job_id):
     folder.mkdir(exist_ok=True)
     source = folder / 'replay.ts'
     source.unlink(missing_ok=True)
-    if worker.disk_used() + 150 * 1024**2 >= worker.MAX_STORAGE:
-        raise worker.Problem(507, 'Temporary video storage is full. Try again after cleanup.')
+
+    def ensure_storage():
+        if worker.disk_used() + worker.STORAGE_HEADROOM >= worker.MAX_STORAGE:
+            raise worker.Problem(
+                507,
+                'Temporary video storage is full. Finished Twitch clips are released automatically; retry after the oldest job finishes.',
+                'storage_limit_exceeded'
+            )
+
+    def preferred_height():
+        usable = worker.storage_status()['usableBytes']
+        # Stay conservative on small caps. A 200 MiB upload budget should never
+        # start by asking Twitch for a 480p file that has little chance of fitting.
+        return 360 if worker.MAX_UPLOAD <= 300 * 1024**2 or usable <= 350 * 1024**2 else 480
+
+    ensure_storage()
+    max_height = preferred_height()
     # Start with Streamlink's normal Twitch resolver. Public VODs generally do
     # not need Chromium/client-integrity at all, and forcing the browser-integrity
     # path can make otherwise playable VODs fail.
@@ -190,7 +205,8 @@ def retrieve(job_id):
             args.append('--twitch-api-header=Authorization=OAuth ' + twitch_token)
         if force_integrity:
             args.extend(['--twitch-force-client-integrity', '--twitch-purge-client-integrity'])
-        args.extend(['-o', str(source), url, '360p,480p,worst'])
+        quality = '360p,worst' if max_height <= 360 else '480p,360p,worst'
+        args.extend(['-o', str(source), url, quality])
         with diagnostic.open('wb') as err:
             return subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=err)
 
@@ -198,8 +214,9 @@ def retrieve(job_id):
         deadline = time.monotonic() + 1800
         while proc.poll() is None:
             size = source.stat().st_size if source.exists() else 0
-            if size > worker.MAX_UPLOAD or worker.disk_used() + size + 150 * 1024**2 > worker.MAX_STORAGE:
-                raise worker.Problem(413, 'This game window exceeds the video storage limit. Shorten the saved VOD start/end range or use the upload fallback.')
+            if size > worker.MAX_UPLOAD:
+                raise worker.Problem(413, 'This game window exceeds the configured clip-size limit. Shorten the saved VOD start/end range.', 'clip_size_exceeded')
+            ensure_storage()
             if time.monotonic() > deadline or worker.STOP.wait(1):
                 raise worker.Problem(504, 'Replay retrieval timed out. Try Analyze Game again or upload the recording.')
 
@@ -217,7 +234,7 @@ def retrieve(job_id):
         args = [
             'yt-dlp', '--no-playlist', '--no-part', '--retries', '2',
             '--fragment-retries', '2', '--socket-timeout', '20',
-            '-f', 'best[height<=480]/worst',
+            '-f', f'best[height<={max_height}]/worst',
             '-o', str(folder / 'ytdlp.%(ext)s')
         ]
         if impersonate:
@@ -241,8 +258,9 @@ def retrieve(job_id):
         deadline = time.monotonic() + 1800
         while proc.poll() is None:
             size = sum(p.stat().st_size for p in folder.glob('ytdlp.*') if p.is_file())
-            if size > worker.MAX_UPLOAD or worker.disk_used() + size + 100 * 1024**2 > worker.MAX_STORAGE:
-                raise worker.Problem(413, 'This game window exceeds the video storage limit.')
+            if size > worker.MAX_UPLOAD:
+                raise worker.Problem(413, 'This game window exceeds the configured clip-size limit.', 'clip_size_exceeded')
+            ensure_storage()
             if time.monotonic() > deadline or worker.STOP.wait(1):
                 raise worker.Problem(504, 'Alternate Twitch retrieval timed out.')
 
@@ -255,10 +273,10 @@ def retrieve(job_id):
         if candidate.stat().st_size <= 0:
             return False
         worker.probe(candidate)
-        worker.command(['ffmpeg', '-v', 'error', '-i', str(candidate),
-                        '-map', '0:v:0', '-map', '0:a?', '-c', 'copy',
-                        '-y', str(folder / 'source.mp4')], 300)
-        worker.probe(folder / 'source.mp4')
+        final = folder / 'source.mp4'
+        final.unlink(missing_ok=True)
+        candidate.replace(final)
+        worker.probe(final)
         return True
 
     # Three-stage retrieval. Public playback gets both normal and fresh-integrity
@@ -285,11 +303,12 @@ def retrieve(job_id):
         streamlink_ok = not proc.returncode and source.exists() and source.stat().st_size > 0
         if streamlink_ok:
             if source.stat().st_size > worker.MAX_UPLOAD:
-                raise worker.Problem(413, 'Replay exceeds the video size limit.')
+                raise worker.Problem(413, 'Replay exceeds the configured clip-size limit.', 'clip_size_exceeded')
             worker.probe(source)
-            worker.command(['ffmpeg', '-v', 'error', '-protocol_whitelist', 'file', '-i', str(source),
-                            '-map', '0:v:0', '-map', '0:a?', '-c', 'copy', '-y', str(folder / 'source.mp4')], 300)
-            worker.probe(folder / 'source.mp4')
+            final = folder / 'source.mp4'
+            final.unlink(missing_ok=True)
+            source.replace(final)
+            worker.probe(final)
         else:
             # Streamlink can be rejected by Twitch even for a VOD that is playable in a
             # normal browser. Use yt-dlp as a second independent Twitch resolver and

@@ -44,9 +44,14 @@ rather than guessing where a user's own edits end.
 - `/api/video-review-config` defaults to the existing public Railway service URL.
   `VIDEO_WORKER_URL` overrides it; an explicit empty value disables the connection.
   This URL is public configuration, not a credential.
-- Check the actual cap using `/health` (the existing service was configured for
-  200 MiB). Code defaults are 700 MiB upload, 1800 MiB disk and 24-hour media retention.
-  Reports persist in SQLite. Back up `/data/jobs.sqlite`; monitor volume capacity.
+- Check the actual cap using `/health`. The health payload now exposes upload cap,
+  storage used/free/headroom, active-queue capacity and whether successful Twitch media is
+  auto-released. Code defaults are 700 MiB upload, 1800 MiB disk, 64 MiB working headroom,
+  eight queued/active jobs and 24-hour retention for non-replay media.
+- Twitch replay jobs request only the saved game window, prefer 480p when storage allows,
+  fall back to 360p on small caps, avoid a duplicate remux copy, and release temporary
+  replay media after a successful report. The SQLite report/evidence remains available.
+  A fresh Elite Scout pass re-retrieves the same game window when the old clip was released.
 - Keep proxy limits compatible with uploads. Configure API spend limits independently
   of this app. Never expose keys in frontend code.
 

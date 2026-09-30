@@ -134,10 +134,19 @@ class ReplayTests(unittest.TestCase):
         argv = json.loads(args_file.read_text())
         self.assertEqual(argv[argv.index('--hls-start-offset') + 1], '120.0')
         self.assertEqual(argv[argv.index('--stream-segmented-duration') + 1], '120.0')
-        self.assertEqual(argv[-1], '360p,480p,worst')
+        self.assertEqual(argv[-1], '480p,360p,worst')
         self.assertEqual(worker.get_job(job['id'])['status'], 'queued')
         self.assertGreater(worker.probe(worker.ROOT / job['id'] / 'source.mp4'), 0)
         self.assertFalse((worker.ROOT / job['id'] / 'replay.ts').exists())
+
+    def test_storage_guard_does_not_double_count_partial_download(self):
+        job = replay.resolve(dict(self.review, source_start_seconds=0, source_end_seconds=30), 'owner', True)
+        folder = worker.ROOT / job['id']
+        folder.mkdir(exist_ok=True)
+        partial = folder / 'replay.ts'
+        partial.write_bytes(b'x' * (8 * 1024**2))
+        with patch.object(worker, 'MAX_STORAGE', 80 * 1024**2), patch.object(worker, 'MAX_UPLOAD', 60 * 1024**2), patch.object(worker, 'STORAGE_HEADROOM', 16 * 1024**2):
+            self.assertLess(worker.disk_used() + worker.STORAGE_HEADROOM, worker.MAX_STORAGE)
 
 if __name__ == '__main__':
     unittest.main()

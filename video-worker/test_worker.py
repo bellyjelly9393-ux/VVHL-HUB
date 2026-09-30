@@ -126,6 +126,14 @@ class WorkerTests(unittest.TestCase):
             self.assertIn('billing', error.exception.message)
             self.assertEqual(request.call_count, 1)
 
+    def test_release_media_keeps_persisted_result(self):
+        job_id = self.create('ready_for_review')
+        worker.update(job_id, 'ready_for_review', {'game_rollup': {'summary': 'saved'}})
+        self.assertTrue((worker.ROOT/job_id/'source.mp4').exists())
+        worker.release_job_media(job_id)
+        self.assertFalse((worker.ROOT/job_id).exists())
+        self.assertEqual(worker.get_job(job_id)['result']['game_rollup']['summary'], 'saved')
+
     def test_private_jobs_and_expiry(self):
         job_id = self.create('awaiting_ai')
         with self.assertRaises(worker.Problem) as error:

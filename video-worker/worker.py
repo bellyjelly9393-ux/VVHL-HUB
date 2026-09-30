@@ -20,6 +20,9 @@ from hockey_review import HOCKEY_RUBRIC, REVIEW_VERSION, sequence_window
 ROOT = Path(os.getenv('DATA_DIR', str(Path(__file__).parent / 'data')))
 MAX_UPLOAD = int(os.getenv('MAX_UPLOAD_MB', '700')) * 1024**2
 MAX_STORAGE = int(os.getenv('MAX_STORAGE_MB', '1800')) * 1024**2
+STORAGE_HEADROOM = int(os.getenv('STORAGE_HEADROOM_MB', '64')) * 1024**2
+MAX_ACTIVE_JOBS = max(1, int(os.getenv('MAX_ACTIVE_JOBS', '8')))
+AUTO_RELEASE_TWITCH_MEDIA = os.getenv('AUTO_RELEASE_TWITCH_MEDIA', '1').strip().lower() not in ('0', 'false', 'no', 'off')
 RETENTION = int(os.getenv('MEDIA_RETENTION_HOURS', '24')) * 3600
 ORIGINS = {x.strip() for x in os.getenv('ALLOWED_ORIGINS', '').split(',') if x.strip()}
 ORIGINS.update({
@@ -58,8 +61,8 @@ AI_RATE_RETRY_LIMIT = int(os.getenv('AI_RATE_RETRY_LIMIT', '5'))
 
 
 class Problem(Exception):
-    def __init__(self, status, message):
-        self.status, self.message = status, message
+    def __init__(self, status, message, code=None):
+        self.status, self.message, self.code = status, message, code
 
 
 def connect():
@@ -219,6 +222,24 @@ def authenticate(header):
 
 def disk_used():
     return sum(p.stat().st_size for p in ROOT.rglob('*') if p.is_file())
+
+
+def storage_status():
+    used = disk_used()
+    free = max(0, MAX_STORAGE - used)
+    return {
+        'usedBytes': used,
+        'limitBytes': MAX_STORAGE,
+        'freeBytes': free,
+        'headroomBytes': STORAGE_HEADROOM,
+        'usableBytes': max(0, free - STORAGE_HEADROOM),
+    }
+
+
+def release_job_media(job_id):
+    directory = ROOT / job_id
+    if directory.exists():
+        shutil.rmtree(directory, ignore_errors=True)
 
 
 def command(args, timeout=300):
@@ -766,7 +787,14 @@ def process(job_id):
     update(job_id, 'processing', result)
     result['game_rollup'] = build_rollup(result['chunks'])
     result['stage'] = 'report_ready'
+    result.pop('failure_code', None)
     update(job_id, 'ready_for_review', result)
+    if AUTO_RELEASE_TWITCH_MEDIA and job['metadata'].get('source_kind') == 'twitch_replay':
+        release_job_media(job_id)
+        with connect() as db:
+            meta = dict(get_job(job_id)['metadata'])
+            meta['media_released_at'] = time.time()
+            db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
 
 def cleanup():
     now = time.time()
@@ -822,10 +850,17 @@ def work_loop():
                 elif STOP.wait(delay):
                     continue
             else:
-                update(row['id'], 'failed', error=exc.message)
+                current = get_job(row['id'])
+                result = current['result']
+                if exc.code:
+                    result['failure_code'] = exc.code
+                update(row['id'], 'failed', result=result, error=exc.message)
         except Exception:
             # Never persist signed URLs, tokens, or raw provider responses in errors.
-            update(row['id'], 'failed', error='Processing or AI request failed. Check worker configuration and retry.')
+            current = get_job(row['id'])
+            result = current['result']
+            result['failure_code'] = 'worker_error'
+            update(row['id'], 'failed', result=result, error='Processing or AI request failed. Check worker configuration and retry.')
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -882,7 +917,10 @@ class Handler(BaseHTTPRequestHandler):
                                     'maxUploadBytes': MAX_UPLOAD, 'liveIngestion': False,
                                     'reviewVersion': REVIEW_VERSION,
                                     'frameStepSeconds': FRAME_STEP,
-                                    'retentionHours': RETENTION / 3600})
+                                    'retentionHours': RETENTION / 3600,
+                                    'maxActiveJobs': MAX_ACTIVE_JOBS,
+                                    'autoReleaseTwitchMedia': AUTO_RELEASE_TWITCH_MEDIA,
+                                    'storage': storage_status()})
         origin = self.headers.get('Origin')
         if origin and not origin_allowed(origin):
             raise Problem(403, 'Origin not allowed')
@@ -1004,20 +1042,32 @@ class Handler(BaseHTTPRequestHandler):
                     db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
                 update(job_id, 'queued')
             return self.reply(202, get_job(job_id, owner))
+        if parts[2:] == ['release-media'] and self.command == 'POST':
+            with WRITE_LOCK:
+                job = get_job(job_id, owner)
+                if job['status'] not in ('ready_for_review', 'failed', 'expired'):
+                    raise Problem(409, 'Temporary media can be released after analysis finishes.')
+                release_job_media(job_id)
+                meta = dict(job['metadata'])
+                meta['media_released_at'] = time.time()
+                with connect() as db:
+                    db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
+            return self.reply(200, {'job': get_job(job_id, owner), 'storage': storage_status()})
         if parts[2:] == ['reanalyze'] and self.command == 'POST':
             with WRITE_LOCK:
                 job = get_job(job_id, owner)
                 if job['status'] not in ('ready_for_review', 'failed', 'awaiting_ai'):
                     raise Problem(409, 'Wait for the current analysis to finish before starting a fresh scout pass.')
-                if not (directory / 'source.mp4').exists():
-                    raise Problem(410, 'Recording expired. Start a new review.')
-                # Preserve the recording and metadata, but clear old AI evidence so the
-                # upgraded scout performs a genuine fresh pass rather than reusing old chunks.
                 meta = dict(job['metadata'])
                 meta.pop('ai_rate_limit_retries', None)
                 with connect() as db:
                     db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
-                update(job_id, 'queued', result={}, error='')
+                if not (directory / 'source.mp4').exists():
+                    if meta.get('source_kind') != 'twitch_replay':
+                        raise Problem(410, 'Recording expired. Upload the recording again for a fresh scout pass.')
+                    update(job_id, 'retrieving', result={}, error='')
+                else:
+                    update(job_id, 'queued', result={}, error='')
             return self.reply(202, get_job(job_id, owner))
         raise Problem(404, 'Not found')
 
@@ -1025,7 +1075,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             self.dispatch()
         except Problem as exc:
-            self.reply(exc.status, {'error': exc.message})
+            payload = {'error': exc.message}
+            if exc.code:
+                payload['code'] = exc.code
+            self.reply(exc.status, payload)
         except Exception:
             self.reply(500, {'error': 'Request could not be completed.'})
 
