@@ -114,11 +114,27 @@ def start_seed_status_monitor(seeded):
                     job = worker.get_job(job_id)
                 except worker.Problem:
                     continue
-                state = (job.get('status'), job.get('error', ''))
+                result = job.get('result') or {}
+                state = (
+                    job.get('status'), job.get('error', ''), result.get('stage'),
+                    result.get('period_index'), len(result.get('detected_periods') or [])
+                )
                 if previous.get(job_id) != state:
                     safe_error = str(job.get('error') or '').replace('\n', ' ')[:400]
-                    failure_code = str((job.get('result') or {}).get('failure_code') or '')
-                    print(f"Replay test status: {job_id} status={job.get('status')} code={failure_code} error={safe_error}", flush=True)
+                    failure_code = str(result.get('failure_code') or '')
+                    stage = str(result.get('stage') or '')
+                    detected = [
+                        str(p.get('label') or '') for p in (result.get('detected_periods') or [])
+                        if isinstance(p, dict)
+                    ][:6]
+                    period_number = result.get('period_index')
+                    reports = len(result.get('period_reports') or [])
+                    print(
+                        f"Replay test status: {job_id} status={job.get('status')} "
+                        f"stage={stage} code={failure_code} detected={detected} "
+                        f"period_index={period_number} period_reports={reports} error={safe_error}",
+                        flush=True
+                    )
                     previous[job_id] = state
                 if job.get('status') not in terminal:
                     all_terminal = False
