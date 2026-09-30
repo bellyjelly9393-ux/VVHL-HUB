@@ -1,0 +1,16 @@
+/* First home-page pass: matching gold trim and a direct locker-room entrance. */
+body.wildman-site.wildman-home.home-core-upgrade{background:radial-gradient(circle at 80% 12%,#2173a30b,transparent 30%),radial-gradient(circle at 10% 18%,#b9903320,transparent 38%),#060808!important}
+body.wildman-site.wildman-home.home-core-upgrade .ice-glow-a{background:#cfa33b!important;opacity:.07!important}
+body.wildman-site.wildman-home.home-core-upgrade .ice-glow-b{background:#4894ba!important;opacity:.025!important}
+body.wildman-home.home-core-upgrade .wm-home-hero,body.wildman-home.home-core-upgrade .wm-home-header{border-color:#b99b4e66!important}
+body.wildman-home.home-core-upgrade .wm-home-hero{border-radius:10px;box-shadow:0 24px 70px #0009!important}
+body.wildman-home.home-core-upgrade .wm-home-header .main-nav a.active-nav{border-bottom-color:#e2bd62!important;color:#ffe29a!important;box-shadow:inset 0 -2px #e2bd62!important}
+body.wildman-home.home-core-upgrade .wm-feature-card:not(.wm-feature-media){border-color:#b79a493f!important;background:linear-gradient(125deg,#19170f,#090c0e)!important}
+body.wildman-home.home-core-upgrade .wm-feature-icon{background:linear-gradient(145deg,#ffe08d,#bc8b30)!important}
+body.wildman-site.wildman-home.home-core-upgrade .eyebrow{color:#dfbf71!important}
+.home-core-feature{display:grid;grid-template-columns:minmax(200px,.65fr) minmax(0,1fr);align-items:center;gap:clamp(24px,5vw,70px);margin-top:32px;margin-bottom:36px;padding:28px;border:1px solid #b69a4966;border-radius:8px;background:radial-gradient(ellipse at 20% 80%,#e2b84c1a,transparent 50%),#090c0d;overflow:hidden}
+.home-core-art{height:330px;max-width:340px;width:100%;justify-self:center;background:url('assets/wildman/stalls/home-pair-v2.png') left center/200% 100% no-repeat;border:1px solid #bda45455;border-radius:4px;box-shadow:0 10px 32px #000}
+.home-core-feature h2{font:clamp(34px,4vw,62px)/1 Impact,'Arial Narrow',sans-serif!important;letter-spacing:.01em;margin:12px 0!important;color:#f1f0e8}
+.home-core-feature h2 span{color:#ddba64}.home-core-feature p{max-width:540px;color:#a9afb0;font-size:14px;line-height:1.7}
+.home-core-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:24px}.home-core-caption{display:block;margin-top:16px;color:#baaa80;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+@media(max-width:650px){.home-core-feature{grid-template-columns:1fr;padding:18px;gap:20px}.home-core-art{height:280px;max-width:240px}.home-core-links{display:grid;grid-template-columns:1fr}.home-core-feature h2{font-size:38px!important}}

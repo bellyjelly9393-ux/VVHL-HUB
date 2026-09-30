@@ -631,6 +631,8 @@
     state.stats = (stats.data || []).filter(s => !privateTeamIds.has(s.team_id));
     state.gamePlayerStats = (gamePlayerStats.data || []).filter(s => !privateTeamIds.has(s.team_id));
     state.teamStats = (teamStats.data || []).filter(s => !privateTeamIds.has(s.team_id));
+    window.WildmanEsportsNetwork.loaded = true;
+    window.dispatchEvent(new CustomEvent("wildman-network-ready"));
     renderNetworkHub();
     renderPlayerDirectory();
     renderWildmanTeamHome();
