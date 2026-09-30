@@ -242,6 +242,38 @@ def release_job_media(job_id):
         shutil.rmtree(directory, ignore_errors=True)
 
 
+def reclaim_replay_media(required_free=None, exclude_job_id=None):
+    """Drop old replay clips that can be fetched again, preserving SQLite evidence/results."""
+    required_free = STORAGE_HEADROOM if required_free is None else max(0, int(required_free))
+    if storage_status()['freeBytes'] >= required_free:
+        return 0
+    reclaimed = 0
+    with connect() as db:
+        rows = db.execute(
+            "SELECT id,status,metadata,created FROM jobs WHERE status IN ('ready_for_review','failed','expired') ORDER BY created"
+        ).fetchall()
+        for row in rows:
+            if row['id'] == exclude_job_id:
+                continue
+            try:
+                meta = json.loads(row['metadata'])
+            except (TypeError, ValueError):
+                continue
+            if meta.get('source_kind') != 'twitch_replay':
+                continue
+            directory = ROOT / row['id']
+            if not directory.exists():
+                continue
+            before = disk_used()
+            release_job_media(row['id'])
+            reclaimed += max(0, before - disk_used())
+            meta['media_released_at'] = time.time()
+            db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), row['id']))
+            if storage_status()['freeBytes'] >= required_free:
+                break
+    return reclaimed
+
+
 def command(args, timeout=300):
     try:
         return subprocess.run(args, capture_output=True, check=True, timeout=timeout).stdout

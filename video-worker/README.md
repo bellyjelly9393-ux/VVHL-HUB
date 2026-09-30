@@ -50,8 +50,10 @@ rather than guessing where a user's own edits end.
   eight queued/active jobs and 24-hour retention for non-replay media.
 - Twitch replay jobs request only the saved game window, prefer 480p when storage allows,
   fall back to 360p on small caps, avoid a duplicate remux copy, and release temporary
-  replay media after a successful report. The SQLite report/evidence remains available.
-  A fresh Elite Scout pass re-retrieves the same game window when the old clip was released.
+  replay media after a successful report. Under storage pressure the worker can also reclaim
+  old failed/completed Twitch clips because those windows are safely re-downloadable. The
+  SQLite report/evidence remains available. A fresh Elite Scout pass re-retrieves the same
+  game window when the old clip was released.
 - Keep proxy limits compatible with uploads. Configure API spend limits independently
   of this app. Never expose keys in frontend code.
 

@@ -174,9 +174,11 @@ def retrieve(job_id):
 
     def ensure_storage():
         if worker.disk_used() + worker.STORAGE_HEADROOM >= worker.MAX_STORAGE:
+            worker.reclaim_replay_media(worker.STORAGE_HEADROOM, exclude_job_id=job_id)
+        if worker.disk_used() + worker.STORAGE_HEADROOM >= worker.MAX_STORAGE:
             raise worker.Problem(
                 507,
-                'Temporary video storage is full. Finished Twitch clips are released automatically; retry after the oldest job finishes.',
+                'Temporary video storage is full even after reclaiming re-downloadable Twitch clips. Retry after the active job finishes.',
                 'storage_limit_exceeded'
             )
 

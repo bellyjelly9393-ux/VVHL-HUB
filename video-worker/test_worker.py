@@ -134,6 +134,20 @@ class WorkerTests(unittest.TestCase):
         self.assertFalse((worker.ROOT/job_id).exists())
         self.assertEqual(worker.get_job(job_id)['result']['game_rollup']['summary'], 'saved')
 
+    def test_storage_reclaim_drops_failed_replay_media_but_keeps_job(self):
+        job_id = self.create('failed')
+        job = worker.get_job(job_id)
+        meta = dict(job['metadata'])
+        meta['source_kind'] = 'twitch_replay'
+        with worker.connect() as db:
+            db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
+        before = worker.disk_used()
+        with patch.object(worker, 'MAX_STORAGE', before + 1024), patch.object(worker, 'STORAGE_HEADROOM', 2 * 1024):
+            reclaimed = worker.reclaim_replay_media(worker.STORAGE_HEADROOM)
+        self.assertGreater(reclaimed, 0)
+        self.assertFalse((worker.ROOT/job_id).exists())
+        self.assertEqual(worker.get_job(job_id)['status'], 'failed')
+
     def test_private_jobs_and_expiry(self):
         job_id = self.create('awaiting_ai')
         with self.assertRaises(worker.Problem) as error:
