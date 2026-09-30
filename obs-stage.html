@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Wildman OBS Broadcast Stage</title>
+  <link rel="stylesheet" href="obs-stage.css?v=20260930a">
+</head>
+<body>
+  <main class="obs-stage" id="obsStage">
+    <div id="streamMount" class="obs-stage-stream"></div>
+    <div id="streamPlaceholder" class="obs-stage-placeholder">
+      <div class="obs-stage-placeholder-mark">W</div>
+      <strong>STREAM FEED WAITING</strong>
+      <span>Attach a Twitch or YouTube URL in Broadcast Studio.</span>
+    </div>
+    <iframe id="overlayFrame" class="obs-stage-overlay" title="Broadcast graphics"></iframe>
+    <div id="stageStatus" class="obs-stage-status">CONNECTING</div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+  <script src="obs-stage.js?v=20260930a"></script>
+</body>
+</html>
