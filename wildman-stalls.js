@@ -7,12 +7,12 @@
   let rows = [], editable = new Set(), manager = false, generation = 0;
   const message = document.getElementById('wildmanStallMessage');
   function card(row) {
-    const id = row.player_id, canEdit = editable.has(id);
-    return `<article class="wc-card" data-player="${esc(id)}"><div class="wc-art" role="group" aria-label="${esc(row.gamertag)} locker stall">
+    const id = row.player_id, canEdit = editable.has(id), isGoalie = /^(G|GOALIE|GOALTENDER)$/i.test(String(row.position || '').trim());
+    return `<article class="wc-card${isGoalie ? ' wc-goalie-card' : ''}" data-player="${esc(id)}"><div class="wc-art" role="group" aria-label="${esc(row.gamertag)} ${isGoalie ? 'goalie locker stall with leg pads, catching glove, blocker, mask, and stick' : 'locker stall'}">
       <div class="wc-plate"><span class="wc-plate-name">${esc(row.jersey_name)}</span><span class="wc-plate-num">${esc(row.jersey_number)}</span></div>
-      <span class="wc-helmet">${esc(row.jersey_number)}</span><b class="wc-print-name">${esc(row.jersey_name)}</b><b class="wc-print-number">${esc(row.jersey_number)}</b>
+      <span class="wc-helmet">${esc(row.jersey_number)}</span>${isGoalie ? '<img class="wc-goalie-kit" src="assets/wildman/stalls/goalie-kit.svg" alt="" aria-hidden="true" loading="lazy" decoding="async">' : ''}<b class="wc-print-name">${esc(row.jersey_name)}</b><b class="wc-print-number">${esc(row.jersey_number)}</b>
       <button class="wc-flip" type="button" aria-label="View back of ${esc(row.gamertag)} jersey" aria-pressed="false"></button><span class="wc-flip-label">TAP JERSEY · VIEW BACK</span></div>
-      <div class="wc-details"><div class="wc-meta">WILDMAN HOCKEY · ${esc(row.position || 'PLAYER')}</div><h3>${esc(row.gamertag)}</h3>
+      <div class="wc-details"><div class="wc-meta">WILDMAN HOCKEY · ${isGoalie ? 'GOALTENDER' : esc(row.position || 'PLAYER')}</div><h3>${esc(row.gamertag)}</h3>
       <div class="wc-tools"><button class="small-btn wc-flip-control" type="button" aria-pressed="false">View back</button><a class="small-btn" href="esports-player.html?id=${encodeURIComponent(id)}">Player profile ↗</a>${canEdit ? '<button class="small-btn wc-edit" type="button" aria-expanded="false">Customize jersey</button>' : '<span class="wc-status">View only</span>'}</div>
       ${canEdit ? `<form class="wc-form" hidden><label>Jersey name<input name="jersey_name" required maxlength="24" value="${esc(row.jersey_name)}" autocomplete="off"></label><label>Jersey number<input name="jersey_number" inputmode="numeric" pattern="[0-9]{0,2}" maxlength="2" value="${esc(row.jersey_number)}" autocomplete="off"></label><button class="small-btn" type="submit">Save jersey</button><button class="small-btn wc-cancel" type="button">Cancel</button></form>` : ''}
       ${manager ? `<details class="wc-manager"><summary>Manage Discord ownership</summary><p>Assign the player's numeric Discord user ID. This grants jersey editing only. Replacing the ID removes the previous owner's access.</p><label>Discord user ID<input class="wc-discord-id" inputmode="numeric" pattern="[0-9]{17,20}" aria-label="Discord user ID for ${esc(row.gamertag)}" placeholder="17–20 digit user ID"></label><button class="small-btn wc-bind" type="button">Assign Discord</button><button class="small-btn wc-unbind" type="button">Remove assignment</button></details>` : ''}

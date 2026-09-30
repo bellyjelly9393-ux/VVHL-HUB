@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-label="Wildman goalie equipment">
+<title>Wildman goalie pads, catcher, blocker, mask and goalie stick</title>
+<defs>
+  <linearGradient id="padFace" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#b8b6ad"/><stop offset=".14" stop-color="#f5f2e8"/><stop offset=".68" stop-color="#ede8dc"/><stop offset="1" stop-color="#97958e"/></linearGradient>
+  <linearGradient id="dark" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#4a4846"/><stop offset=".46" stop-color="#151616"/><stop offset="1" stop-color="#050605"/></linearGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="#f5d68b"/><stop offset=".55" stop-color="#c19140"/><stop offset="1" stop-color="#6b4820"/></linearGradient>
+  <linearGradient id="glove" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f3eee0"/><stop offset=".55" stop-color="#d2c8b7"/><stop offset="1" stop-color="#85837f"/></linearGradient>
+  <filter id="shadow" x="-35%" y="-25%" width="180%" height="170%"><feDropShadow dx="3" dy="7" stdDeviation="7" flood-color="#000" flood-opacity=".7"/></filter>
+  <g id="pad">
+    <path d="M9 0 Q48 -7 87 4 L96 18 94 195 Q90 218 72 225 L21 225 Q5 214 4 194 L3 20Z" fill="url(#dark)" stroke="#080808" stroke-width="4"/>
+    <path d="M14 7 Q45 2 82 9 L87 23 86 189 Q84 207 70 212 L24 213 Q14 206 13 188 L12 24Z" fill="url(#padFace)" stroke="#6b6254" stroke-width="2"/>
+    <path d="M16 21 L34 13 49 31 82 31 82 48 50 49 33 31 17 40Z" fill="url(#gold)" stroke="#7b5629" stroke-width="1.5"/>
+    <path d="M16 53 L31 45 49 64 82 63 82 82 47 81 30 62 16 72Z" fill="#17181b" stroke="#b88e52" stroke-width="1"/>
+    <path d="M17 94 L36 83 57 107 82 107 82 125 52 125 34 104 17 113Z" fill="url(#gold)" stroke="#7b5629" stroke-width="1.5"/>
+    <path d="M17 136 L31 127 47 142 83 140 83 159 45 160 29 145 17 154Z" fill="#17181b" stroke="#b88e52" stroke-width="1"/>
+    <path d="M17 169 Q48 163 81 168 L81 180 Q53 175 17 182Z" fill="url(#gold)"/>
+    <path d="M21 190 L75 190 M21 201 L71 201" stroke="#8e8c86" stroke-width="2" opacity=".55"/>
+    <path d="M22 19 L20 185 M76 20 L78 182" stroke="#fffdf5" stroke-width="2" opacity=".7"/>
+    <path d="M8 22 L8 194 M92 26 L91 185" stroke="#c09b5e" stroke-width="2" stroke-dasharray="4 7" opacity=".75"/>
+    <text x="47" y="174" fill="#25221e" font-size="12" font-weight="900" font-family="Arial,sans-serif" text-anchor="middle" letter-spacing="1">WM</text>
+  </g>
+</defs>
+<!-- The stick leans against the far left of the locker. -->
+<g filter="url(#shadow)" transform="rotate(-7 80 465)">
+  <path d="M61 220 L74 221 112 679 100 680Z" fill="#e5e0d4" stroke="#252321" stroke-width="3"/>
+  <path d="M61 220 L74 221 81 319 69 318Z" fill="#16191d"/>
+  <path d="M70 337 L84 337 103 622 91 620Z" fill="#c39448" opacity=".9"/>
+  <path d="M100 670 Q109 685 135 688 L163 689 169 704 Q154 721 120 717 L100 713 93 692Z" fill="#f2e8d2" stroke="#241f1a" stroke-width="4"/>
+  <path d="M107 687 L160 699 M112 701 L155 710" stroke="#a27537" stroke-width="4"/>
+  <path d="M63 251 L75 252 M66 265 L78 266 M68 279 L79 280 M69 293 L80 294" stroke="#cfac68" stroke-width="3"/>
+</g>
+<!-- Wall-mounted goalie mask. -->
+<g filter="url(#shadow)" transform="translate(471 130)">
+  <path d="M16 15 Q46 -6 76 13 Q95 29 82 77 L65 96 29 96 7 74 Q0 34 16 15Z" fill="url(#glove)" stroke="#18191c" stroke-width="5"/>
+  <path d="M18 23 Q47 2 74 22 L79 42 Q46 31 12 45Z" fill="url(#dark)"/>
+  <path d="M20 23 L43 12 53 29 76 26 76 41 49 37 43 27 20 35Z" fill="url(#gold)"/>
+  <path d="M9 47 L82 43 76 79 61 92 27 92 14 77Z" fill="#202329" stroke="#16191b" stroke-width="3"/>
+  <path d="M10 52 Q44 41 81 51 M10 65 Q44 56 79 64 M16 78 Q45 70 75 77 M30 45 L27 91 M46 43 L46 94 M62 45 L66 91" fill="none" stroke="#e7e5dc" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M32 84 L61 84" stroke="#cda25d" stroke-width="4"/>
+  <path d="M6 46 L1 67 13 81 M83 47 L92 64 81 80" fill="none" stroke="#c79a54" stroke-width="5"/>
+</g>
+<!-- Catching glove, at the goalie's left shoulder. -->
+<g filter="url(#shadow)" transform="translate(71 335) rotate(-10 51 50)">
+  <path d="M18 73 Q-1 53 11 32 L27 20 31 4 Q41 -2 51 13 L64 24 80 4 Q91 -3 97 15 L95 40 Q111 46 103 70 Q93 91 65 102 L29 99Z" fill="url(#glove)" stroke="#161719" stroke-width="5"/>
+  <path d="M22 75 Q32 83 57 87 L71 80 83 56 67 31 39 24 23 41Z" fill="#222629" stroke="#be934f" stroke-width="4"/>
+  <path d="M38 28 L59 81 M55 27 L75 69 M27 44 L80 48 M25 57 L81 59 M28 70 L73 70" stroke="#e9e1cd" stroke-width="2.5"/>
+  <path d="M35 10 L32 38 M48 12 L45 33 M88 16 L78 41" stroke="#c3954f" stroke-width="6" stroke-linecap="round"/>
+  <path d="M24 78 Q43 93 74 84" fill="none" stroke="#c99c55" stroke-width="5"/>
+  <path d="M33 89 L72 94" stroke="#161719" stroke-width="11" stroke-linecap="round"/>
+</g>
+<!-- Blocker and stick-holding glove. -->
+<g filter="url(#shadow)" transform="translate(440 336) rotate(9 52 54)">
+  <path d="M22 75 Q5 70 5 53 L20 35 49 43 87 72 76 106 37 108Z" fill="url(#dark)" stroke="#111" stroke-width="4"/>
+  <path d="M10 3 L97 8 103 72 Q55 80 4 66Z" fill="url(#glove)" stroke="#161719" stroke-width="5"/>
+  <path d="M18 14 L85 18 89 31 18 28Z" fill="url(#gold)"/>
+  <path d="M18 36 L88 39 91 53 15 50Z" fill="#252529"/>
+  <path d="M17 57 L92 60" stroke="#b68e4d" stroke-width="5"/>
+  <path d="M25 9 L29 69 M75 12 L77 71" stroke="#fcf8ec" stroke-width="2" opacity=".75"/>
+  <path d="M26 80 L67 92" stroke="#b79152" stroke-width="8" stroke-linecap="round"/>
+</g>
+<!-- Full-height goalie leg pads, sitting in front of the stall bench. -->
+<g filter="url(#shadow)" transform="translate(94 492) rotate(-3 50 110)"><use href="#pad"/></g>
+<g filter="url(#shadow)" transform="translate(423 492) rotate(3 50 110)"><use href="#pad"/></g>
+</svg>
