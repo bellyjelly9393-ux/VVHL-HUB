@@ -1,6 +1,6 @@
 """Evidence rules shared by the visual scout and report writer."""
 
-REVIEW_VERSION = '2026-09-21-evidence-v2'
+REVIEW_VERSION = '2026-10-01-unified-scout-media-v3'
 
 HOCKEY_RUBRIC = '''
 HOCKEY READS AND EVIDENCE STANDARD
