@@ -1638,3 +1638,42 @@ body.wm-page-player:not(.wm-theme-hitmen) .wm-player-grid:first-of-type{
 
 /* Public Wildman pages remain distinct from Calgary: gold leads, crimson intensifies.
    Calgary itself keeps the dedicated black/crimson/silver operations treatment. */
+
+
+/* Shared Live / Media dropdown navigation */
+.wildman-site .main-nav .nav-menu{position:relative;display:flex;align-items:center}
+.wildman-site .nav-menu-trigger{
+  min-height:38px;padding:9px 12px!important;border:0!important;border-radius:10px!important;
+  display:flex;align-items:center;gap:6px;background:transparent!important;color:#b8b4bd!important;
+  font:800 12px/1 Inter,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;
+  box-shadow:none!important
+}
+.wildman-site .nav-menu-trigger:hover,
+.wildman-site .nav-menu.open>.nav-menu-trigger,
+.wildman-site .nav-menu.active-nav-group>.nav-menu-trigger{
+  color:#ffe29a!important;background:rgba(215,169,66,.07)!important;box-shadow:inset 0 -2px #d7a942!important
+}
+.wildman-site .nav-menu-trigger span{font-size:13px;transition:transform .16s ease}
+.wildman-site .nav-menu.open>.nav-menu-trigger span{transform:rotate(180deg)}
+.wildman-site .nav-menu-panel{
+  display:none;position:absolute;top:calc(100% + 8px);left:0;z-index:500;
+  width:270px;padding:8px;border:1px solid rgba(215,169,66,.22);border-radius:14px;
+  background:rgba(7,7,9,.98);box-shadow:0 24px 60px rgba(0,0,0,.5);backdrop-filter:blur(14px)
+}
+.wildman-site .nav-menu.open>.nav-menu-panel{display:grid;gap:4px}
+.wildman-site .main-nav .nav-menu-panel a{
+  display:grid!important;gap:3px;padding:11px 12px!important;border-radius:10px!important;
+  color:#f2f0f4!important;background:transparent!important;box-shadow:none!important;text-transform:none!important
+}
+.wildman-site .main-nav .nav-menu-panel a:hover{background:rgba(215,169,66,.08)!important}
+.wildman-site .nav-menu-panel a b{font-size:12px;letter-spacing:.03em}
+.wildman-site .nav-menu-panel a small{color:#8f8a94;font-size:9px;line-height:1.35}
+
+@media(max-width:680px){
+  .wildman-site .main-nav .nav-menu{display:block;width:100%}
+  .wildman-site .nav-menu-trigger{width:100%;justify-content:space-between;text-align:left}
+  .wildman-site .nav-menu-panel{
+    position:static;width:100%;margin:4px 0 6px;padding:5px;
+    border-radius:10px;box-shadow:none;background:rgba(255,255,255,.025)
+  }
+}

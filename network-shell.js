@@ -5,7 +5,7 @@
   if (!document.querySelector('link[href*="network-v2.css"]')) {
     const polish = document.createElement('link');
     polish.rel = 'stylesheet';
-    polish.href = 'network-v2.css?v=20260920a';
+    polish.href = 'network-v2.css?v=20261001nav1';
     document.head.appendChild(polish);
   }
 

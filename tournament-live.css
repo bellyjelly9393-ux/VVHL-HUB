@@ -50,3 +50,23 @@
 .pro-playoff-field-head strong{font:900 20px/1 "Barlow Condensed",sans-serif}.pro-playoff-field-head span{color:#8d858e;font-size:9px}
 @media(max-width:850px){.pro-playoff-grid{grid-template-columns:1fr}}
 @media(max-width:560px){.pro-playoff-games{grid-template-columns:repeat(3,1fr)}.pro-playoff-field-head{align-items:flex-start;flex-direction:column}}
+
+
+/* Live channel switcher */
+.broadcast-channel-picker{display:block!important;margin:0 0 16px}
+.broadcast-channel-switcher{
+  display:flex;align-items:end;gap:12px;margin:0 0 12px;padding:12px;
+  border:1px solid rgba(215,169,66,.22);border-radius:14px;
+  background:linear-gradient(135deg,rgba(18,15,12,.92),rgba(7,7,8,.96));
+}
+.broadcast-channel-switcher label{display:grid;gap:6px;flex:1;min-width:0}
+.broadcast-channel-switcher label>span{
+  color:#dabb76;font-size:9px;font-weight:900;letter-spacing:.14em
+}
+.broadcast-channel-switcher select{width:100%;min-height:44px}
+.broadcast-channel-open{white-space:nowrap}
+.broadcast-channel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+@media(max-width:650px){
+  .broadcast-channel-switcher{align-items:stretch;flex-direction:column}
+  .broadcast-channel-open{width:100%;text-align:center}
+}
