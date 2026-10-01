@@ -22,7 +22,7 @@ if (document.body.classList.contains('wildman-site')) {
   if (!document.querySelector('link[href*="network-v2.css"]')) {
     const presentationStyles = document.createElement('link');
     presentationStyles.rel = 'stylesheet';
-    presentationStyles.href = 'network-v2.css?v=20260920a';
+    presentationStyles.href = 'network-v2.css?v=20261001nav1';
     document.head.appendChild(presentationStyles);
   }
 
