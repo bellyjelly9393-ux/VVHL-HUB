@@ -507,7 +507,15 @@ Evaluate the hockey in layers:
 6. PLAYER SCOUTING: when a gamertag or identity is clearly readable, evaluate repeatable habits,
    hockey IQ/reads, puck decisions, positioning, support, risk profile, execution and role fit.
    Roster context alone is not proof of identity.
-7. GAME MANAGEMENT: score/time/context decisions only when readable. Separate tactical process
+7. SYSTEM-TO-PLAYER LINK: for important gameplay sequences, connect the visible team structure
+   or tactical responsibility to the identified player's actual execution. State the team read,
+   the player's responsibility, what the player did, and whether it helped or hurt the structure.
+   Do not blame the nearest player when an earlier coverage/support breakdown caused the problem.
+8. MEDIA HIGHLIGHTS: flag only directly visible, self-contained highlight candidates such as a
+   goal, major save, defensive stop, passing sequence, skill play, hit or dangerous chance.
+   Never infer a goal/save/highlight that occurs between sparse frames. Suggest a bounded clip
+   window around the evidence so a later FFmpeg stage can cut the original source.
+9. GAME MANAGEMENT: score/time/context decisions only when readable. Separate tactical process
    from outcome so a good read with a bad result is not automatically graded as a bad decision.
 
 Identify readable shot-chart/action-tracker/stat screens and state whether they appear period-only
@@ -569,14 +577,53 @@ Return structured JSON. Every player evaluation and observation remains NEEDS HU
             'player': {'type': ['string', 'null']},
         }
     }
+    system_execution_schema = {
+        'type': 'object', 'additionalProperties': False,
+        'required': ['timestamp', 'phase', 'team_read', 'player', 'responsibility',
+                     'execution', 'effect', 'confidence'],
+        'properties': {
+            'timestamp': {'type': 'number'},
+            'phase': {'type': 'string', 'enum': [
+                'offense', 'defense', 'transition', 'forecheck',
+                'special_teams', 'goalie', 'game_management'
+            ]},
+            'team_read': {'type': 'string'},
+            'player': {'type': ['string', 'null']},
+            'responsibility': {'type': ['string', 'null']},
+            'execution': {'type': ['string', 'null']},
+            'effect': {'type': 'string', 'enum': ['helped', 'hurt', 'neutral', 'unclear']},
+            'confidence': {'type': 'string', 'enum': ['low', 'moderate', 'high']},
+        }
+    }
+    highlight_schema = {
+        'type': 'object', 'additionalProperties': False,
+        'required': ['timestamp', 'kind', 'player', 'reason', 'priority',
+                     'clip_start', 'clip_end', 'confidence'],
+        'properties': {
+            'timestamp': {'type': 'number'},
+            'kind': {'type': 'string', 'enum': [
+                'goal', 'save', 'defensive_play', 'passing_sequence',
+                'skill_play', 'hit', 'chance', 'other'
+            ]},
+            'player': {'type': ['string', 'null']},
+            'reason': {'type': 'string'},
+            'priority': {'type': 'string', 'enum': ['high', 'medium', 'low']},
+            'clip_start': {'type': 'number'},
+            'clip_end': {'type': 'number'},
+            'confidence': {'type': 'string', 'enum': ['low', 'moderate', 'high']},
+        }
+    }
     schema = {
         'type': 'object', 'additionalProperties': False,
-        'required': ['summary', 'tactical', 'player_evaluations', 'observations', 'uncertainties'],
+        'required': ['summary', 'tactical', 'player_evaluations', 'observations',
+                     'system_execution', 'highlight_candidates', 'uncertainties'],
         'properties': {
             'summary': {'type': 'string'},
             'tactical': tactical_schema,
             'player_evaluations': {'type': 'array', 'items': player_schema},
             'observations': {'type': 'array', 'items': observation_schema},
+            'system_execution': {'type': 'array', 'items': system_execution_schema},
+            'highlight_candidates': {'type': 'array', 'items': highlight_schema},
             'uncertainties': {'type': 'array', 'items': {'type': 'string'}},
         }
     }
@@ -598,6 +645,8 @@ Return structured JSON. Every player evaluation and observation remains NEEDS HU
             or not isinstance(parsed.get('tactical'), dict)
             or not isinstance(parsed.get('player_evaluations'), list)
             or not isinstance(parsed.get('observations'), list)
+            or not isinstance(parsed.get('system_execution'), list)
+            or not isinstance(parsed.get('highlight_candidates'), list)
             or not isinstance(parsed.get('uncertainties'), list)):
         raise Problem(502, 'AI returned an invalid review.')
     for item in parsed['observations']:
@@ -610,6 +659,47 @@ Return structured JSON. Every player evaluation and observation remains NEEDS HU
             t for t in player.get('evidence_timestamps', [])
             if chunk['start'] <= t <= chunk['end']
         ]
+    for item in parsed['system_execution']:
+        if not chunk['start'] <= item['timestamp'] <= chunk['end']:
+            raise Problem(502, 'AI returned an out-of-range system timestamp; retry this review.')
+        item['verification'] = 'needs_review'
+        identity = str(item.get('player') or '').strip().casefold()
+        if identity:
+            linked = [
+                o for o in parsed['observations']
+                if o.get('source') == 'gameplay'
+                and str(o.get('player') or '').strip().casefold() == identity
+                and abs(float(o.get('timestamp') or 0) - float(item['timestamp'])) <= max(12, frame_step * 2)
+            ]
+            if not linked:
+                parsed['uncertainties'].append(
+                    'System-to-player attribution reduced to team-only: identity-linked gameplay evidence was insufficient.'
+                )
+                item['player'] = None
+                item['responsibility'] = None
+                item['execution'] = None
+                item['effect'] = 'unclear'
+                item['confidence'] = 'low'
+    for item in parsed['highlight_candidates']:
+        if not chunk['start'] <= item['timestamp'] <= chunk['end']:
+            raise Problem(502, 'AI returned an out-of-range highlight timestamp; retry this review.')
+        start = max(float(chunk['start']), float(item.get('clip_start') or item['timestamp'] - 8))
+        end = min(float(chunk['end']), float(item.get('clip_end') or item['timestamp'] + 6))
+        if end <= start:
+            start = max(float(chunk['start']), float(item['timestamp']) - 8)
+            end = min(float(chunk['end']), float(item['timestamp']) + 6)
+        item['clip_start'] = round(start, 3)
+        item['clip_end'] = round(end, 3)
+        item['verification'] = 'needs_review'
+        identity = str(item.get('player') or '').strip().casefold()
+        if identity and not any(
+            o.get('source') == 'gameplay'
+            and str(o.get('player') or '').strip().casefold() == identity
+            and abs(float(o.get('timestamp') or 0) - float(item['timestamp'])) <= max(12, frame_step * 2)
+            for o in parsed['observations']
+        ):
+            item['player'] = None
+            item['confidence'] = 'low'
     supported_players = []
     for player in parsed['player_evaluations']:
         identity = str(player.get('player') or '').strip().casefold()
@@ -651,6 +741,8 @@ def build_rollup(chunks):
             'tactical': review.get('tactical', {}),
             'player_evaluations': (review.get('player_evaluations') or [])[:12],
             'observations': (review.get('observations') or [])[:20],
+            'system_execution': (review.get('system_execution') or [])[:16],
+            'highlight_candidates': (review.get('highlight_candidates') or [])[:10],
             'uncertainties': (review.get('uncertainties') or [])[:10],
             'frame_step_seconds': chunk.get('frame_step_seconds'),
             'sequence_review': chunk.get('sequence_review'),
@@ -677,15 +769,64 @@ The report must cover:
 - individual player reports for every clearly identified player with enough evidence:
   role/position context, strengths, concerns, repeatable habits, hockey-IQ/decision profile,
   EA-specific execution that is actually visible, and one coaching/scouting recommendation
+- explicit system-to-player links: what Calgary/the reviewed team was trying to do, the player's
+  responsibility in that structure, the player's execution, and whether it helped or hurt the system
+- distinguish an individual error from a team-structure failure; do not blame the final defender
+  merely because that player is closest to the visible outcome
 - opponent-exploitable tendencies and next-game corrections
+- ranked media highlight candidates ONLY from supplied highlight evidence, with safe clip windows
 - a polished professional write-up suitable for a serious hockey operations/postgame page
 
 Use direct, confident hockey language without hype. If identity or evidence is uncertain, say so.
 '''
+    team_system_schema = {
+        'type': 'object', 'additionalProperties': False,
+        'required': ['phase', 'finding', 'player_links', 'evidence_timestamps', 'coaching_note'],
+        'properties': {
+            'phase': {'type': 'string'},
+            'finding': {'type': 'string'},
+            'player_links': {'type': 'string'},
+            'evidence_timestamps': {'type': 'array', 'items': {'type': 'number'}},
+            'coaching_note': {'type': 'string'},
+        }
+    }
+    player_rollup_schema = {
+        'type': 'object', 'additionalProperties': False,
+        'required': ['player', 'position', 'role_context', 'system_execution', 'individual_play',
+                     'strengths', 'concerns', 'coaching_focus', 'evidence_timestamps', 'confidence'],
+        'properties': {
+            'player': {'type': 'string'},
+            'position': {'type': ['string', 'null']},
+            'role_context': {'type': 'string'},
+            'system_execution': {'type': 'string'},
+            'individual_play': {'type': 'string'},
+            'strengths': {'type': 'string'},
+            'concerns': {'type': 'string'},
+            'coaching_focus': {'type': 'string'},
+            'evidence_timestamps': {'type': 'array', 'items': {'type': 'number'}},
+            'confidence': {'type': 'string', 'enum': ['low', 'moderate', 'high']},
+        }
+    }
+    highlight_rollup_schema = {
+        'type': 'object', 'additionalProperties': False,
+        'required': ['timestamp', 'kind', 'player', 'reason', 'priority',
+                     'clip_start', 'clip_end', 'confidence'],
+        'properties': {
+            'timestamp': {'type': 'number'},
+            'kind': {'type': 'string'},
+            'player': {'type': ['string', 'null']},
+            'reason': {'type': 'string'},
+            'priority': {'type': 'string', 'enum': ['high', 'medium', 'low']},
+            'clip_start': {'type': 'number'},
+            'clip_end': {'type': 'number'},
+            'confidence': {'type': 'string', 'enum': ['low', 'moderate', 'high']},
+        }
+    }
     schema = {
         'type': 'object', 'additionalProperties': False,
         'required': ['summary', 'patterns', 'strengths', 'corrections',
-                     'tactical_report', 'player_report', 'professional_writeup'],
+                     'tactical_report', 'player_report', 'professional_writeup',
+                     'team_systems', 'players', 'highlights'],
         'properties': {
             'summary': {'type': 'string'},
             'patterns': {'type': 'string'},
@@ -694,6 +835,9 @@ Use direct, confident hockey language without hype. If identity or evidence is u
             'tactical_report': {'type': 'string'},
             'player_report': {'type': 'string'},
             'professional_writeup': {'type': 'string'},
+            'team_systems': {'type': 'array', 'items': team_system_schema},
+            'players': {'type': 'array', 'items': player_rollup_schema},
+            'highlights': {'type': 'array', 'items': highlight_rollup_schema},
         }
     }
     response = request_ai(
@@ -709,7 +853,7 @@ Report the scope as reviewed recording/ranges, never a complete game unless esta
 Any section without evidence must explicitly say insufficient evidence, never filler.
 ''' + '\n\nReviewed evidence:\n' + json.dumps(evidence)}
             ]}],
-            'max_output_tokens': 5000,
+            'max_output_tokens': 7000,
             'text': {'format': {'type': 'json_schema', 'name': 'elite_game_scouting_rollup',
                                 'strict': True, 'schema': schema}},
         }
@@ -731,6 +875,8 @@ Any section without evidence must explicitly say insufficient evidence, never fi
         'tactical_report', 'player_report', 'professional_writeup'
     )):
         raise Problem(502, 'AI returned an invalid scouting rollup.')
+    if not all(isinstance(parsed.get(k), list) for k in ('team_systems', 'players', 'highlights')):
+        raise Problem(502, 'AI returned an invalid structured scouting rollup.')
     return parsed
 
 def merge_period_spans(existing, additions):
