@@ -63,37 +63,69 @@
       .sort((a,b)=>(Number(S.sources.find(x=>x.id===a.id)?.slot_order||99)-Number(S.sources.find(x=>x.id===b.id)?.slot_order||99))||new Date(b.scheduled_at||0)-new Date(a.scheduled_at||0));
   }
 
+  function channelFamily(value){
+    const key=String(value||'').trim().toLowerCase();
+    if(key==='wildman'||key.startsWith('wildman-'))return 'wildman';
+    if(key==='hitmen'||key.startsWith('hitmen-'))return 'hitmen';
+    return key;
+  }
+
   function renderChannelPicker(){
     const root=$('broadcastChannelPicker'); if(!root)return;
     const sources=publicSources();
     if(!sources.length){root.innerHTML='<div class="empty-state">No public live channels are configured.</div>';return;}
+
     if(requestedChannel){
-      const wanted=sources.find(s=>String(s.channel_key||'').toLowerCase()===String(requestedChannel).toLowerCase());
+      const wantedFamily=channelFamily(requestedChannel);
+      const wanted=sources.find(s=>channelFamily(s.channel_key)===wantedFamily);
       if(wanted){
         S.selectedBroadcastKey=wanted._key;
         sessionStorage.setItem('wildman-live-channel',S.selectedBroadcastKey);
       }
       requestedChannel='';
     }
+
     if(!S.selectedBroadcastKey||!sources.some(s=>s._key===S.selectedBroadcastKey)){
-      const wild=sources.find(s=>s.channel_key==='wildman')||sources[0];
+      const wild=sources.find(s=>channelFamily(s.channel_key)==='wildman')||sources[0];
       S.selectedBroadcastKey=wild._key;
       sessionStorage.setItem('wildman-live-channel',S.selectedBroadcastKey);
     }
-    root.innerHTML=sources.map(s=>`<div class="broadcast-channel-card ${S.selectedBroadcastKey===s._key?'active':''}">
-      <button type="button" data-channel-key="${esc(s._key)}">
-        <span class="broadcast-channel-live">LIVE CHANNEL</span>
-        <strong>${esc(s.broadcast_title)}</strong>
-        <small>${esc(s.channel_group||event(s.event_id)?.name||'Wildman Network')} · ${esc(String(s.stream_provider||'stream').toUpperCase())}</small>
-      </button>
-      <a href="live-channel.html?source=${encodeURIComponent(s.id)}">OPEN CHANNEL →</a>
-    </div>`).join('');
-    root.querySelectorAll('[data-channel-key]').forEach(btn=>btn.onclick=()=>{
-      S.selectedBroadcastKey=btn.dataset.channelKey;
+
+    const selected=sources.find(s=>s._key===S.selectedBroadcastKey)||sources[0];
+    root.innerHTML=`
+      <div class="broadcast-channel-switcher">
+        <label for="broadcastChannelSelect"><span>WATCH CHANNEL</span>
+          <select id="broadcastChannelSelect" class="select-field">
+            ${sources.map(s=>`<option value="${esc(s._key)}" ${S.selectedBroadcastKey===s._key?'selected':''}>${esc(channelFamily(s.channel_key)==='hitmen'?'Calgary Hitmen Live':'Wildman Live')} · ${esc(s.broadcast_title)}</option>`).join('')}
+          </select>
+        </label>
+        <a class="small-btn broadcast-channel-open" href="live-channel.html?source=${encodeURIComponent(selected.id)}">Open Selected Channel →</a>
+      </div>
+      <div class="broadcast-channel-grid">
+        ${sources.map(s=>`<div class="broadcast-channel-card ${S.selectedBroadcastKey===s._key?'active':''}">
+          <button type="button" data-channel-key="${esc(s._key)}">
+            <span class="broadcast-channel-live">${channelFamily(s.channel_key)==='hitmen'?'HITMEN CHANNEL':'WILDMAN CHANNEL'}</span>
+            <strong>${esc(s.broadcast_title)}</strong>
+            <small>${esc(s.channel_group||event(s.event_id)?.name||'Wildman Network')} · ${esc(String(s.stream_provider||'stream').toUpperCase())}</small>
+          </button>
+          <a href="live-channel.html?source=${encodeURIComponent(s.id)}">OPEN CHANNEL →</a>
+        </div>`).join('')}
+      </div>`;
+
+    const choose=(key)=>{
+      const source=sources.find(s=>s._key===key); if(!source)return;
+      S.selectedBroadcastKey=source._key;
       sessionStorage.setItem('wildman-live-channel',S.selectedBroadcastKey);
+      const family=channelFamily(source.channel_key)||'wildman';
+      const next=new URL(location.href);
+      next.searchParams.set('channel',family);
+      history.replaceState(null,'',next.pathname+next.search+next.hash);
       renderChannelPicker();
       renderFeatured();
-    });
+    };
+
+    root.querySelector('#broadcastChannelSelect')?.addEventListener('change',e=>choose(e.target.value));
+    root.querySelectorAll('[data-channel-key]').forEach(btn=>btn.onclick=()=>choose(btn.dataset.channelKey));
   }
 
   function featuredCopy(g){
@@ -127,11 +159,11 @@
     const rows=[...S.games].sort((a,b)=>(statusRank[a.status]??9)-(statusRank[b.status]??9)||new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));
     const sources=publicSources();
     const selected=sources.find(x=>x._key===S.selectedBroadcastKey);
-    const source=selected||sources.find(x=>x.channel_key==='wildman')||sources[0];
+    const source=selected||sources.find(x=>channelFamily(x.channel_key)==='wildman')||sources[0];
     const heading=document.querySelector('#featured .section-heading h2');
     const intro=document.querySelector('#featured .live-channel-intro');
-    if(heading)heading.textContent=source?.channel_key==='hitmen'?'CALGARY HITMEN LIVE':'WILDMAN NETWORK LIVE';
-    if(intro)intro.textContent=source?.channel_key==='hitmen'
+    if(heading)heading.textContent=channelFamily(source?.channel_key)==='hitmen'?'CALGARY HITMEN LIVE':'WILDMAN NETWORK LIVE';
+    if(intro)intro.textContent=channelFamily(source?.channel_key)==='hitmen'
       ?'Calgary Hitmen LGCHL coverage. Switch back to Wildman for tournament and network broadcasts, or use Multiview for both.'
       :'Wildman tournament and esports-network coverage. Switch to Calgary Hitmen for the dedicated LGCHL team feed, or open Multiview for both.';
     const g=source||
