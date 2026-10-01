@@ -148,8 +148,10 @@
   function syncNameplate(card) {
     const plate=card.querySelector('.core-locker-nameplate');
     if (!plate) return;
-    plate.querySelectorAll('[data-locker-num]').forEach(n=>n.textContent=plateNumber(card));
-    plate.querySelector('[data-locker-name]').textContent=plateName(card);
+    const number=plateNumber(card), name=plateName(card);
+    plate.querySelectorAll('[data-locker-num]').forEach(n=>{ if(n.textContent!==number) n.textContent=number; });
+    const label=plate.querySelector('[data-locker-name]');
+    if(label && label.textContent!==name) label.textContent=name;
   }
 
   function initialize() {
@@ -192,11 +194,26 @@
       else {document.querySelector('.wc-auth')?.scrollIntoView({block:'center',behavior:'smooth'});document.getElementById('wildmanStallLogin')?.focus();}
     }
   });
+  // Stall cards are replaced wholesale by wildman-stalls.js after auth/data refreshes.
+  // Watch only direct replacements here. Observing every descendant/text mutation caused
+  // the dashboard to continuously mutate its own nameplates and could lock the page.
   new MutationObserver(mutations=>{
     const structural=mutations.some(m=>m.type==='childList' && [...m.addedNodes,...m.removedNodes].some(n=>n.nodeType===1 && (n.classList?.contains('wc-card') || n.querySelector?.('.wc-card'))));
     if(structural) initialize();
-    cards().forEach(syncNameplate);
-  }).observe(root,{childList:true,subtree:true,characterData:true});
+  }).observe(root,{childList:true});
+
+  // Keep the decorative locker nameplate synced while an owner previews jersey edits,
+  // without observing the entire card subtree.
+  root.addEventListener('input',e=>{
+    if(!e.target.matches?.('input[name="jersey_name"],input[name="jersey_number"]')) return;
+    const card=e.target.closest('.wc-card');
+    if(card) requestAnimationFrame(()=>syncNameplate(card));
+  });
+  root.addEventListener('click',e=>{
+    if(!e.target.closest?.('.wc-cancel')) return;
+    const card=e.target.closest('.wc-card');
+    if(card) setTimeout(()=>syncNameplate(card),0);
+  });
   window.addEventListener('wildman-network-ready',drawDetail);
   initialize();
 })();
