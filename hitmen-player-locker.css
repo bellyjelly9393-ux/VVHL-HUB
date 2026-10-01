@@ -1355,18 +1355,30 @@
 .reference-locker-pane .player-stall-photo{
   position:absolute;
   inset:0;
+  overflow:hidden;
   border:0!important;
+  background:#080809;
 }
+/* Keep the live jersey/name/number overlays in the exact same coordinate space
+   as the 1856x2304 stall artwork. The old rule stretched .hs-stall to the
+   wide hero pane while the image used object-fit:cover, so the artwork was
+   cropped but the overlays were not. That is what knocked the Hitmen jersey
+   numbers/nameplate out of position. */
 .reference-locker-pane .player-stall-photo .hs-stall{
+  position:absolute;
+  left:0;
+  top:46%;
   width:100%;
-  height:100%;
-  aspect-ratio:auto!important;
+  height:auto;
+  aspect-ratio:1856/2304!important;
+  transform:translateY(-46%);
+  flex:none;
 }
 .reference-locker-pane .player-stall-photo .hs-img{
   width:100%;
   height:100%;
   object-fit:cover;
-  object-position:center 46%;
+  object-position:center;
 }
 .reference-locker-pane .hs-hint{display:none!important}
 .reference-flip-controls{
@@ -1539,6 +1551,14 @@
 }
 @media(max-width:520px){
   .reference-locker-pane{height:500px}
+  .reference-locker-pane .player-stall-photo .hs-stall{
+    left:50%;
+    top:50%;
+    width:auto;
+    min-width:100%;
+    height:100%;
+    transform:translate(-50%,-50%);
+  }
   .reference-player-head h1{font-size:42px!important}
   .reference-player-pane{padding:14px 12px}
   .reference-flip-controls{bottom:24px;width:208px;grid-template-columns:24px 72px 72px 24px}
