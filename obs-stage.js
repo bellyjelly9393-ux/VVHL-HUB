@@ -12,6 +12,8 @@
   var status=document.getElementById('stageStatus');
   var overlay=document.getElementById('overlayFrame');
   var streamSignature='';
+  var twitchPlayer=null;
+  var twitchMountId='twitchPersistentPlayer';
 
   if(preview) document.body.classList.add('obs-stage-preview');
   overlay.src='obs-overlay.html?channel='+encodeURIComponent(channel);
@@ -49,41 +51,75 @@
     return 'external';
   }
   function clearFeed(){
+    try{
+      if(twitchPlayer&&typeof twitchPlayer.setMuted==='function')twitchPlayer.setMuted(true);
+    }catch(e){}
+    twitchPlayer=null;
     mount.innerHTML='';
     stage.classList.remove('has-feed');
+    streamSignature='';
+  }
+
+  function ensurePersistentTwitch(ref,muted){
+    var key=ref.video?('video:'+ref.video):('channel:'+String(ref.channel||''));
+    if(streamSignature!==key||!twitchPlayer){
+      mount.innerHTML='<div id="'+twitchMountId+'" style="width:100%;height:100%"></div>';
+      twitchPlayer=new Twitch.Player(twitchMountId,{
+        width:'100%',
+        height:'100%',
+        autoplay:true,
+        muted:true,
+        parent:[location.hostname],
+        channel:ref.video?undefined:(ref.channel||''),
+        video:ref.video||undefined
+      });
+      streamSignature=key;
+    }
+    try{
+      if(twitchPlayer&&typeof twitchPlayer.setMuted==='function')twitchPlayer.setMuted(!!muted);
+    }catch(e){}
   }
   function renderFeed(payload,scene,brand){
     var url=String(payload.streamUrl||'').trim();
     var provider=providerFor(url,payload.streamProvider);
     var activeScene=scene==='game'||scene==='player';
-    var muted=preview||payload.streamMuted===true;
+    var desiredMute=preview||payload.streamMuted===true||!activeScene;
     if(mark)mark.textContent=brand==='hitmen'?'H':'W';
 
-    var signature=[activeScene,url,provider,muted,location.hostname].join('|');
-    if(signature===streamSignature)return;
-    streamSignature=signature;
+    if(!url){clearFeed();return;}
 
-    if(!activeScene||!url){clearFeed();return;}
-
-    var html='';
     if(provider==='twitch'){
       var ref=twitchRef(url);
       if(ref.clip){
-        html='<iframe src="https://clips.twitch.tv/embed?clip='+encodeURIComponent(ref.clip)+'&parent='+encodeURIComponent(location.hostname)+'&autoplay=true&muted='+(muted?'true':'false')+'" allow="autoplay; fullscreen" allowfullscreen title="Twitch clip"></iframe>';
+        var clipSig='clip:'+ref.clip+'|'+desiredMute;
+        if(clipSig!==streamSignature){
+          mount.innerHTML='<iframe src="https://clips.twitch.tv/embed?clip='+encodeURIComponent(ref.clip)+'&parent='+encodeURIComponent(location.hostname)+'&autoplay=true&muted='+(desiredMute?'true':'false')+'" allow="autoplay; fullscreen" allowfullscreen title="Twitch clip"></iframe>';
+          streamSignature=clipSig;
+        }
+      }else if(ref.video||ref.channel){
+        ensurePersistentTwitch(ref,desiredMute);
       }else{
-        var q=ref.video?'video='+encodeURIComponent(ref.video):'channel='+encodeURIComponent(ref.channel||'');
-        if(ref.video||ref.channel)html='<iframe src="https://player.twitch.tv/?'+q+'&parent='+encodeURIComponent(location.hostname)+'&autoplay=true&muted='+(muted?'true':'false')+'" allow="autoplay; fullscreen" allowfullscreen title="Twitch stream"></iframe>';
+        clearFeed();setStatus('UNSUPPORTED FEED');return;
       }
-    }else if(provider==='youtube'){
-      var id=youtubeId(url);
-      if(id)html='<iframe src="https://www.youtube.com/embed/'+encodeURIComponent(id)+'?autoplay=1&mute='+(muted?'1':'0')+'&playsinline=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="YouTube stream"></iframe>';
-    }else if(provider==='video'){
-      html='<video src="'+url.replace(/"/g,'&quot;')+'" autoplay '+(muted?'muted ':'')+'playsinline controls></video>';
+      if(activeScene)stage.classList.add('has-feed');else stage.classList.remove('has-feed');
+      return;
     }
 
-    if(!html){clearFeed();setStatus('UNSUPPORTED FEED');return;}
-    mount.innerHTML=html;
-    stage.classList.add('has-feed');
+    var signature=[url,provider,desiredMute,location.hostname].join('|');
+    if(signature!==streamSignature){
+      var html='';
+      if(provider==='youtube'){
+        var id=youtubeId(url);
+        if(id)html='<iframe src="https://www.youtube.com/embed/'+encodeURIComponent(id)+'?autoplay=1&mute='+(desiredMute?'1':'0')+'&playsinline=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="YouTube stream"></iframe>';
+      }else if(provider==='video'){
+        html='<video src="'+url.replace(/"/g,'&quot;')+'" autoplay '+(desiredMute?'muted ':'')+'playsinline controls></video>';
+      }
+      if(!html){clearFeed();setStatus('UNSUPPORTED FEED');return;}
+      twitchPlayer=null;
+      mount.innerHTML=html;
+      streamSignature=signature;
+    }
+    if(activeScene)stage.classList.add('has-feed');else stage.classList.remove('has-feed');
   }
   function render(row){
     if(!row)return;
