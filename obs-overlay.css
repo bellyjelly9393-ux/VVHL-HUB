@@ -140,11 +140,34 @@ body[data-brand="wildman"]{
   --brand-rgb:216,173,85;
 }
 body[data-brand="wildman"] .obs-corner-bug{
+  top:14px;
+  left:14px;
+  min-width:275px;
+  gap:9px;
+  padding:8px 11px 8px 8px;
+  border-radius:12px;
   border-color:rgba(216,173,85,.32);
   background:
     linear-gradient(110deg,rgba(8,6,10,.96),rgba(18,13,22,.88)),
     radial-gradient(circle at 18% 50%,rgba(216,173,85,.12),transparent 38%);
-  box-shadow:0 18px 50px rgba(0,0,0,.42),0 0 28px rgba(216,173,85,.07);
+  box-shadow:0 14px 38px rgba(0,0,0,.42),0 0 22px rgba(216,173,85,.07);
+}
+body[data-brand="wildman"] .obs-corner-bug .obs-brand-mark{
+  width:44px;
+  height:44px;
+  border-radius:10px;
+}
+body[data-brand="wildman"] .obs-corner-bug .obs-bug-copy small{
+  font-size:9px;
+  letter-spacing:.14em;
+}
+body[data-brand="wildman"] .obs-corner-bug .obs-bug-copy strong{
+  margin-top:4px;
+  font-size:19px;
+}
+body[data-brand="wildman"] .obs-corner-bug .obs-live-dot{
+  padding:5px 7px;
+  font-size:8px;
 }
 body[data-brand="wildman"] .obs-brand-mark{
   border-color:rgba(216,173,85,.52);
