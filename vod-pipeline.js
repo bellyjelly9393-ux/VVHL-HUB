@@ -303,6 +303,8 @@
       const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/reanalyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
       const oldAiMarkers=await db().from('vod_review_markers').delete().eq('review_id',review.id).like('note','[AI%');
       if(oldAiMarkers.error)throw oldAiMarkers.error;
+      const oldPlayerReports=await db().from('hitmen_player_reports').delete().eq('review_id',review.id);
+      if(oldPlayerReports.error)throw oldPlayerReports.error;
       const resetSegments=await db().from('vod_review_segments').update({
         analysis_summary:null,offense_notes:null,defense_notes:null,transition_notes:null,
         special_teams_notes:null,player_notes:[],tags:[],status:'queued',confidence:'preliminary',
@@ -312,7 +314,7 @@
       const resetReview=await db().from('vod_review_sessions').update({
         worker_status:job.status,status:'queued',
         full_game_summary:null,recurring_patterns:null,strengths:null,corrections:null,
-        tactical_report:null,player_report:null,professional_writeup:null,
+        tactical_report:null,player_report:null,professional_writeup:null,worker_result:{},
         worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()
       }).eq('id',review.id);
       if(resetReview.error)throw resetReview.error;
@@ -395,9 +397,67 @@
     }catch(e){setStatus(e.message||'Could not reach video worker. Retrying…','bad');}
   }
 
+  const normalizedPlayerKey=value=>String(value||'').trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g,'');
+
+  function structuredPlayerSummary(player){
+    return [
+      player.role_context&&`Role: ${player.role_context}`,
+      player.system_execution&&`System execution: ${player.system_execution}`,
+      player.individual_play&&`Individual play: ${player.individual_play}`,
+      player.coaching_focus&&`Development focus: ${player.coaching_focus}`
+    ].filter(Boolean).join('\n');
+  }
+
+  async function syncHitmenPlayerReports(reviewId,review,players){
+    const usable=(Array.isArray(players)?players:[]).filter(p=>
+      p?.player&&p?.confidence!=='low'&&Array.isArray(p.evidence_timestamps)&&p.evidence_timestamps.length
+    );
+    if(!usable.length)return {saved:0,lockers:0};
+
+    const {data:team,error:teamError}=await db().from('teams').select('name').eq('id',review.team_id).maybeSingle();
+    if(teamError)throw teamError;
+    if(team?.name!=='Calgary Hitmen')return {saved:0,lockers:0};
+
+    const clear=await db().from('hitmen_player_reports').delete().eq('review_id',reviewId);
+    if(clear.error)throw clear.error;
+
+    const reportRows=usable.map(p=>({
+      team_id:review.team_id,
+      player_key:String(p.player).trim(),
+      season:55,
+      review_id:reviewId,
+      summary:structuredPlayerSummary(p)||`Film review for ${String(p.player).trim()}`,
+      strengths:p.strengths||'',
+      concerns:p.concerns||''
+    }));
+    const inserted=await db().from('hitmen_player_reports').insert(reportRows);
+    if(inserted.error)throw inserted.error;
+
+    const {data:lockers,error:lockerError}=await db().from('team_player_lockers')
+      .select('id,gamertag').eq('team_id',review.team_id).eq('season',55);
+    if(lockerError)throw lockerError;
+    const byTag=new Map((lockers||[]).map(l=>[normalizedPlayerKey(l.gamertag),l]));
+    let lockerUpdates=0;
+    for(const p of usable){
+      const locker=byTag.get(normalizedPlayerKey(p.player));
+      if(!locker)continue;
+      const updateResult=await db().from('team_player_lockers').update({
+        scouting_summary:structuredPlayerSummary(p)||null,
+        scouting_strengths:p.strengths||null,
+        scouting_concerns:p.concerns||null,
+        scouting_tendencies:p.system_execution||p.individual_play||null,
+        development_focus:p.coaching_focus||null,
+        updated_at:new Date().toISOString()
+      }).eq('id',locker.id);
+      if(updateResult.error)throw updateResult.error;
+      lockerUpdates++;
+    }
+    return {saved:reportRows.length,lockers:lockerUpdates};
+  }
+
   async function ingest(job,reviewId){
     const chunks=job?.result?.chunks||[]; if(!chunks.length)return;
-    const {data:review,error:reviewError}=await db().from('vod_review_sessions').select('team_id,source_start_seconds').eq('id',reviewId).maybeSingle();
+    const {data:review,error:reviewError}=await db().from('vod_review_sessions').select('team_id,source_start_seconds,title,esports_game_id,competitive_game_id,event_id').eq('id',reviewId).maybeSingle();
     if(reviewError)throw reviewError;if(!review?.team_id)throw new Error('VOD review team is missing.');
     const offset=sourceOffset(review);
     let {data:segments,error}=await db().from('vod_review_segments').select('*').eq('review_id',reviewId).order('start_seconds');
@@ -456,10 +516,51 @@
         if(seen.has(key))continue; seen.add(key);
         markers.push({review_id:reviewId,segment_id:seg.id,team_id:seg.team_id,timestamp_seconds:absoluteTimestamp,category:'general',player_label:o.player||null,note,created_by:auth().user?.id||null});
       }
+      for(const c of matched)for(const item of c.review?.system_execution||[]){
+        const phase=String(item.phase||'system').replaceAll('_',' ');
+        const effect=String(item.effect||'unclear');
+        const detail=[
+          item.team_read&&`Team: ${item.team_read}`,
+          item.responsibility&&`Responsibility: ${item.responsibility}`,
+          item.execution&&`Execution: ${item.execution}`
+        ].filter(Boolean).join(' · ');
+        const note=`[AI SYSTEM · ${phase} · ${effect}] ${detail||'System sequence identified.'}`;
+        const absoluteTimestamp=offset+(Number(item.timestamp)||0);
+        const key=`${Math.round(absoluteTimestamp)}|${note}`;
+        if(seen.has(key))continue;seen.add(key);
+        markers.push({
+          review_id:reviewId,segment_id:seg.id,team_id:seg.team_id,
+          timestamp_seconds:absoluteTimestamp,category:'system',
+          player_label:item.player||null,note,created_by:auth().user?.id||null
+        });
+      }
+      for(const c of matched)for(const item of c.review?.highlight_candidates||[]){
+        const kind=String(item.kind||'highlight').replaceAll('_',' ');
+        const priority=String(item.priority||'low').toUpperCase();
+        const clipStart=offset+(Number(item.clip_start)||Number(item.timestamp)||0);
+        const clipEnd=offset+(Number(item.clip_end)||Number(item.timestamp)||0);
+        const note=`[AI HIGHLIGHT · ${priority} · ${kind}] ${item.reason||'Highlight candidate'} · clip ${Math.round(clipStart)}-${Math.round(clipEnd)}s`;
+        const absoluteTimestamp=offset+(Number(item.timestamp)||0);
+        const key=`${Math.round(absoluteTimestamp)}|${note}`;
+        if(seen.has(key))continue;seen.add(key);
+        markers.push({
+          review_id:reviewId,segment_id:seg.id,team_id:seg.team_id,
+          timestamp_seconds:absoluteTimestamp,category:'highlight',
+          player_label:item.player||null,note,created_by:auth().user?.id||null
+        });
+      }
     }
     if(markers.length){const {error:merr}=await db().from('vod_review_markers').insert(markers);if(merr)throw merr;}
 
     const rollup=job?.result?.game_rollup||{};
+    const structured={
+      version:job?.result?.review_version||job?.result?.reviewVersion||null,
+      period_detection:job?.result?.period_detection||null,
+      detected_periods:job?.result?.detected_periods||[],
+      team_systems:Array.isArray(rollup.team_systems)?rollup.team_systems:[],
+      players:Array.isArray(rollup.players)?rollup.players:[],
+      highlights:Array.isArray(rollup.highlights)?rollup.highlights:[]
+    };
     const payload={
       full_game_summary:rollup.summary||summaries.join('\n\n')||null,
       recurring_patterns:rollup.patterns||null,
@@ -468,14 +569,24 @@
       tactical_report:rollup.tactical_report||null,
       player_report:rollup.player_report||null,
       professional_writeup:rollup.professional_writeup||null,
+      worker_result:structured,
       status:'reviewing',worker_status:'ready_for_review',
       worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()
     };
     const {error:rerr}=await db().from('vod_review_sessions').update(payload).eq('id',reviewId);
     if(rerr)throw rerr;
-    setStatus(fallbackFullGame
-      ?'Full-game AI scouting report imported. Automatic period detection was skipped; review the evidence and report below.'
-      :'Period analysis imported. Review the AI notes/markers, then save the final game report.','good');
+    let hitmenSync={saved:0,lockers:0};
+    try{
+      hitmenSync=await syncHitmenPlayerReports(reviewId,review,structured.players);
+    }catch(syncError){
+      console.error('Hitmen player report sync failed',syncError);
+    }
+    const highlightCount=structured.highlights.length;
+    const syncText=hitmenSync.saved?` · ${hitmenSync.saved} player reports · ${hitmenSync.lockers} locker profiles updated`:'';
+    const highlightText=highlightCount?` · ${highlightCount} highlight candidate${highlightCount===1?'':'s'}`:'';
+    setStatus((fallbackFullGame
+      ?'Full-game AI scouting report imported.'
+      :'Period analysis imported.')+`${syncText}${highlightText} Review evidence before publishing.`,'good');
     setTimeout(()=>document.getElementById('refreshVod')?.click(),350);
   }
 
