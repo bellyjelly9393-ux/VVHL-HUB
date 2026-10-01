@@ -10,7 +10,7 @@
     const id = row.player_id, canEdit = editable.has(id), isGoalie = /^(G|GOALIE|GOALTENDER)$/i.test(String(row.position || '').trim());
     return `<article class="wc-card${isGoalie ? ' wc-goalie-card' : ''}" data-player="${esc(id)}"><div class="wc-art" role="group" aria-label="${esc(row.gamertag)} ${isGoalie ? 'goalie locker stall with leg pads, catching glove, blocker, mask, and stick' : 'locker stall'}">
       <div class="wc-plate"><span class="wc-plate-name">${esc(row.jersey_name)}</span><span class="wc-plate-num">${esc(row.jersey_number)}</span></div>
-      <span class="wc-helmet">${esc(row.jersey_number)}</span>${isGoalie ? '<img class="wc-goalie-kit" src="assets/wildman/stalls/goalie-kit.svg" alt="" aria-hidden="true" loading="lazy" decoding="async">' : ''}<b class="wc-print-name">${esc(row.jersey_name)}</b><b class="wc-print-number">${esc(row.jersey_number)}</b>
+      <span class="wc-helmet">${esc(row.jersey_number)}</span>${isGoalie ? '<img class="wc-goalie-kit" src="assets/wildman/stalls/goalie-kit.svg" alt="" aria-hidden="true" loading="lazy" decoding="async">' : ''}<b class="wc-print-name">${esc(row.jersey_name)}</b><b class="wc-print-number">${esc(row.jersey_number)}</b><span class="wc-sleeve-number wc-sleeve-left" aria-hidden="true">${esc(row.jersey_number)}</span><span class="wc-sleeve-number wc-sleeve-right" aria-hidden="true">${esc(row.jersey_number)}</span>
       <button class="wc-flip" type="button" aria-label="View back of ${esc(row.gamertag)} jersey" aria-pressed="false"></button><span class="wc-flip-label">TAP JERSEY · VIEW BACK</span></div>
       <div class="wc-details"><div class="wc-meta">WILDMAN HOCKEY · ${isGoalie ? 'GOALTENDER' : esc(row.position || 'PLAYER')}</div><h3>${esc(row.gamertag)}</h3>
       <div class="wc-tools"><button class="small-btn wc-flip-control" type="button" aria-pressed="false">View back</button><a class="small-btn" href="esports-player.html?id=${encodeURIComponent(id)}">Player profile ↗</a>${canEdit ? '<button class="small-btn wc-edit" type="button" aria-expanded="false">Customize jersey</button>' : '<span class="wc-status">View only</span>'}</div>
@@ -21,7 +21,7 @@
   function print(card, name, number) {
     card.querySelector('.wc-plate-name').textContent = name;
     card.querySelector('.wc-print-name').textContent = name;
-    card.querySelectorAll('.wc-plate-num,.wc-helmet,.wc-print-number').forEach(n => n.textContent = number);
+    card.querySelectorAll('.wc-plate-num,.wc-helmet,.wc-print-number,.wc-sleeve-number').forEach(n => n.textContent = number);
   }
   function render() {
     root.innerHTML = rows.length ? rows.map(card).join('') : '<p class="wc-error">No Wildman stalls are available yet.</p>';

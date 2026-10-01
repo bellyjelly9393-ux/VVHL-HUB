@@ -173,10 +173,7 @@
         flip.addEventListener('click',e=>{const b=e.target.closest('[data-side]');if(!b)return;const art=c.querySelector('.wc-art');if(art?.classList.contains('is-back')!==(b.dataset.side==='back'))c.querySelector('.wc-flip')?.click();sync();});
         c.querySelectorAll('.wc-flip,.wc-flip-control').forEach(b=>b.addEventListener('click',sync));
       }
-      const art=c.querySelector('.wc-art');
-      if (art && !art.querySelector('.wc-jersey-crest')) {
-        const crest=document.createElement('img');crest.className='wc-jersey-crest';crest.src='https://d2ol7oe51mr4n9.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/72f4c4d6-ce4d-4da6-a1b9-45079d9fb21b.png';crest.alt='';crest.setAttribute('aria-hidden','true');crest.loading='lazy';crest.decoding='async';art.appendChild(crest);
-      }
+
     });
     const defaultCard=all.find(c=>/rusty/i.test(c.querySelector('h3')?.textContent||'')) || all[0];
     select(all.some(c=>c.dataset.player===selected)?selected:defaultCard.dataset.player,false);
