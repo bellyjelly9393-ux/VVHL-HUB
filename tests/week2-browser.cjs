@@ -24,6 +24,10 @@ const pages=['index.html','wildman-room.html','hitmen-room.html','lg-network.htm
     }
     errors.push(...pageErrors.map(e=>file+': '+e));
     if([390,1440].includes(width))await page.screenshot({path:'qa-artifacts/'+file.replace('.html','')+'-'+width+'.png',fullPage:true});
+    if(file==='index.html'&&[390,1440].includes(width)){
+     const review=await page.screenshot({type:'jpeg',quality:45,fullPage:true});
+     console.log('WEEK2_IMAGE '+width+' '+review.toString('base64'));
+    }
     await page.close();
    }
    await context.close();

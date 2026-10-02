@@ -3,6 +3,7 @@
   const C=window.WildmanPublicConfig, M=window.WildmanPublicModel;
   if(!C || !M || window.WildmanPublicUI) return;
   window.WildmanPublicUI={loaded:false};
+  setInterval(()=>{if(!document.hidden)window.WildmanEsportsNetwork?.refresh();},60000);
   let posts=[], reports=[], mediaError=false, mediaLoading=true, hitmenLogo=C.brands.hitmen.logo;
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
   const safeURL=raw=>{try{const u=new URL(raw,location.href);return ['http:','https:'].includes(u.protocol)?u.href:'';}catch{return '';}};
@@ -24,7 +25,7 @@
     const h=team(g.home_team_id),a=team(g.away_team_id);
     return '<a class="wn-game-row" href="'+gameHref(g)+'"><span><span class="wn-game-teams">'+badge(a)+esc(a?.name||'Away team pending')+' at '+badge(h)+esc(h?.name||'Home team pending')+'</span><small>'+esc(g.status==='live'?'LIVE'+(g.period?' · P'+g.period:'')+(g.clock?' · '+g.clock:''):date(g.scheduled_at))+' · '+esc(event(g.event_id)?.name||'Event')+'</small><small>'+esc(M.provenance(g))+'</small></span><strong>'+esc(M.score(g))+'</strong></a>';
   }
-  const gameRows=(rows,message)=>rows.length?rows.slice(0,4).map(gameRow).join(''):empty(message);
+  const gameRows=(rows,message,limit=4)=>rows.length?rows.slice(0,limit).map(gameRow).join(''):empty(message);
   const sourceNote=row=>'<p class="wn-note">'+esc(M.provenance(row))+'</p>';
   function teamSummary(key) {
     const t=key==='wildman'?wildman():hitmen();
@@ -61,7 +62,12 @@
     const stat=id=>(state().teamStats||[]).find(s=>s.event_id===g.event_id&&s.team_id===id);
     const record=s=>s&&s.wins!=null&&s.losses!=null?String(s.wins)+'–'+s.losses+(s.ot_losses!=null?'–'+s.ot_losses:''):'Record unavailable';
     const preview=posts.find(p=>String(p.id)===String(choice.previewPostId));
-    return '<div class="wn-matchup"><span class="wn-brand">'+badge(a)+'</span><span>VS</span><span class="wn-brand">'+badge(h)+'</span></div><h3>'+esc(a?.name||'Away team pending')+' at '+esc(h?.name||'Home team pending')+'</h3><p>'+esc(date(g.scheduled_at))+'</p><p class="wn-note">'+esc(record(stat(a?.id)))+' / '+esc(record(stat(h?.id)))+'</p>'+sourceNote(g)+(preview?'<p>'+esc(storyExcerpt(preview))+'</p><a class="wn-button" href="'+storyHref(preview)+'">Read matchup preview →</a>':empty('Matchup preview, recent form and player context have not been published yet.'))+'<div class="wn-actions"><a href="'+gameHref(g)+'">Open game page →</a></div>';
+    const form=t=>M.recent(M.teamGames(state(),t?.id)).filter(x=>x.event_id===g.event_id&&x.home_score!=null&&x.away_score!=null&&x.home_score!==x.away_score).slice(0,5).map(x=>(x.home_team_id===t?.id?x.home_score>x.away_score:x.away_score>x.home_score)?'W':'L').join(' · ')||'Recent form unavailable';
+    const context=t=>{const s=stat(t?.id);return s?.rank!=null?'Source rank '+s.rank:'Standings context unavailable';};
+    const players=(state().stats||[]).filter(s=>s.event_id===g.event_id&&[h?.id,a?.id].includes(s.team_id)&&s.points!=null).sort((a,b)=>Number(b.points)-Number(a.points)).slice(0,3);
+    const detail='<p class="wn-note">'+esc(context(a))+' / '+esc(context(h))+'</p><p class="wn-note">Recent form: '+esc(form(a))+' / '+esc(form(h))+'</p>'+(players.length?'<p class="wn-note">Event player leaders: '+players.map(s=>esc(M.id(state().players,s.player_id)?.gamertag||'Player')+' · '+esc(s.points)+' P').join(' / ')+'</p>':'')+(choice.whyItMatters?'<p>'+esc(choice.whyItMatters)+'</p>':'');
+
+    return '<div class="wn-matchup"><span class="wn-brand">'+badge(a)+'</span><span>VS</span><span class="wn-brand">'+badge(h)+'</span></div><h3>'+esc(a?.name||'Away team pending')+' at '+esc(h?.name||'Home team pending')+'</h3><p>'+esc(date(g.scheduled_at))+'</p><p class="wn-note">'+esc(record(stat(a?.id)))+' / '+esc(record(stat(h?.id)))+'</p>'+sourceNote(g)+detail+(preview?'<p>'+esc(storyExcerpt(preview))+'</p><a class="wn-button" href="'+storyHref(preview)+'">Read matchup preview →</a>':empty('Matchup preview, recent form and player context have not been published yet.'))+'<div class="wn-actions"><a href="'+gameHref(g)+'">Open game page →</a></div>';
   }
   function standings(eventId) {
     const rows=M.standings(state(),eventId);
@@ -109,7 +115,7 @@
     if(!e) {
       ['schedule','standings','teams','rosters','stats'].forEach(key=>mount('[data-event-'+key+']',empty('Select an available event from the Tournament Hub.')));return;
     }
-    mount('[data-event-schedule]',gameRows(M.upcoming(M.games(state()).filter(g=>g.event_id===e.id)), 'No upcoming game slots published.')+gameRows(M.recent(M.games(state()).filter(g=>g.event_id===e.id)), 'No results published.'));
+    mount('[data-event-schedule]',gameRows(M.upcoming(M.games(state()).filter(g=>g.event_id===e.id)), 'No upcoming game slots published.',24)+gameRows(M.recent(M.games(state()).filter(g=>g.event_id===e.id)), 'No results published.',24));
     mount('[data-event-standings]',standings(e.id));
     const entries=(state().eventTeams||[]).filter(r=>r.event_id===e.id);
     mount('[data-event-teams]',entries.length?entries.map(r=>'<a class="wn-roster-row" href="esports-team.html?team='+encodeURIComponent(r.team_id)+'"><b>'+esc(team(r.team_id)?.name||'Team pending')+'</b><span>Team page →</span></a>').join(''):empty('Event teams have not been published.'));

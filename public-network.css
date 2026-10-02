@@ -151,3 +151,7 @@
 }
 @media(max-width:380px){.wn-hero{grid-template-columns:1fr}.wn-hero-logo{display:none}.wn-game-row{gap:8px}.wn-coach{gap:12px}}
 @media(prefers-reduced-motion:reduce){.wn-launch *{scroll-behavior:auto!important}}
+
+.wn-hero>.wn-brand{width:260px;height:240px}
+@media(max-width:760px){.wn-hero>.wn-brand{width:100px;height:140px}}
+@media(max-width:380px){.wn-hero>.wn-brand{display:none}}
