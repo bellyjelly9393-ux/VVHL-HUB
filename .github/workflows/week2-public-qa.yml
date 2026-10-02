@@ -1,0 +1,38 @@
+name: Week 2 public QA
+on:
+  push:
+    branches: ['feature/week2-public-network']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  public-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Static page and JavaScript checks
+        run: node tests/week2-static-check.cjs
+      - name: Existing backend tests and public data guardrails
+        run: node --test test-deep-scout.cjs tests/public-network.test.cjs
+      - name: Install isolated browser QA tooling
+        run: npm install --prefix /tmp/wildman-week2-qa playwright@1.55.1
+      - name: Install Chromium
+        run: /tmp/wildman-week2-qa/node_modules/.bin/playwright install --with-deps chromium
+      - name: Serve static site
+        run: python3 -m http.server 8080 > /tmp/wildman-week2-http.log 2>&1 &
+      - name: Mobile and desktop browser checks
+        env:
+          NODE_PATH: /tmp/wildman-week2-qa/node_modules
+        run: node tests/week2-browser.cjs
+      - name: Save review screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: week2-public-review
+          path: qa-artifacts/
+          if-no-files-found: ignore

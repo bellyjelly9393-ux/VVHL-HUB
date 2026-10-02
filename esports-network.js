@@ -643,6 +643,6 @@
     renderLiveGameDetail();
   }
 
-  window.WildmanEsportsNetwork = { state, refresh: load };
+  window.WildmanEsportsNetwork = { state, db, refresh: load };
   load();
 })();
