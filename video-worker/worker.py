@@ -67,8 +67,16 @@ class Problem(Exception):
         self.status, self.message, self.code = status, message, code
 
 
+class JobConnection(sqlite3.Connection):
+    def __exit__(self, *args):
+        try:
+            return super().__exit__(*args)
+        finally:
+            self.close()
+
+
 def connect():
-    db = sqlite3.connect(ROOT / 'jobs.sqlite', timeout=30)
+    db = sqlite3.connect(ROOT / 'jobs.sqlite', timeout=30, factory=JobConnection)
     db.row_factory = sqlite3.Row
     return db
 
@@ -748,6 +756,18 @@ def merge_period_spans(existing, additions):
     return spans
 
 
+def bounded_period_units(periods, limit=600):
+    """Bound downloads without losing parent-period identity or source offsets."""
+    units = []
+    for period in periods:
+        start, end = float(period['start']), float(period['end'])
+        while start < end:
+            finish = min(start + limit, end)
+            units.append({'label': period['label'], 'start': start, 'end': finish})
+            start = finish
+    return units
+
+
 def normalize_regulation_periods(spans, total_duration):
     """Return exactly P1/P2/P3 when the scoreboard scan found them in order."""
     found = {}
@@ -858,7 +878,7 @@ def process_streamed_replay(job_id):
             )
             return
 
-        metadata['period_units'] = periods
+        metadata['period_units'] = bounded_period_units(periods)
         metadata['period_unit_index'] = 0
         metadata['periods'] = periods
         metadata['period_source'] = 'replay_scoreboard'
@@ -880,7 +900,7 @@ def process_streamed_replay(job_id):
         raise Problem(422, 'Replay period index is invalid.')
     period = periods[period_index]
     label = str(period['label'])
-    period_base = float(period['start'])
+    period_base = float((metadata.get('active_replay_unit') or period)['start'])
     retry_count = int(metadata.get('ai_rate_limit_retries', 0) or 0)
     frame_step = min(12, FRAME_STEP + retry_count * 2)
 
@@ -949,8 +969,10 @@ def process_streamed_replay(job_id):
 
     # One synthesis per period. This is the durable "put it through" result before
     # we delete that period's temporary video.
+    period_complete = period_index + 1 >= len(periods) or periods[period_index + 1]['label'] != label
+    period_chunks = [c for c in result['chunks'] if c.get('label') == label]
     existing_report = next((p for p in result['period_reports'] if p.get('label') == label), None)
-    if not existing_report:
+    if period_complete and not existing_report:
         result['stage'] = 'writing_period_report'
         update(job_id, 'processing', result)
         report = build_rollup(period_chunks)
@@ -1380,6 +1402,7 @@ class Handler(BaseHTTPRequestHandler):
                 db.execute('UPDATE jobs SET metadata=?,status=?,error=? WHERE id=?', (json.dumps(meta), 'queued', '', job_id))
             return self.reply(202, get_job(job_id, owner))
         if parts[2:] == ['retry'] and self.command == 'POST':
+            self.body()  # Drain the JSON request before closing the connection.
             with WRITE_LOCK:
                 job = get_job(job_id, owner)
                 if job['status'] not in ('failed', 'awaiting_ai'):
@@ -1393,6 +1416,7 @@ class Handler(BaseHTTPRequestHandler):
                 update(job_id, 'queued')
             return self.reply(202, get_job(job_id, owner))
         if parts[2:] == ['release-media'] and self.command == 'POST':
+            self.body()  # Drain the JSON request before closing the connection.
             with WRITE_LOCK:
                 job = get_job(job_id, owner)
                 if job['status'] not in ('ready_for_review', 'failed', 'expired'):
@@ -1404,6 +1428,7 @@ class Handler(BaseHTTPRequestHandler):
                     db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
             return self.reply(200, {'job': get_job(job_id, owner), 'storage': storage_status()})
         if parts[2:] == ['reanalyze'] and self.command == 'POST':
+            self.body()  # Drain the JSON request before closing the connection.
             with WRITE_LOCK:
                 job = get_job(job_id, owner)
                 if job['status'] not in ('ready_for_review', 'failed', 'awaiting_ai'):
@@ -1439,4 +1464,5 @@ if __name__ == '__main__':
     initialize()
     threading.Thread(target=work_loop, daemon=True).start()
     ThreadingHTTPServer(('0.0.0.0', int(os.getenv('PORT', '8080'))), Handler).serve_forever()
+
 
