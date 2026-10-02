@@ -289,6 +289,23 @@ def resolve(review, owner, create=False):
         return worker.get_job(job_id, owner)
 
 
+def split_download_unit(metadata):
+    kind = (metadata.get('active_replay_unit') or {}).get('kind')
+    key, index_key = ('period_units', 'period_unit_index') if kind == 'period' else ('scan_units', 'scan_unit_index')
+    units = metadata.get(key) or []
+    index = int(metadata.get(index_key) or 0)
+    if index >= len(units):
+        return False
+    unit = units[index]
+    if float(unit['end']) - float(unit['start']) <= 30:
+        return False
+    mid = round((float(unit['start']) + float(unit['end'])) / 2, 3)
+    units[index:index+1] = [{**unit, 'end': mid}, {**unit, 'start': mid}]
+    metadata[key] = units
+    metadata.pop('active_replay_unit', None)
+    return True
+
+
 def retrieve(job_id):
     job = worker.get_job(job_id)
     url = replay_url(job['metadata']['vod_url'])
@@ -332,6 +349,11 @@ def retrieve(job_id):
 
         elif phase == 'analyze_periods':
             units = metadata.get('period_units') or []
+            old_index = max(0, int(metadata.get('period_unit_index') or 0))
+            if any(float(u['end']) - float(u['start']) > 600 for u in units):
+                completed = units[:old_index]
+                units = completed + worker.bounded_period_units(units[old_index:])
+                metadata['period_units'] = units
             unit_index = max(0, int(metadata.get('period_unit_index') or 0))
             if unit_index >= len(units):
                 raise worker.Problem(409, 'Replay period analysis is already complete.')
@@ -467,6 +489,7 @@ def retrieve(job_id):
     # attempts before a saved account token is ever used, so a stale Twitch cookie
     # cannot poison an otherwise-public VOD.
     proc = launch_streamlink(False, False)
+    ytdlp = None
     try:
         wait_for_streamlink(proc)
 
@@ -511,10 +534,22 @@ def retrieve(job_id):
             if not ytdlp_ok:
                 raise worker.Problem(422, 'Twitch blocked Streamlink and all yt-dlp replay fallbacks. Retrieval diagnostics were kept on the private worker volume for troubleshooting.')
         worker.update(job_id, 'queued')
-    except Exception:
+    except Exception as exc:
         (folder / 'source.mp4').unlink(missing_ok=True)
+        if isinstance(exc, worker.Problem) and exc.code == 'clip_size_exceeded' and metadata.get('streamed_replay'):
+            if split_download_unit(metadata):
+                worker.update_metadata(job_id, metadata, 'retrieving', job.get('result') or {}, '')
+                return
         raise
     finally:
+        if ytdlp is not None and ytdlp.poll() is None:
+            ytdlp.terminate()
+            try:
+                ytdlp.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                ytdlp.kill()
+                ytdlp.wait()
+
         if proc.poll() is None:
             proc.terminate()
             try:
@@ -531,3 +566,4 @@ def retrieve(job_id):
         for item in folder.glob('ytdlp.*'):
             if item.name != 'ytdlp-error.log' or success:
                 item.unlink(missing_ok=True)
+
