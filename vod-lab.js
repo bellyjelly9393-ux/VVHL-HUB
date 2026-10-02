@@ -39,6 +39,14 @@
       u.searchParams.set("t",String(Math.floor(seconds))); return u.toString();
     }catch{return url;}
   }
+  // Segment and marker times are already absolute positions in the full VOD.
+  function timestampLink(seconds,label){
+    const url=currentReview()?.vod_url;
+    if(!url||seconds==null||!Number.isFinite(Number(seconds)))return esc(label);
+    const href=timestampUrl(url,Number(seconds));
+    if(!/^https?:\/\//i.test(href))return esc(label);
+    return `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" title="Review footage at ${esc(fmtTime(seconds))} in the full VOD">${esc(label)}</a>`;
+  }
   function allowedTeams(){
     const a=auth(), role=String(a.profile?.role||"").toLowerCase();
     if(role==="admin") return a.teams||[];
@@ -151,10 +159,10 @@
       el.innerHTML=`<div class="vod-empty">${txt}</div>`;return;
     }
     el.innerHTML=segs.map(s=>`<article class="segment-card${s.id===state.selectedSegmentId?" selected":""}">
-      <div class="segment-card-head"><div><h4>${esc(s.label)}</h4><small>${fmtTime(s.start_seconds)} → ${fmtTime(s.end_seconds)}${s.end_seconds!=null?` · ${fmtTime(s.end_seconds-s.start_seconds)}`:""}</small></div><span class="segment-pill ${esc(s.status)}">${esc(String(s.status).replaceAll("_"," "))}</span></div>
+      <div class="segment-card-head"><div><h4>${esc(s.label)}</h4><small>${timestampLink(s.start_seconds,fmtTime(s.start_seconds))} → ${timestampLink(s.end_seconds,fmtTime(s.end_seconds))}${s.end_seconds!=null?` · ${fmtTime(s.end_seconds-s.start_seconds)}`:""}</small></div><span class="segment-pill ${esc(s.status)}">${esc(String(s.status).replaceAll("_"," "))}</span></div>
       <div class="segment-card-actions"><button class="small-btn" type="button" data-segment-id="${esc(s.id)}">Review</button><button class="small-btn" type="button" data-segment-open="${esc(s.id)}">Open Timestamp</button></div>
     </article>`).join("");
-    el.querySelectorAll("[data-segment-id]").forEach(b=>b.addEventListener("click",()=>selectSegment(b.dataset.segmentId)));
+    el.querySelectorAll("[data-segment-id]").forEach(b=>b.addEventListener("click",()=>{selectSegment(b.dataset.segmentId);openSegmentById(b.dataset.segmentId);}));
     el.querySelectorAll("[data-segment-open]").forEach(b=>b.addEventListener("click",()=>openSegmentById(b.dataset.segmentOpen)));
   }
   function renderSegmentEditor(){
@@ -169,7 +177,7 @@
     const el=$("markerList"),s=currentSegment(); if(!el||!s)return;
     const rows=reviewMarkers().filter(m=>m.segment_id===s.id);
     if(!rows.length){el.innerHTML=`<div class="vod-empty">No timestamp markers for ${esc(s.label)} yet.</div>`;return;}
-    el.innerHTML=rows.map(m=>`<div class="marker-row"><b>${fmtTime(m.timestamp_seconds)}</b><small>${esc(String(m.category).replaceAll("_"," "))}${m.player_label?` · ${esc(m.player_label)}`:""}</small><span>${esc(m.note)}</span></div>`).join("");
+    el.innerHTML=rows.map(m=>`<div class="marker-row"><b>${timestampLink(m.timestamp_seconds,fmtTime(m.timestamp_seconds))}</b><small>${esc(String(m.category).replaceAll("_"," "))}${m.player_label?` · ${esc(m.player_label)}`:""}</small><span>${esc(m.note)}</span></div>`).join("");
   }
   function renderAll(){renderKpis();renderLibrary();renderDetail();}
 
