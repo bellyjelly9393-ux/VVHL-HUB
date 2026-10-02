@@ -35,3 +35,8 @@ test('configured featured event must be public',()=>{
 test('sample and historical provenance are retained rather than relabeled official',()=>{
  assert.match(M.provenance({source_label:'Edit-log sample',source_type:'historical'}),/Edit-log sample.*historical/);
 });
+
+test('missing or unsafe asset/registration URLs never become invented destinations',()=>{
+ for(const value of [undefined,null,'','  ','javascript:alert(1)','data:text/html,test'])assert.equal(M.safeURL(value,'https://example.com/'),'');
+ assert.equal(M.safeURL('assets/logo.png','https://example.com/'),'https://example.com/assets/logo.png');
+});

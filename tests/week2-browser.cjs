@@ -15,6 +15,8 @@ const pages=['index.html','wildman-room.html','hitmen-room.html','lg-network.htm
     await page.waitForTimeout(1000);
     assert.equal(await page.locator('.wn-network-header .main-nav a').count(),8,file+': navigation');
     assert.ok(await page.locator('.wn-score-track a').count()>0,file+': ticker fallback');
+    const invented=await page.locator('a[href$="/undefined"],a[href$="/null"],img[src$="/undefined"],img[src$="/null"]').count();
+    assert.equal(invented,0,file+': invented URL from missing data');
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+1);
     assert.equal(overflow,false,file+' at '+width+': page-wide overflow');
     const toggle=page.locator('.menu-toggle');

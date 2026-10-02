@@ -6,7 +6,8 @@
   setInterval(()=>{if(!document.hidden)window.WildmanEsportsNetwork?.refresh();},60000);
   let posts=[], reports=[], mediaError=false, mediaLoading=true, hitmenLogo=C.brands.hitmen.logo;
   const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-  const safeURL=raw=>{try{const u=new URL(raw,location.href);return ['http:','https:'].includes(u.protocol)?u.href:'';}catch{return '';}};
+  const safeURL=raw=>M.safeURL(raw,location.href);
+  const failedLogos=new Set();
   const date=v=>M.stamp(v)?new Date(v).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'Time to be confirmed';
   const empty=message=>'<p class="wn-empty">'+esc(message)+'</p>';
   const state=()=>window.WildmanEsportsNetwork?.state || {};
@@ -18,7 +19,7 @@
   const badge=t=>safeURL(t?.logo_url)?'<img src="'+esc(safeURL(t.logo_url))+'" alt="'+esc(t.name)+' logo" loading="lazy">':'';
   const brand=key=>{
     const b=C.brands[key],url=safeURL(key==='hitmen'?hitmenLogo:b.logo);
-    return url?'<img src="'+esc(url)+'" alt="'+esc(b.name)+' logo" loading="lazy">':'<span class="wn-logo-pending">'+esc(b.name)+'<small style="display:block">Official logo pending</small></span>';
+    return url&&!failedLogos.has(url)?'<img src="'+esc(url)+'" alt="'+esc(b.name)+' logo" loading="lazy">':'<span class="wn-logo-pending">'+esc(b.name)+'<small style="display:block">Official logo pending</small></span>';
   };
   const gameHref=g=>'live-game.html?id='+encodeURIComponent(g.id);
   function gameRow(g) {
@@ -174,6 +175,13 @@
     mediaError=[0,1].some(i=>results[i].status!=='fulfilled'||results[i].value.error);
     mediaLoading=false;render();
   }
+  document.addEventListener('error',e=>{
+    const image=e.target;
+    if(image instanceof HTMLImageElement && image.closest('.wn-brand')){
+      failedLogos.add(image.src);
+      image.parentElement.innerHTML='<span class="wn-logo-pending">'+esc(image.alt.replace(/ logo$/,''))+'<small style="display:block">Official logo unavailable</small></span>';
+    }
+  },true);
   document.addEventListener('change',e=>{if(e.target.matches('[data-overview-select]'))renderOverview();if(e.target.matches('[data-roster-team]'))renderCompetition();});
   window.addEventListener('wildman-network-ready',render);
   render();

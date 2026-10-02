@@ -3,6 +3,11 @@
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.WildmanPublicModel = factory();
 })(typeof window === 'undefined' ? globalThis : window, function() {
+  const safeURL = (raw, base) => {
+    if (typeof raw !== 'string' || !raw.trim()) return '';
+    try { const url = new URL(raw, base); return ['http:','https:'].includes(url.protocol) ? url.href : ''; }
+    catch { return ''; }
+  };
   const id = (rows, key) => (rows || []).find(row => String(row.id) === String(key));
   const stamp = value => { const n = Date.parse(value); return Number.isFinite(n) ? n : 0; };
   const publicEvent = event => event && event.is_public !== false && event.is_sandbox !== true;
@@ -31,5 +36,5 @@
     const priority = g => g.home_team_id === wildmanId || g.away_team_id === wildmanId ? 0 : lgEvent(id(state.events,g.event_id)) ? 1 : 2;
     return [...live.sort((a,b) => priority(a)-priority(b)), ...upcoming(games(state),now)].slice(0,10);
   };
-  return { id, stamp, publicEvent, events, games, upcoming, recent, teamGames, score, lgEvent, lgGames, featuredEvent, provenance, standings, ticker };
+  return { safeURL, id, stamp, publicEvent, events, games, upcoming, recent, teamGames, score, lgEvent, lgGames, featuredEvent, provenance, standings, ticker };
 });
