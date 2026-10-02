@@ -1,6 +1,30 @@
 {
   "rewrites": [
     {
+      "source": "/lg-network",
+      "destination": "/lg-network.html"
+    },
+    {
+      "source": "/wildman-room",
+      "destination": "/wildman-room.html"
+    },
+    {
+      "source": "/hitmen-room",
+      "destination": "/hitmen-room.html"
+    },
+    {
+      "source": "/tournaments",
+      "destination": "/tournaments.html"
+    },
+    {
+      "source": "/competition",
+      "destination": "/competition.html"
+    },
+    {
+      "source": "/elite-chel-media",
+      "destination": "/elite-chel-media.html"
+    },
+    {
       "source": "/hitmen-hub",
       "destination": "/hitmen-hub.html"
     },
