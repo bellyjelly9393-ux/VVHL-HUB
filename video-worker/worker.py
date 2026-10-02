@@ -398,12 +398,41 @@ def extract_frames(source, folder, start, end, frame_step=FRAME_STEP, max_size='
     return frames
 
 
+_GM_PROFILE = {}
+_GM_PROFILE_LOCK = threading.Lock()
+
+
+def gm_profile():
+    url = os.getenv('HITMEN_GM_PROFILE_URL', '').strip()
+    if not url:
+        return {}
+    if url != 'https://wildmanhockey-elitechelmedia.app/api/hitmen-scout-profile':
+        raise Problem(503, 'Invalid Hitmen GM profile endpoint.')
+    with _GM_PROFILE_LOCK:
+        if _GM_PROFILE.get('expires', 0) > time.time():
+            return _GM_PROFILE['data']
+        secret = os.getenv('WORKER_QUEUE_SECRET', '')
+        if not secret:
+            raise Problem(503, 'Hitmen GM worker authentication is not configured.')
+        try:
+            data = http_json(url, {'Authorization': 'Bearer ' + secret,
+                                  'Content-Type': 'application/json'}, {})
+            if (data.get('provider') != 'openrouter' or not data.get('model')
+                    or not isinstance(data.get('instructions'), str)
+                    or not data['instructions'].strip()):
+                raise ValueError('Invalid GM profile')
+        except Exception:
+            raise Problem(503, 'Hitmen GM configuration unavailable. Saved analysis can be resumed.')
+        _GM_PROFILE.update(data=data, expires=time.time() + 300)
+        return data
+
+
 def ai_config():
     """Choose credentials only for the explicitly selected provider."""
     provider = os.getenv('AI_PROVIDER', 'openrouter' if os.getenv('OPENROUTER_API_KEY') else 'openai').strip().lower()
     if provider == 'openrouter':
         return ('OpenRouter', os.getenv('OPENROUTER_API_KEY', ''),
-                os.getenv('OPENROUTER_MODEL', ''), 'https://openrouter.ai/api/v1/responses')
+                gm_profile().get('model') or os.getenv('OPENROUTER_MODEL', ''), 'https://openrouter.ai/api/v1/responses')
     if provider == 'openai':
         return ('OpenAI', os.getenv('OPENAI_API_KEY', ''),
                 os.getenv('OPENAI_MODEL', ''), 'https://api.openai.com/v1/responses')
@@ -422,6 +451,9 @@ def request_ai(request_payload):
         raise Problem(503, 'AI connection is not configured.')
     request_payload = dict(request_payload)
     request_payload['model'] = model
+    profile = gm_profile()
+    if profile:
+        request_payload['instructions'] = profile['instructions'] + '\n\nFor video analysis, the attached frames and reviewed observations are the evidence packet. Cite their recording timestamps instead of unavailable database E IDs. Return only the requested JSON schema; all findings remain provisional. Do not infer missing roster or season context.'
     result = None
     for attempt in range(3):
         try:
