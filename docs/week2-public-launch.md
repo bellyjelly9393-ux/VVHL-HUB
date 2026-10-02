@@ -68,3 +68,5 @@ Review before manual merge. Do not auto-merge.
 ## After launch
 
 Publish broader LG editorial stories and Game of the Week; provide approved public Calgary data and crest if absent; improve per-story social metadata; add approved Academy availability/booking/membership details. Future reusable team hubs and ranking/division engines remain outside this launch.
+
+The existing scouting test fixtures were stale: they returned json() only and asserted a discontinued Gemini/Anthropic two-pass flow. Updated test fixtures to provide text() and verify the already-deployed OpenRouter contract, authorization, provider failure, exact identities and fabricated-citation rejection. No API implementation changed.
