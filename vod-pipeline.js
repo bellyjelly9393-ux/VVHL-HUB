@@ -461,6 +461,7 @@
 
     const rollup=job?.result?.game_rollup||{};
     const payload={
+      worker_result:job.result,
       full_game_summary:rollup.summary||summaries.join('\n\n')||null,
       recurring_patterns:rollup.patterns||null,
       strengths:rollup.strengths||null,
@@ -528,3 +529,4 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});});
   else{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});}
 })();
+
