@@ -25,3 +25,28 @@ test('baselines exclude drafts, invalid ratings and repeated publications',()=>{
  assert.deepEqual(model.baseline([r,r,{ai_review_id:'game2',evidence:{verification:'needs_review',rating:{score:100}}}]),{games:1,score:70});
  assert.equal(model.rating({score:NaN}),null);assert.equal(model.rating({score:101}),null);
 });
+test('approved durable evidence recovers retrieval and AI stages without a rerun',()=>{
+ const r={...review,id:'game',worker_status:'failed',full_game_summary:'Reviewed report'};
+ const state=model.reconcile(r,periods(),{active:true,report:{summary:'Published report'}});
+ assert.equal(state.recovered,true);assert.equal(state.stages[2].name,'Evidence Available');
+ assert.equal(state.stages[2].done,true);assert.equal(state.stages[3].done,true);
+ assert.equal(state.approved,true);assert.equal(state.published,true);
+ assert.doesNotMatch(state.next,/retry|failed/i);
+});
+test('draft writeups and worker ready flags cannot substitute for period evidence or publication',()=>{
+ const p=periods();p[1].analysis_summary='';
+ const state=model.reconcile({...review,id:'game',worker_status:'ready_for_review',full_game_summary:'Draft'},p);
+ assert.equal(state.analysisComplete,false);assert.equal(state.published,false);assert.equal(state.stages[5].done,false);
+});
+test('archived windows are excluded while active OT and required periods still gate publication',()=>{
+ const p=periods();p.push({segment_type:'overtime',segment_index:1,label:'Old OT',start_seconds:0,end_seconds:9000,status:'queued',archived_at:'2026-10-03'});
+ assert.deepEqual(model.periodErrors(review,p,{approved:true}),[]);
+ assert.equal(model.reconcile({...review,id:'game'},p).approved,true);
+ p[0].archived_at='2026-10-03';
+ assert.match(model.periodErrors(review,p).join(' '),/Period 1/);
+});
+test('a reopened human-edited period remains protected from automatic import',()=>{
+ assert.equal(model.protectedEvidence({status:'needs_review',analyzed_by:'manager'}),true);
+ assert.equal(model.protectedEvidence({status:'complete',analyzed_by:null}),true);
+ assert.equal(model.protectedEvidence({status:'needs_review',analyzed_by:null}),false);
+});

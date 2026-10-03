@@ -1,7 +1,7 @@
 name: VOD management review
 on:
   push:
-    branches: [main, fix/vod-management-review]
+    branches: [main, fix/vod-management-review, fix/vod-evidence-reconciliation]
   pull_request:
     paths:
       - 'vod-*'

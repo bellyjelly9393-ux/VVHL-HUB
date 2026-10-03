@@ -7,8 +7,34 @@
   const systems=['offensive_structure','defensive_structure','forecheck','breakout','neutral_zone','entries','exits','puck_support','rush_offense','cycle_offense','slot_creation','shot_selection','defensive_zone_coverage','slot_protection','rush_defense','transition_after_turnovers','special_teams','repeatable_strengths','repeatable_problems','opponent_adjustments','next_game_adjustments'];
   const text=v=>typeof v==='string'?v:'';
   const array=v=>Array.isArray(v)?v:[];
+  const activeSegments=segments=>array(segments).filter(s=>!s.archived_at);
+  const hasAnalysis=s=>Boolean(text(s?.analysis_summary).trim());
+  const protectedEvidence=s=>Boolean(s?.analyzed_by||s?.status==='complete');
+  function reconcile(review={},segments=[],publication=null,job=null){
+    const active=activeSegments(segments),periods=active.filter(s=>['period','overtime'].includes(s.segment_type));
+    const bounds=periodErrors(review,periods),validPeriods=periods.filter(s=>s.end_seconds!=null&&Number(s.end_seconds)>Number(s.start_seconds)&&Number(s.start_seconds)>=Number(review.source_start_seconds||0)&&(review.source_end_seconds==null||Number(s.end_seconds)<=Number(review.source_end_seconds)));
+    const periodEvidence=s=>hasAnalysis(s)||array(review.worker_result?.period_reports).some(p=>p.label===s.label&&text(p.report?.summary).trim());
+    const evidence=validPeriods.filter(periodEvidence);
+    const analysisComplete=!bounds.length&&periods.length>0&&periods.every(periodEvidence);
+    const approved=analysisComplete&&periods.every(s=>s.status==='complete'&&hasAnalysis(s));
+    const rawStatus=job?.status||review.worker_status||'';
+    const rawFailure=['failed','expired'].includes(rawStatus);
+    const writeup=Boolean(text(review.review_document?.summary||review.full_game_summary).trim());
+    const published=Boolean(publication?.active&&approved&&text(publication.report?.summary).trim());
+    return {periods,usableEvidence:evidence.length>0,analysisComplete,approved,writeup,published,
+      recovered:rawFailure&&evidence.length>0,rawFailure,rawStatus,
+      stages:[
+        {name:'Game Review',label:'1 · Source',done:Boolean(review.id)},
+        {name:'Periods',label:'2 · Split',done:!bounds.length},
+        {name:rawFailure&&evidence.length?'Evidence Available':'Recording',label:'3 · Retrieve',done:evidence.length>0||['processing','awaiting_ai','needs_periods','ready_for_review'].includes(rawStatus),recovered:rawFailure&&evidence.length>0},
+        {name:analysisComplete?'AI Analysis Complete':'AI Review',label:'4 · Analyze',done:analysisComplete,blocked:!analysisComplete&&rawStatus==='awaiting_ai'},
+        {name:approved?'Human Approved':'Human Review',label:'5 · Verify',done:approved},
+        {name:published?'Published':writeup?'Write-Up Saved':'Write-Up',label:'6 · Publish',done:published}
+      ],
+      next:published?'Approved scouting reports are published. Refresh them only when reviewed evidence changes.':approved?'All required periods are approved. Publish / Refresh Scouting Reports when ready.':analysisComplete?'Saved analysis is complete. Review and approve the remaining periods.':evidence.length?'Saved period evidence is preserved. Finish the remaining periods before publishing.':rawFailure?'Recording retrieval failed. Retry to continue analysis.':'Analyze the game to detect periods and prepare scouting evidence.'};
+  }
   function periodErrors(review,segments,{approved=false}={}){
-    const errors=[],periods=segments.filter(s=>['period','overtime'].includes(s.segment_type)).sort((a,b)=>a.start_seconds-b.start_seconds);
+    const errors=[],periods=activeSegments(segments).filter(s=>['period','overtime'].includes(s.segment_type)).sort((a,b)=>a.start_seconds-b.start_seconds);
     const start=Number(review.source_start_seconds||0),end=review.source_end_seconds==null?start+Number(review.duration_seconds):Number(review.source_end_seconds);
     if(!Number.isFinite(end)||end<=start)errors.push('Set a valid game window in Advanced Tools.');
     for(const n of [1,2,3])if(!periods.some(s=>s.segment_type==='period'&&s.segment_index===n))errors.push(`Period ${n} has not been detected or confirmed.`);
@@ -55,5 +81,5 @@
     const scores=[...unique.values()];
     return {games:scores.length,score:scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null};
   }
-  return {systems,periodErrors,documentFor,rating,baseline};
+  return {systems,periodErrors,documentFor,rating,baseline,activeSegments,hasAnalysis,protectedEvidence,reconcile};
 });

@@ -1,9 +1,36 @@
 (() => {
+  if(window.WildmanVODPipelineInstalled)return;window.WildmanVODPipelineInstalled=true;
   const WORKER='https://wildman-video-worker-production.up.railway.app';
   const db=()=>window.VVHLBackend?.db;
   const auth=()=>window.VVHLBackend?.state||{};
   let pollTimer=null;
   let busy=false;
+  let checking=false;
+  let savedState=null;
+  async function durableState(reviewId,job=null){
+    const [r,s,p]=await Promise.all([
+      db().from('vod_review_sessions').select('*').eq('id',reviewId).maybeSingle(),
+      db().from('vod_review_segments').select('*').eq('review_id',reviewId),
+      db().from('vod_game_publications').select('active,report').eq('review_id',reviewId).maybeSingle()
+    ]);
+    if(r.error)throw r.error;if(s.error)throw s.error;if(p.error)throw p.error;
+    return r.data?window.WildmanVODReview.reconcile(r.data,s.data,p.data,job):null;
+  }
+  function showDurable(state){
+    if(!state?.usableEvidence)return false;
+    const text=state.next+(state.recovered?' Raw recording retrieval failed earlier; the saved reports remain available.':'');
+    setStatus(text,state.analysisComplete?'good':'warn');
+    const b=document.getElementById('vodAnalyzeGame');if(b)b.textContent=state.analysisComplete?'View Reports':'Continue Analysis';
+    return true;
+  }
+  async function showAttemptError(error,fallback){
+    const message=error.message||fallback;
+    try{
+      const state=await durableState(selectedReviewId());
+      if(state?.usableEvidence){setStatus(`New attempt failed: ${message} Saved evidence is preserved. ${state.next}`,'warn');return;}
+    }catch{}
+    setStatus(message,'bad');
+  }
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const selectedReviewId=()=>document.querySelector('.vod-row.active')?.dataset?.vodId||'';
@@ -71,14 +98,14 @@
   }
 
   async function periodsFor(reviewId){
-    const {data,error}=await db().from('vod_review_segments').select('id,label,segment_type,segment_index,start_seconds,end_seconds').eq('review_id',reviewId).in('segment_type',['period','overtime']).order('start_seconds');
+    const {data,error}=await db().from('vod_review_segments').select('id,label,segment_type,segment_index,start_seconds,end_seconds,archived_at').eq('review_id',reviewId).in('segment_type',['period','overtime']).order('start_seconds');
     if(error)throw error;
-    return (data||[]).filter(s=>s.end_seconds!=null).map(s=>({id:s.id,label:s.label,start:Number(s.start_seconds),end:Number(s.end_seconds)}));
+    return (data||[]).filter(s=>!s.archived_at&&s.end_seconds!=null).map(s=>({id:s.id,label:s.label,start:Number(s.start_seconds),end:Number(s.end_seconds)}));
   }
   async function requiredPeriodsImported(reviewId){
-    const {data,error}=await db().from('vod_review_segments').select('segment_type,segment_index,analysis_summary').eq('review_id',reviewId).eq('segment_type','period');
+    const {data,error}=await db().from('vod_review_segments').select('segment_type,segment_index,analysis_summary,archived_at').eq('review_id',reviewId).eq('segment_type','period');
     if(error)throw error;
-    const periods=data||[];
+    const periods=(data||[]).filter(p=>!p.archived_at);
     return [1,2,3].every(index=>periods.some(p=>Number(p.segment_index)===index&&String(p.analysis_summary||'').trim()));
   }
   const sourceOffset=review=>Math.max(0,Number(review?.source_start_seconds)||0);
@@ -101,7 +128,13 @@
     document.getElementById('vodCheckPipeline')?.addEventListener('click',checkSelected);
     document.getElementById('vodRetryPipeline')?.addEventListener('click',retry);
     document.getElementById('vodEliteReanalyze')?.addEventListener('click',reanalyzeElite);
-    document.getElementById('vodAnalyzeGame')?.addEventListener('click',async()=>{const r=await currentReview();if(r?.worker_status==='ready_for_review')return reanalyzeElite();return analyzeGame();});
+    document.getElementById('vodAnalyzeGame')?.addEventListener('click',async()=>{
+      try{const r=await currentReview();if(!r)return;
+        const state=await durableState(r.id);
+        if(state?.analysisComplete){document.getElementById('gameReviewLayers')?.scrollIntoView({behavior:'smooth'});return;}
+        return analyzeGame();
+      }catch(e){setStatus(e.message,'bad');}
+    });
     document.getElementById('vodSaveReplay')?.addEventListener('click',saveReplay);
     document.getElementById('vodSaveTwitchAuth')?.addEventListener('click',saveTwitchAuth);
     document.getElementById('vodClearTwitchAuth')?.addEventListener('click',clearTwitchAuth);
@@ -262,7 +295,7 @@
       await db().from('vod_review_sessions').update({worker_status:uploaded.status,worker_updated_at:new Date().toISOString()}).eq('id',review.id);
       setStatus(periods.length>=3?'Upload complete. Railway is processing your saved period windows.':'Upload complete. Railway is detecting P1/P2/P3 automatically.','good');
       beginPoll(job.id,review.id);
-    }catch(e){setStatus(e.message||'Could not start video pipeline.','bad');}
+    }catch(e){await showAttemptError(e,'Could not start video pipeline.');}
     finally{busy=false;if(button)button.disabled=false;}
   }
 
@@ -296,7 +329,7 @@
         setStatus('Retry queued. The original uploaded recording is being reused.','good');
         beginPoll(review.worker_job_id,review.id);
       }
-    }catch(e){setStatus(e.message||'Retry is not available yet.','bad');}
+    }catch(e){await showAttemptError(e,'Retry is not available yet.');}
   }
 
   async function reanalyzeElite(){
@@ -304,17 +337,14 @@
       const review=await currentReview();
       if(!review?.worker_job_id)throw new Error('There is no saved recording to re-analyze yet.');
       ensureScoutMode(review);
-      if(!confirm('Run a fresh Elite Scout pass on the saved recording? This replaces the old AI evidence but keeps the video.'))return;
+      if(!confirm('Run a fresh Elite Scout pass on the saved recording? New evidence is saved as a separate draft; existing reviewed reports are preserved.'))return;
       setStatus('Starting a fresh elite scouting pass on the saved recording…');
       const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/reanalyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-      // Keep the previous evidence available until a successful replacement is imported.
-      const {error:resetError}=await db().from('vod_review_segments').update({status:'queued',updated_at:new Date().toISOString()}).eq('review_id',review.id);
-      if(resetError)throw resetError;
-      const {error:reviewError}=await db().from('vod_review_sessions').update({worker_status:job.status,status:'queued',review_document:null,updated_at:new Date().toISOString()}).eq('id',review.id);
+      const {error:reviewError}=await db().from('vod_review_sessions').update({worker_status:job.status,worker_updated_at:new Date().toISOString()}).eq('id',review.id);
       if(reviewError)throw reviewError;
-      setStatus('Fresh scout pass queued. The original recording is being reused.','good');
+      setStatus('New analysis queued as a separate draft. Saved period evidence and approvals are preserved.','good');
       beginPoll(review.worker_job_id,review.id);
-    }catch(e){setStatus(e.message||'Fresh scout pass could not be started.','bad');}
+    }catch(e){await showAttemptError(e,'Fresh scout pass could not be started.');}
   }
 
   function beginPoll(jobId,reviewId){
@@ -345,6 +375,7 @@
   }
 
   async function checkJob(jobId,reviewId,loud=false){
+    if(checking)return;checking=true;
     try{
       const response=await workerFetch(`/reviews/${encodeURIComponent(reviewId)}/job`);
       const job=response.job;
@@ -355,8 +386,10 @@
       if(saveError)throw saveError;
       const autoImported=await importDetectedPeriods(reviewId,job);
       if(autoImported)document.getElementById('refreshVod')?.click();
+      savedState=await durableState(reviewId,job);
       const done=['ready_for_review','failed','expired','awaiting_ai','needs_periods'].includes(job.status);
-      if(job.status==='needs_periods'){
+      if(savedState?.analysisComplete&&job.status!=='ready_for_review'){showDurable(savedState);}
+      else if(job.status==='needs_periods'){
         if(selectedReviewId()===reviewId)document.getElementById('manualPeriodBuilder')?.setAttribute('open','');
         setStatus('The upload is safe, but automatic period detection was not confident enough. Use the manual P1/P2/P3 marker below, Build / Update Periods, then press Continue / Retry. No re-upload.','warn');
       }
@@ -364,7 +397,7 @@
       else if(job.status==='ready_for_review'){
         const review=await currentReview();
         const periodsImported=await requiredPeriodsImported(reviewId);
-        if(periodsImported&&review?.worker_result?.website_imported===true)setStatus('Analysis is saved. Review the notes and game report below.','good');
+        if(periodsImported&&((review?.pending_worker_result?.website_imported===true&&review.pending_worker_result?.import_key===importKey(job))||(review?.worker_result?.website_imported===true&&review?.worker_result?.import_key===importKey(job))))setStatus('Analysis is saved. Review the notes and game report below.','good');
         else{
           setStatus(periodsImported?'Refreshing completed worker evidence…':'Completed worker analysis found. Repairing missing period evidence…','good');
           await ingest(job,reviewId);
@@ -376,8 +409,8 @@
         if(code==='storage_limit_exceeded')msg='Temporary storage cap reached before this clip could fit. Completed Twitch clips are released automatically; press Continue / Retry after the older job finishes.';
         if(code==='clip_size_exceeded')msg='This game window is larger than the configured clip-size cap. Shorten the saved start/end window, then create a fresh review for that game.';
         if(code==='queue_full')msg='The video queue is full. Let an older game finish, then press Continue / Retry.';
-        setStatus(msg,'bad');
-        if(/twitch.*(blocked|authenticated|authentication)|anonymous replay playback/i.test(msg)){
+        if(!showDurable(savedState))setStatus(msg,'bad');
+        if(!savedState?.usableEvidence&&/twitch.*(blocked|authenticated|authentication)|anonymous replay playback/i.test(msg)){
           const details=document.getElementById('vodTwitchConnect');
           const badge=document.getElementById('vodTwitchAuthBadge');
           if(details)details.open=true;
@@ -397,9 +430,14 @@
       }
       if(done){clearInterval(pollTimer);pollTimer=null;}
       if(loud&&job.status==='ready_for_review')document.getElementById('refreshVod')?.click();
-    }catch(e){setStatus(e.message||'Could not reach video worker. Retrying…','bad');}
+    }catch(e){if(selectedReviewId()===reviewId&&!showDurable(savedState))setStatus(e.message||'Could not reach video worker. Retrying…','bad');}finally{checking=false;}
   }
 
+  function importKey(job){
+    const text=JSON.stringify([job.id,job.result?.review_version,job.result?.game_rollup,job.result?.period_reports,job.result?.chunks]);
+    let hash=2166136261;for(let i=0;i<text.length;i++)hash=Math.imul(hash^text.charCodeAt(i),16777619);
+    return `${job.id}:${text.length}:${hash>>>0}`;
+  }
   async function ingest(job,reviewId){
     const chunks=job?.result?.chunks||[];
     const periodReports=job?.result?.period_reports||[];
@@ -409,6 +447,10 @@
     const offset=sourceOffset(review);
     let {data:segments,error}=await db().from('vod_review_segments').select('*').eq('review_id',reviewId).order('start_seconds');
     if(error)throw error;
+    segments=window.WildmanVODReview.activeSegments(segments);
+    const protectedReview=Boolean(review.review_document)||segments.some(window.WildmanVODReview.protectedEvidence);
+    const staged=await db().rpc('stage_vod_worker_result',{target_review:reviewId,worker_result:job.result,worker_job:job.id});
+    if(staged.error)throw staged.error;
 
     const fallbackFullGame=job?.result?.period_detection==='full_game_fallback';
     if(fallbackFullGame){
@@ -418,7 +460,7 @@
     }
     const problems=window.WildmanVODReview.periodErrors(review,segments||[]);
     if(problems.length){
-      const saved=await db().from('vod_review_sessions').update({worker_result:job.result,status:'reviewing',updated_at:new Date().toISOString()}).eq('id',reviewId);
+      const saved=await db().from('vod_review_sessions').update({pending_worker_result:job.result,worker_updated_at:new Date().toISOString()}).eq('id',reviewId);
       if(saved.error)throw saved.error;
       document.getElementById('manualPeriodBuilder').hidden=false;
       document.getElementById('manualPeriodBuilder').open=true;
@@ -431,7 +473,7 @@
     for(const seg of segments||[]){
       const matched=fallbackFullGame?chunks:chunks.filter(c=>c.label===seg.label);
       const periodReport=periodReports.find(p=>p?.label===seg.label)?.report||null;
-      if((!matched.length&&!periodReport)||seg.status==='complete')continue;
+      if((!matched.length&&!periodReport)||window.WildmanVODReview.protectedEvidence(seg))continue;
       const summary=matched.length
         ?matched.map(c=>c.review?.summary).filter(Boolean).join('\n\n')
         :String(periodReport?.summary||'').trim();
@@ -456,7 +498,7 @@
       ].join('\n'):'';
       const fallbackTactical=!matched.length&&periodReport?.tactical_report?String(periodReport.tactical_report):'';
       const notes=[summary,tacticalText||fallbackTactical,uncertainties.length?`Needs review: ${uncertainties.join(' | ')}`:''].filter(Boolean).join('\n\n');
-      const {error:uerr}=await db().from('vod_review_segments').update({
+      const {data:updatedSegments,error:uerr}=await db().from('vod_review_segments').update({
         analysis_summary:notes||null,player_notes:playerNotes,
         forecheck_notes:tactical.map(t=>t.forecheck).filter(Boolean).join('\n')||null,
         breakout_notes:tactical.map(t=>t.breakout).filter(Boolean).join('\n')||null,
@@ -466,8 +508,9 @@
         special_teams_notes:tactical.map(t=>t.special_teams).filter(Boolean).join('\n')||null,
         tags:[...new Set(matched.flatMap(c=>(c.review?.observations||[]).map(o=>o.source)))],
         status:'needs_review',confidence:'preliminary',updated_at:new Date().toISOString()
-      }).eq('id',seg.id);
+      }).eq('id',seg.id).eq('updated_at',seg.updated_at).is('archived_at',null).is('analyzed_by',null).neq('status','complete').select('id');
       if(uerr)throw uerr;
+      if(!updatedSegments?.length)continue;
       if(summary)summaries.push(`${seg.label}: ${summary}`);
       for(const c of matched)for(const o of c.review?.observations||[]){
         const category=String(o.category||'general').replaceAll('_',' ');
@@ -484,7 +527,7 @@
 
     const rollup=job?.result?.game_rollup||{};
     const payload={
-      worker_result:{...job.result,website_imported:true},
+      worker_result:{...job.result,website_imported:true,import_key:importKey(job)},
       full_game_summary:rollup.summary||summaries.join('\n\n')||null,
       recurring_patterns:rollup.patterns||null,
       strengths:rollup.strengths||null,
@@ -495,11 +538,16 @@
       status:'reviewing',worker_status:'ready_for_review',
       worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()
     };
-    const {error:rerr}=await db().from('vod_review_sessions').update(payload).eq('id',reviewId);
-    if(rerr)throw rerr;
-    setStatus(fallbackFullGame
-      ?'Full-game AI scouting report imported. Automatic period detection was skipped; review the evidence and report below.'
-      :'Period analysis imported. Review the AI notes/markers, then save the final game report.','good');
+    if(protectedReview){
+      const {error}=await db().from('vod_review_sessions').update({pending_worker_result:{...job.result,website_imported:true,import_key:importKey(job)},worker_status:'ready_for_review',worker_updated_at:new Date().toISOString()}).eq('id',reviewId);
+      if(error)throw error;
+      setStatus('Saved evidence and approvals are preserved. New AI suggestions are available separately under New Analysis Draft.','good');
+    }else{
+      // The RPC rechecks human review under a lock to avoid racing a manager's edit.
+      const {error:rerr}=await db().rpc('import_vod_worker_draft',{target_review:reviewId,worker_job:job.id,worker_result:payload.worker_result});
+      if(rerr)throw rerr;
+      setStatus('Period analysis imported. Review the period evidence before publishing.','good');
+    }
     setTimeout(()=>document.getElementById('refreshVod')?.click(),350);
   }
 
@@ -507,13 +555,14 @@
     try{
       const review=await currentReview(); if(!review)return;
       if(selectedReviewId()!==review.id)return;
-      const analyzeButton=document.getElementById('vodAnalyzeGame');if(analyzeButton)analyzeButton.textContent=review.worker_status==='ready_for_review'?'Re-run Analysis':'Analyze Game';
+      savedState=await durableState(review.id);
+      const analyzeButton=document.getElementById('vodAnalyzeGame');if(analyzeButton)analyzeButton.textContent=savedState?.analysisComplete?'View Reports':'Analyze Game';
       const source=document.getElementById('vodReplayUrl');if(source)source.value=review.vod_url||'';
       const start=document.getElementById('vodSourceStart');if(start)start.value=fmtClock(sourceOffset(review));
       const end=document.getElementById('vodSourceEnd');if(end)end.value=review.source_end_seconds==null?'':fmtClock(review.source_end_seconds);
       const format=document.getElementById('vodGameFormat');if(format)format.value=review.game_format||'6s';
       const context=document.getElementById('vodScoutingContext');if(context)context.value=review.scouting_context||'';
-      if(review.worker_job_id){
+      if(!showDurable(savedState)&&review.worker_job_id){
         const extra=review.source_file_name?` · ${review.source_file_name}`:'';
         setStatus(`Saved pipeline: ${String(review.worker_status||'unknown').replaceAll('_',' ')}${extra}`);
       }
@@ -521,6 +570,11 @@
     }catch{}
   }
 
+window.addEventListener('vvhl-vod-rendered',event=>{
+    if(event.detail?.review?.id!==selectedReviewId())return;
+    savedState=window.WildmanVODReview.reconcile(event.detail.review,event.detail.segments,event.detail.publication);
+    showDurable(savedState);
+  });
   let lastSelectedReviewId='';
   let autoAnalyzeStarted=false;
   function maybeAutoAnalyze(id){
@@ -542,7 +596,7 @@
     install();
     const id=selectedReviewId();
     if(id!==lastSelectedReviewId){
-      lastSelectedReviewId=id;
+      lastSelectedReviewId=id;savedState=null;
       clearInterval(pollTimer);pollTimer=null;
       document.getElementById('manualPeriodBuilder')?.removeAttribute('open');
       setStatus('Press Analyze Game to retrieve the saved recording.');

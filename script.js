@@ -93,8 +93,8 @@ if (menuButton && nav) {
     load('live-pipeline-status.js?v=20260917a');
   }
   if(page==='vod-lab.html'||page==='vod-lab') {
-    load('vod-pipeline.js?v=20260916b');
-    load('vod-pipeline-polish.js?v=20260916b');
+    load('vod-pipeline.js?v=20261003-durable');
+    load('vod-pipeline-polish.js?v=20261003-durable');
     load('vod-local-marker.js?v=20260916');
     load('vod-postgame-link.js?v=20260916');
   }

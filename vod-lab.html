@@ -112,6 +112,7 @@
               <div class="vod-actions"><button id="buildSegments" class="small-btn primary" type="button">Build / Update Periods</button><button id="addCustomSegment" class="small-btn" type="button">Add Custom Segment</button></div>
             </details>
             <div id="segmentList" class="segment-list"></div>
+            <details id="archivedPeriods" hidden><summary>Archived Periods</summary><div id="archivedPeriodList"></div></details>
 
             <div id="segmentEditorWrap" hidden>
               <div class="section-divider"></div>
@@ -150,7 +151,8 @@
             <div class="section-divider"></div>
             <div class="eyebrow">MANAGEMENT REVIEW</div><h3>Game Report</h3>
             <div id="gameReviewLayers"></div>
-            <div class="vod-actions"><button id="publishVodReport" class="small-btn primary" type="button">Approve &amp; Publish Reports</button><span id="publishVodStatus" role="status"></span></div>
+            <details id="pendingAnalysisDraft" hidden><summary>New Analysis Draft · saved separately</summary><p>These suggestions do not replace approved reports. Reopen the affected period to edit your reviewed evidence.</p><p id="pendingAnalysisContent" style="white-space:pre-wrap"></p></details>
+            <div class="vod-actions"><button id="publishVodReport" class="small-btn primary" type="button">Publish / Refresh Scouting Reports</button><span id="publishVodStatus" role="status"></span></div>
             <details id="gameReportEdits"><summary>Edit game report / Advanced Tools</summary>
             <div class="rollup-grid">
               <label class="wide">Full-game summary<textarea id="gameSummary" class="text-input" placeholder="Overall game identity and evidence-based read..."></textarea></label>
@@ -175,8 +177,9 @@
 <script src="backend.js"></script>
 <script src="management-guard.js"></script>
 <script src="script.js"></script>
-<script src="vod-review-model.js"></script>
-<script src="vod-lab.js?v=20261003-custom-period-remove"></script>
-<script src="vod-pipeline.js?v=20261003-period-reconcile"></script>
+<script src="vod-review-model.js?v=20261003-durable"></script>
+<script src="vod-lab.js?v=20261003-durable"></script>
+<script src="vod-pipeline.js?v=20261003-durable"></script>
+<script src="vod-pipeline-polish.js?v=20261003-durable"></script>
 </body>
 </html>
