@@ -1,5 +1,8 @@
 (() => {
   const state = { initialized:false, loading:false, teamId:"", reviews:[], segments:[], markers:[], selectedReviewId:"", selectedSegmentId:"" };
+  const model = window.WildmanVODReview;
+  let editingPeriod = false;
+  let savingPeriod = false;
   const $ = (id) => document.getElementById(id);
   const db = () => window.VVHLBackend?.db;
   const auth = () => window.VVHLBackend?.state || {};
@@ -72,7 +75,7 @@
   }
 
   async function loadData(){
-    if(state.loading||!db()||!hasAccess()||!state.teamId) return;
+    if(state.loading||editingPeriod||!db()||!hasAccess()||!state.teamId) return;
     state.loading=true; setStatus(`Loading ${teamName()} VOD reviews…`);
     try{
       const [r,s,m]=await Promise.all([
@@ -111,7 +114,7 @@
     if(!state.reviews.length){el.innerHTML=`<div class="vod-empty">No VOD reviews in this workspace yet.</div>`;return;}
     el.innerHTML=state.reviews.map(r=>{
       const segs=reviewSegments(r.id),done=segs.filter(s=>s.status==="complete").length;
-      return `<div class="vod-library-entry"><button class="vod-row${r.id===state.selectedReviewId?" active":""}" data-vod-id="${esc(r.id)}"><strong>${esc(r.title)}</strong><span>${esc(r.opponent_label||"No opponent label")}</span><small>${esc(String(r.intake_mode||"scout").toUpperCase())} · ${esc(String(r.game_type||"scouting").replaceAll("_"," "))} · ${done}/${segs.length} segments complete · ${r.game_date?new Date(r.game_date).toLocaleDateString():"No date"}</small></button><button type="button" class="small-btn" data-delete-vod="${esc(r.id)}" aria-label="Delete ${esc(r.title)}">Delete review</button></div>`;
+      return `<div class="vod-library-entry"><button class="vod-row${r.id===state.selectedReviewId?" active":""}" data-vod-id="${esc(r.id)}"><strong>${esc(r.title)}</strong><span>${esc(r.opponent_label||"No opponent label")}</span><small>${esc(String(r.intake_mode||"scout").toUpperCase())} · ${esc(String(r.game_type||"scouting").replaceAll("_"," "))} · ${done}/${segs.length} segments complete · ${r.game_date?new Date(r.game_date).toLocaleDateString():"No date"}</small></button><button hidden type="button" class="small-btn" data-delete-vod="${esc(r.id)}" aria-label="Delete ${esc(r.title)}">Delete review</button></div>`;
     }).join("");
     el.querySelectorAll("[data-vod-id]").forEach(b=>b.addEventListener("click",()=>selectReview(b.dataset.vodId)));
     el.querySelectorAll("[data-delete-vod]").forEach(b=>b.addEventListener("click",()=>deleteReview(b.dataset.deleteVod)));
@@ -130,7 +133,7 @@
     const manualBuilder=$("manualPeriodBuilder");
     if(manualBuilder){
       const hasWorker=Boolean(r.worker_job_id);
-      manualBuilder.hidden=hasWorker && r.worker_status!=="needs_periods";
+      manualBuilder.hidden=false;
     }
     const absoluteEnd=sourceEnd!=null?sourceEnd:(r.duration_seconds!=null?sourceStart+Number(r.duration_seconds):null);
     $("periodVodEnd").value=absoluteEnd!=null?fmtTime(absoluteEnd):"";
@@ -145,7 +148,7 @@
     if($("gameTactical")) $("gameTactical").value=r.tactical_report||"";
     if($("gamePlayers")) $("gamePlayers").value=r.player_report||"";
     if($("gameProfessional")) $("gameProfessional").value=r.professional_writeup||"";
-    renderSegments(); renderSegmentEditor();
+    renderSegments(); renderSegmentEditor(); renderGameLayers();
   }
   function renderSegments(){
     const el=$("segmentList"),segs=reviewSegments();
@@ -156,13 +159,13 @@
         : r?.worker_job_id&&r.worker_status!=="needs_periods"
           ? "Automatic capture or analysis is still processing. Periods will appear here if detection succeeds."
           : "No periods built yet. Use the manual fallback only if automatic detection asks for help.";
-      el.innerHTML=`<div class="vod-empty">${txt}</div>`;return;
+      el.innerHTML=[1,2,3].map(n=>`<article class="segment-card"><h4>Period ${n}</h4><span class="segment-pill">Awaiting detection</span><p>Time range pending</p><button class="small-btn" disabled>Review</button></article>`).join("")+`<p class="analysis-note">${esc(txt)}</p>`;return;
     }
     el.innerHTML=segs.map(s=>`<article class="segment-card${s.id===state.selectedSegmentId?" selected":""}">
-      <div class="segment-card-head"><div><h4>${esc(s.label)}</h4><small>${timestampLink(s.start_seconds,fmtTime(s.start_seconds))} → ${timestampLink(s.end_seconds,fmtTime(s.end_seconds))}${s.end_seconds!=null?` · ${fmtTime(s.end_seconds-s.start_seconds)}`:""}</small></div><span class="segment-pill ${esc(s.status)}">${esc(String(s.status).replaceAll("_"," "))}</span></div>
-      <div class="segment-card-actions"><button class="small-btn" type="button" data-segment-id="${esc(s.id)}">Review</button><button class="small-btn" type="button" data-segment-open="${esc(s.id)}">Open Timestamp</button></div>
+      <div class="segment-card-head"><div><h4>${esc(s.label)}</h4><small>${esc(fmtTime(s.start_seconds))} → ${esc(fmtTime(s.end_seconds))}${s.end_seconds!=null?` · ${fmtTime(s.end_seconds-s.start_seconds)}`:""}</small></div><span class="segment-pill ${esc(s.status)}">${esc(String(s.status).replaceAll("_"," "))}</span></div>
+      <p class="segment-preview">${esc((s.analysis_summary||"Waiting for period analysis.").slice(0,180))}</p><div class="segment-card-actions"><button class="small-btn" type="button" data-segment-id="${esc(s.id)}">Review</button></div>
     </article>`).join("");
-    el.querySelectorAll("[data-segment-id]").forEach(b=>b.addEventListener("click",()=>{selectSegment(b.dataset.segmentId);openSegmentById(b.dataset.segmentId);}));
+    el.querySelectorAll("[data-segment-id]").forEach(b=>b.addEventListener("click",()=>selectSegment(b.dataset.segmentId)));
     el.querySelectorAll("[data-segment-open]").forEach(b=>b.addEventListener("click",()=>openSegmentById(b.dataset.segmentOpen)));
   }
   function renderSegmentEditor(){
@@ -170,8 +173,10 @@
     $("segmentEditorTitle").textContent=s.label; $("segmentStart").value=fmtTime(s.start_seconds); $("segmentEnd").value=s.end_seconds==null?"":fmtTime(s.end_seconds);
     $("segmentStatus").value=s.status; $("segmentConfidence").value=s.confidence||"preliminary"; $("segmentSummary").value=s.analysis_summary||"";
     $("segmentOffense").value=s.offense_notes||""; $("segmentDefense").value=s.defense_notes||""; $("segmentTransition").value=s.transition_notes||""; $("segmentSpecial").value=s.special_teams_notes||"";
+    $("segmentForecheck").value=s.forecheck_notes||"";$("segmentBreakout").value=s.breakout_notes||"";
     $("segmentPlayers").value=Array.isArray(s.player_notes)?s.player_notes.map(x=>typeof x==="string"?x:(x.note||JSON.stringify(x))).join("\n"):"";
-    $("segmentTags").value=Array.isArray(s.tags)?s.tags.join(", "):""; renderMarkers();
+    $("segmentTags").value=Array.isArray(s.tags)?s.tags.join(", "):"";
+    renderPeriodContent(s); renderMarkers();
   }
   function renderMarkers(){
     const el=$("markerList"),s=currentSegment(); if(!el||!s)return;
@@ -182,11 +187,11 @@
   function renderAll(){renderKpis();renderLibrary();renderDetail();}
 
   function selectReview(id){
-    state.selectedReviewId=id; const first=reviewSegments(id)[0]; state.selectedSegmentId=first?.id||""; renderAll();
+    editingPeriod=false; state.selectedReviewId=id; const first=reviewSegments(id)[0]; state.selectedSegmentId=first?.id||""; renderAll();
     const url=new URL(location.href);url.searchParams.set("review",id);history.replaceState(null,"",url);
     setTimeout(()=>document.getElementById("vodDetail")?.scrollIntoView({behavior:"smooth",block:"start"}),50);
   }
-  function selectSegment(id){state.selectedSegmentId=id; renderSegments();renderSegmentEditor(); document.getElementById("segmentEditorWrap")?.scrollIntoView({behavior:"smooth",block:"start"});}
+  function selectSegment(id){editingPeriod=false;state.selectedSegmentId=id; renderSegments();renderSegmentEditor(); document.getElementById("segmentEditorWrap")?.scrollIntoView({behavior:"smooth",block:"start"});}
   function openSegmentById(id){const r=currentReview(),s=state.segments.find(x=>x.id===id); if(!r?.vod_url||!s)return; window.open(timestampUrl(r.vod_url,s.start_seconds),"_blank","noopener");}
 
   async function createReview(){
@@ -330,7 +335,9 @@
       {segment_type:"period",segment_index:3,label:"Period 3",start_seconds:p3,end_seconds:otStarts[0]??vodEnd}
     ];
     otStarts.forEach((start,i)=>defs.push({segment_type:"overtime",segment_index:i+1,label:`Overtime ${i+1}`,start_seconds:start,end_seconds:otStarts[i+1]??vodEnd}));
-    const payload=defs.map(d=>({...d,review_id:r.id,team_id:state.teamId}));
+    const boundaryErrors=model.periodErrors(r,defs);
+    if(boundaryErrors.length)return setStatus(boundaryErrors.join(" "),"error");
+    const payload=defs.map(d=>({...d,review_id:r.id,team_id:state.teamId,status:"needs_review"}));
     setStatus("Saving period boundaries…");
     const {error}=await db().from("vod_review_segments").upsert(payload,{onConflict:"review_id,segment_type,segment_index"}); if(error)return setStatus(error.message,"error");
     let del=db().from("vod_review_segments").delete().eq("review_id",r.id).eq("segment_type","overtime");
@@ -338,7 +345,7 @@
     const sourceStart=Math.max(0,Number(r.source_start_seconds)||0);
     const reviewDuration=vodEnd!=null?Math.max(0,vodEnd-sourceStart):r.duration_seconds;
     const updateReview={duration_seconds:reviewDuration,status:"reviewing",overtime_count:otStarts.length,updated_at:new Date().toISOString()};
-    if(vodEnd!=null)updateReview.source_end_seconds=vodEnd;
+
     const {error:uerr}=await db().from("vod_review_sessions").update(updateReview).eq("id",r.id); if(uerr)return setStatus(uerr.message,"error");
     await loadData(); const first=reviewSegments(r.id)[0]; state.selectedSegmentId=first?.id||"";renderAll(); setStatus(`Built ${defs.length} review segment${defs.length===1?"":"s"}.`,"success");
   }
@@ -350,13 +357,23 @@
     if(error)return setStatus(error.message,"error"); await loadData(); state.selectedSegmentId=data.id;renderAll();setStatus("Custom segment added. Set its timestamps and review it independently.","success");
   }
 
-  async function saveSegment(){
+  async function saveSegment(decision="needs_review"){
+    if(typeof decision!=="string")decision="needs_review";
+    if(savingPeriod)return;
+    const problems=model.periodErrors(currentReview(),reviewSegments());
+    if(problems.length)return setStatus(problems.join(" "),"error");
+    if(decision==="complete"&&!$("segmentSummary").value.trim())return setStatus("A period summary is required before approval.","error");
     const s=currentSegment(); if(!s)return; const start=parseTime($("segmentStart").value),end=parseTime($("segmentEnd").value);
     if(start==null||(end!=null&&end<start))return setStatus("Segment timestamps are invalid.","error");
     const playerNotes=$("segmentPlayers").value.split("\n").map(x=>x.trim()).filter(Boolean); const tags=$("segmentTags").value.split(",").map(x=>x.trim()).filter(Boolean);
-    const payload={start_seconds:start,end_seconds:end,status:$("segmentStatus").value,confidence:$("segmentConfidence").value,analysis_summary:$("segmentSummary").value.trim()||null,offense_notes:$("segmentOffense").value.trim()||null,defense_notes:$("segmentDefense").value.trim()||null,transition_notes:$("segmentTransition").value.trim()||null,special_teams_notes:$("segmentSpecial").value.trim()||null,player_notes:playerNotes,tags,analyzed_by:auth().user?.id||null,updated_at:new Date().toISOString()};
-    setStatus(`Saving ${s.label} review…`); const {error}=await db().from("vod_review_segments").update(payload).eq("id",s.id); if(error)return setStatus(error.message,"error");
-    await loadData(); state.selectedSegmentId=s.id;renderAll();setStatus(`${s.label} review saved.`,"success");
+    const payload={start_seconds:start,end_seconds:end,status:decision,confidence:$("segmentConfidence").value,analysis_summary:$("segmentSummary").value.trim()||null,forecheck_notes:$("segmentForecheck").value.trim()||null,breakout_notes:$("segmentBreakout").value.trim()||null,offense_notes:$("segmentOffense").value.trim()||null,defense_notes:$("segmentDefense").value.trim()||null,transition_notes:$("segmentTransition").value.trim()||null,special_teams_notes:$("segmentSpecial").value.trim()||null,player_notes:playerNotes,tags,analyzed_by:auth().user?.id||null,updated_at:new Date().toISOString()};
+    savingPeriod=true;
+    try{
+      const {data,error}=await db().from("vod_review_segments").update(payload).eq("id",s.id).eq("updated_at",s.updated_at).select("id");
+      if(error)throw error;if(!data?.length)throw new Error("This period changed elsewhere. Refresh before saving.");
+      editingPeriod=false;await loadData();state.selectedSegmentId=s.id;renderAll();
+      setStatus(decision==="complete"?`${s.label} approved.`:decision==="needs_review"?`${s.label} saved for review.`:`${s.label} rejected. Use Advanced Tools to re-run analysis.`,"success");
+    }catch(error){setStatus(error.message,"error");}finally{savingPeriod=false;}
   }
 
   async function addMarker(){
@@ -389,8 +406,9 @@
   }
   async function saveRollup(){
     const r=currentReview(); if(!r)return; const segs=reviewSegments(); const allDone=segs.length>0&&segs.every(s=>s.status==="complete");
-    const payload={full_game_summary:$("gameSummary").value.trim()||null,recurring_patterns:$("gamePatterns").value.trim()||null,strengths:$("gameStrengths").value.trim()||null,corrections:$("gameCorrections").value.trim()||null,tactical_report:$("gameTactical")?.value.trim()||null,player_report:$("gamePlayers")?.value.trim()||null,professional_writeup:$("gameProfessional")?.value.trim()||null,status:allDone?"complete":"reviewing",updated_at:new Date().toISOString()};
-    const {error}=await db().from("vod_review_sessions").update(payload).eq("id",r.id); if(error)return setStatus(error.message,"error"); await loadData(); state.selectedReviewId=r.id;renderAll();setStatus(allDone?"Game report saved and VOD review marked complete.":"Game report saved. Unfinished segments remain in the review queue.","success");
+    const document=editedDocument();
+    const payload={review_document:document,full_game_summary:$("gameSummary").value.trim()||null,recurring_patterns:$("gamePatterns").value.trim()||null,strengths:$("gameStrengths").value.trim()||null,corrections:$("gameCorrections").value.trim()||null,tactical_report:$("gameTactical")?.value.trim()||null,player_report:$("gamePlayers")?.value.trim()||null,professional_writeup:$("gameProfessional")?.value.trim()||null,status:"reviewing",updated_at:new Date().toISOString()};
+    const {error}=await db().from("vod_review_sessions").update(payload).eq("id",r.id); if(error)return setStatus(error.message,"error"); await loadData(); state.selectedReviewId=r.id;renderAll();setStatus("Game report draft saved. Publish after approving every period.","success");
   }
   async function archiveReview(){const r=currentReview();if(!r)return;const {error}=await db().from("vod_review_sessions").update({status:"archived",updated_at:new Date().toISOString()}).eq("id",r.id);if(error)return setStatus(error.message,"error");state.selectedReviewId="";state.selectedSegmentId="";await loadData();setStatus("VOD review archived.","success");}
   async function deleteReview(id){
@@ -406,9 +424,58 @@
     }catch(error){setStatus(error.message||"Could not delete review.","error");}
   }
 
+
+  function renderPeriodContent(s){
+    if(!s)return;
+    $("periodEditFields").hidden=!editingPeriod;
+    $("saveSegment").hidden=!editingPeriod;
+    $("editSegment").textContent=editingPeriod?"Cancel Edit":"Edit";
+    $("approveSegment").disabled=editingPeriod||s.status==="complete";
+    const chunks=currentReview()?.worker_result?.chunks||[];
+    const tactical=chunks.filter(c=>c.label===s.label).map(c=>c.review?.tactical||{});
+    const field=k=>[...new Set(tactical.map(t=>t[k]).filter(Boolean))].join("\n");
+    const sections=[["Period Summary",s.analysis_summary],["Offense",s.offense_notes||field("offense")],["Defense",s.defense_notes||field("defense")],["Transition",s.transition_notes||field("transition")],["Forecheck",s.forecheck_notes||field("forecheck")],["Breakout",s.breakout_notes||field("breakout")],["Player Notes",Array.isArray(s.player_notes)?s.player_notes.map(p=>typeof p==="string"?p:p.note||"").join("\n"):""]];
+    if(s.special_teams_notes||field("special_teams"))sections.push(["Special Teams",s.special_teams_notes||field("special_teams")]);
+    $("periodReviewContent").innerHTML=sections.map(([label,value])=>`<section><h4>${esc(label)}</h4><p>${esc(value||"Insufficient reviewed evidence.")}</p></section>`).join("");
+    $("periodReviewContent").hidden=editingPeriod;
+  }
+  const scoreLabel=r=>r?`${r.score}/100 — ${r.reason||"Management review required"}`:"Not rated — insufficient reviewed evidence";
+  function reportDocument(){const r=currentReview();return r?.review_document?.version===1?r.review_document:model.documentFor(r||{});}
+  function renderGameLayers(){
+    const doc=reportDocument(),problems=model.periodErrors(currentReview(),reviewSegments(),{approved:true});
+    const section=(title,value)=>`<section><h4>${esc(title)}</h4><p>${esc(value||"Insufficient reviewed evidence.")}</p></section>`;
+    $("gameReviewLayers").innerHTML=`<p class="analysis-note">${problems.length?esc(problems.join(" ")):"All periods approved. Review the three report layers before publishing."}</p><h3>Team Systems Report</h3>${section("Game overall",scoreLabel(doc.game_rating))}${section("Result",doc.result)}${section("Process",doc.process||doc.summary)}<div class="period-review-content">${model.systems.map(k=>section(k.replaceAll("_"," "),doc.team_systems?.[k])).join("")}</div>${doc.tactical_report?section("Tactical evidence",doc.tactical_report):""}<h3>Line / D-pair Reports</h3>${doc.units.length?doc.units.map(u=>section(`${u.label} · ${u.players.join(" / ")}`,[u.summary,u.strengths,u.concerns,u.adjustments,scoreLabel(u.rating)].filter(Boolean).join("\n"))).join(""):section("Unit evidence","No verified line or defense-pair report yet. Lineup names alone do not establish chemistry.")}<h3>Individual Player Reports</h3>${doc.players.length?doc.players.map(p=>section(p.player,[p.strengths,p.concerns,p.habits,p.coach_note,scoreLabel(p.rating)].filter(Boolean).join("\n"))).join(""):section("Player evidence",doc.player_report)}`;
+    $("publishVodReport").disabled=problems.length>0;
+    let editor=$("structuredReportFields");
+    if(!editor){editor=document.createElement("div");editor.id="structuredReportFields";editor.className="rollup-grid";$("gameReportEdits").append(editor);}
+    const field=(path,label,value)=>`<label class="wide">${esc(label)}<textarea class="text-input" data-report-path="${esc(path)}">${esc(value||"")}</textarea></label>`;
+    editor.innerHTML=field("result","Result",doc.result)+field("process","Process",doc.process)+model.systems.map(k=>field(`team_systems.${k}`,k.replaceAll("_"," "),doc.team_systems?.[k])).join("")+doc.units.map((u,i)=>['summary','strengths','concerns','adjustments'].map(k=>field(`units.${i}.${k}`,`${u.label}: ${k}`,u[k])).join("")).join("")+doc.players.map((p,i)=>['strengths','concerns','habits','coach_note'].map(k=>field(`players.${i}.${k}`,`${p.player}: ${k}`,p[k])).join("")).join("");
+  }
+  function editedDocument(){
+    const doc=JSON.parse(JSON.stringify(reportDocument()));
+    document.querySelectorAll('[data-report-path]').forEach(el=>{const keys=el.dataset.reportPath.split('.');let target=doc;for(const key of keys.slice(0,-1))target=target[key];target[keys.at(-1)]=el.value.trim();});
+    doc.summary=$("gameSummary").value.trim();doc.tactical_report=$("gameTactical").value.trim();doc.player_report=$("gamePlayers").value.trim();
+    return doc;
+  }
+  async function publishReport(){
+    const r=currentReview();if(!r)return;
+    const problems=model.periodErrors(r,reviewSegments(),{approved:true});if(problems.length)return setStatus(problems.join(" "),"error");
+    $("publishVodReport").disabled=true;
+    try{
+      const {data,error}=await db().rpc("publish_vod_review",{target_review:r.id,expected_updated_at:r.updated_at,report:editedDocument()});
+      if(error)throw error;
+      await loadData();$("publishVodStatus").textContent=`Published approved report · ${data?.player_reports||0} player reports updated.`;
+    }catch(error){$("publishVodStatus").textContent=error.message||"Publishing failed. Drafts remain private.";}
+    finally{$("publishVodReport").disabled=model.periodErrors(currentReview(),reviewSegments(),{approved:true}).length>0;}
+  }
+
   function bind(){
     $("vodTeam")?.addEventListener("change",e=>{state.teamId=e.target.value;state.selectedReviewId="";state.selectedSegmentId="";loadData();});
     $("refreshVod")?.addEventListener("click",loadData); $("createVod")?.addEventListener("click",createReview); $("batchCreateVod")?.addEventListener("click",createBatchReviews); $("buildSegments")?.addEventListener("click",buildSegments); $("addCustomSegment")?.addEventListener("click",addCustomSegment);
+    $("editSegment")?.addEventListener("click",()=>{editingPeriod=!editingPeriod;if(!editingPeriod)renderSegmentEditor();else renderPeriodContent(currentSegment());});
+    $("approveSegment")?.addEventListener("click",()=>saveSegment("complete"));
+    $("rejectSegment")?.addEventListener("click",()=>saveSegment("rejected"));
+    $("publishVodReport")?.addEventListener("click",publishReport);
     $("saveSegment")?.addEventListener("click",saveSegment); $("addMarker")?.addEventListener("click",addMarker); $("openSegment")?.addEventListener("click",()=>currentSegment()&&openSegmentById(currentSegment().id)); $("copySegmentPacket")?.addEventListener("click",copySegmentPacket);
     $("buildRollup")?.addEventListener("click",buildRollup); $("saveRollup")?.addEventListener("click",saveRollup); $("archiveVod")?.addEventListener("click",archiveReview); $("deleteVod")?.addEventListener("click",deleteReview);
   }

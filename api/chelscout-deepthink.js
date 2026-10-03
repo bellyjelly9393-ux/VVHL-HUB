@@ -217,17 +217,19 @@ async function contextFor(token,names,question,scenario,requestedLens){
   addOne('Calgary Season 55 schedule/results index',{games:scheduleRows.map(g=>({week:g.week,scheduled_at:g.scheduled_at,opponent_name:g.opponent_name,status:g.status,calgary_score:g.calgary_score,opponent_score:g.opponent_score,overtime:g.overtime}))},{evidenceClass:'verified_game_record'});
  }
 
- if(opponentNames.length||lens==='postgame'){
+ if(opponentNames.length||['postgame','general','lineup','player'].includes(lens)){
   try{
    const vods=await read(`vod_review_sessions?select=id,title,opponent_label,game_type,game_date,vod_url,status,worker_status,full_game_summary,recurring_patterns,strengths,corrections,tactical_report,player_report,professional_writeup,schedule_game_id,created_at,updated_at&team_id=eq.${TEAM}&order=created_at.desc&limit=120`);
+   const publications=await read(`vod_game_publications?select=review_id,report,published_at&team_id=eq.${TEAM}&active=eq.true&order=published_at.desc&limit=120`);
+   const approved=new Map(publications.map(p=>[p.review_id,p]));
    const gameIds=new Set(relevantGames.map(g=>g.id));
-   const relevantVods=vods.filter(v=>gameIds.has(v.schedule_game_id)||opponentNames.some(n=>clean(v.opponent_label)===clean(n))).slice(0,30);
+   const relevantVods=vods.filter(v=>approved.has(v.id)&&(!opponentNames.length||gameIds.has(v.schedule_game_id)||opponentNames.some(n=>clean(v.opponent_label)===clean(n)))).slice(0,30).map(v=>({...v,approved_report:approved.get(v.id).report,published_at:approved.get(v.id).published_at}));
    add('Opponent VOD review sessions',relevantVods,{evidenceClass:'video_summary'});
    const reviewIds=relevantVods.map(v=>v.id);
    if(reviewIds.length){
     const list=reviewIds.join(',');
     const [segments,markers]=await Promise.allSettled([
-     read(`vod_review_segments?select=*&team_id=eq.${TEAM}&review_id=in.(${list})&order=segment_index&limit=200`),
+     read(`vod_review_segments?select=*&team_id=eq.${TEAM}&status=eq.complete&review_id=in.(${list})&order=segment_index&limit=200`),
      read(`vod_review_markers?select=*&team_id=eq.${TEAM}&review_id=in.(${list})&order=timestamp_seconds&limit=300`)
     ]);
     if(segments.status==='fulfilled')add('Timestamped VOD segment analysis',segments.value,{evidenceClass:'video_observation'});

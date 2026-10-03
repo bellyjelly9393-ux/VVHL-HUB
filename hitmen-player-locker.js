@@ -82,8 +82,9 @@
   const add=(o,k)=>Number(o?.[k]||0);
 
   function aggregate(){
-    const t={games:reports.length,goals:0,assists:0,points:0,plus_minus:0,shots:0,hits:0,takeaways:0,giveaways:0,pim:0,blocks:0,faceoff_pct:0,passing_pct:0,foN:0,passN:0,saves:0,shots_faced:0,goals_against:0,save_pct:0};
-    reports.forEach(r=>{
+    const statReports=reports.filter(r=>!r.ai_review_id);
+    const t={games:statReports.length,goals:0,assists:0,points:0,plus_minus:0,shots:0,hits:0,takeaways:0,giveaways:0,pim:0,blocks:0,faceoff_pct:0,passing_pct:0,foN:0,passN:0,saves:0,shots_faced:0,goals_against:0,save_pct:0};
+    statReports.forEach(r=>{
       const s=r.stats||{};
       ['goals','assists','plus_minus','shots','hits','takeaways','giveaways','pim'].forEach(k=>t[k]+=add(s,k));
       t.blocks+=s.blocks!=null?add(s,'blocks'):add(s,'blocked_shots');
@@ -167,7 +168,7 @@
   function renderWeeklyPerformance(){
     const box=E('weeklyPerformanceChart');
     if(!box)return;
-    const games=reports.slice(0,5).reverse();
+    const games=reports.filter(r=>!r.ai_review_id).slice(0,5).reverse();
     if(!games.length){
       box.innerHTML='<div class="weekly-chart-empty">GAME DATA WILL POPULATE HERE</div>';
       return;
@@ -201,8 +202,10 @@
       box.innerHTML='<div class="locker-empty">No game reports yet. Your individual breakdowns will appear here after games are reviewed.</div>';
       return;
     }
-    box.innerHTML=reports.map(r=>
-      '<article class="player-report"><div class="player-report-head"><div><small>'+esc(r.game_date?new Date(r.game_date).toLocaleDateString():'GAME REPORT')+'</small><h3>'+esc(r.opponent_name||'Opponent')+(r.result?' · '+esc(r.result):'')+'</h3></div><small>'+esc(r.position_played||locker.position||'')+(r.line_label?' · '+esc(r.line_label):'')+'</small></div>'+reportStatLine(r)+'<div class="player-report-grid"><div class="report-note"><small>WHAT WORKED</small><p>'+esc(r.strengths||'Pending VOD review.')+'</p></div><div class="report-note"><small>NEXT IMPROVEMENT</small><p>'+esc(r.improvements||'Pending VOD review.')+'</p></div><div class="report-note"><small>TACTICAL NOTES</small><p>'+esc(r.tactical_notes||'Pending VOD review.')+'</p></div><div class="report-note"><small>COACH SUMMARY</small><p>'+esc(r.coach_summary||'Pending VOD review.')+'</p></div></div></article>'
+    const baseline=window.WildmanVODReview.baseline(reports);
+    const baselineText=baseline.score==null?'No approved game ratings yet.':`Game-performance baseline: ${baseline.score}/100 across ${baseline.games} rated games. This is not a permanent skill rating.`;
+    box.innerHTML='<p class="locker-empty">'+esc(baselineText)+'</p>'+reports.map(r=>
+      '<article class="player-report"><div class="player-report-head"><div><small>'+esc(r.game_date?new Date(r.game_date).toLocaleDateString():'GAME REPORT')+'</small><h3>'+esc(r.opponent_name||'Opponent')+(r.result?' · '+esc(r.result):'')+'</h3></div><small>'+esc(r.position_played||locker.position||'')+(r.line_label?' · '+esc(r.line_label):'')+'</small></div>'+reportStatLine(r)+(r.evidence?.rating?.score!=null?'<p>Reviewed game rating: '+esc(r.evidence.rating.score)+'/100 · '+esc(r.evidence.rating.reason||'')+'</p>':'')+'<div class="player-report-grid"><div class="report-note"><small>WHAT WORKED</small><p>'+esc(r.strengths||'Pending VOD review.')+'</p></div><div class="report-note"><small>NEXT IMPROVEMENT</small><p>'+esc(r.improvements||'Pending VOD review.')+'</p></div><div class="report-note"><small>TACTICAL NOTES</small><p>'+esc(r.tactical_notes||'Pending VOD review.')+'</p></div><div class="report-note"><small>COACH SUMMARY</small><p>'+esc(r.coach_summary||'Pending VOD review.')+'</p></div></div>'+((r.evidence?.unit_reports||[]).map(u=>'<section class="report-note"><small>'+esc(u.label)+' · LINE / D-PAIR</small><p>'+esc([u.summary,u.strengths,u.concerns,u.adjustments].filter(Boolean).join('\n'))+'</p></section>').join(''))+'</article>'
     ).join('');
   }
 
@@ -347,7 +350,7 @@
       if(gr.error)throw gr.error;
       if(wr.error)throw wr.error;
       if(lr.error)throw lr.error;
-      reports=gr.data||[];
+      reports=(gr.data||[]).filter(r=>!r.ai_review_id||r.evidence?.verification==='approved');
       weekly=wr.data||[];
       lineReports=(lr.data||[]).filter(r=>(r.player_locker_ids||[]).includes(locker.id));
       await render();

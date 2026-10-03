@@ -30,7 +30,7 @@
       <div class="vod-hero">
         <div class="eyebrow">PERIOD-BY-PERIOD REVIEW PIPELINE</div>
         <h1>VIDEO <span>INTELLIGENCE</span></h1>
-        <p>Split one long VOD into actual period windows, review each period independently, tag important moments and roll the completed segments into one game report. A bad Period 2 can be re-reviewed without making the system swallow the whole broadcast again.</p>
+        <p>Analyze each detected period, review the evidence, and publish approved team, unit and player reports.</p>
         <div class="vod-badges"><span>Period Segments</span><span>OT Ready</span><span>Timestamp Markers</span><span>Team Scoped</span><span>AI-Ready Queue</span></div>
       </div>
 
@@ -40,16 +40,17 @@
       </div>
       <div id="vodStatus" class="vod-status">Waiting for authorized access…</div>
 
-      <div class="vod-kpis">
+      <details class="vod-advanced"><summary>Workspace statistics</summary><div class="vod-kpis">
         <div class="vod-kpi"><small>VOD Reviews</small><strong id="vodReviewCount">0</strong></div>
         <div class="vod-kpi"><small>Segments</small><strong id="vodSegmentCount">0</strong></div>
         <div class="vod-kpi"><small>Completed</small><strong id="vodCompleteCount">0</strong></div>
         <div class="vod-kpi"><small>Markers</small><strong id="vodMarkerCount">0</strong></div>
       </div>
 
+      </details>
       <div class="vod-grid">
         <section class="vod-panel">
-          <div class="eyebrow">NEW REVIEW</div><h3>Add Game VOD</h3>
+          <details id="vodIntake"><summary>Add Game VOD</summary>
           <div class="vod-form">
             <label class="wide">Title<input id="newVodTitle" class="field" placeholder="Hitmen Scouting Game 1"></label>
             <label>Opponent / lobby<input id="newVodOpponent" class="field" placeholder="Opponent or lobby label"></label>
@@ -82,6 +83,7 @@
             <div class="vod-actions"><button id="batchCreateVod" class="small-btn primary" type="button">Create + Queue Games</button><span id="batchVodStatus" class="copy-feedback"></span></div>
             <div class="analysis-note"><strong>Line format:</strong> Title | Start | End | Opponent. The opponent field is optional. Up to eight games can be queued in one batch.</div>
           </details>
+          </details>
           <div class="section-divider"></div>
           <div class="eyebrow">REVIEW LIBRARY</div><h3>Games</h3>
           <div id="vodLibrary" class="vod-library"></div>
@@ -92,7 +94,7 @@
           <div id="vodDetail" hidden>
             <div class="vod-detail-head">
               <div><div class="eyebrow" id="vodDetailTeam">TEAM VOD</div><h2 id="vodDetailTitle">Game VOD</h2><p id="vodDetailMeta"></p><a id="vodOpenLink" class="video-link" href="#" target="_blank" rel="noopener">OPEN FULL VOD ↗</a></div>
-              <div class="vod-actions"><button id="archiveVod" class="small-btn" type="button">Archive</button><button id="deleteVod" class="small-btn" type="button">Delete</button></div>
+              <details><summary>Advanced Tools</summary><div class="vod-actions"><button id="archiveVod" class="small-btn" type="button">Archive</button><button id="deleteVod" class="small-btn" type="button">Delete</button></div></details>
             </div>
 
             <details id="manualPeriodBuilder">
@@ -114,35 +116,42 @@
             <div id="segmentEditorWrap" hidden>
               <div class="section-divider"></div>
               <div class="eyebrow">SEGMENT REVIEW</div><h3 id="segmentEditorTitle">Period</h3>
-              <div class="segment-editor">
-                <label>Start<input id="segmentStart" class="field mono"></label>
-                <label>End<input id="segmentEnd" class="field mono"></label>
-                <label>Status<select id="segmentStatus" class="select-field"><option value="queued">Queued</option><option value="reviewing">Reviewing</option><option value="complete">Complete</option><option value="needs_review">Needs Review</option></select></label>
-                <label>Confidence<select id="segmentConfidence" class="select-field"><option value="preliminary">Preliminary</option><option value="moderate">Moderate</option><option value="high">High</option></select></label>
+              <div id="periodReviewContent" class="period-review-content"></div>
+              <div class="segment-editor" id="periodEditFields" hidden>
+                <label>Start<input id="segmentStart" class="field mono" readonly></label>
+                <label>End<input id="segmentEnd" class="field mono" readonly></label>
+                <label hidden>Status<select id="segmentStatus" class="select-field"><option value="queued">Queued</option><option value="reviewing">Reviewing</option><option value="complete">Complete</option><option value="needs_review">Needs Review</option></select></label>
+                <label hidden>Confidence<select id="segmentConfidence" class="select-field"><option value="preliminary">Preliminary</option><option value="moderate">Moderate</option><option value="high">High</option></select></label>
                 <label class="wide">Period summary<textarea id="segmentSummary" class="text-input" placeholder="What happened in this period? Structure, momentum, repeatable tendencies..."></textarea></label>
                 <label>Offense<textarea id="segmentOffense" class="text-input" placeholder="Entries, possession, cycle, chances, shooting decisions..."></textarea></label>
                 <label>Defense<textarea id="segmentDefense" class="text-input" placeholder="Gap control, slot protection, rush defense, coverage..."></textarea></label>
                 <label>Transition<textarea id="segmentTransition" class="text-input" placeholder="Breakouts, neutral-zone routes, turnovers, reloads..."></textarea></label>
+                <label>Forecheck<textarea id="segmentForecheck" class="text-input"></textarea></label>
+                <label>Breakout<textarea id="segmentBreakout" class="text-input"></textarea></label>
                 <label>Special teams<textarea id="segmentSpecial" class="text-input" placeholder="PP, PK, faceoffs, pulled goalie, special situations..."></textarea></label>
                 <label class="wide">Player notes<textarea id="segmentPlayers" class="text-input" placeholder="One player note per line: Gamertag — observation"></textarea></label>
-                <label class="wide">Tags<input id="segmentTags" class="field" placeholder="forecheck, breakout, slot-defense, turnovers"></label>
+                <label class="wide" hidden>Tags<input id="segmentTags" class="field" placeholder="forecheck, breakout, slot-defense, turnovers"></label>
               </div>
-              <div class="vod-actions"><button id="openSegment" class="small-btn" type="button">Open Segment Timestamp</button><button id="copySegmentPacket" class="small-btn" type="button">Copy Analysis Packet</button><button id="saveSegment" class="small-btn primary" type="button">Save Segment Review</button><span id="copyFeedback" class="copy-feedback"></span></div>
+              <div class="vod-actions"><button id="editSegment" class="small-btn" type="button">Edit</button><button id="rejectSegment" class="small-btn" type="button">Reject Period</button><button id="approveSegment" class="small-btn primary" type="button">Approve Period</button><button id="saveSegment" class="small-btn primary" type="button" hidden>Save Edits</button><button id="openSegment" class="small-btn" type="button">Open Timestamp</button><details><summary>Advanced Tools</summary><button id="copySegmentPacket" class="small-btn" type="button">Copy Analysis Packet</button></details><span id="copyFeedback" class="copy-feedback"></span></div>
 
               <div class="section-divider"></div>
               <div class="eyebrow">TIMESTAMP NOTES</div><h3>Key Moments</h3>
-              <div class="marker-form">
+              <details><summary>Add Correction / Key Moment</summary><div class="marker-form">
                 <label>VOD time<input id="markerTime" class="field mono" placeholder="34:22"></label>
                 <label>Category<select id="markerCategory" class="select-field"><option value="general">General</option><option value="goal">Goal</option><option value="chance">Chance</option><option value="entry">Entry</option><option value="exit">Exit</option><option value="turnover">Turnover</option><option value="forecheck">Forecheck</option><option value="breakout">Breakout</option><option value="defense">Defense</option><option value="special_teams">Special Teams</option><option value="faceoff">Faceoff</option><option value="goalie">Goalie</option></select></label>
                 <label>Note<input id="markerNote" class="field" placeholder="What happened here?"></label>
                 <label>Player<input id="markerPlayer" class="field" placeholder="Gamertag"></label>
                 <button id="addMarker" class="small-btn primary" type="button">Add Marker</button>
               </div>
+              </details>
               <div id="markerList" class="marker-list"></div>
             </div>
 
             <div class="section-divider"></div>
-            <div class="eyebrow">FULL GAME ROLLUP</div><h3>Game Report</h3>
+            <div class="eyebrow">MANAGEMENT REVIEW</div><h3>Game Report</h3>
+            <div id="gameReviewLayers"></div>
+            <div class="vod-actions"><button id="publishVodReport" class="small-btn primary" type="button">Approve &amp; Publish Reports</button><span id="publishVodStatus" role="status"></span></div>
+            <details id="gameReportEdits"><summary>Edit game report / Advanced Tools</summary>
             <div class="rollup-grid">
               <label class="wide">Full-game summary<textarea id="gameSummary" class="text-input" placeholder="Overall game identity and evidence-based read..."></textarea></label>
               <label>Recurring patterns<textarea id="gamePatterns" class="text-input" placeholder="Repeatable tendencies across multiple sequences..."></textarea></label>
@@ -153,6 +162,7 @@
               <label class="wide">Professional write-up<textarea id="gameProfessional" class="text-input" placeholder="Polished hockey-operations / postgame analysis..."></textarea></label>
             </div>
             <div class="vod-actions"><button id="buildRollup" class="small-btn" type="button">Build Draft From Periods</button><button id="saveRollup" class="small-btn primary" type="button">Save Game Report</button></div>
+            </details>
             <div class="analysis-note"><strong>Evidence standard:</strong> Railway + AI can generate tactical, player and full-game scouting evidence automatically. AI observations remain provisional until a human reviews the timestamps. Sparse or unclear footage should be described as uncertain rather than filled in.</div>
           </div>
         </section>
@@ -165,7 +175,8 @@
 <script src="backend.js"></script>
 <script src="management-guard.js"></script>
 <script src="script.js"></script>
-<script src="vod-lab.js?v=20261002-timestamp-links"></script>
+<script src="vod-review-model.js"></script>
+<script src="vod-lab.js?v=20261002-management-review"></script>
 <script src="vod-pipeline.js"></script>
 </body>
 </html>

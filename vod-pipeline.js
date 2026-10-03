@@ -87,15 +87,15 @@
     const anchor=detail.querySelector('.vod-detail-head'); if(!anchor)return;
     const panel=document.createElement('div');
     panel.id='vodPipelinePanel'; panel.className='analysis-note'; panel.style.marginTop='16px';
-    panel.innerHTML=`<div class="eyebrow">GAME ANALYSIS</div><h3 style="margin:6px 0 8px">Retrieve Recording · Detect Periods · Analyze</h3><p>Analyze Game reuses this game's capture or retrieves its saved Twitch replay. Existing jobs resume without starting again.</p><div class="vod-actions"><button id="vodAnalyzeGame" class="small-btn primary" type="button">Analyze Game</button><button id="vodCheckPipeline" class="small-btn" type="button">Check Status</button><button id="vodRetryPipeline" class="small-btn" type="button">Continue / Retry</button><button id="vodEliteReanalyze" class="small-btn" type="button">Re-run Elite Scout</button></div>
+    panel.innerHTML=`<div class="eyebrow">GAME ANALYSIS</div><h3 style="margin:6px 0 8px">Retrieve Recording · Detect Periods · Analyze</h3><p>Analyze Game reuses this game's capture or retrieves its saved Twitch replay. Existing jobs resume without starting again.</p><div class="vod-actions"><button id="vodAnalyzeGame" class="small-btn primary" type="button">Analyze Game</button></div><details id="vodPipelineAdvanced"><summary>Advanced Tools</summary><div class="vod-actions"><button id="vodCheckPipeline" class="small-btn" type="button">Check Status</button><button id="vodRetryPipeline" class="small-btn" type="button">Continue / Retry</button><button id="vodEliteReanalyze" class="small-btn" type="button">Re-run Elite Scout</button></div>
     <details id="vodTwitchConnect" style="margin-top:12px"><summary>Twitch Retrieval Connection <span id="vodTwitchAuthBadge" class="status-pill" style="margin-left:8px">CHECKING</span></summary><p><strong>Only needed when Twitch blocks anonymous VOD playback.</strong> Paste the Twitch website <code>auth-token</code> here, never into chat. It is stored privately on the Railway worker and is not written to logs.</p><div class="vod-form"><label class="wide">Twitch web auth-token<input id="vodTwitchToken" class="field mono" type="password" autocomplete="off" placeholder="Private token · not your password"></label></div><div class="vod-actions"><button id="vodSaveTwitchAuth" class="small-btn primary" type="button">Connect Twitch Retrieval</button><button id="vodClearTwitchAuth" class="small-btn" type="button">Disconnect</button><span id="vodTwitchAuthMsg" class="copy-feedback"></span></div><small>This token can grant broad Twitch account access. Use it only on this private management page and revoke it from Twitch Security if you no longer want the worker connected.</small></details>
-    <details style="margin-top:12px" open><summary>Recording source / game window / upload fallback</summary><p>Use the exact Twitch replay plus the start and end of this game inside the full broadcast. Railway will retrieve only that window instead of swallowing the entire VOD like a very stupid pelican.</p><div class="vod-form"><label class="wide">Saved Twitch replay URL<input id="vodReplayUrl" class="field" type="url" placeholder="https://www.twitch.tv/videos/..."></label><label>Game starts in full VOD<input id="vodSourceStart" class="field mono" placeholder="0:00"></label><label>Game ends in full VOD<input id="vodSourceEnd" class="field mono" placeholder="28:40"></label><label>Game format<select id="vodGameFormat" class="select-field"><option value="6s">6s</option><option value="4s">4s</option><option value="3s">3s</option><option value="HUT">HUT</option><option value="unknown">Unknown</option></select></label><label class="wide">Lineup / scouting context<textarea id="vodScoutingContext" class="text-input" placeholder="Calgary: LW ..., C ..., RW ..., LD ..., RD ..., G ...&#10;Opponent: ..."></textarea></label></div><button id="vodSaveReplay" class="small-btn" type="button">Save source + game window</button><p>Or upload an MP4 / MOV recording containing this game:</p><input id="vodPipelineFile" class="field" type="file" accept="video/mp4,video/quicktime,.mp4,.mov"><button id="vodStartPipeline" class="small-btn" type="button">Upload & Start Pipeline</button></details><small id="vodPipelineStatus">Press Analyze Game to retrieve the saved recording.</small>`;
+    <details style="margin-top:12px"><summary>Recording source / game window / upload fallback</summary><p>Use the exact Twitch replay plus the start and end of this game inside the full broadcast. The worker retrieves bounded slices of this game and keeps each period separate.</p><div class="vod-form"><label class="wide">Saved Twitch replay URL<input id="vodReplayUrl" class="field" type="url" placeholder="https://www.twitch.tv/videos/..."></label><label>Game starts in full VOD<input id="vodSourceStart" class="field mono" placeholder="0:00"></label><label>Game ends in full VOD<input id="vodSourceEnd" class="field mono" placeholder="28:40"></label><label>Game format<select id="vodGameFormat" class="select-field"><option value="6s">6s</option><option value="4s">4s</option><option value="3s">3s</option><option value="HUT">HUT</option><option value="unknown">Unknown</option></select></label><label class="wide">Lineup / scouting context<textarea id="vodScoutingContext" class="text-input" placeholder="Calgary: LW ..., C ..., RW ..., LD ..., RD ..., G ...&#10;Opponent: ..."></textarea></label></div><button id="vodSaveReplay" class="small-btn" type="button">Save source + game window</button><p>Or upload an MP4 / MOV recording containing this game:</p><input id="vodPipelineFile" class="field" type="file" accept="video/mp4,video/quicktime,.mp4,.mov"><button id="vodStartPipeline" class="small-btn" type="button">Upload & Start Pipeline</button></details></details><small id="vodPipelineStatus">Press Analyze Game to retrieve the saved recording.</small>`;
     anchor.insertAdjacentElement('afterend',panel);
     document.getElementById('vodStartPipeline')?.addEventListener('click',start);
     document.getElementById('vodCheckPipeline')?.addEventListener('click',checkSelected);
     document.getElementById('vodRetryPipeline')?.addEventListener('click',retry);
     document.getElementById('vodEliteReanalyze')?.addEventListener('click',reanalyzeElite);
-    document.getElementById('vodAnalyzeGame')?.addEventListener('click',analyzeGame);
+    document.getElementById('vodAnalyzeGame')?.addEventListener('click',async()=>{const r=await currentReview();if(r?.worker_status==='ready_for_review')return reanalyzeElite();return analyzeGame();});
     document.getElementById('vodSaveReplay')?.addEventListener('click',saveReplay);
     document.getElementById('vodSaveTwitchAuth')?.addEventListener('click',saveTwitchAuth);
     document.getElementById('vodClearTwitchAuth')?.addEventListener('click',clearTwitchAuth);
@@ -301,21 +301,11 @@
       if(!confirm('Run a fresh Elite Scout pass on the saved recording? This replaces the old AI evidence but keeps the video.'))return;
       setStatus('Starting a fresh elite scouting pass on the saved recording…');
       const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/reanalyze`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
-      const oldAiMarkers=await db().from('vod_review_markers').delete().eq('review_id',review.id).like('note','[AI%');
-      if(oldAiMarkers.error)throw oldAiMarkers.error;
-      const resetSegments=await db().from('vod_review_segments').update({
-        analysis_summary:null,offense_notes:null,defense_notes:null,transition_notes:null,
-        special_teams_notes:null,player_notes:[],tags:[],status:'queued',confidence:'preliminary',
-        updated_at:new Date().toISOString()
-      }).eq('review_id',review.id);
-      if(resetSegments.error)throw resetSegments.error;
-      const resetReview=await db().from('vod_review_sessions').update({
-        worker_status:job.status,status:'queued',
-        full_game_summary:null,recurring_patterns:null,strengths:null,corrections:null,
-        tactical_report:null,player_report:null,professional_writeup:null,
-        worker_updated_at:new Date().toISOString(),updated_at:new Date().toISOString()
-      }).eq('id',review.id);
-      if(resetReview.error)throw resetReview.error;
+      // Keep the previous evidence available until a successful replacement is imported.
+      const {error:resetError}=await db().from('vod_review_segments').update({status:'queued',updated_at:new Date().toISOString()}).eq('review_id',review.id);
+      if(resetError)throw resetError;
+      const {error:reviewError}=await db().from('vod_review_sessions').update({worker_status:job.status,status:'queued',review_document:null,updated_at:new Date().toISOString()}).eq('id',review.id);
+      if(reviewError)throw reviewError;
       setStatus('Fresh scout pass queued. The original recording is being reused.','good');
       beginPoll(review.worker_job_id,review.id);
     }catch(e){setStatus(e.message||'Fresh scout pass could not be started.','bad');}
@@ -337,9 +327,14 @@
     const {data:review,error:rerr}=await db().from('vod_review_sessions').select('team_id,source_start_seconds').eq('id',reviewId).maybeSingle();
     if(rerr)throw rerr;if(!review?.team_id)return false;
     const offset=sourceOffset(review);
-    const payload=periods.map((p,i)=>({review_id:reviewId,team_id:review.team_id,segment_type:'period',segment_index:i+1,label:p.label||`Period ${i+1}`,start_seconds:offset+Number(p.start),end_seconds:offset+Number(p.end),status:'queued',confidence:'preliminary'}));
+    let otIndex=0;
+    const payload=periods.map((p,i)=>{const ot=/over|\bot\b/i.test(p.label||'');return {review_id:reviewId,team_id:review.team_id,segment_type:ot?'overtime':'period',segment_index:ot?++otIndex:i+1,label:p.label||`Period ${i+1}`,start_seconds:Math.round(offset+Number(p.start)),end_seconds:Math.round(offset+Number(p.end)),status:'queued',confidence:'preliminary'};});
+    const boundReview=await db().from('vod_review_sessions').select('*').eq('id',reviewId).single();
+    if(boundReview.error)throw boundReview.error;
+    const problems=window.WildmanVODReview.periodErrors(boundReview.data,payload);
+    if(problems.length)throw new Error(problems.join(' '));
     const {error}=await db().from('vod_review_segments').upsert(payload,{onConflict:'review_id,segment_type,segment_index'});if(error)throw error;
-    await db().from('vod_review_sessions').update({duration_seconds:Number(job.result?.duration)||null,overtime_count:0,updated_at:new Date().toISOString()}).eq('id',reviewId);
+    await db().from('vod_review_sessions').update({duration_seconds:Number(job.result?.duration)||null,overtime_count:otIndex,updated_at:new Date().toISOString()}).eq('id',reviewId);
     return true;
   }
 
@@ -362,7 +357,7 @@
       else if(job.status==='awaiting_ai')setStatus(job.result?.period_detection==='auto'?'Periods detected automatically ✓ Video is split and ready. AI scouting is the only remaining connection. No re-upload needed.':'Video validated and split into period-sized work. AI is not connected to Railway yet. No re-upload is needed once the AI connection is added.','warn');
       else if(job.status==='ready_for_review'){
         const review=await currentReview();
-        if(review?.status==='complete'||(review?.status==='reviewing'&&review?.full_game_summary))setStatus('Analysis is saved. Review the notes and game report below.','good');
+        if(review?.worker_result?.chunks?.length&&review.worker_result?.website_imported===true&&(review?.status==='complete'||(review?.status==='reviewing'&&review?.full_game_summary)))setStatus('Analysis is saved. Review the notes and game report below.','good');
         else{setStatus('AI period review finished. Importing results into VOD Lab…','good');await ingest(job,reviewId);}
       }
       else if(job.status==='failed'||job.status==='expired'){
@@ -397,29 +392,33 @@
 
   async function ingest(job,reviewId){
     const chunks=job?.result?.chunks||[]; if(!chunks.length)return;
-    const {data:review,error:reviewError}=await db().from('vod_review_sessions').select('team_id,source_start_seconds').eq('id',reviewId).maybeSingle();
+    const {data:review,error:reviewError}=await db().from('vod_review_sessions').select('*').eq('id',reviewId).maybeSingle();
     if(reviewError)throw reviewError;if(!review?.team_id)throw new Error('VOD review team is missing.');
     const offset=sourceOffset(review);
     let {data:segments,error}=await db().from('vod_review_segments').select('*').eq('review_id',reviewId).order('start_seconds');
     if(error)throw error;
 
     const fallbackFullGame=job?.result?.period_detection==='full_game_fallback';
-    if((!segments||!segments.length)&&fallbackFullGame){
-      const duration=Number(job?.result?.duration)||Math.max(...chunks.map(c=>Number(c.end)||0));
-      const {data:created,error:cerr}=await db().from('vod_review_segments').insert({
-        review_id:reviewId,team_id:review.team_id,segment_type:'custom',segment_index:1,label:'Full Game',
-        start_seconds:offset,end_seconds:offset+duration,status:'queued',confidence:'preliminary'
-      }).select('*').single();
-      if(cerr)throw cerr;
-      segments=[created];
+    if(fallbackFullGame){
+      setStatus('Period detection needs correction. Full-game fallback evidence is retained on the worker; confirm period boundaries before importing.','warn');
+      document.getElementById('manualPeriodBuilder').open=true;
+      return;
     }
-
+    const problems=window.WildmanVODReview.periodErrors(review,segments||[]);
+    if(problems.length){
+      const saved=await db().from('vod_review_sessions').update({worker_result:job.result,status:'reviewing',updated_at:new Date().toISOString()}).eq('id',reviewId);
+      if(saved.error)throw saved.error;
+      document.getElementById('manualPeriodBuilder').hidden=false;
+      document.getElementById('manualPeriodBuilder').open=true;
+      throw new Error('Confirm period boundaries before import: '+problems.join(' '));
+    }
     const existingMarkers=await db().from('vod_review_markers').select('timestamp_seconds,note').eq('review_id',reviewId);
+    if(existingMarkers.error)throw existingMarkers.error;
     const seen=new Set((existingMarkers.data||[]).map(m=>`${Math.round(Number(m.timestamp_seconds)||0)}|${m.note}`));
     const summaries=[]; const markers=[];
     for(const seg of segments||[]){
       const matched=fallbackFullGame?chunks:chunks.filter(c=>c.label===seg.label);
-      if(!matched.length)continue;
+      if(!matched.length||seg.status==='complete')continue;
       const summary=matched.map(c=>c.review?.summary).filter(Boolean).join('\n\n');
       const uncertainties=[...new Set(matched.flatMap(c=>c.review?.uncertainties||[]))];
       const observationPlayers=matched.flatMap(c=>(c.review?.observations||[]).filter(o=>o.player).map(o=>`${o.player} — ${o.note}`));
@@ -442,6 +441,12 @@
       const notes=[summary,tacticalText,uncertainties.length?`Needs review: ${uncertainties.join(' | ')}`:''].filter(Boolean).join('\n\n');
       const {error:uerr}=await db().from('vod_review_segments').update({
         analysis_summary:notes||null,player_notes:playerNotes,
+        forecheck_notes:tactical.map(t=>t.forecheck).filter(Boolean).join('\n')||null,
+        breakout_notes:tactical.map(t=>t.breakout).filter(Boolean).join('\n')||null,
+        offense_notes:tactical.map(t=>t.offense).filter(Boolean).join('\n')||null,
+        defense_notes:tactical.map(t=>t.defense).filter(Boolean).join('\n')||null,
+        transition_notes:tactical.map(t=>t.transition).filter(Boolean).join('\n')||null,
+        special_teams_notes:tactical.map(t=>t.special_teams).filter(Boolean).join('\n')||null,
         tags:[...new Set(matched.flatMap(c=>(c.review?.observations||[]).map(o=>o.source)))],
         status:'needs_review',confidence:'preliminary',updated_at:new Date().toISOString()
       }).eq('id',seg.id);
@@ -452,16 +457,17 @@
         const impact=o.impact?` · ${o.impact}`:'';
         const note=`[AI ${String(o.source||'gameplay').replaceAll('_',' ')} · ${category}${impact}] ${o.note}`;
         const absoluteTimestamp=offset+(Number(o.timestamp)||0);
+        if(!Number.isFinite(absoluteTimestamp)||absoluteTimestamp<seg.start_seconds||absoluteTimestamp>seg.end_seconds)continue;
         const key=`${Math.round(absoluteTimestamp)}|${note}`;
         if(seen.has(key))continue; seen.add(key);
-        markers.push({review_id:reviewId,segment_id:seg.id,team_id:seg.team_id,timestamp_seconds:absoluteTimestamp,category:'general',player_label:o.player||null,note,created_by:auth().user?.id||null});
+        markers.push({review_id:reviewId,segment_id:seg.id,team_id:seg.team_id,timestamp_seconds:Math.round(absoluteTimestamp),category:'general',player_label:o.player||null,note,created_by:auth().user?.id||null});
       }
     }
     if(markers.length){const {error:merr}=await db().from('vod_review_markers').insert(markers);if(merr)throw merr;}
 
     const rollup=job?.result?.game_rollup||{};
     const payload={
-      worker_result:job.result,
+      worker_result:{...job.result,website_imported:true},
       full_game_summary:rollup.summary||summaries.join('\n\n')||null,
       recurring_patterns:rollup.patterns||null,
       strengths:rollup.strengths||null,
@@ -484,6 +490,7 @@
     try{
       const review=await currentReview(); if(!review)return;
       if(selectedReviewId()!==review.id)return;
+      const analyzeButton=document.getElementById('vodAnalyzeGame');if(analyzeButton)analyzeButton.textContent=review.worker_status==='ready_for_review'?'Re-run Analysis':'Analyze Game';
       const source=document.getElementById('vodReplayUrl');if(source)source.value=review.vod_url||'';
       const start=document.getElementById('vodSourceStart');if(start)start.value=fmtClock(sourceOffset(review));
       const end=document.getElementById('vodSourceEnd');if(end)end.value=review.source_end_seconds==null?'':fmtClock(review.source_end_seconds);
@@ -529,4 +536,3 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});});
   else{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});}
 })();
-

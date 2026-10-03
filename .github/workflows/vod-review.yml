@@ -1,0 +1,31 @@
+name: VOD management review
+on:
+  push:
+    branches: [main, fix/vod-management-review]
+  pull_request:
+    paths:
+      - 'vod-*'
+      - 'hitmen-player-locker*'
+      - 'api/chelscout-deepthink.js'
+      - 'test-vod-*'
+      - 'test-deep-scout.cjs'
+      - '.github/workflows/vod-review.yml'
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node --test test-vod-review.cjs test-deep-scout.cjs
+      - run: npm install --prefix /tmp/vod-browser playwright@1.56.1
+      - run: /tmp/vod-browser/node_modules/.bin/playwright install --with-deps chromium
+      - name: Management workflow browser checks
+        env:
+          NODE_PATH: /tmp/vod-browser/node_modules
+        run: |
+          export CHROMIUM_PATH="$(node -p 'require("playwright").chromium.executablePath()')"
+          node test-vod-browser.cjs
