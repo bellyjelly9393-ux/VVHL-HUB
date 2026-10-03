@@ -75,6 +75,12 @@
     if(error)throw error;
     return (data||[]).filter(s=>s.end_seconds!=null).map(s=>({id:s.id,label:s.label,start:Number(s.start_seconds),end:Number(s.end_seconds)}));
   }
+  async function requiredPeriodsImported(reviewId){
+    const {data,error}=await db().from('vod_review_segments').select('segment_type,segment_index,analysis_summary').eq('review_id',reviewId).eq('segment_type','period');
+    if(error)throw error;
+    const periods=data||[];
+    return [1,2,3].every(index=>periods.some(p=>Number(p.segment_index)===index&&String(p.analysis_summary||'').trim()));
+  }
   const sourceOffset=review=>Math.max(0,Number(review?.source_start_seconds)||0);
   const workerPeriods=(review,periods)=>{
     const offset=sourceOffset(review);
@@ -357,8 +363,12 @@
       else if(job.status==='awaiting_ai')setStatus(job.result?.period_detection==='auto'?'Periods detected automatically ✓ Video is split and ready. AI scouting is the only remaining connection. No re-upload needed.':'Video validated and split into period-sized work. AI is not connected to Railway yet. No re-upload is needed once the AI connection is added.','warn');
       else if(job.status==='ready_for_review'){
         const review=await currentReview();
-        if(review?.worker_result?.chunks?.length&&review.worker_result?.website_imported===true&&(review?.status==='complete'||(review?.status==='reviewing'&&review?.full_game_summary)))setStatus('Analysis is saved. Review the notes and game report below.','good');
-        else{setStatus('AI period review finished. Importing results into VOD Lab…','good');await ingest(job,reviewId);}
+        const periodsImported=await requiredPeriodsImported(reviewId);
+        if(periodsImported&&review?.worker_result?.website_imported===true)setStatus('Analysis is saved. Review the notes and game report below.','good');
+        else{
+          setStatus(periodsImported?'Refreshing completed worker evidence…':'Completed worker analysis found. Repairing missing period evidence…','good');
+          await ingest(job,reviewId);
+        }
       }
       else if(job.status==='failed'||job.status==='expired'){
         const code=job.result?.failure_code||'';
@@ -391,7 +401,9 @@
   }
 
   async function ingest(job,reviewId){
-    const chunks=job?.result?.chunks||[]; if(!chunks.length)return;
+    const chunks=job?.result?.chunks||[];
+    const periodReports=job?.result?.period_reports||[];
+    if(!chunks.length&&!periodReports.length)throw new Error('The worker finished without importable period evidence. Keep this review private and retry the worker before approving.');
     const {data:review,error:reviewError}=await db().from('vod_review_sessions').select('*').eq('id',reviewId).maybeSingle();
     if(reviewError)throw reviewError;if(!review?.team_id)throw new Error('VOD review team is missing.');
     const offset=sourceOffset(review);
@@ -418,8 +430,11 @@
     const summaries=[]; const markers=[];
     for(const seg of segments||[]){
       const matched=fallbackFullGame?chunks:chunks.filter(c=>c.label===seg.label);
-      if(!matched.length||seg.status==='complete')continue;
-      const summary=matched.map(c=>c.review?.summary).filter(Boolean).join('\n\n');
+      const periodReport=periodReports.find(p=>p?.label===seg.label)?.report||null;
+      if((!matched.length&&!periodReport)||seg.status==='complete')continue;
+      const summary=matched.length
+        ?matched.map(c=>c.review?.summary).filter(Boolean).join('\n\n')
+        :String(periodReport?.summary||'').trim();
       const uncertainties=[...new Set(matched.flatMap(c=>c.review?.uncertainties||[]))];
       const observationPlayers=matched.flatMap(c=>(c.review?.observations||[]).filter(o=>o.player).map(o=>`${o.player} — ${o.note}`));
       const evaluatedPlayers=matched.flatMap(c=>(c.review?.player_evaluations||[]).map(p=>{
@@ -428,7 +443,8 @@
         const evidence=stamps.length?` [evidence: ${stamps.join(', ')}s]`:'';
         return `${p.player}${pos} — Strengths: ${p.strengths||'—'} | Concerns: ${p.concerns||'—'} | Habits: ${p.habits||'—'} | Coach: ${p.coach_note||'—'} | Confidence: ${p.confidence||'low'}${evidence}`;
       }));
-      const playerNotes=[...new Set([...evaluatedPlayers,...observationPlayers])];
+      const fallbackPlayers=periodReport?.player_report?[String(periodReport.player_report)]:[];
+      const playerNotes=[...new Set([...evaluatedPlayers,...observationPlayers,...fallbackPlayers])];
       const tactical=matched.map(c=>c.review?.tactical).filter(Boolean);
       const tacticalText=tactical.length?[
         ...new Set(tactical.flatMap(t=>[
@@ -438,7 +454,8 @@
           t.game_management&&`Game management: ${t.game_management}`
         ].filter(Boolean)))
       ].join('\n'):'';
-      const notes=[summary,tacticalText,uncertainties.length?`Needs review: ${uncertainties.join(' | ')}`:''].filter(Boolean).join('\n\n');
+      const fallbackTactical=!matched.length&&periodReport?.tactical_report?String(periodReport.tactical_report):'';
+      const notes=[summary,tacticalText||fallbackTactical,uncertainties.length?`Needs review: ${uncertainties.join(' | ')}`:''].filter(Boolean).join('\n\n');
       const {error:uerr}=await db().from('vod_review_segments').update({
         analysis_summary:notes||null,player_notes:playerNotes,
         forecheck_notes:tactical.map(t=>t.forecheck).filter(Boolean).join('\n')||null,
