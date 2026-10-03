@@ -1007,6 +1007,13 @@ def process_streamed_replay(job_id):
         finally:
             shutil.rmtree(frame_dir, ignore_errors=True)
 
+    # The streamed source uses local clip time; reports retain game-relative time.
+    # Inspect the play before releasing this period part, just as for uploads.
+    result['stage'] = 'checking_period_sequences'
+    update(job_id, 'processing', result)
+    review_sequences(job_id, source, period_chunks, metadata, result,
+                     source_offset=period_base, frame_size='640:360')
+
     # One synthesis per period. This is the durable "put it through" result before
     # we delete that period's temporary video.
     period_complete = period_index + 1 >= len(periods) or periods[period_index + 1]['label'] != label
@@ -1040,6 +1047,35 @@ def process_streamed_replay(job_id):
         metadata['media_released_at'] = time.time()
         update_metadata(job_id, metadata)
 
+
+
+def review_sequences(job_id, source, chunks, metadata, result,
+                     source_offset=0, frame_size='1280:720'):
+    """Persist bounded closer looks through the existing authenticated GM model."""
+    for saved in chunks:
+        if saved.get('sequence_checked'):
+            continue
+        window = sequence_window(saved['review'], saved)
+        if window:
+            start, end = window['start'] - source_offset, window['end'] - source_offset
+            if start < 0 or end <= start:
+                raise Problem(422, 'Closer review falls outside this recording part.')
+            frame_dir = source.parent / 'sequence-frames'
+            shutil.rmtree(frame_dir, ignore_errors=True)
+            try:
+                frames = extract_frames(source, frame_dir, start, end, .5, frame_size)
+                context = {**metadata, 'current_period': saved.get('label'),
+                           'review_pass': 'closer gameplay sequence'}
+                # An independent look: do not supply the first-pass verdict.
+                context.pop('previous_chunk', None)
+                detail = analyze(frames, window, context, .5)
+                saved['sequence_review'] = {**window, 'frame_step_seconds': .5, 'review': detail}
+            finally:
+                shutil.rmtree(frame_dir, ignore_errors=True)
+        saved['sequence_checked'] = True
+        update(job_id, 'processing', result)
+        if window and AI_CHUNK_PAUSE > 0:
+            STOP.wait(AI_CHUNK_PAUSE)
 
 
 def process(job_id):
@@ -1116,26 +1152,7 @@ def process(job_id):
     # Persist each closer look separately, so a synthesis retry does not pay for it again.
     result['stage'] = 'checking_sequences'
     update(job_id, 'processing', result)
-    for saved in result['chunks']:
-        if saved.get('sequence_checked'):
-            continue
-        window = sequence_window(saved['review'], saved)
-        if window:
-            frame_dir = directory / 'sequence-frames'
-            shutil.rmtree(frame_dir, ignore_errors=True)
-            try:
-                frames = extract_frames(source, frame_dir, window['start'], window['end'], .5)
-                context = {**job['metadata'], 'review_pass': 'closer gameplay sequence',
-                           'ai_rate_limit_retries': retry_count}
-                # Do not feed the first-pass verdict back to this pass: reduce anchoring.
-                detail = analyze(frames, window, context, .5)
-                saved['sequence_review'] = {**window, 'frame_step_seconds': .5, 'review': detail}
-            finally:
-                shutil.rmtree(frame_dir, ignore_errors=True)
-        saved['sequence_checked'] = True
-        update(job_id, 'processing', result)
-        if window and AI_CHUNK_PAUSE > 0:
-            STOP.wait(AI_CHUNK_PAUSE)
+    review_sequences(job_id, source, result['chunks'], job['metadata'], result)
     result.pop('plan', None)
     # Persist chunk evidence before synthesis. A failed synthesis must remain
     # retriable, not become a successful report with missing sections.

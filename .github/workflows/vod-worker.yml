@@ -1,7 +1,7 @@
 name: VOD worker checks
 on:
   push:
-    branches: [feature/video-review-worker, fix/vod-worker-management]
+    branches: [main, feature/video-review-worker, fix/vod-worker-management, fix/vod-scout-sequences]
     paths: ['video-worker/**', '.github/workflows/vod-worker.yml']
   pull_request:
     paths: ['video-worker/**', '.github/workflows/vod-worker.yml']

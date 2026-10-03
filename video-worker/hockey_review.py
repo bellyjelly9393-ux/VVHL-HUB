@@ -1,6 +1,6 @@
 """Evidence rules shared by the visual scout and report writer."""
 
-REVIEW_VERSION = '2026-10-02-management-v3'
+REVIEW_VERSION = '2026-10-03-chelscout-sequences-v4'
 
 HOCKEY_RUBRIC = '''
 HOCKEY READS AND EVIDENCE STANDARD
@@ -30,6 +30,13 @@ Every substantive claim must cite a supplied recording timestamp. A useful coach
 note states observed situation -> decision/read -> visible consequence (or unknown)
 -> a specific alternative and when to use it. Separate observed fact, tactical
 interpretation and recommendation. Do not manufacture an outcome between sparse frames.
+Apply the GM scouting framework to the visible sequence: identify pressure, the player's
+responsibility, available support, the selected option, and the visible consequence.
+For centers examine low support and middle-lane responsibility; for wings examine wall
+outlets, inside support and recovery; for defense examine retrievals, first passes,
+gap and partner coverage; for goalies examine shot context, screens and rebound support.
+These are questions to investigate, never automatic claims about a player's behavior.
+Give each supported concern a practical next-game adjustment and explain its tradeoff.
 Player evaluations require readable identity linked to gameplay AND cited gameplay
 evidence. Remove unsupported player evaluations; roster/loadout context is not enough.
 One play is a single observation, not a habit. Repeated tendencies require at least two

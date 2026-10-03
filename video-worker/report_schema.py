@@ -45,17 +45,31 @@ Existing closer looks and replayed footage are the same play, not additional evi
 '''
 
 def verified_report(report, chunks):
-    observations = [o for c in chunks for o in (c.get('review') or {}).get('observations', [])
-                    if o.get('source') == 'gameplay' and isinstance(o.get('timestamp'), (int, float))
-                    and not isinstance(o.get('timestamp'), bool) and math.isfinite(o['timestamp'])
-                    and c.get('start', 0) <= o['timestamp'] <= c.get('end', 0)]
+    observations = []
+    closer_windows = []
+    def valid_time(value):
+        return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    for c in chunks:
+        sources = [(c.get('review') or {}, c.get('start', 0), c.get('end', 0))]
+        closer = c.get('sequence_review') or {}
+        start, end = closer.get('start'), closer.get('end')
+        if (valid_time(start) and valid_time(end)
+                and c.get('start', 0) <= start < end <= c.get('end', 0)
+                and isinstance(closer.get('review'), dict)):
+            closer_windows.append((start, end))
+            sources.append((closer['review'], start, end))
+        for evidence, lower, upper in sources:
+            observations.extend(o for o in evidence.get('observations', [])
+                                if o.get('source') == 'gameplay' and valid_time(o.get('timestamp'))
+                                and lower <= o['timestamp'] <= upper)
     def times_for(name=None):
         return {o['timestamp'] for o in observations
                 if name is None or str(o.get('player') or '').strip().casefold() == name}
     def safe_rating(value, times):
         score = value.get('score') if isinstance(value, dict) else None
         # Eight-second closer reviews are not independent sequences.
-        enough = len(times) >= 2 and max(times) - min(times) >= 8
+        enough = (len(times) >= 2 and max(times) - min(times) >= 8
+                  and not any(start <= min(times) <= max(times) <= end for start, end in closer_windows))
         if (not enough or isinstance(score, bool) or not isinstance(score, (int, float))
                 or not math.isfinite(score) or not 0 <= score <= 100):
             return {'score': None, 'reason': 'Insufficient independent reviewed gameplay evidence.'}
