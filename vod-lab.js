@@ -168,13 +168,14 @@
       const displayLabel=waiting?"waiting for analysis":String(s.status).replaceAll("_"," ");
       return `<article class="segment-card${s.id===state.selectedSegmentId?" selected":""}">
       <div class="segment-card-head"><div><h4>${esc(s.label)}</h4><small>${esc(fmtTime(s.start_seconds))} → ${esc(fmtTime(s.end_seconds))}${s.end_seconds!=null?` · ${fmtTime(s.end_seconds-s.start_seconds)}`:""}</small></div><span class="segment-pill ${esc(displayStatus)}">${esc(displayLabel)}</span></div>
-      <p class="segment-preview">${esc((s.analysis_summary||"Waiting for period analysis.").slice(0,180))}</p><div class="segment-card-actions"><button class="small-btn" type="button" data-segment-id="${esc(s.id)}">Review</button>${segmentHasAnalysis(s)&&s.status!=="complete"?`<button class="small-btn primary" type="button" data-quick-approve="${esc(s.id)}">✓ Approve Period</button>`:s.status==="complete"?`<button class="small-btn" type="button" disabled>✓ Approved</button>`:""}</div>
+      <p class="segment-preview">${esc((s.analysis_summary||"Waiting for period analysis.").slice(0,180))}</p><div class="segment-card-actions"><button class="small-btn" type="button" data-segment-id="${esc(s.id)}">Review</button>${segmentHasAnalysis(s)&&s.status!=="complete"?`<button class="small-btn primary" type="button" data-quick-approve="${esc(s.id)}">✓ Approve Period</button>`:s.status==="complete"?`<button class="small-btn" type="button" disabled>✓ Approved</button>`:""}${s.segment_type==="custom"?`<button class="small-btn" type="button" data-remove-custom="${esc(s.id)}">Remove Custom Period</button>`:""}</div>
     </article>`;
     }).join("");
     const ready=segs.filter(s=>segmentHasAnalysis(s)&&s.status!=="complete");
     if(ready.length>1)el.insertAdjacentHTML("beforeend",`<div class="segment-card-actions"><button class="small-btn primary" type="button" id="approveAllReadyPeriods">✓ Approve All Ready Periods (${ready.length})</button></div>`);
     el.querySelectorAll("[data-segment-id]").forEach(b=>b.addEventListener("click",()=>selectSegment(b.dataset.segmentId)));
     el.querySelectorAll("[data-quick-approve]").forEach(b=>b.addEventListener("click",()=>quickApproveSegment(b.dataset.quickApprove)));
+    el.querySelectorAll("[data-remove-custom]").forEach(b=>b.addEventListener("click",()=>removeCustomSegment(b.dataset.removeCustom)));
     el.querySelector("#approveAllReadyPeriods")?.addEventListener("click",approveAllReadyPeriods);
     el.querySelectorAll("[data-segment-open]").forEach(b=>b.addEventListener("click",()=>openSegmentById(b.dataset.segmentOpen)));
   }
@@ -365,6 +366,20 @@
     const sourceStart=Math.max(0,Number(r.source_start_seconds)||0);
     const {data,error}=await db().from("vod_review_segments").insert({review_id:r.id,team_id:state.teamId,segment_type:"custom",segment_index:idx,label:`Custom ${idx}`,start_seconds:sourceStart,status:"queued"}).select().single();
     if(error)return setStatus(error.message,"error"); await loadData(); state.selectedSegmentId=data.id;renderAll();setStatus("Custom segment added. Set its timestamps and review it independently.","success");
+  }
+
+  async function removeCustomSegment(id){
+    const s=state.segments.find(x=>x.id===id&&x.review_id===state.selectedReviewId);
+    if(!s||s.segment_type!=="custom")return setStatus("Only custom periods can be removed here.","error");
+    if(!confirm(`Remove ${s.label}? Its saved custom-period analysis and timestamp markers will also be removed.`))return;
+    try{
+      const {error:markerError}=await db().from("vod_review_markers").delete().eq("segment_id",s.id).eq("team_id",state.teamId);
+      if(markerError)throw markerError;
+      const {data,error}=await db().from("vod_review_segments").delete().eq("id",s.id).eq("team_id",state.teamId).eq("segment_type","custom").select("id");
+      if(error)throw error;if(!data?.length)throw new Error("Custom period was not removed. Refresh and check your management access.");
+      if(state.selectedSegmentId===s.id)state.selectedSegmentId="";
+      await loadData();setStatus(`${s.label} removed.`,"success");
+    }catch(error){setStatus(error.message||"Could not remove custom period.","error");}
   }
 
   async function quickApproveSegment(id){
