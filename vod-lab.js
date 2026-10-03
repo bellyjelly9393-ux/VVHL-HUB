@@ -168,10 +168,14 @@
       const displayLabel=waiting?"waiting for analysis":String(s.status).replaceAll("_"," ");
       return `<article class="segment-card${s.id===state.selectedSegmentId?" selected":""}">
       <div class="segment-card-head"><div><h4>${esc(s.label)}</h4><small>${esc(fmtTime(s.start_seconds))} → ${esc(fmtTime(s.end_seconds))}${s.end_seconds!=null?` · ${fmtTime(s.end_seconds-s.start_seconds)}`:""}</small></div><span class="segment-pill ${esc(displayStatus)}">${esc(displayLabel)}</span></div>
-      <p class="segment-preview">${esc((s.analysis_summary||"Waiting for period analysis.").slice(0,180))}</p><div class="segment-card-actions"><button class="small-btn" type="button" data-segment-id="${esc(s.id)}">Review</button></div>
+      <p class="segment-preview">${esc((s.analysis_summary||"Waiting for period analysis.").slice(0,180))}</p><div class="segment-card-actions"><button class="small-btn" type="button" data-segment-id="${esc(s.id)}">Review</button>${segmentHasAnalysis(s)&&s.status!=="complete"?`<button class="small-btn primary" type="button" data-quick-approve="${esc(s.id)}">✓ Approve Period</button>`:s.status==="complete"?`<button class="small-btn" type="button" disabled>✓ Approved</button>`:""}</div>
     </article>`;
     }).join("");
+    const ready=segs.filter(s=>segmentHasAnalysis(s)&&s.status!=="complete");
+    if(ready.length>1)el.insertAdjacentHTML("beforeend",`<div class="segment-card-actions"><button class="small-btn primary" type="button" id="approveAllReadyPeriods">✓ Approve All Ready Periods (${ready.length})</button></div>`);
     el.querySelectorAll("[data-segment-id]").forEach(b=>b.addEventListener("click",()=>selectSegment(b.dataset.segmentId)));
+    el.querySelectorAll("[data-quick-approve]").forEach(b=>b.addEventListener("click",()=>quickApproveSegment(b.dataset.quickApprove)));
+    el.querySelector("#approveAllReadyPeriods")?.addEventListener("click",approveAllReadyPeriods);
     el.querySelectorAll("[data-segment-open]").forEach(b=>b.addEventListener("click",()=>openSegmentById(b.dataset.segmentOpen)));
   }
   function renderSegmentEditor(){
@@ -361,6 +365,35 @@
     const sourceStart=Math.max(0,Number(r.source_start_seconds)||0);
     const {data,error}=await db().from("vod_review_segments").insert({review_id:r.id,team_id:state.teamId,segment_type:"custom",segment_index:idx,label:`Custom ${idx}`,start_seconds:sourceStart,status:"queued"}).select().single();
     if(error)return setStatus(error.message,"error"); await loadData(); state.selectedSegmentId=data.id;renderAll();setStatus("Custom segment added. Set its timestamps and review it independently.","success");
+  }
+
+  async function quickApproveSegment(id){
+    if(savingPeriod)return;
+    const s=state.segments.find(x=>x.id===id&&x.review_id===state.selectedReviewId);
+    if(!s||s.status==="complete")return;
+    if(!segmentHasAnalysis(s))return setStatus(`${s?.label||"Period"} cannot be approved until analysis evidence is imported.`,"error");
+    savingPeriod=true;
+    try{
+      const {data,error}=await db().from("vod_review_segments").update({status:"complete",analyzed_by:auth().user?.id||null,updated_at:new Date().toISOString()}).eq("id",s.id).eq("updated_at",s.updated_at).select("id");
+      if(error)throw error;if(!data?.length)throw new Error("This period changed elsewhere. Refresh before approving.");
+      await loadData();setStatus(`${s.label} approved. No extra review screen required.`,"success");
+    }catch(error){setStatus(error.message||"Could not approve period.","error");}
+    finally{savingPeriod=false;}
+  }
+
+  async function approveAllReadyPeriods(){
+    if(savingPeriod)return;
+    const ready=reviewSegments().filter(s=>segmentHasAnalysis(s)&&s.status!=="complete");
+    if(!ready.length)return setStatus("No analyzed periods are waiting for approval.","success");
+    savingPeriod=true;
+    try{
+      for(const s of ready){
+        const {data,error}=await db().from("vod_review_segments").update({status:"complete",analyzed_by:auth().user?.id||null,updated_at:new Date().toISOString()}).eq("id",s.id).eq("updated_at",s.updated_at).select("id");
+        if(error)throw error;if(!data?.length)throw new Error(`${s.label} changed elsewhere. Refresh before approving the remaining periods.`);
+      }
+      await loadData();setStatus(`Approved ${ready.length} ready periods. Failed or evidence-free periods were left untouched.`,"success");
+    }catch(error){await loadData();setStatus(error.message||"Could not approve all ready periods.","error");}
+    finally{savingPeriod=false;}
   }
 
   async function saveSegment(decision="needs_review"){
