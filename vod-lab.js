@@ -61,6 +61,7 @@
   function currentSegment(){ return state.segments.find(s=>s.id===state.selectedSegmentId)||null; }
   function reviewSegments(reviewId=state.selectedReviewId){ return state.segments.filter(s=>s.review_id===reviewId).sort((a,b)=>a.start_seconds-b.start_seconds||a.segment_index-b.segment_index); }
   function reviewMarkers(reviewId=state.selectedReviewId){ return state.markers.filter(m=>m.review_id===reviewId).sort((a,b)=>a.timestamp_seconds-b.timestamp_seconds); }
+  function segmentHasAnalysis(segment){ return Boolean(String(segment?.analysis_summary||"").trim()); }
 
   function populateTeams(){
     const select=$("vodTeam"), teams=allowedTeams(); if(!select) return;
@@ -161,10 +162,15 @@
           : "No periods built yet. Use the manual fallback only if automatic detection asks for help.";
       el.innerHTML=[1,2,3].map(n=>`<article class="segment-card"><h4>Period ${n}</h4><span class="segment-pill">Awaiting detection</span><p>Time range pending</p><button class="small-btn" disabled>Review</button></article>`).join("")+`<p class="analysis-note">${esc(txt)}</p>`;return;
     }
-    el.innerHTML=segs.map(s=>`<article class="segment-card${s.id===state.selectedSegmentId?" selected":""}">
-      <div class="segment-card-head"><div><h4>${esc(s.label)}</h4><small>${esc(fmtTime(s.start_seconds))} → ${esc(fmtTime(s.end_seconds))}${s.end_seconds!=null?` · ${fmtTime(s.end_seconds-s.start_seconds)}`:""}</small></div><span class="segment-pill ${esc(s.status)}">${esc(String(s.status).replaceAll("_"," "))}</span></div>
+    el.innerHTML=segs.map(s=>{
+      const waiting=!segmentHasAnalysis(s)&&["queued","reviewing","needs_review"].includes(s.status);
+      const displayStatus=waiting?"waiting_analysis":s.status;
+      const displayLabel=waiting?"waiting for analysis":String(s.status).replaceAll("_"," ");
+      return `<article class="segment-card${s.id===state.selectedSegmentId?" selected":""}">
+      <div class="segment-card-head"><div><h4>${esc(s.label)}</h4><small>${esc(fmtTime(s.start_seconds))} → ${esc(fmtTime(s.end_seconds))}${s.end_seconds!=null?` · ${fmtTime(s.end_seconds-s.start_seconds)}`:""}</small></div><span class="segment-pill ${esc(displayStatus)}">${esc(displayLabel)}</span></div>
       <p class="segment-preview">${esc((s.analysis_summary||"Waiting for period analysis.").slice(0,180))}</p><div class="segment-card-actions"><button class="small-btn" type="button" data-segment-id="${esc(s.id)}">Review</button></div>
-    </article>`).join("");
+    </article>`;
+    }).join("");
     el.querySelectorAll("[data-segment-id]").forEach(b=>b.addEventListener("click",()=>selectSegment(b.dataset.segmentId)));
     el.querySelectorAll("[data-segment-open]").forEach(b=>b.addEventListener("click",()=>openSegmentById(b.dataset.segmentOpen)));
   }
@@ -337,7 +343,7 @@
     otStarts.forEach((start,i)=>defs.push({segment_type:"overtime",segment_index:i+1,label:`Overtime ${i+1}`,start_seconds:start,end_seconds:otStarts[i+1]??vodEnd}));
     const boundaryErrors=model.periodErrors(r,defs);
     if(boundaryErrors.length)return setStatus(boundaryErrors.join(" "),"error");
-    const payload=defs.map(d=>({...d,review_id:r.id,team_id:state.teamId,status:"needs_review"}));
+    const payload=defs.map(d=>({...d,review_id:r.id,team_id:state.teamId,status:"queued"}));
     setStatus("Saving period boundaries…");
     const {error}=await db().from("vod_review_segments").upsert(payload,{onConflict:"review_id,segment_type,segment_index"}); if(error)return setStatus(error.message,"error");
     let del=db().from("vod_review_segments").delete().eq("review_id",r.id).eq("segment_type","overtime");
@@ -430,7 +436,9 @@
     $("periodEditFields").hidden=!editingPeriod;
     $("saveSegment").hidden=!editingPeriod;
     $("editSegment").textContent=editingPeriod?"Cancel Edit":"Edit";
-    $("approveSegment").disabled=editingPeriod||s.status==="complete";
+    const canApprove=segmentHasAnalysis(s);
+    $("approveSegment").disabled=editingPeriod||s.status==="complete"||!canApprove;
+    $("approveSegment").title=canApprove?"":"Period analysis must be imported before approval.";
     const chunks=currentReview()?.worker_result?.chunks||[];
     const tactical=chunks.filter(c=>c.label===s.label).map(c=>c.review?.tactical||{});
     const field=k=>[...new Set(tactical.map(t=>t[k]).filter(Boolean))].join("\n");
