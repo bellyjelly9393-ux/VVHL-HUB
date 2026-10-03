@@ -17,6 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 from hockey_review import HOCKEY_RUBRIC, REVIEW_VERSION, sequence_window
+from report_schema import extend_schema, verified_report, REPORT_RUBRIC
 
 ROOT = Path(os.getenv('DATA_DIR', str(Path(__file__).parent / 'data')))
 MAX_UPLOAD = int(os.getenv('MAX_UPLOAD_MB', '700')) * 1024**2
@@ -736,12 +737,13 @@ Use direct, confident hockey language without hype. If identity or evidence is u
             'professional_writeup': {'type': 'string'},
         }
     }
+    schema = extend_schema(schema)
     response = request_ai(
         {
             'model': model,
             'store': False,
             'input': [{'role': 'user', 'content': [
-                {'type': 'input_text', 'text': prompt + HOCKEY_RUBRIC + '''
+                {'type': 'input_text', 'text': prompt + HOCKEY_RUBRIC + REPORT_RUBRIC + '''
 Include [mm:ss] evidence references in tactical and player reports and corrections.
 A sequence_review is a closer look at the SAME play, not an independent repetition.
 If it contradicts the sparse overview, retract the overview claim and explain uncertainty.
@@ -771,7 +773,7 @@ Any section without evidence must explicitly say insufficient evidence, never fi
         'tactical_report', 'player_report', 'professional_writeup'
     )):
         raise Problem(502, 'AI returned an invalid scouting rollup.')
-    return parsed
+    return verified_report(parsed, chunks)
 
 def merge_period_spans(existing, additions):
     spans = [dict(x) for x in (existing or []) if x.get('label') and x.get('end') is not None]
@@ -788,7 +790,8 @@ def merge_period_spans(existing, additions):
     return spans
 
 
-def bounded_period_units(periods, limit=600):
+def bounded_period_units(periods, limit=370):
+    limit = max(1, min(float(limit), 370))
     """Bound downloads without losing parent-period identity or source offsets."""
     units = []
     for period in periods:
@@ -801,36 +804,38 @@ def bounded_period_units(periods, limit=600):
 
 
 def normalize_regulation_periods(spans, total_duration):
-    """Return exactly P1/P2/P3 when the scoreboard scan found them in order."""
-    found = {}
+    """Keep chronological period identity, including OT; ambiguous resets need review."""
+    ordered = []
+    rank = {'Period 1': 1, 'Period 2': 2, 'Period 3': 3}
     for span in spans or []:
         label = str(span.get('label') or '')
-        if label not in ('Period 1', 'Period 2', 'Period 3'):
+        if label.startswith('Overtime'):
+            suffix = label.removeprefix('Overtime').strip()
+            if suffix and not suffix.isdigit():
+                return []
+            number = int(suffix or 1)
+            if number < 1:
+                return []
+            label = f'Overtime {number}'
+            rank[label] = 3 + number
+        if label not in rank:
             continue
-        start = max(0.0, float(span.get('start') or 0))
-        end = min(float(total_duration), float(span.get('end') or total_duration))
-        if end <= start:
-            continue
-        if label not in found:
-            found[label] = {'label': label, 'start': start, 'end': end}
+        start, end = float(span.get('start', 0)), float(span.get('end', total_duration))
+        if not all(math.isfinite(x) for x in (start, end)) or start < 0 or end <= start or end > total_duration:
+            return []
+        if ordered and rank[label] < rank[ordered[-1]['label']]:
+            return []
+        if ordered and label == ordered[-1]['label']:
+            ordered[-1]['end'] = max(end, ordered[-1]['end'])
         else:
-            found[label]['start'] = min(found[label]['start'], start)
-            found[label]['end'] = max(found[label]['end'], end)
-    ordered = [found.get('Period 1'), found.get('Period 2'), found.get('Period 3')]
-    if any(x is None for x in ordered):
+            ordered.append({'label': label, 'start': start, 'end': end})
+    if [p['label'] for p in ordered[:3]] != ['Period 1', 'Period 2', 'Period 3']:
         return []
-    # Make boundaries contiguous at detected transitions so intermission/menu frames
-    # cannot leave holes or cause the same footage to be analyzed twice.
-    p1, p2, p3 = ordered
-    b12 = max(p1['start'], min(p1['end'], p2['start']))
-    b23 = max(p2['start'], min(p2['end'], p3['start']))
-    if not (0 < b12 < b23 < total_duration):
-        return []
-    return [
-        {'label': 'Period 1', 'start': round(p1['start'], 3), 'end': round(b12, 3)},
-        {'label': 'Period 2', 'start': round(b12, 3), 'end': round(b23, 3)},
-        {'label': 'Period 3', 'start': round(b23, 3), 'end': round(float(total_duration), 3)},
-    ]
+    for i in range(len(ordered)-1):
+        if ordered[i+1]['start'] <= ordered[i]['start']:
+            return []
+        ordered[i]['end'] = min(ordered[i]['end'], ordered[i+1]['start'])
+    return ordered
 
 
 def process_streamed_replay(job_id):
@@ -901,12 +906,15 @@ def process_streamed_replay(job_id):
 
         total_duration = float(metadata.get('source_end_seconds') or 0) - float(metadata.get('source_start_seconds') or 0)
         periods = normalize_regulation_periods(result.get('period_spans'), total_duration)
-        if len(periods) != 3:
+        import re
+        if re.search(r'lag[- ]?out|restart|replayed period', metadata.get('players', ''), re.I):
+            periods = []
+        if len(periods) < 3:
             result['stage'] = 'needs_period_boundaries'
             result['failure_code'] = 'period_detection_failed'
             update_metadata(
-                job_id, metadata, 'failed', result,
-                'The game-clock scan could not confidently lock all three periods. No AI analysis was run.'
+                job_id, metadata, 'needs_periods', result,
+                'Confirm actual period boundaries and any restart/OT mapping. No AI analysis was run.'
             )
             return
 
@@ -1060,10 +1068,9 @@ def process(job_id):
                 meta['periods'] = periods
                 db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
         else:
-            # OCR is an enhancement, not a gate. Review the full recording in normal
-            # overlapping chunks so a user can still get a useful scouting report.
-            periods = []
-            period_mode = 'full_game_fallback'
+            result.update({'duration': duration, 'stage': 'needs_period_boundaries', 'period_detection': 'needs_periods'})
+            update(job_id, 'needs_periods', result, 'Confirm actual period boundaries before AI analysis. The recording is preserved.')
+            return
     plan = segments(periods, duration)
     result.update({
         'duration': duration,
@@ -1270,6 +1277,36 @@ class Handler(BaseHTTPRequestHandler):
                                     'maxActiveJobs': MAX_ACTIVE_JOBS,
                                     'autoReleaseTwitchMedia': AUTO_RELEASE_TWITCH_MEDIA,
                                     'storage': storage_status()})
+        if path.startswith('/internal/replay-jobs/'):
+            # Operational recovery uses the existing service-only admin credential.
+            # Never return metadata, which can contain deployment/test harness values.
+            supplied = self.headers.get('X-Replay-Admin', '')
+            if not REPLAY_ADMIN_TOKEN or not hmac.compare_digest(supplied, REPLAY_ADMIN_TOKEN):
+                raise Problem(404, 'Not found')
+            parts = path.strip('/').split('/')
+            if len(parts) not in (3, 4):
+                raise Problem(404, 'Not found')
+            try:
+                job_id = str(UUID(parts[2]))
+            except ValueError:
+                raise Problem(400, 'Invalid job identifier')
+            job = get_job(job_id)
+            if self.command == 'POST' and parts[3:] == ['retry']:
+                self.body()
+                with WRITE_LOCK:
+                    job = get_job(job_id)
+                    if job['status'] not in ('failed', 'expired', 'awaiting_ai'):
+                        raise Problem(409, 'Only a failed, expired or AI-waiting job can resume.')
+                    meta = dict(job['metadata'])
+                    if meta.get('source_kind') != 'twitch_replay':
+                        raise Problem(409, 'This recovery endpoint only resumes saved Twitch replays.')
+                    meta.pop('ai_rate_limit_retries', None)
+                    status = 'queued' if (ROOT / job_id / 'source.mp4').exists() else 'retrieving'
+                    update_metadata(job_id, meta, status, job['result'], '')
+                job = get_job(job_id)
+            elif self.command != 'GET' or len(parts) != 3:
+                raise Problem(405, 'Method not allowed')
+            return self.reply(200, {k: job[k] for k in ('id', 'status', 'result', 'error')})
         if path == '/internal/replay-test':
             if self.command != 'POST':
                 raise Problem(405, 'Method not allowed')
@@ -1422,7 +1459,11 @@ class Handler(BaseHTTPRequestHandler):
                 raise Problem(400, 'Add the real period ranges first.')
             try:
                 clean = [{'label': str(p['label'])[:80], 'start': float(p['start']), 'end': float(p['end'])} for p in periods]
-                segments(clean, probe(directory / 'source.mp4'))
+                job = get_job(job_id, owner)
+                meta = job['metadata']
+                duration = (float(meta['source_end_seconds']) - float(meta['source_start_seconds'])
+                            if meta.get('streamed_replay') else probe(directory / 'source.mp4'))
+                segments(clean, duration)
             except (KeyError, TypeError, ValueError):
                 raise Problem(400, 'Invalid period ranges')
             with WRITE_LOCK, connect() as db:
@@ -1431,7 +1472,16 @@ class Handler(BaseHTTPRequestHandler):
                     raise Problem(409, 'This review is not waiting for period boundaries.')
                 meta = dict(job['metadata'])
                 meta['periods'] = clean
-                db.execute('UPDATE jobs SET metadata=?,status=?,error=? WHERE id=?', (json.dumps(meta), 'queued', '', job_id))
+                status='queued'
+                if meta.get('streamed_replay'):
+                    meta.update({'period_units':bounded_period_units(clean),'period_unit_index':0,
+                                 'replay_phase':'analyze_periods','period_source':'manual'})
+                    status='retrieving'
+                result=dict(job['result'])
+                result['detected_periods']=clean
+                result['period_detection']='manual'
+                result.pop('failure_code',None)
+                db.execute('UPDATE jobs SET metadata=?,status=?,result=?,error=? WHERE id=?', (json.dumps(meta), status, json.dumps(result), '', job_id))
             return self.reply(202, get_job(job_id, owner))
         if parts[2:] == ['retry'] and self.command == 'POST':
             self.body()  # Drain the JSON request before closing the connection.
@@ -1496,5 +1546,3 @@ if __name__ == '__main__':
     initialize()
     threading.Thread(target=work_loop, daemon=True).start()
     ThreadingHTTPServer(('0.0.0.0', int(os.getenv('PORT', '8080'))), Handler).serve_forever()
-
-

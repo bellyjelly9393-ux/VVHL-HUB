@@ -13,7 +13,7 @@ class LivePeriodTests(unittest.TestCase):
 
     @patch('live_periods.time.monotonic')
     def test_requires_confirmed_forward_transition(self, monotonic):
-        monotonic.side_effect=[0, 300, 301, 700, 701]
+        monotonic.side_effect=[300, 700]
         w=live_periods.LivePeriodWatcher('https://example.test/live.m3u8','/tmp/test-live-periods')
         w.started=0
         w._observe(2)

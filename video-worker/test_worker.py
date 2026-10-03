@@ -26,7 +26,7 @@ class WorkerTests(unittest.TestCase):
         job_id = str(uuid4())
         with worker.connect() as db:
             db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',
-                       (job_id, 'owner-a', 1, status, json.dumps({'periods': []}), '{}', ''))
+                       (job_id, 'owner-a', 1, status, json.dumps({'periods': [{'label':'Period 1','start':0,'end':6}]}), '{}', ''))
         directory = worker.ROOT / job_id
         directory.mkdir()
         worker.command(['ffmpeg', '-v', 'error', '-f', 'lavfi', '-i',
@@ -100,7 +100,9 @@ class WorkerTests(unittest.TestCase):
         with patch.dict(os.environ, {'OPENAI_API_KEY': 'test', 'OPENAI_MODEL': 'test'}), \
              patch.object(worker, 'http_json', side_effect=[busy, response]) as request, \
              patch.object(worker.STOP, 'wait', return_value=False):
-            self.assertEqual(worker.build_rollup([{'review': {'summary': 'test'}}]), report)
+            actual=worker.build_rollup([{'review': {'summary': 'test'}}])
+            self.assertEqual({k:actual[k] for k in report}, report)
+            self.assertIsNone(actual['game_rating']['score'])
             self.assertEqual(request.call_count, 2)
 
     def test_token_truncation_retries_but_never_accepts_partial_json(self):
@@ -109,17 +111,17 @@ class WorkerTests(unittest.TestCase):
         def response(url, headers, payload):
             calls.append(payload['max_output_tokens'])
             return incomplete if len(calls) == 1 else {'status': 'completed'}
-        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test'}), patch.object(worker, 'http_json', side_effect=response):
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test', 'OPENAI_MODEL':'test', 'AI_PROVIDER':'openai'}), patch.object(worker, 'http_json', side_effect=response):
             worker.request_ai({'model': 'test', 'max_output_tokens': 4800})
         self.assertEqual(calls, [4800, 9600])
-        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test'}), patch.object(worker, 'http_json', return_value=incomplete):
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test', 'OPENAI_MODEL':'test', 'AI_PROVIDER':'openai'}), patch.object(worker, 'http_json', return_value=incomplete):
             with self.assertRaises(worker.Problem):
                 worker.request_ai({'model': 'test', 'max_output_tokens': 4800})
 
     def test_quota_failure_is_not_retried(self):
         quota = urllib.error.HTTPError('https://api.openai.com/v1/responses', 429, 'quota', {},
                                       io.BytesIO(b'{"error":{"code":"insufficient_quota"}}'))
-        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test'}), \
+        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test', 'OPENAI_MODEL':'test', 'AI_PROVIDER':'openai'}), \
              patch.object(worker, 'http_json', side_effect=quota) as request:
             with self.assertRaises(worker.Problem) as error:
                 worker.request_ai({'model': 'test'})

@@ -7,8 +7,8 @@ import replay
 class PeriodPartTests(unittest.TestCase):
     def test_cap_and_contiguous_source_offsets(self):
         units=worker.bounded_period_units([{'label':'Period 3','start':800,'end':2100}])
-        self.assertEqual([(u['start'],u['end']) for u in units],[(800,1400),(1400,2000),(2000,2100)])
-        self.assertTrue(all(u['end']-u['start']<=600 for u in units))
+        self.assertEqual([(u['start'],u['end']) for u in units],[(800,1170),(1170,1540),(1540,1910),(1910,2100)])
+        self.assertTrue(all(u['end']-u['start']<=370 for u in units))
         self.assertTrue(all(u['label']=='Period 3' for u in units))
 
     def test_byte_limit_split_preserves_completed_units_and_stops_at_floor(self):
@@ -41,4 +41,3 @@ class PeriodPartTests(unittest.TestCase):
             self.assertIn('game_rollup',result)
 
 if __name__=='__main__': unittest.main()
-

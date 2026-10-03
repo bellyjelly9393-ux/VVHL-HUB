@@ -9,14 +9,15 @@ and configuration presence; it does not prove API billing or model access.
 
 1. Management signs into Postgame Desk, selects a game and uploads MP4/MOV directly
    to the HTTPS worker. Optional format, gamertags, period ranges and replay offset
-   provide context. Blank ranges use best-effort OCR, then full-recording fallback.
+   provide context. Blank ranges use best-effort OCR; uncertain periods pause for boundary review.
 2. FFmpeg validates the recording (maximum two hours and 4K). The worker reviews
    overlapping 120-second sections at a six-second frame interval. Rate-limit retries
    may increase overview spacing to 12 seconds; each chunk records its actual spacing.
 3. For each chunk containing gameplay observations, a separate pass reviews at most
    one eight-second sequence at two frames/second. This pass does not receive the
    first-pass verdict. It can contradict it. It is still sampled vision, not puck tracking.
-4. A synthesis pass writes seven report sections, using only supplied evidence and
+4. A synthesis pass writes the legacy sections plus team systems, line / defense-pair
+   reports and individual game ratings when supported by named gameplay evidence, using
    the hockey rubric in `hockey_review.py`. Uncertain identity, missing evidence,
    sparse motion and single-play observations must remain explicit. Game format
    matters; 4s should not be judged as a five-skater system.
@@ -74,7 +75,7 @@ also runs a low-cost scoreboard watcher inspired by the uploaded VVHL worker des
 ~20 seconds FFmpeg grabs only the scoreboard crop, local Tesseract OCR reads the period, and
 the same new period must be seen twice before a boundary is accepted. Confident P1/P2/P3
 boundaries are handed directly to the existing evidence review; uncertain reads fall back to
-the post-capture OCR/full-game review rather than fabricating a split. This watcher uses no
+post-capture OCR, then pause for boundary review when uncertain. This watcher uses no
 additional AI calls. Tune it with `LIVE_PERIOD_WATCH_SECONDS`,
 `LIVE_PERIOD_CONFIRM_READS`, and the `LIVE_SCOREBOARD_CROP_*` variables.
 
@@ -93,3 +94,19 @@ resumable evidence and synthesis, bounded closer passes, report import completen
 re-import preservation and replay offsets. AI responses are mocked. Real hockey
 accuracy and authenticated production upload/save/reload require a real recording
 and a management account; never describe these tests as proving that accuracy.
+
+
+## Management approval
+
+Replay analysis pieces are capped at 370 seconds and retain period identity, including
+overtime. Regressing clocks and lag-out/restart context require management to map
+actual periods before analysis. No missing-period fallback sends a whole game to AI.
+
+The website imports worker results as drafts. Approved periods and valid boundaries
+are required before publishing game reports to player lockers and GM AI. Editing a
+published source report invalidates its publication until it is approved again.
+
+Service-only recovery uses the existing `REPLAY_ADMIN_TOKEN` in `X-Replay-Admin`:
+`GET /internal/replay-jobs/{id}` reads saved results without metadata, and
+`POST /internal/replay-jobs/{id}/retry` with `{}` resumes a failed/expired/AI-waiting
+Twitch replay without deleting saved evidence. Completed jobs cannot be retried here.

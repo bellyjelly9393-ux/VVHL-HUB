@@ -17,10 +17,13 @@ class ReplayTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = patch.object(worker, 'ROOT', Path(self.tmp.name))
         self.root.start()
+        self.token_path=patch.object(replay,'TWITCH_AUTH_FILE',Path(self.tmp.name)/'.twitch-auth-token')
+        self.token_path.start()
         worker.initialize()
         self.review = {'id': str(uuid4()), 'vod_url': 'https://www.twitch.tv/videos/12345', 'title': 'Game'}
 
     def tearDown(self):
+        self.token_path.stop()
         self.root.stop()
         self.tmp.cleanup()
 
