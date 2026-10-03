@@ -77,9 +77,11 @@ const fixture=()=>{
   assert.equal(await page.locator('#editSegment').isVisible(),false);
   await page.locator('[data-segment-id="p1"]').click();
   assert.equal(await page.locator('#segmentEditorWrap').isVisible(),false);
+  await page.locator('#vodPipelineAdvanced summary').first().click();
+  await page.locator('#vodCheckPipeline').click();
+  await page.waitForFunction(()=>document.getElementById('vodPipelineStatus').textContent.includes('published'));
   // A stale worker failure must not invalidate downstream evidence.
   await page.evaluate(()=>{window.workerJob={id:'job',status:'failed',error:'Old retrieval failed',result:{}};window.testRows.vod_review_sessions[0].worker_status='failed';});
-  await page.locator('#vodPipelineAdvanced summary').first().click();
   await page.locator('#vodCheckPipeline').click();
   await page.waitForFunction(()=>document.getElementById('vodPipelineStatus').textContent.includes('saved reports'));
   await page.locator('#refreshVod').click();

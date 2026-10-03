@@ -50,3 +50,10 @@ test('a reopened human-edited period remains protected from automatic import',()
  assert.equal(model.protectedEvidence({status:'complete',analyzed_by:null}),true);
  assert.equal(model.protectedEvidence({status:'needs_review',analyzed_by:null}),false);
 });
+test('saved structured period reports complete AI analysis without granting human approval',()=>{
+ const p=periods().map(s=>({...s,status:'needs_review',analysis_summary:''}));
+ const r={...review,id:'game',worker_status:'failed',worker_result:{period_reports:p.map(s=>({label:s.label,report:{summary:'Saved structured evidence'}}))}};
+ const state=model.reconcile(r,p);
+ assert.equal(state.analysisComplete,true);assert.equal(state.recovered,true);assert.equal(state.approved,false);
+ r.worker_result.period_reports.pop();assert.equal(model.reconcile(r,p).analysisComplete,false);
+});

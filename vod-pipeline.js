@@ -377,16 +377,19 @@
   async function checkJob(jobId,reviewId,loud=false){
     if(checking)return;checking=true;
     try{
+      savedState=await durableState(reviewId);
+      if(selectedReviewId()!==reviewId)return;
       const response=await workerFetch(`/reviews/${encodeURIComponent(reviewId)}/job`);
       const job=response.job;
       if(selectedReviewId()!==reviewId)return;
-      if(!job){if(loud)setStatus('Press Analyze Game to retrieve the saved recording.');return;}
-      if(job.waiting_for_capture){setStatus(`Game capture: ${job.status}. Waiting for the saved recording; no upload needed.`,'good');return;}
+      if(!job){if(!showDurable(savedState)&&loud)setStatus('Press Analyze Game to retrieve the saved recording.');return;}
+      if(job.waiting_for_capture){if(!showDurable(savedState))setStatus(`Game capture: ${job.status}. Waiting for the saved recording; no upload needed.`,'good');return;}
       const {error:saveError}=await db().from('vod_review_sessions').update({worker_job_id:job.id,worker_status:job.status,worker_updated_at:new Date().toISOString()}).eq('id',reviewId);
       if(saveError)throw saveError;
       const autoImported=await importDetectedPeriods(reviewId,job);
       if(autoImported)document.getElementById('refreshVod')?.click();
       savedState=await durableState(reviewId,job);
+      if(selectedReviewId()!==reviewId)return;
       const done=['ready_for_review','failed','expired','awaiting_ai','needs_periods'].includes(job.status);
       if(savedState?.analysisComplete&&job.status!=='ready_for_review'){showDurable(savedState);}
       else if(job.status==='needs_periods'){

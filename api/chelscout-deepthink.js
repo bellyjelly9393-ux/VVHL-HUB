@@ -229,12 +229,14 @@ async function contextFor(token,names,question,scenario,requestedLens){
    if(reviewIds.length){
     const list=reviewIds.join(',');
     const [segments,markers]=await Promise.allSettled([
-     read(`vod_review_segments?select=*&team_id=eq.${TEAM}&status=eq.complete&review_id=in.(${list})&order=segment_index&limit=200`),
+     read(`vod_review_segments?select=*&team_id=eq.${TEAM}&status=eq.complete&archived_at=is.null&review_id=in.(${list})&order=segment_index&limit=200`),
      read(`vod_review_markers?select=*&team_id=eq.${TEAM}&review_id=in.(${list})&order=timestamp_seconds&limit=300`)
     ]);
-    if(segments.status==='fulfilled')add('Timestamped VOD segment analysis',segments.value,{evidenceClass:'video_observation'});
+    const approvedSegments=segments.status==='fulfilled'?segments.value.filter(s=>s.status==='complete'&&!s.archived_at):[];
+    const approvedIds=new Set(approvedSegments.map(s=>s.id));
+    if(segments.status==='fulfilled')add('Timestamped VOD segment analysis',approvedSegments,{evidenceClass:'video_observation'});
     else warnings.push('VOD segment analysis could not be loaded.');
-    if(markers.status==='fulfilled')add('Timestamped VOD markers',markers.value,{evidenceClass:'video_observation'});
+    if(markers.status==='fulfilled')add('Timestamped VOD markers',markers.value.filter(m=>approvedIds.has(m.segment_id)),{evidenceClass:'video_observation'});
     else warnings.push('VOD markers could not be loaded.');
    }
   }catch{warnings.push('Opponent VOD evidence could not be loaded.');}
