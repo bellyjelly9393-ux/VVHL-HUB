@@ -5,7 +5,7 @@
   const ST=()=>window.VVHLBackend?.state||{};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm=v=>String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null};
+  const num=v=>{if(v==null||String(v).trim()==='')return null;const n=Number(v);return Number.isFinite(n)?n:null};
   let selected=null,loading=false;
 
   const canWrite=()=>{
@@ -46,7 +46,7 @@
 
   function latestStatsByName(rows){
     const m=new Map();
-    rows.forEach(r=>{const k=norm(r.gamertag);if(k&&!m.has(k))m.set(k,r)});
+    rows.forEach(r=>{const k=String(r.gamertag||'').trim().toLowerCase();if(k&&(!m.has(k)||(r.source==='lg_chl'&&m.get(k).source!=='lg_chl')))m.set(k,r)});
     return m;
   }
 
@@ -57,11 +57,11 @@
     const posOrder={LW:1,C:2,RW:3,LD:4,RD:5,G:6};
     rows.sort((a,b)=>(posOrder[a.position]||9)-(posOrder[b.position]||9)||String(a.gamertag).localeCompare(String(b.gamertag)));
     box.innerHTML=rows.map(r=>{
-      const s=stats.get(norm(r.gamertag))||{};
+      const s=stats.get(String(r.gamertag||'').trim().toLowerCase())||{};
       const pts=s.points??((s.goals!=null||s.assists!=null)?Number(s.goals||0)+Number(s.assists||0):null);
       const extra=s.raw_stats&&Object.keys(s.raw_stats).length?'<details><summary>Raw public stats</summary><pre>'+esc(JSON.stringify(s.raw_stats,null,2))+'</pre></details>':'';
       return '<article class="hoi-player-card"><div class="hoi-player-card-head"><div><strong>'+esc(r.gamertag)+'</strong><div class="hoi-player-sub">'+esc(r.management_role||r.roster_role||'Active')+(r.salary!=null?' · '+money(r.salary):'')+'</div></div><span class="hoi-player-pos">'+esc(r.position||'—')+'</span></div>'+
-      '<div class="hoi-player-stats">'+stat('GP',s.games_played)+stat('G',s.goals)+stat('A',s.assists)+stat('PTS',pts)+stat('+/-',s.plus_minus)+stat('FO%',s.faceoff_pct)+stat('HITS',s.hits)+stat('PIM',s.pim)+'</div>'+extra+'</article>';
+      '<p class="hoi-muted">'+esc(s.source==='lg_chl'?'LGCHL S55 season totals':s.source==='ea_nhl27'?'EA club totals · not league-only':'No matched stats')+(s.source_updated_at?' · '+esc(new Date(s.source_updated_at).toLocaleString()):'')+'</p><div class="hoi-player-stats">'+stat('GP',s.games_played)+stat('G',s.goals)+stat('A',s.assists)+stat('PTS',pts)+stat('+/-',s.plus_minus)+stat('FO%',s.faceoff_pct)+stat('HITS',s.hits)+stat('PIM',s.pim)+(r.position==='G'?stat('SV%',s.goalie_save_pct)+stat('GAA',s.goalie_gaa):stat('SHOTS',s.shots)+stat('TA',s.takeaways)+stat('GA',s.giveaways)+stat('PASS%',s.passing_pct))+'</div>'+extra+'</article>';
     }).join('');
   }
 
@@ -99,9 +99,7 @@
       if(!r.ok)throw new Error(body.error||'LG roster sync failed.');
       const rpc=await DB().rpc('apply_hitmen_opponent_roster_snapshot',{p_rows:body.players,p_source_updated_at:body.fetched_at});
       if(rpc.error)throw rpc.error;
-      const up=await DB().from('hitmen_opponents').update({lg_roster_updated_at:body.fetched_at,source_updated_at:body.fetched_at}).eq('team_id',TEAM).eq('season',SEASON);
-      if(up.error)throw up.error;
-      setStatus('LGCHL rosters synced · '+body.team_count+' teams · '+body.player_count+' players.');
+      setStatus('LG roster refresh: '+(rpc.data?.teams_updated||0)+' teams updated; '+(rpc.data?.teams_preserved?.length||0)+' teams retained for source checks.');
       await loadSelected();
     }catch(e){setStatus('LG roster sync failed. '+e.message)}
     finally{if(b)b.disabled=false;}
@@ -218,8 +216,8 @@
     const b=E('hoiGenerateReport');if(b)b.disabled=true;setStatus('Building pregame scouting report with Wildman Hockey Ops…');
     try{
       const t=await token();
-      const question='Prepare a complete regular-season pregame scouting report for '+selected.name+'. Use the current opponent roster, individual player stats, public league information, EA NHL 27 game logs, Calgary head-to-head history, and VOD evidence if available. Identify personnel threats, team strengths and weaknesses, likely tactical tendencies that are actually supported by evidence, Calgary matchup priorities, likely counter-adjustments, uncertainty, and the single most valuable film check before game time.';
-      const r=await fetch('/api/chelscout-deepthink',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify({question,scenario:'Regular-season pregame preparation for '+selected.name+'. Rosters are finalized. Do not use old draft-pool status as current team strength.',lens:'opponent',mode:'auto'}),signal:AbortSignal.timeout(115000)});
+      const question='Prepare a complete regular-season pregame scouting report for '+selected.name+'. Use the current opponent roster, individual player stats, public league information, EA NHL 27 game logs, Calgary head-to-head history, and VOD evidence if available. Identify personnel threats, team strengths and weaknesses, likely tactical tendencies that are actually supported by evidence, Calgary matchup priorities, likely counter-adjustments, uncertainty, stats and roster freshness, observed arrivals/departures since the previous snapshot, and the single most valuable film check before game time.';
+      const r=await fetch('/api/chelscout-deepthink',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify({question,scenario:'Regular-season pregame preparation for '+selected.name+'. Use the latest successfully verified roster and its date; flag stale or failed refreshes. Separate LG league-season stats from EA club games. Observed roster additions/removals are not proof of a trade. Do not use old draft-pool status as current team strength.',lens:'opponent',mode:'auto'}),signal:AbortSignal.timeout(115000)});
       const body=await r.json();if(!r.ok)throw new Error(body.error||'Pregame report failed.');
       const next=await DB().from('hitmen_schedule_games').select('id,scheduled_at').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',selected.name).eq('status','scheduled').gte('scheduled_at',new Date().toISOString()).order('scheduled_at').limit(1).maybeSingle();
       const save=await DB().from('hitmen_opponent_pregame_reports').insert({team_id:TEAM,season:SEASON,opponent_name:selected.name,scheduled_game_id:next.data?.id||null,model:body.model||null,report:body.answer,evidence_summary:{lens:body.lens,depthMode:body.depthMode,depthReason:body.depthReason,coverage:body.coverage,evidenceIds:(body.sources||[]).map(x=>x.id)},created_by:ST().user.id});

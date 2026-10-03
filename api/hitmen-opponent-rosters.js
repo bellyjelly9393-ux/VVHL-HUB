@@ -1,38 +1,4 @@
-const ROSTER_URL='https://www.leaguegaming.com/forums/index.php?leaguegaming/league&action=league&page=roster&leagueid=39&seasonid=55';
-
-const clean=(s='')=>s.replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\s+/g,' ').trim();
-
-function parseRosters(html){
-  const players=[];
-  for(const table of html.matchAll(/<table\b[^>]*>([\s\S]*?)<\/table>/gi)){
-    const body=table[1];
-    let team=clean(body.match(/<th\b[^>]*>([\s\S]*?)<\/th>/i)?.[1]||'');
-    if(!team){
-      team=clean(body.match(/class=["'][^"']*(?:team|header)[^"']*["'][^>]*>([\s\S]*?)<\//i)?.[1]||'');
-    }
-    if(!team)continue;
-    for(const row of body.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)){
-      const htmlRow=row[1];
-      const link=htmlRow.match(/<a\b[^>]*href=["'][^"']*(?:userid|user_id)=(\d+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
-      if(!link||!clean(link[2]))continue;
-      const label=clean(htmlRow);
-      if(!/^\d+\./.test(label)&&!/\b(LW|RW|LD|RD|C|G)\b/.test(label))continue;
-      const amount=label.match(/\b([\d.]+)\s*(M|K)\b/i);
-      players.push({
-        uid:Number(link[1]),
-        name:clean(link[2]),
-        team,
-        position:label.match(/\b(LW|RW|LD|RD|C|G)\b/)?.[1]||null,
-        salary:amount?Math.round(Number(amount[1])*(String(amount[2]).toUpperCase()==='M'?1000000:1000)):null,
-        management_role:/\bOwner\b/i.test(label)?'Owner':/\bGM\b/i.test(label)?'GM':/\bAGM\b/i.test(label)?'AGM':null,
-        roster_role:/training camp|tc\b/i.test(label)?'Training Camp':'Active'
-      });
-    }
-  }
-  const dedup=[...new Map(players.map(p=>[p.team+'|'+p.uid,p])).values()];
-  if(dedup.length<50)throw new Error('LG roster response did not contain a complete Season 55 roster set.');
-  return dedup;
-}
+import { ROSTER_URL, parseRosters, clean } from '../lib/opponent-refresh.mjs';
 
 export default async function handler(req,res){
   if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({error:'GET only'});}

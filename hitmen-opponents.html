@@ -22,6 +22,11 @@
 <div class="hoi-kpis"><div><small>Season Games</small><strong id="hoiGameCount">0</strong></div><div><small>Opponents</small><strong id="hoiOpponentCount">0</strong></div><div><small>Repeat Opponents</small><strong id="hoiRepeatCount">0</strong></div><div><small>Completed</small><strong id="hoiFinalCount">0</strong></div><div><small>VOD Evidence</small><strong id="hoiVodCount">0</strong></div></div>
 </section>
 
+<section class="section-shell section-block hoi-panel" aria-label="Opponent refresh schedule">
+<div class="hoi-panel-head"><div><h2>Opponent Stats Refresh</h2><p class="hoi-muted">Tuesday and Saturday at 11:30 p.m. Eastern time. Upcoming opponents first, then the remaining season.</p></div><button id="hoiRefreshOpponents" class="hm-save" data-write-only type="button">Refresh Opponent Stats</button></div>
+<p id="hoiRefreshStatus" role="status" aria-live="polite">Loading refresh status…</p>
+<details><summary>Source status</summary><div id="hoiRefreshDetails"></div></details>
+</section>
 <section class="section-shell section-block hoi-layout">
 <aside class="hoi-sidebar">
 <div class="hoi-panel"><div class="eyebrow">SEASON 55</div><h2>Opponent Board</h2><input id="hoiSearch" class="hoi-input" type="search" placeholder="Search opponent"><div class="hoi-filter-row"><button class="active" data-hoi-filter="all">All</button><button data-hoi-filter="repeat">Repeat</button><button data-hoi-filter="upcoming">Upcoming</button><button data-hoi-filter="played">Played</button></div><div id="hoiOpponents" class="hoi-opponents"></div></div>
@@ -47,7 +52,7 @@
     </div>
   </div>
   <div id="hoiEaClub" class="hoi-ea-club"></div>
-  <div id="hoiRoster" class="hoi-roster-grid"></div>
+  <div id="hoiRosterChanges" class="hoi-muted"></div><div id="hoiRoster" class="hoi-roster-grid"></div>
 </section>
 
 <section class="hoi-subsection hoi-pregame-section">
@@ -85,5 +90,5 @@
 </div>
 </main>
 <footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN OPPONENT INTELLIGENCE</b><span>Schedule · statistics · head-to-head · VOD evidence · rematch memory</span></div><p>Private management</p></div></footer>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="backend.js"></script><script src="management-guard.js"></script><script src="script.js"></script><script src="hitmen-opponents.js"></script><script src="hitmen-opponent-intel.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="backend.js"></script><script src="management-guard.js"></script><script src="script.js"></script><script src="hitmen-opponents.js"></script><script src="hitmen-opponent-intel.js"></script><script src="hitmen-opponent-refresh.js"></script>
 </body></html>
