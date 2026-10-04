@@ -1,0 +1,8 @@
+/* Team identity: Calgary Hitmen. The only place Hitmen colour is defined.
+   Usage: add class "team-hitmen" to a broadcast block. Red is reserved for the crest
+   (image), the HITMEN wordmark and one live/tonight indicator. */
+.team-hitmen{
+  --team-wordmark:#D7192D;
+  --bc-live:#E0262F;
+  --team-crest:url("assets/lgchl/s55/team412.png");
+}
