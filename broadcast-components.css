@@ -95,7 +95,9 @@
   .bc-sb-opp .bc-crest{width:56px;height:56px}
   .bc-broadcast .bc-sb-opp h3{font-size:28px}
   .bc-sb-cd b{font-size:34px}
-  .bc-sb-rail span+span{display:none}
+  .bc-sb-rail{padding:6px 16px}
+  .bc-sb-rail span:first-child:not(:only-child){display:none}
+  .bc-sb-rail span+span{white-space:normal;overflow:visible}
 }
 
 /* ---------- arena + jumbotron (one game day: up to 3 games) ----------
@@ -132,6 +134,15 @@
 .bc-jt-final small{flex-basis:100%;text-align:center;margin-top:2px;font:700 7px/1 var(--bc-font-label);letter-spacing:.18em;color:var(--bc-dim)}
 .bc-jt-row .bc-crest img{filter:brightness(1.12) drop-shadow(0 0 3px rgba(255,255,255,.18))}
 .bc-jt-row .bc-abbr{border:0;background:none;padding:0;font:800 14px/1 var(--bc-font-label);letter-spacing:.06em;color:var(--bc-led-text)}
+/* 4-game days: tighter rows and smaller crests so four rows fit the same face (3-game days unchanged) */
+.bc-jt-front.bc-jt-n4{grid-auto-rows:33px}
+.bc-jt-n4 .bc-jt-row{grid-template-columns:32px 34px 1fr 34px}
+.bc-jt-n4 .bc-jt-row .bc-crest{width:30px;height:30px}
+.bc-jt-n4 .bc-jt-row i{font-size:9px}
+.bc-jt-n4 .bc-jt-row s{font-size:11px}
+.bc-jt-n4 .bc-jt-row s.bc-jt-final{font-size:11px}
+.bc-jt-n4 .bc-jt-final small{margin-top:1px;font-size:6px}
+.bc-jt-n4 .bc-jt-row .bc-abbr{font-size:11px}
 .bc-jt-empty{position:absolute;inset:0;z-index:2;display:grid;place-items:center;text-align:center;font:800 20px/1.1 var(--bc-font-label);letter-spacing:.14em;text-transform:uppercase;color:var(--bc-led-text)}
 /* side faces: same dark LED housing, no content */
 .bc-jt-right{width:60px;height:200px;transform:matrix3d(2.19959806,1.02062068,0,0.00236493,0.19405777,0.47279305,0,0.00033932,0,0,1,0,745,166,0,1);background:radial-gradient(circle at 50% 45%,#141517,#070708 80%)}

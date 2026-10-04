@@ -120,7 +120,9 @@
 
   // Jumbotron: one game day at a time (Calgary plays 3 games each Sun, Mon and Tue).
   // The board day rolls over at 06:00 ET; on non-game days it shows the next game day.
-  // Up to 3 games of that ET date, ordered by puck drop. Finals show the score (winner bold).
+  // Every game of that ET date (3 normally, 4 on some days; capped at 4 to fit the board), ordered by puck drop.
+  // Finals show the score (winner bold).
+  const JUMBO_MAX_GAMES = 4;
   const isoDay = d => { const [mm,dd,yy]=etDateKey(d).split('/'); return `${yy}-${mm}-${dd}`; };
   const boardDayKey = (now=new Date()) => isoDay(new Date(now.getTime()-6*3600*1000));
   function jumboGames(rows,now=new Date()){
@@ -129,13 +131,14 @@
       .map(x=>({...x,day:isoDay(x.at)})).filter(x=>x.day>=from).sort((a,b)=>a.at-b.at);
     if(!games.length) return {day:null,games:[]};
     const day=games[0].day;
-    return {day,games:games.filter(x=>x.day===day).slice(0,3)};
+    return {day,games:games.filter(x=>x.day===day).slice(0,JUMBO_MAX_GAMES)};
   }
   let jumboKey='';
   function renderJumbotron(){
     const root=$('hitmenJumbo'), sr=$('hitmenJumboSr'); if(!root) return;
     jumboKey=boardDayKey();
     const {games}=jumboGames(S.schedule);
+    root.classList.toggle('bc-jt-n4',games.length>3);
     if(!games.length){
       root.innerHTML='<div class="bc-jt-empty">Schedule TBA</div>';
       if(sr) sr.innerHTML='<li>Schedule TBA</li>';
