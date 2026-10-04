@@ -30,6 +30,92 @@
     return {w,l,otl,gp:w+l+otl,pts:w*2+otl,gf,ga,diff:gf-ga,streak};
   }
 
+  // LGCHL S55 crest ids + abbreviations (same map as the live-ticker branch; crests in assets/lgchl/s55/).
+  const LG_TEAMS = {
+    'Calgary Hitmen':['CGY',412],'Baie-Comeau Drakkar':['BAC',469],'Barrie Colts':['BAR',449],'Brandon Wheat Kings':['BDN',409],
+    'Brantford Bulldogs':['BFD',306],'Chicoutimi Saguenéens':['CHI',468],'Chilliwack Bruins':['CHW',2983],'Edmonton Oil Kings':['EDM',415],
+    'Everett Silvertips':['EVT',380],'Flint Firebirds':['FLT',514],'Gatineau Olympiques':['GAT',461],'Kelowna Rockets':['KEL',400],
+    'Kingston Frontenacs':['KGN',444],'Lethbridge Hurricanes':['LET',418],'London Knights':['LDN',370],'Medicine Hat Tigers':['MHT',416],
+    'Moncton Wildcats':['MON',365],'Moose Jaw Warriors':['MJW',411],'Niagara IceDogs':['NIA',375],'North Bay Battalion':['NBB',448],
+    "Ottawa 67's":['OTT',446],'Portland Winterhawks':['POR',398],'Prince Albert Raiders':['PAR',413],'Prince George Cougars':['PGC',422],
+    'Red Deer Rebels':['RDR',385],'Regina Pats':['REG',414],'Saginaw Spirit':['SAG',408],'Saint John Sea Dogs':['SJS',397],
+    'Sarnia Sting':['SAR',451],'Saskatoon Blades':['SAS',379],'Seattle Thunderbirds':['SEA',421],'Shawinigan Cataractes':['SHA',382],
+    'Spokane Chiefs':['SPO',420],'Sudbury Wolves':['SBY',447],'Swift Current Broncos':['SCB',377],'Tri-City Americans':['TCA',399],
+    "Val-d'Or Foreurs":['VDO',460],'Vancouver Giants':['VAN',386],'Victoria Royals':['VIC',419],'Windsor Spitfires':['WSR',381]
+  };
+  const ASSET_V = '20261004-broadcast';
+  const teamAbbr = name => (LG_TEAMS[name]?.[0]) || String(name||'').split(/\s+/).filter(Boolean).map(w=>w[0]).join('').slice(0,3).toUpperCase() || 'TBA';
+  // Crest <img> with an abbreviation fallback if the file is missing or fails to load.
+  function crestHtml(name){
+    const id=LG_TEAMS[name]?.[1];
+    const abbr=`<span class="bc-abbr">${esc(teamAbbr(name))}</span>`;
+    return id?`<img src="assets/lgchl/s55/team${id}.png?v=${ASSET_V}" alt="" data-abbr="${esc(teamAbbr(name))}" decoding="async">`:abbr;
+  }
+  function wireCrestFallbacks(root){
+    root?.querySelectorAll('img[data-abbr]').forEach(img=>{
+      const swap=()=>{const sp=document.createElement('span');sp.className='bc-abbr';sp.textContent=img.dataset.abbr;img.replaceWith(sp);};
+      if(img.complete&&img.naturalWidth===0) swap(); else img.addEventListener('error',swap,{once:true});
+    });
+  }
+  // Time zones: LG schedule is ET; Calgary is MT.
+  const ET='America/New_York', MT='America/Edmonton';
+  const fmt = (d,tz,opts) => new Intl.DateTimeFormat('en-US',{timeZone:tz,...opts}).format(d);
+  const etDateKey = d => fmt(d,ET,{year:'numeric',month:'2-digit',day:'2-digit'}); // MM/DD/YYYY
+  const clock = (d,tz) => fmt(d,tz,{hour:'numeric',minute:'2-digit'});
+  const dayLabel = d => fmt(d,ET,{weekday:'short'}).toUpperCase();
+  const dateLabel = d => `${dayLabel(d)} ${fmt(d,ET,{month:'short'}).toUpperCase()} ${fmt(d,ET,{day:'numeric'})}`;
+
+  function nextGame(rows,now=new Date()){
+    return (rows||[]).filter(g=>g.status!=='final'&&g.status!=='cancelled'&&new Date(g.scheduled_at)>now)
+      .sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at))[0]||null;
+  }
+  function setText(id,v){const el=$(id); if(el) el.textContent=v;}
+  let countdownTimer=null;
+  function renderScoreboard(){
+    if(!$('hitmenBroadcast')) return;
+    const rec=seasonRecord(S.schedule);
+    const big=$('hitmenSbRecord');
+    if(big){
+      if(rec.gp){big.innerHTML=`<span>${rec.w}</span><i>&ndash;</i><span>${rec.l}</span><i>&ndash;</i><span>${rec.otl}</span>`;big.setAttribute('aria-label',`Season record ${rec.w} wins, ${rec.l} losses, ${rec.otl} overtime losses`);}
+      else big.textContent='\u2014';
+    }
+    setText('hitmenSbPts',rec.gp?rec.pts:'\u2014');
+    setText('hitmenSbGf',rec.gp?rec.gf:'\u2014');
+    setText('hitmenSbGa',rec.gp?rec.ga:'\u2014');
+    setText('hitmenSbDiff',rec.gp?(rec.diff>0?`+${rec.diff}`:rec.diff<0?`\u2212${Math.abs(rec.diff)}`:'0'):'\u2014');
+    setText('hitmenSbStreak',rec.streak||'\u2014');
+    renderNextGame();
+  }
+  function renderNextGame(){
+    const now=new Date(), g=nextGame(S.schedule,now);
+    const tag=$('hitmenSbNextTag'), crest=$('hitmenSbOppCrest');
+    if(countdownTimer){clearInterval(countdownTimer);countdownTimer=null;}
+    if(!g){
+      if(tag){tag.className='bc-k';tag.textContent='Next game';}
+      setText('hitmenSbNextDate','\u2014'); setText('hitmenSbOppName','Schedule TBA'); setText('hitmenSbCountdown','--:--:--');
+      if(crest) crest.innerHTML=''; if($('hitmenSbTimes')) $('hitmenSbTimes').innerHTML='&mdash; ET<br>&mdash; MT';
+      setText('hitmenSbRailRight','Puck drop \u00b7 ET / MT');
+      return;
+    }
+    const at=new Date(g.scheduled_at), tonight=etDateKey(at)===etDateKey(now);
+    if(tag){tag.className=tonight?'bc-k bc-onair':'bc-k';tag.textContent=tonight?'Tonight':'Next game';}
+    setText('hitmenSbNextDate',dateLabel(at));
+    setText('hitmenSbOppName',g.opponent_name||'TBA');
+    if(crest){crest.innerHTML=crestHtml(g.opponent_name);wireCrestFallbacks(crest);}
+    if($('hitmenSbTimes')) $('hitmenSbTimes').innerHTML=`${esc(clock(at,ET))} ET<br>${esc(clock(at,MT))} MT`;
+    const sameNight=S.schedule.filter(x=>x!==g&&x.status!=='final'&&etDateKey(new Date(x.scheduled_at))===etDateKey(at)&&new Date(x.scheduled_at)>at)
+      .sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
+    setText('hitmenSbRailLeft',`LGCHL \u00b7 Season 55${g.week?` \u00b7 Week ${g.week}`:''}`);
+    setText('hitmenSbRailRight',sameNight.length?`Then ${sameNight.map(x=>`${teamAbbr(x.opponent_name)} ${clock(new Date(x.scheduled_at),ET).replace(/\s?[AP]M$/,'')}`).join(' \u00b7 ')} ET`:'Puck drop \u00b7 ET / MT');
+    const tick=()=>{
+      const ms=at-new Date();
+      if(ms<=0){renderNextGame();return;}
+      const t=Math.floor(ms/1000),d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),sec=t%60,p=v=>String(v).padStart(2,'0');
+      setText('hitmenSbCountdown',`${d?`${d}D `:''}${p(h)}:${p(m)}:${p(sec)}`);
+    };
+    tick(); countdownTimer=setInterval(tick,1000);
+  }
+
   function setStatus(text,tone=''){
     const el=$('hitmenStatus'); if(!el)return;
     el.textContent=text; el.className=`hitmen-status ${tone}`.trim();
@@ -147,7 +233,7 @@
     const rec=seasonRecord(S.schedule);
     if($('hitmenRecord')) $('hitmenRecord').textContent=rec.gp?`${rec.w}-${rec.l}-${rec.otl}`:'\u2014';
   }
-  function render(){renderKpis();renderActiveSession();renderHistory();}
+  function render(){renderKpis();renderScoreboard();renderActiveSession();renderHistory();}
   function bind(){$('createSession')?.addEventListener('click',createSession);}
   bind();
   window.addEventListener('vvhl-auth-change',()=>loadAll());

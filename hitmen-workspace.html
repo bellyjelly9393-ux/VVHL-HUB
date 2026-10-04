@@ -12,6 +12,9 @@
   <link rel="stylesheet" href="wildman.css">
   <link rel="stylesheet" href="management.css">
   <link rel="stylesheet" href="hitmen-workspace.css">
+  <link rel="stylesheet" href="broadcast-tokens.css?v=20261004-broadcast">
+  <link rel="stylesheet" href="team-hitmen.css?v=20261004-broadcast">
+  <link rel="stylesheet" href="broadcast-components.css?v=20261004-broadcast">
   <link rel="stylesheet" href="network-v2.css">
 </head>
 <body class="wildman-site management-protected hitmen-war-room">
@@ -52,6 +55,33 @@
         <div><strong>BAD NEWS KELLS</strong><span>GM · #5</span></div>
         <div><strong>IMONA_PLAIN</strong><span>OWNER · #16</span></div>
         <div><strong>SMOKOLI</strong><span>AGM · #83</span></div>
+      </div>
+    </section>
+
+    <section class="bc-broadcast team-hitmen" id="hitmenBroadcast" aria-label="Calgary Hitmen scoreboard">
+      <div class="bc-scorebug">
+        <section class="bc-sb-team">
+          <img class="bc-sb-crest" src="assets/lgchl/s55/team412.png?v=20261004-broadcast" width="104" height="104" alt="Calgary Hitmen crest">
+          <div><span class="bc-k">LGCHL &middot; Season 55</span><h2 class="bc-wordmark"><span>Calgary</span> <b>Hitmen</b></h2></div>
+        </section>
+        <section class="bc-sb-record">
+          <span class="bc-k">Season record</span>
+          <div class="bc-sb-big" id="hitmenSbRecord" aria-label="Season record W-L-OTL">&mdash;</div>
+          <div class="bc-sb-wlo" aria-hidden="true"><span>W</span><span>L</span><span>OTL</span></div>
+          <dl class="bc-sb-line">
+            <div><dd id="hitmenSbPts">&mdash;</dd><dt>PTS</dt></div>
+            <div><dd id="hitmenSbGf">&mdash;</dd><dt>GF</dt></div>
+            <div><dd id="hitmenSbGa">&mdash;</dd><dt>GA</dt></div>
+            <div><dd id="hitmenSbDiff">&mdash;</dd><dt>DIFF</dt></div>
+            <div><dd id="hitmenSbStreak">&mdash;</dd><dt>STRK</dt></div>
+          </dl>
+        </section>
+        <section class="bc-sb-next">
+          <div class="bc-sb-next-hd"><span class="bc-k" id="hitmenSbNextTag">Next game</span><span class="bc-k" id="hitmenSbNextDate">&mdash;</span></div>
+          <div class="bc-sb-opp"><span class="bc-crest" id="hitmenSbOppCrest" aria-hidden="true"></span><div><small>VS</small><h3 id="hitmenSbOppName">Schedule TBA</h3></div></div>
+          <div class="bc-sb-cd"><b id="hitmenSbCountdown" role="timer" aria-label="Time to puck drop">--:--:--</b><span id="hitmenSbTimes">&mdash; ET<br>&mdash; MT</span></div>
+        </section>
+        <div class="bc-sb-rail"><span id="hitmenSbRailLeft">LGCHL &middot; Season 55</span><span id="hitmenSbRailRight">Puck drop &middot; ET / MT</span></div>
       </div>
     </section>
 
@@ -132,7 +162,7 @@
 <script src="management-guard.js?v=20260922-cleanup"></script>
 <script src="wildman-player-intelligence.js"></script>
 <script src="script.js"></script>
-<script src="hitmen-workspace.js?v=20261004-record"></script>
+<script src="hitmen-workspace.js?v=20261004-broadcast"></script>
 <script src="live-pipeline-status.js?v=20260928-routing"></script>
 <script src="hitmen-game-center-sync.js"></script>
 <script src="hitmen-vod-handoff.js"></script>
