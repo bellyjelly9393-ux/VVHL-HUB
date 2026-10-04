@@ -84,6 +84,9 @@
   "functions": {
     "api/chelscout-deepthink.js": {
       "maxDuration": 120
+    },
+    "api/lgchl-scores.js": {
+      "maxDuration": 60
     }
   }
 }

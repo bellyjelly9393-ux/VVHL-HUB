@@ -16,7 +16,7 @@ const BASE = 'https://lrgllzvwgvqagcpiyvfd.supabase.co';
 const PUBLISHABLE_KEY = 'sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
 const COLUMNS = 'id,season,week,scheduled_at,opponent_name,calgary_side,status,calgary_score,opponent_score,overtime,source_url';
 const GAME_WINDOW_MIN = 35; // LG nights run 3 games 35 minutes apart.
-const LOGO_DIR = '/assets/lgchl/s55/';
+const LOGO_DIR = '/assets/lgchl/s55/48/'; // 48px webp crests (100px PNG originals one level up)
 
 // LGCHL team ids derived from S55 roster overlap (hitmen_opponent_roster_players x lg_player_season_stats).
 const TEAMS = {
@@ -72,7 +72,7 @@ function teamInfo(name) {
   return {
     name: String(name || 'TBD'),
     abbr: hit ? hit[0] : initials(name),
-    logo: hit ? `${LOGO_DIR}team${hit[1]}.png` : null,
+    logo: hit ? `${LOGO_DIR}team${hit[1]}.webp` : null,
   };
 }
 
@@ -161,7 +161,7 @@ export function buildTicker(rows, now = Date.now()) {
     generated_at: new Date(now).toISOString(),
     season,
     game_window_min: GAME_WINDOW_MIN,
-    team: { name: 'Calgary Hitmen', short: 'Hitmen', abbr: 'CGY', logo: `${LOGO_DIR}team412.png`, league: 'LGCHL' },
+    team: { name: 'Calgary Hitmen', short: 'Hitmen', abbr: 'CGY', logo: `${LOGO_DIR}team412.webp`, league: 'LGCHL' },
     record,
     streak,
     last5: finals.slice(-5).map(g => g.result).join(''),
