@@ -33,12 +33,13 @@
   --bc-arena-photo:url("assets/broadcast/arena-tunnel.webp");
   --bc-arena-photo-jpg:url("assets/broadcast/arena-tunnel.jpg");
   --bc-photo-filter:saturate(.4) contrast(1.05);
-  --bc-arena-soft:url("assets/broadcast/arena-soft.webp");
   --bc-ice:url("assets/broadcast/ice-texture.webp");
-  /* faded imagery behind panels (desaturated, low opacity, softly masked) */
-  --bc-bg-photo-opacity:.18;
-  --bc-bg-ice-opacity:.07;
-  --bc-watermark-opacity:.07;
+  /* FX backplates (DESIGN-SYSTEM.md section 3): greyscale, low opacity, soft-masked imagery behind panels */
+  --bc-fx-lights:url("assets/broadcast/fx-lights.webp");
+  --bc-fx-soft:radial-gradient(130% 110% at 72% 18%,#000 0,rgba(0,0,0,.55) 55%,transparent 100%);
+  /* silver / steel: cold top edge on panels, brushed metal on rails */
+  --bc-steel-hi:rgba(206,211,217,.20);
+  --bc-steel:url("assets/broadcast/brushed.png");
 
   /* LED board */
   --bc-led-bg:#060607;

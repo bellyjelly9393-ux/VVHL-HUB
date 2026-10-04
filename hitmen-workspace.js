@@ -93,7 +93,7 @@
     if(!g){
       if(tag){tag.className='bc-k';tag.textContent='Next game';}
       setText('hitmenSbNextDate','\u2014'); setText('hitmenSbOppName','Schedule TBA'); setText('hitmenSbCountdown','--:--:--');
-      if(crest){crest.innerHTML='';crest.closest('.bc-sb-next')?.style.setProperty('--bc-opp-crest','none');} if($('hitmenSbTimes')) $('hitmenSbTimes').innerHTML='&mdash; ET<br>&mdash; MT';
+      if(crest) crest.innerHTML=''; if($('hitmenSbTimes')) $('hitmenSbTimes').innerHTML='&mdash; ET<br>&mdash; MT';
       setText('hitmenSbRailRight','Puck drop \u00b7 ET / MT');
       return;
     }
@@ -102,8 +102,6 @@
     setText('hitmenSbNextDate',dateLabel(at));
     setText('hitmenSbOppName',g.opponent_name||'TBA');
     if(crest){crest.innerHTML=crestHtml(g.opponent_name);wireCrestFallbacks(crest);}
-    const oppId=LG_TEAMS[g.opponent_name]?.[1], nextPanel=crest?.closest('.bc-sb-next');
-    if(nextPanel) nextPanel.style.setProperty('--bc-opp-crest',oppId?`url("assets/lgchl/s55/team${oppId}.png?v=${ASSET_V}")`:'none');
     if($('hitmenSbTimes')) $('hitmenSbTimes').innerHTML=`${esc(clock(at,ET))} ET<br>${esc(clock(at,MT))} MT`;
     const sameNight=S.schedule.filter(x=>x!==g&&x.status!=='final'&&etDateKey(new Date(x.scheduled_at))===etDateKey(at)&&new Date(x.scheduled_at)>at)
       .sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));

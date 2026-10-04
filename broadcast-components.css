@@ -51,18 +51,13 @@
 .bc-sb-cd b{font:700 40px/1 var(--bc-font-display);font-variant-numeric:tabular-nums;letter-spacing:.04em;color:var(--bc-offwhite);white-space:nowrap}
 .bc-sb-cd span{font:600 12px/1.35 var(--bc-font-label);letter-spacing:.12em;text-transform:uppercase;color:var(--bc-muted);text-align:right;white-space:nowrap}
 
-/* faded imagery behind every panel so nothing sits on flat grey:
-   blurred arena photo + ice texture, crest watermarks (team crest / next opponent), all greyscale */
-.bc-scorebug>section>*{position:relative;z-index:1}
-.bc-scorebug>section::before,.bc-sb-team::after,.bc-sb-next::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;filter:grayscale(1)}
-.bc-scorebug>section::before{background:var(--bc-arena-soft) 50% 64%/cover no-repeat;opacity:var(--bc-bg-photo-opacity);
-  -webkit-mask-image:linear-gradient(180deg,#000 0,rgba(0,0,0,.35) 100%);mask-image:linear-gradient(180deg,#000 0,rgba(0,0,0,.35) 100%)}
-.bc-scorebug>section.bc-sb-record::before{background:var(--bc-ice) 0 0/360px auto repeat;opacity:var(--bc-bg-ice-opacity);
-  -webkit-mask-image:radial-gradient(75% 80% at 50% 45%,#000 0,transparent 100%);mask-image:radial-gradient(75% 80% at 50% 45%,#000 0,transparent 100%)}
-.bc-sb-team::after{background:var(--team-crest,none) 112% 50%/auto 150% no-repeat;opacity:var(--bc-watermark-opacity);filter:grayscale(1) brightness(1.5);
-  -webkit-mask-image:linear-gradient(90deg,transparent 35%,#000 80%);mask-image:linear-gradient(90deg,transparent 35%,#000 80%)}
-.bc-sb-next::after{background:var(--bc-opp-crest,none) 118% 38%/auto 135% no-repeat;opacity:var(--bc-watermark-opacity);filter:grayscale(1) brightness(1.5);
-  -webkit-mask-image:linear-gradient(90deg,transparent 40%,#000 85%);mask-image:linear-gradient(90deg,transparent 40%,#000 85%)}
+/* FX backplate (matches the mockups' .sbs): faded roof-lights photo behind the scorebug,
+   greyscale, low opacity, soft radial mask. Content sits above it. */
+.bc-scorebug::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:var(--bc-fx,var(--bc-fx-lights)) var(--bc-fx-pos,center top)/var(--bc-fx-size,cover) no-repeat;
+  opacity:var(--bc-fx-o,.18);filter:grayscale(1) contrast(1.05);
+  -webkit-mask-image:var(--bc-fx-mask,var(--bc-fx-soft));mask-image:var(--bc-fx-mask,var(--bc-fx-soft))}
+.bc-scorebug{border-top-color:var(--bc-steel-hi)}
 
 /* crest image with abbreviation fallback */
 .bc-crest{display:inline-grid;place-items:center;overflow:hidden}
@@ -71,7 +66,7 @@
 
 /* brushed-metal base rail */
 .bc-sb-rail{grid-column:1/-1;position:relative;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:26px;padding:0 18px;
-  background:linear-gradient(180deg,#1E1F22,#151618);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),inset 0 -1px 0 rgba(0,0,0,.6)}
+  background:var(--bc-steel) 0 0/512px 26px,linear-gradient(180deg,#1E1F22,#151618);background-blend-mode:screen,normal;box-shadow:inset 0 1px 0 rgba(255,255,255,.1),inset 0 -1px 0 rgba(0,0,0,.6)}
 .bc-sb-rail span{font:700 10.5px/1.2 var(--bc-font-label);letter-spacing:var(--bc-track-label);text-transform:uppercase;color:#7D8187;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 @media(max-width:1100px){
@@ -164,3 +159,17 @@
   .bc-stage{transform:scale(var(--bc-stage-scale))}
   .bc-stage-wrap+.bc-scorebug{margin-top:-46px}
 }
+
+/* ---------- network brand: EliteChel Series Media (DESIGN-SYSTEM.md section 7) ----------
+   Brand content like a crest: small only (22px top bar, 20px footer, 44px corner bug at 50%).
+   Never recoloured, outlined, glowing or animated; never on the jumbotron LED face. */
+.ec-net{display:inline-flex;align-items:center;gap:8px;flex:none;font:700 11px/1 var(--bc-font-label);letter-spacing:var(--bc-track-label);text-transform:uppercase;color:#C9CCD0;white-space:nowrap}
+.ec-net img{width:22px;height:22px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))}
+.ec-foot{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font:700 10.5px/1 var(--bc-font-label);letter-spacing:.18em;text-transform:uppercase;color:var(--bc-muted);white-space:nowrap}
+.ec-foot-col{display:grid;justify-items:end;gap:10px}
+.ec-foot-col p{margin:0}
+.ec-foot img{width:20px;height:20px;object-fit:contain;opacity:.9}
+.ec-bug{position:absolute;right:18px;bottom:calc(var(--ec-bug-lift,150px) + 16px);z-index:5;height:44px;width:auto;opacity:.5;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))}
+@media(max-width:1100px){.ec-bug{--ec-bug-lift:120px}}
+@media(max-width:1180px){.ec-net span{display:none}}
+@media(max-width:700px){.ec-bug{--ec-bug-lift:46px;height:32px}.ec-foot{margin-left:0;white-space:normal}.ec-foot-col{justify-items:start}}
