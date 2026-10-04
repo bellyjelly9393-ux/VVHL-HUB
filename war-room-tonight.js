@@ -97,7 +97,8 @@ async function load(){
     games.forEach(g=>{const mine=reps.filter(r=>r.scheduled_game_id===g.id&&(v.mgmt||r.evidence_summary?.approved===true));
       const pick=mine.find(r=>r.evidence_summary?.lineups?.calgary)||mine[0];g.report=pick?parseReport(pick):null});
   }
-  const lockerFor=name=>lockers.find(l=>norm(l.gamertag)===norm(name))||null;
+  const current=lockers.filter(l=>l.roster_class!=='historical'); // archived past players never feed a jersey or TV
+  const lockerFor=name=>current.find(l=>norm(l.gamertag)===norm(name))||null;
   const cgy=standings.find(t=>t.lg_team_id===CGY)||null;
   return {v,schedule,lockers,standings,games,day,today:day===ref,cgy,teamFor,lockerFor,errors};
 }

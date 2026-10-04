@@ -61,6 +61,8 @@ async function load(){
  }
  const order={LW:1,C:2,RW:3,LD:4,RD:5,G:6};
  lockers.sort((a,b)=>(a.roster_class==='tc')-(b.roster_class==='tc')||(order[a.position]||9)-(order[b.position]||9)||a.gamertag.localeCompare(b.gamertag));
+ // Archived past players (roster_class='historical') never get a stall or count; their game reports stay reachable from their dossier.
+ lockers=lockers.filter(l=>l.roster_class!=='historical');
  const active=lockers.filter(l=>l.roster_class!=='tc'),tc=lockers.filter(l=>l.roster_class==='tc');
  E('lockerRosterCount').textContent=active.length;E('lockerTcCount').textContent=tc.length;
  E('lockerReportCount').textContent=playerReports.length+gameReports.length;

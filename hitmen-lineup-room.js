@@ -175,7 +175,7 @@ async function load(){
    DB().from('player_availability').select('*').eq('team_id',TEAM)
  ]);
  const err=[lockers,snaps,opps,schedule,avail].find(x=>x.error)?.error;if(err){console.error(err);return msg(err.message||'Could not load lineup room.',true)}
- S.lockers=(lockers.data||[]).filter(l=>l.player_id);S.snapshots=snaps.data||[];S.opponents=opps.data||[];S.schedule=schedule.data||[];S.availability=avail.data||[];
+ S.lockers=(lockers.data||[]).filter(l=>l.player_id&&l.roster_class!=='historical'); // archived past players are not pickableS.snapshots=snaps.data||[];S.opponents=opps.data||[];S.schedule=schedule.data||[];S.availability=avail.data||[];
  E('lineupRosterCount').textContent=S.lockers.filter(l=>!isTc(l)).length;E('lineupTcCount').textContent=S.lockers.filter(isTc).length;
  renderOpponentOptions();await refreshLineups();renderLines();renderDepth();renderAvailability();updateBattleLink();msg('Lineup Room ready · '+S.lockers.length+' player stalls loaded.');
 }

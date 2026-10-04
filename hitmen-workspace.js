@@ -197,7 +197,7 @@
         db().from('hitmen_schedule_games').select('id,week,scheduled_at,opponent_name,calgary_side,status,calgary_score,opponent_score,overtime').eq('team_id',S.team.id).eq('season',55).order('scheduled_at')
       ]);
       if(sessions.error||lockers.error||reports.error||lineups.error) throw (sessions.error||lockers.error||reports.error||lineups.error);
-      S.sessions=sessions.data||[]; S.lockers=lockers.data||[]; S.reports=reports.data||[]; S.lineups=lineups.data||[];
+      S.sessions=sessions.data||[]; S.lockers=(lockers.data||[]).filter(x=>x.roster_class!=='historical'); // archived past players are not counted S.reports=reports.data||[]; S.lineups=lineups.data||[];
       if(schedule.error) console.warn('hitmen_schedule_games unavailable',schedule.error);
       S.schedule=schedule.error?[]:(schedule.data||[]);
       const ids=S.sessions.map(x=>x.id);
