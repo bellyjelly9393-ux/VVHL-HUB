@@ -5,6 +5,7 @@ const SEASON=55;
 const BASE='https://lrgllzvwgvqagcpiyvfd.supabase.co';
 const KEY='sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
 const OPENROUTER_DEFAULT='https://openrouter.ai/api/v1';
+const {requestGrok}=require('../lib/grok-client.cjs');
 
 const SYSTEM=`You are WILDMAN HOCKEY OPS, the Calgary Hitmen private EA Sports NHL 6v6 regular-season head scout, video coach, opponent analyst, lineup strategist and hockey operations advisor.
 
@@ -280,7 +281,8 @@ async function contextFor(token,names,question,scenario,requestedLens){
  };
 }
 
-async function openRouter(text,mode){
+async function openRouter(text,mode,provider='claude'){
+ if(provider==='grok')return requestGrok({system:SYSTEM,prompt:text,mode});
  const key=process.env.OPENROUTER_API_KEY;
  if(!key)throw fail(503,'OPENROUTER_API_KEY is not configured on this deployment.');
  const base=(process.env.OPENROUTER_BASE_URL||OPENROUTER_DEFAULT).replace(/\/$/,'');
@@ -313,13 +315,14 @@ async function openRouter(text,mode){
 
 async function saveRun(rest,record){
  try{
-  await fetch(rest.base+'/rest/v1/hitmen_ai_analysis_runs',{
+  const response=await fetch(rest.base+'/rest/v1/hitmen_ai_analysis_runs',{
    method:'POST',
    headers:{...rest.headers,'Content-Type':'application/json','Prefer':'return=minimal'},
    body:JSON.stringify(record),
    signal:AbortSignal.timeout(10000)
   });
- }catch{}
+  return response.ok;
+ }catch{return false;}
 }
 
 async function handler(req,res){
@@ -328,13 +331,14 @@ async function handler(req,res){
  const token=String(req.headers.authorization||'');
  if(!/^Bearer \S+$/.test(token))return res.status(401).json({error:'Sign in to the War Room.'});
  try{
-  const {question,playerNames=[],scenario='',mode='auto',lens='auto'}=req.body||{};
+  const {question,playerNames=[],scenario='',mode='auto',lens='auto',provider='claude'}=req.body||{};
   if(
    typeof question!=='string'||!question.trim()||question.length>5000||
    typeof scenario!=='string'||scenario.length>8000||
    !Array.isArray(playerNames)||playerNames.length>24||
    playerNames.some(n=>typeof n!=='string'||!n.trim()||n.length>100)||
    !['auto','quick','deep','max'].includes(mode)||
+   !['claude','grok'].includes(provider)||
    !['auto','player','opponent','lineup','postgame','market','general'].includes(lens)
   )throw fail(400,'Use a question, optional exact gamertags, and a valid analysis lens.');
 
@@ -349,7 +353,7 @@ async function handler(req,res){
    evidencePacket:{coverage:packet.coverage,sources:packet.sources}
   });
 
-  const output=await openRouter(prompt,depth.mode);
+  const output=await openRouter(prompt,depth.mode,provider);
   const cited=[...new Set([...output.answer.matchAll(/\[E(\d+)\]/g)].map(m=>'E'+m[1]))];
   const unknown=cited.filter(id=>!packet.sources.some(s=>s.id===id));
   const warnings=[...packet.coverage.warnings];
@@ -358,16 +362,19 @@ async function handler(req,res){
 
   const coverage={...packet.coverage,warnings};
   const nextDepth=depth.mode==='quick'?'deep':depth.mode==='deep'?'max':null;
-  saveRun(packet.rest,{
+  const saved=await saveRun(packet.rest,{
    team_id:TEAM,season:SEASON,lens:packet.lens,mode:depth.mode,
    question:question.trim(),scenario:scenario.trim()||null,
    player_names:playerNames.map(n=>n.trim()),model:output.model,answer:output.answer,
-   evidence_ids:cited,coverage,usage:{...output.usage,auto_depth_reason:depth.reason},created_by:packet.userId
+   evidence_ids:cited,coverage,usage:{...output.usage,provider,auto_depth_reason:depth.reason},created_by:packet.userId
   });
+  if(!saved)warnings.push('This answer could not be saved to analysis history. Keep a copy before leaving the page.');
 
   return res.status(200).json({
    answer:output.answer,
    model:output.model,
+   provider,
+   saved,
    reasoningEffort:output.effort,
    depthMode:depth.mode,
    depthReason:depth.reason,

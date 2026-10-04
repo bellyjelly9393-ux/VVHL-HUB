@@ -79,6 +79,12 @@
             <textarea id="gmAiScenario" class="text-input" rows="3" maxlength="8000" placeholder="Opponent lineup, date, availability, budget, positions, score context and what you want solved. Unverified details are treated as assumptions."></textarea>
 
             <div class="gm-ai-control-grid">
+              <label for="gmAiProvider">Scouting analyst
+                <select id="gmAiProvider" class="text-input">
+                  <option value="claude">Claude</option>
+                  <option value="grok">Grok — second opinion</option>
+                </select>
+              </label>
               <label for="gmAiLens">Hockey analysis lens
                 <select id="gmAiLens" class="text-input">
                   <option value="auto">Auto-detect from question</option>
@@ -100,7 +106,7 @@
               <button id="gmAiDeepAsk" class="small-btn primary" type="button">Analyze Hockey Question</button>
               <button id="gmAiGoDeeper" class="small-btn" type="button" hidden>Go Deeper</button>
             </div>
-            <p class="section-note">Claude chooses Quick, Deep or Max automatically from the question, hockey lens and evidence packet. After an answer, Go Deeper appears when another reasoning level is available.</p>
+            <p class="section-note">Both analysts use the same hockey framework and access rules. Depth is chosen from your question and available evidence. Select Grok and analyze again for a second opinion. Earlier answers stay below for comparison during this session; each request uses API credits. Reports remain advisory until management reviews them.</p>
           </div>
           <div class="gm-ai-examples">
             <button type="button" data-gm-lens="opponent" data-gm-example="Prepare our complete scouting brief for the next opponent on the schedule using everything we currently know.">Prep Next Opponent</button>
@@ -116,6 +122,10 @@
             <h3>READY FOR A QUESTION.</h3>
             <p>Ask naturally. The engine chooses the hockey lens and reasoning depth, loads the current evidence, challenges its first conclusion, and gives you a cited hockey-operations answer.</p>
           </div>
+          <details id="gmAiHistory" class="gm-ai-evidence" hidden>
+            <summary>Previous answers — compare opinions</summary>
+            <div id="gmAiHistoryList"></div>
+          </details>
         </section>
 
         <aside class="panel gm-ai-side">
