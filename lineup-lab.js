@@ -122,7 +122,7 @@ function makeHelpers(cfg,v,D,L){
     } else if(L.shared){const b=ctx.playerBase(id);if(b.gp)x={gp:b.gp,g:b.g,a:b.a,s:b.s,h:b.hits,tk:b.tk,int:b.int,bs:0,gv:b.gv,fop:null,pass:null,svp:null,sog:0,src:'box scores'}}
     if(!x) x={gp:0,src:'no data'};
     x.name=l.gamertag;x.names=[lc(l.gamertag)];
-    if(slot==='C'){const fo=ctx.faceoffs(id);if(fo){x.fop=100*fo.w/Math.max(1,fo.w+fo.l);x.draws=fo.w+fo.l;x.fow=fo.w;x.fol=fo.l;x.drawsEst=false}else{x.draws=x.fop!=null?20*x.gp:0;x.drawsEst=x.fop!=null}}
+    if(slot==='C'){const fo=ctx.faceoffs(id);if(fo){x.fop=100*fo.w/Math.max(1,fo.w+fo.l);x.draws=fo.w+fo.l;x.fow=fo.w;x.fol=fo.l;x.drawsEst=false}else{if(!(x.fop>0))x.fop=null;x.draws=x.fop!=null?20*x.gp:0;x.drawsEst=x.fop!=null}}
     if(slot==='G'&&x.svp==null){const gb=ctx.goalieBase(id);if(gb&&gb.sf){x.svp=gb.sv/gb.sf;x.sog=gb.sf;x.src='box scores'}}
     return x;
   }
@@ -138,7 +138,11 @@ function makeHelpers(cfg,v,D,L){
     const x={gp:+row.games_played||0,g:+row.goals||0,a:+row.assists||0,s:+row.shots||0,h:+row.hits||0,tk:+row.takeaways||0,gv:+row.giveaways||0,
       int:+(rs.interceptions??0)||0,bs:+(rs.bs??rs.skbs??0)||0,fop:row.faceoff_pct!=null?+row.faceoff_pct:(rs.fop!=null?+rs.fop:null),pass:row.passing_pct!=null?+row.passing_pct:null,
       svp:sv==null?null:(sv>1?sv/100:sv),sog:+(rs.sog??0)||0,name:disp,names,src:row.source==='lg_chl'?`${cfg.league} ${cfg.seasonLabel}`:'EA career'};
-    if(slot==='C'){x.draws=x.fop!=null?20*x.gp:0;x.drawsEst=true}
+    if(slot==='C'){
+      // an LG FO% of 0 (or none) over a few games means "not recorded": fall back to the EA career line, with its real draw count
+      if(!(x.fop>0)){const ea=rows.find(o=>o.source==='ea_nhl27'),er=ea?.raw_stats||{};
+        if(ea&&+er.fop>0){x.fop=+er.fop;x.draws=+er.fo||20*(+ea.games_played||0);x.drawsEst=!(+er.fo);x.foSrc='EA career'}else{x.fop=null;x.draws=0}}
+      else{x.draws=20*x.gp;x.drawsEst=true}}
     if(slot==='G'&&!x.sog&&x.svp!=null)x.sog=Math.round(15*x.gp);
     return x;
   }
@@ -285,7 +289,7 @@ const LANE_NAME={fo:'Faceoffs',lwA:'Our LW attack',rwA:'Our RW attack',lwT:'Thei
 function reason(l,S){
   const i=l.inputs,u=S.us,t=S.them,n=(side,p)=>esc(side[p]?.name||'—');
   switch(l.id){
-    case 'fo':return `Faceoffs: ${n(u,'C')} ${i.our.raw!=null?pct(i.our.raw):'no FO data'}${i.our.fw!=null?` (${i.our.fw}–${i.our.fl})`:''} vs ${n(t,'C')} ${i.their.raw!=null?pct(i.their.raw):'no FO data'} → shrunk ${pct(i.our.shr)} vs ${pct(i.their.shr)} toward ${pct(i.base)}${i.our.est||i.their.est?' (draws estimated at 20/GP)':''}.`;
+    case 'fo':return `Faceoffs: ${n(u,'C')} ${i.our.raw!=null?pct(i.our.raw):'no FO data'}${i.our.fw!=null?` (${i.our.fw}–${i.our.fl})`:''} vs ${n(t,'C')} ${i.their.raw!=null?pct(i.their.raw):'no FO data'}${t.C?.foSrc?` (${t.C.foSrc}, ${t.C.draws} draws)`:''} → shrunk ${pct(i.our.shr)} vs ${pct(i.their.shr)} toward ${pct(i.base)}${i.our.est||i.their.est?' (draws estimated at 20/GP)':''}.`;
     case 'lwA':case 'rwA':return `Our ${l.us} ${n(u,l.us)} (${f2(i.our.attRaw)} G+½A/GP raw → ${f2(i.our.att)} shrunk, ${l.us} base ${f2(i.our.base)}) vs their ${l.them} ${n(t,l.them)} (${f2(i.their.dnRaw)} net def plays/GP → ${f2(i.their.dn)}).`;
     case 'lwT':case 'rwT':return `Their ${l.them} ${n(t,l.them)} (${f2(i.their.gRaw)} G/GP raw → ${f2(i.their.g)} shrunk at k=5, vs ${l.them} base ${f2(i.their.base)}) attacks our ${l.us} ${n(u,l.us)} (${f2(i.our.dpRaw)} def plays/GP)${l.key?' · key threat':''}.`;
     case 'mid':return `Middle: their C ${n(t,'C')} (${f2(i.their.aRaw)} A/GP, ${i.their.passRaw!=null?pct(i.their.passRaw):'–'} passing) vs our C ${n(u,'C')} (${f2(i.our.tiRaw)} TK+INT/GP).`;
