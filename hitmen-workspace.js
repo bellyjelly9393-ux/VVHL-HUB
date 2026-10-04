@@ -6,7 +6,29 @@
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const n = v => Number(v) || 0;
-  const S = { team:null, sessions:[], games:[], lockers:[], reports:[], lineups:[], loading:false };
+  const S = { team:null, sessions:[], games:[], schedule:[], lockers:[], reports:[], lineups:[], loading:false };
+
+  // Season record from hitmen_schedule_games: only final rows that carry both scores count.
+  // W = Calgary scored more; OTL = lost in overtime; L = any other loss. 2 pts per W, 1 per OTL.
+  function seasonRecord(rows){
+    let w=0,l=0,otl=0,gf=0,ga=0;
+    const finals=(rows||[]).filter(g=>g.status==='final'&&g.calgary_score!=null&&g.opponent_score!=null)
+      .sort((a,b)=>String(a.scheduled_at).localeCompare(String(b.scheduled_at)));
+    const results=finals.map(g=>{
+      const cs=Number(g.calgary_score),os=Number(g.opponent_score);
+      gf+=cs; ga+=os;
+      if(cs>os){w++;return 'W';}
+      if(g.overtime){otl++;return 'OT';}
+      l++;return 'L';
+    });
+    let streak='';
+    if(results.length){
+      const last=results[results.length-1];let k=0;
+      for(let i=results.length-1;i>=0&&results[i]===last;i--)k++;
+      streak=`${last}${k}`;
+    }
+    return {w,l,otl,gp:w+l+otl,pts:w*2+otl,gf,ga,diff:gf-ga,streak};
+  }
 
   function setStatus(text,tone=''){
     const el=$('hitmenStatus'); if(!el)return;
@@ -42,14 +64,17 @@
     try{
       const allowed=await loadTeam();
       if(!allowed){setStatus('Calgary Hitmen workspace access is restricted.','error');return;}
-      const [sessions,lockers,reports,lineups]=await Promise.all([
+      const [sessions,lockers,reports,lineups,schedule]=await Promise.all([
         db().from('team_competitive_sessions').select('*').eq('team_id',S.team.id).order('created_at',{ascending:false}),
         db().from('team_player_lockers').select('id,roster_class,gamertag,position,management_role').eq('team_id',S.team.id).eq('season',55),
         db().from('hitmen_player_reports').select('id').eq('team_id',S.team.id).eq('season',55),
-        db().from('lineups').select('id,status,is_active,updated_at').eq('team_id',S.team.id).eq('league','LGCHL')
+        db().from('lineups').select('id,status,is_active,updated_at').eq('team_id',S.team.id).eq('league','LGCHL'),
+        db().from('hitmen_schedule_games').select('id,week,scheduled_at,opponent_name,calgary_side,status,calgary_score,opponent_score,overtime').eq('team_id',S.team.id).eq('season',55).order('scheduled_at')
       ]);
       if(sessions.error||lockers.error||reports.error||lineups.error) throw (sessions.error||lockers.error||reports.error||lineups.error);
       S.sessions=sessions.data||[]; S.lockers=lockers.data||[]; S.reports=reports.data||[]; S.lineups=lineups.data||[];
+      if(schedule.error) console.warn('hitmen_schedule_games unavailable',schedule.error);
+      S.schedule=schedule.error?[]:(schedule.data||[]);
       const ids=S.sessions.map(x=>x.id);
       if(ids.length){
         const games=await db().from('team_competitive_games').select('*').in('session_id',ids).order('game_number');
@@ -119,9 +144,8 @@
     if($('hitmenRosterCount')) $('hitmenRosterCount').textContent=S.lockers.filter(x=>x.roster_class!=='tc').length;
     if($('hitmenTcCount')) $('hitmenTcCount').textContent=S.lockers.filter(x=>x.roster_class==='tc').length;
     if($('hitmenLineupCount')) $('hitmenLineupCount').textContent=S.lineups.length;
-    const finals=S.games.filter(g=>g.status==='final');
-    const w=finals.filter(g=>n(g.team_score)>n(g.opponent_score)).length,l=finals.filter(g=>n(g.opponent_score)>n(g.team_score)).length;
-    if($('hitmenRecord')) $('hitmenRecord').textContent=`${w}-${l}`;
+    const rec=seasonRecord(S.schedule);
+    if($('hitmenRecord')) $('hitmenRecord').textContent=rec.gp?`${rec.w}-${rec.l}-${rec.otl}`:'\u2014';
   }
   function render(){renderKpis();renderActiveSession();renderHistory();}
   function bind(){$('createSession')?.addEventListener('click',createSession);}
