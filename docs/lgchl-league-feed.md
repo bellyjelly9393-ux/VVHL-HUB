@@ -79,3 +79,18 @@ Notes:
 * **Health**: `select * from lgchl_sync_runs order by id desc limit 5;`. Look at `error` and `pages_failed`.
 * **Manual run** (SQL editor): `select private.lgchl_kick_sync('full');`
 * **Pause**: `select cron.alter_job(job_id, active := false) from cron.job where jobname like 'lgchl-%';`
+
+## Hitmen block (`GET /api/live-ticker`)
+Since 2026-10-04 the Hitmen block reads the same public views, so it needs no service key or session:
+* **Games**: `lgchl_games_board` rows where LG team 412 is the away or home team (66 games).
+* **Record**: the official LG standings line from `lgchl_standings_current` (W-L-OTL; W includes OT wins).
+* **Streak and last 5**: worked out from the finals.
+
+The old staff-only read of `hitmen_schedule_games` is retired. A read-only diff of the two sources:
+* Same 66 games, times, weeks, home/away, statuses and scores.
+* `hitmen_schedule_games` has no postponed/cancelled rows and no OT flags, and only 3 of its 9 finals
+  have an LG link.
+* LG spells two names differently: "Chicoutimi Sagueneens" and "Tri City Americans".
+
+Gap: LG schedule rows have no OT flag. Per-game results therefore show W/L only, but the record
+still counts OTL correctly because it comes from the standings.

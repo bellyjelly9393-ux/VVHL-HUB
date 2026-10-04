@@ -32,8 +32,7 @@
     leaguePoll: 300000,
     pxPerSecond: 60,
   };
-  const CACHE_KEY = 'wm-live-ticker:v3';
-  const AUTH_KEY = 'sb-lrgllzvwgvqagcpiyvfd-auth-token';
+  const CACHE_KEY = 'wm-live-ticker:v4';
   const LEAGUE_ORDER = ['WHL', 'OHL', 'QMJHL']; // Calgary's league first
   const qsNow = (() => {
     try { const v = new URLSearchParams(location.search).get('ticker_now'); const t = v ? Date.parse(v) : NaN; return Number.isFinite(t) ? t : null; } catch { return null; }
@@ -298,28 +297,12 @@
   }
 
   // ---------- data ----------
-  function readToken() {
-    try {
-      const s = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
-      const tok = s?.access_token || s?.currentSession?.access_token;
-      const exp = s?.expires_at || s?.currentSession?.expires_at;
-      return tok && (!exp || exp * 1000 > Date.now() + 5000) ? tok : null;
-    } catch { return null; }
-  }
-  async function sessionToken() {
-    try {
-      // eslint-disable-next-line no-undef
-      if (typeof vvhlDb !== 'undefined' && vvhlDb?.auth?.getSession) { const { data: s } = await vvhlDb.auth.getSession(); if (s?.session?.access_token) return s.session.access_token; }
-    } catch {}
-    return readToken();
-  }
   async function getJson(url, headers = {}) {
     const r = await fetch(url, { headers: { accept: 'application/json', ...headers }, credentials: 'same-origin' });
     return r;
   }
   async function loadHitmen() {
-    let r = await getJson(cfg.endpoint);
-    if (r.status === 401) { const tok = await sessionToken(); if (tok) r = await getJson(cfg.endpoint, { Authorization: `Bearer ${tok}` }); }
+    const r = await getJson(cfg.endpoint); // public feed; no session or key needed
     if (!r.ok) throw new Error('hitmen ' + r.status);
     const b = await r.json(); if (!b?.ok) throw new Error('hitmen payload'); return b;
   }

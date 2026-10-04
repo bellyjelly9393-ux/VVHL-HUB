@@ -20,7 +20,7 @@ const TEAM_COLS = 'lg_team_id,name,abbr,nickname,league,conference,division,logo
 let restFetch = (url, init) => fetch(url, init); // injectable for tests
 export function setRestFetcher(fn) { restFetch = fn; }
 
-async function rest(pathAndQuery) {
+export async function rest(pathAndQuery) {
   const out = [];
   for (let from = 0; ; from += PAGE) {
     const r = await restFetch(`${process.env.SUPABASE_URL || BASE}/rest/v1/${pathAndQuery}`, {
@@ -35,7 +35,7 @@ async function rest(pathAndQuery) {
 }
 
 const cache = new Map();
-async function cached(key, fn, now) {
+export async function cached(key, fn, now) {
   const hit = cache.get(key);
   if (hit && now - hit.at < CACHE_MS) return hit.value;
   try { const value = await fn(); cache.set(key, { at: now, value }); return value; }
@@ -69,7 +69,7 @@ function team(t) {
   };
 }
 
-async function loadTeams(now) {
+export async function loadTeams(now) {
   return cached('teams', async () => {
     const rows = await rest(`lgchl_standings_current?select=${TEAM_COLS}&order=league.asc,conference.asc,conference_rank.asc`);
     return rows;

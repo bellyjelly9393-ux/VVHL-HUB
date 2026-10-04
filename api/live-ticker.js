@@ -1,145 +1,80 @@
 // Site-wide Calgary Hitmen live ticker feed.
-// GET /api/live-ticker -> compact, public-safe JSON (record, streak, recent finals,
-// next game, live window, upcoming) built from public.hitmen_schedule_games.
+// GET /api/live-ticker -> compact public JSON: record, streak, last 5, recent finals, next game,
+// live window, upcoming.
 //
-// Access model (hitmen_schedule_games RLS only allows signed-in Calgary staff/lockers):
-//   1. If SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) is set in the Vercel env,
-//      the function reads server-side and serves everyone (CDN cached ~30s).
-//      Only schedule/score columns are selected; scouting notes never leave the server.
-//   2. Otherwise it forwards the visitor's own Supabase session (Authorization: Bearer)
-//      with the publishable key, so RLS decides. Anonymous visitors get 401 and the
-//      ticker hides itself.
-// The service key is never sent to the browser.
+// Source: the PUBLIC league views filled by the Supabase Edge Function lgchl-league-sync
+// (public.lgchl_games_board + public.lgchl_standings_current, read-only RLS for anon), read with
+// the publishable key. Everyone, signed in or not, gets the same cacheable payload, and no
+// secret key is needed on Vercel.
+//   * Games: every LG game where LG team 412 (Calgary Hitmen) is home or away. Home/away comes from
+//     LG's own listing (away team first), and every game links to its LG game page.
+//   * Record: the official LG standings line (W includes OT wins, OTL separate), so OT results are
+//     right even though LG schedule rows carry no OT flag.
+// Retired 2026-10-04: the old staff-only read of hitmen_schedule_games (service key / user
+// session). A read-only diff showed the same 66 games, sides, statuses and scores. That table has
+// no postponed/cancelled rows, no OT flags, and only 3 of 9 finals had an LG link, so it added
+// nothing to the ticker.
+import { rest, cached, loadTeams, HITMEN_LG_TEAM_ID, SEASON } from './_lgchl.js';
 
-const TEAM_ID = 'b0bcbdda-da9d-419d-8f61-b34937966d49';
-const BASE = 'https://lrgllzvwgvqagcpiyvfd.supabase.co';
-const PUBLISHABLE_KEY = 'sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
-const COLUMNS = 'id,season,week,scheduled_at,opponent_name,calgary_side,status,calgary_score,opponent_score,overtime,source_url';
 const GAME_WINDOW_MIN = 35; // LG nights run 3 games 35 minutes apart.
-const LOGO_DIR = '/assets/lgchl/s55/48/'; // 48px webp crests (100px PNG originals one level up)
-
-// LGCHL team ids derived from S55 roster overlap (hitmen_opponent_roster_players x lg_player_season_stats).
-const TEAMS = {
-  'Calgary Hitmen': ['CGY', 412],
-  'Baie-Comeau Drakkar': ['BAC', 469], 'Barrie Colts': ['BAR', 449], 'Brandon Wheat Kings': ['BDN', 409],
-  'Brantford Bulldogs': ['BFD', 306], 'Chicoutimi Saguenéens': ['CHI', 468], 'Chilliwack Bruins': ['CHW', 2983],
-  'Edmonton Oil Kings': ['EDM', 415], 'Everett Silvertips': ['EVT', 380], 'Flint Firebirds': ['FLT', 514],
-  'Gatineau Olympiques': ['GAT', 461], 'Kelowna Rockets': ['KEL', 400], 'Kingston Frontenacs': ['KGN', 444],
-  'Lethbridge Hurricanes': ['LET', 418], 'London Knights': ['LDN', 370], 'Medicine Hat Tigers': ['MHT', 416],
-  'Moncton Wildcats': ['MON', 365], 'Moose Jaw Warriors': ['MJW', 411], 'Niagara IceDogs': ['NIA', 375],
-  'North Bay Battalion': ['NBB', 448], "Ottawa 67's": ['OTT', 446], 'Portland Winterhawks': ['POR', 398],
-  'Prince Albert Raiders': ['PAR', 413], 'Prince George Cougars': ['PGC', 422], 'Red Deer Rebels': ['RDR', 385],
-  'Regina Pats': ['REG', 414], 'Saginaw Spirit': ['SAG', 408], 'Saint John Sea Dogs': ['SJS', 397],
-  'Sarnia Sting': ['SAR', 451], 'Saskatoon Blades': ['SAS', 379], 'Seattle Thunderbirds': ['SEA', 421],
-  'Shawinigan Cataractes': ['SHA', 382], 'Spokane Chiefs': ['SPO', 420], 'Sudbury Wolves': ['SBY', 447],
-  'Swift Current Broncos': ['SCB', 377], 'Tri-City Americans': ['TCA', 399], "Val-d'Or Foreurs": ['VDO', 460],
-  'Vancouver Giants': ['VAN', 386], 'Victoria Royals': ['VIC', 419], 'Windsor Spitfires': ['WSR', 381],
-};
-
-// calgary_side -> home/away. Verified 2026-10-04 against official LGCHL S55 data:
-// the LG standings list Calgary 1-3-0 at home / 3-2-0 away, which matches exactly the
-// 'right' rows (EDM L, LET L, BDN L, SAS W) and the 'left' rows (MHT W, CHW W, RDR W, REG L, SCB L).
-// LG game pages agree: the away team is listed first, and that is the 'left' side here.
-//   'right' = Calgary is HOME  ->  ticker shows "vs OPP"
-//   'left'  = Calgary is AWAY  ->  ticker shows "@ OPP"
-const SIDE_HOME = { right: true, left: false };
-
-// STOPGAP: official LeagueGaming game ids for S55 finals whose hitmen_schedule_games.source_url
-// is still NULL (looked up on LG's team_page_schedule for team 412, 2026-10-04). The key matches
-// the table's unique (scheduled_at, opponent_name) pair. A DB value always wins over this map.
-// Remove these entries once the rows have source_url populated.
-const LG_GAME_URL = 'https://www.leaguegaming.com/forums/index.php?leaguegaming/league&action=league&page=game&gameid=';
-const FALLBACK_LG_GAME_IDS = {
-  '2026-09-28T01:00:00.000Z|Edmonton Oil Kings': 916747,
-  '2026-09-28T01:35:00.000Z|Medicine Hat Tigers': 916774,
-  '2026-09-28T02:10:00.000Z|Chilliwack Bruins': 916805,
-  '2026-09-30T01:00:00.000Z|Regina Pats': 916925,
-  '2026-09-30T01:35:00.000Z|Saskatoon Blades': 916958,
-  '2026-09-30T02:10:00.000Z|Swift Current Broncos': 916986,
-};
+const GAME_COLS = 'lg_game_id,season,week,game_at,status,away_lg_team_id,home_lg_team_id,away_score,home_score,source_url,updated_at';
 
 const fail = (status, code) => Object.assign(new Error(code), { status, code });
-
-function initials(name) {
-  const words = String(name || '').replace(/[^A-Za-zÀ-ÿ0-9' -]/g, '').split(/[\s-]+/).filter(Boolean);
-  if (!words.length) return '?';
-  if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
-  return words.slice(0, words.length > 2 ? 2 : words.length).map(w => w[0]).join('').toUpperCase();
-}
-
-function teamInfo(name) {
-  const hit = TEAMS[String(name || '').trim()];
-  return {
-    name: String(name || 'TBD'),
-    abbr: hit ? hit[0] : initials(name),
-    logo: hit ? `${LOGO_DIR}team${hit[1]}.webp` : null,
-  };
-}
-
-function resultOf(g) {
-  if (g.status !== 'final' || g.calgary_score == null || g.opponent_score == null) return null;
-  if (g.calgary_score > g.opponent_score) return 'W';
-  if (g.calgary_score < g.opponent_score) return g.overtime ? 'OTL' : 'L';
-  return 'T';
-}
 
 function gameState(g, now) {
   if (g.status === 'final') return 'final';
   if (g.status === 'postponed' || g.status === 'cancelled') return g.status;
-  const t = Date.parse(g.scheduled_at);
+  const t = Date.parse(g.at);
   if (!Number.isFinite(t)) return 'tbd';
   if (now < t) return 'scheduled';
   if (now < t + GAME_WINDOW_MIN * 60e3) return 'live'; // inferred from the puck-drop window
-  return 'pending'; // window passed, no final recorded yet
+  return 'pending'; // window passed, no final posted on LG yet
 }
 
-function sourceUrl(g, at) {
-  if (/^https:\/\/(www\.)?leaguegaming\.com\//.test(g.source_url || '')) return g.source_url;
-  const id = at && FALLBACK_LG_GAME_IDS[`${at}|${String(g.opponent_name || '').trim()}`];
-  return id ? LG_GAME_URL + id : null;
-}
-
-function shape(g, now) {
-  const result = resultOf(g);
-  const at = g.scheduled_at ? new Date(g.scheduled_at).toISOString() : null;
-  const home = Object.prototype.hasOwnProperty.call(SIDE_HOME, g.calgary_side) ? SIDE_HOME[g.calgary_side] : null;
-  return {
-    id: g.id,
+// lgchl_games_board row -> Calgary-centric game.
+function shape(g, teams, now) {
+  const home = g.home_lg_team_id === HITMEN_LG_TEAM_ID;
+  const oppId = home ? g.away_lg_team_id : g.home_lg_team_id;
+  const opp = teams.get(oppId);
+  const gf = home ? g.home_score : g.away_score;
+  const ga = home ? g.away_score : g.home_score;
+  const final = g.status === 'final' && gf != null && ga != null;
+  const out = {
+    id: g.lg_game_id,
     week: g.week,
-    at,
-    opponent: teamInfo(g.opponent_name),
-    side: g.calgary_side || null,
-    home, // true = Calgary home ("vs"), false = away ("@"), null = unknown
+    at: g.game_at ? new Date(g.game_at).toISOString() : null,
+    opponent: { id: oppId, name: opp?.name || 'TBD', abbr: opp?.abbr || '?', logo: opp?.logo_path || null },
+    side: home ? 'right' : 'left', // legacy field: LG lists away (left) then home (right)
+    home,                           // true = Calgary home ("vs"), false = away ("@")
     status: g.status,
-    state: gameState(g, now),
-    result,
-    gf: g.calgary_score,
-    ga: g.opponent_score,
-    ot: !!g.overtime,
-    source_url: sourceUrl(g, at),
+    result: final ? (gf > ga ? 'W' : gf < ga ? 'L' : 'T') : null, // LG schedule rows have no OT flag
+    gf, ga,
+    ot: null,
+    source_url: g.source_url || null,
   };
+  out.state = gameState(out, now);
+  return out;
 }
 
-export function buildTicker(rows, now = Date.now()) {
-  const all = (rows || []).filter(r => r && r.scheduled_at);
-  const season = all.reduce((m, r) => Math.max(m, Number(r.season) || 0), 0) || null;
-  const games = all
-    .filter(r => Number(r.season) === season)
-    .sort((a, b) => Date.parse(a.scheduled_at) - Date.parse(b.scheduled_at))
-    .map(g => shape(g, now));
-
+export function buildTicker(rows, teamRows, now = Date.now()) {
+  const teams = new Map((teamRows || []).map(t => [t.lg_team_id, t]));
+  const games = (rows || []).filter(r => r && r.game_at)
+    .sort((a, b) => Date.parse(a.game_at) - Date.parse(b.game_at) || a.lg_game_id - b.lg_game_id)
+    .map(g => shape(g, teams, now));
   const finals = games.filter(g => g.state === 'final' && g.result);
+
+  // Record from the finals, then replaced by the official standings line when present.
   const record = { w: 0, l: 0, otl: 0, t: 0, gp: finals.length, gf: 0, ga: 0 };
-  for (const g of finals) {
-    if (g.result === 'W') record.w++;
-    else if (g.result === 'OTL') record.otl++;
-    else if (g.result === 'T') record.t++;
-    else record.l++;
-    record.gf += g.gf; record.ga += g.ga;
+  for (const g of finals) { record[g.result === 'W' ? 'w' : g.result === 'T' ? 't' : 'l']++; record.gf += g.gf; record.ga += g.ga; }
+  record.source = 'games';
+  const st = teams.get(HITMEN_LG_TEAM_ID);
+  if (st && st.gp != null) {
+    Object.assign(record, { w: st.w, l: st.l, otl: st.otl, otw: st.otw, gp: st.gp, gf: st.gf, ga: st.ga, pts: st.pts, source: 'lg_standings' });
   }
-  record.pts = record.w * 2 + record.otl + record.t;
+  record.pts ??= record.w * 2 + record.otl + record.t;
   record.diff = record.gf - record.ga;
   record.label = `${record.w}-${record.l}-${record.otl}`;
+  if (st) Object.assign(record, { division: st.division, division_rank: st.division_rank, conference_rank: st.conference_rank });
 
   let streak = null;
   for (let i = finals.length - 1; i >= 0; i--) {
@@ -150,38 +85,32 @@ export function buildTicker(rows, now = Date.now()) {
   }
   if (streak) streak.label = `${streak.type}${streak.count}`;
 
-  const recent = finals.slice(-5).reverse();
   const live = games.find(g => g.state === 'live') || null;
-  const pending = games.filter(g => g.state === 'pending');
   const future = games.filter(g => g.state === 'scheduled');
-  const next = future[0] || null;
-
+  const season = games.length ? (rows.find(r => r.season)?.season ?? SEASON) : SEASON;
   return {
     ok: true,
     generated_at: new Date(now).toISOString(),
     season,
     game_window_min: GAME_WINDOW_MIN,
-    team: { name: 'Calgary Hitmen', short: 'Hitmen', abbr: 'CGY', logo: `${LOGO_DIR}team412.webp`, league: 'LGCHL' },
+    team: { name: st?.name || 'Calgary Hitmen', short: 'Hitmen', abbr: st?.abbr || 'CGY', logo: st?.logo_path || '/assets/lgchl/s55/48/team412.webp', league: 'LGCHL', lg_team_id: HITMEN_LG_TEAM_ID },
     record,
     streak,
     last5: finals.slice(-5).map(g => g.result).join(''),
     live,
-    next,
-    recent,
-    pending,
+    next: future[0] || null,
+    recent: finals.slice(-5).reverse(),
+    pending: games.filter(g => g.state === 'pending'),
     upcoming: future.slice(0, 9),
     counts: { total: games.length, final: finals.length, remaining: games.length - finals.length },
+    source: 'Supabase lgchl_games_board + lgchl_standings_current (public; scraped from leaguegaming.com)',
+    standings_at: st?.standings_at || null,
   };
 }
 
-async function readRows(headers) {
-  const url = `${process.env.SUPABASE_URL || BASE}/rest/v1/hitmen_schedule_games?select=${COLUMNS}&team_id=eq.${TEAM_ID}&order=scheduled_at.asc&limit=400`;
-  const r = await fetch(url, { headers: { ...headers, accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
-  if (r.status === 401 || r.status === 403) throw fail(401, 'auth_required');
-  if (!r.ok) throw fail(502, 'upstream_error');
-  const body = await r.json().catch(() => null);
-  if (!Array.isArray(body)) throw fail(502, 'upstream_error');
-  return body;
+async function loadHitmenGames(now) {
+  return cached('hitmen-games', () => rest(`lgchl_games_board?select=${GAME_COLS}&season=eq.${SEASON}` +
+    `&or=(away_lg_team_id.eq.${HITMEN_LG_TEAM_ID},home_lg_team_id.eq.${HITMEN_LG_TEAM_ID})&order=game_at.asc,lg_game_id.asc`), now);
 }
 
 export default async function handler(req, res) {
@@ -190,33 +119,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: 'method_not_allowed' });
   }
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY || '';
-  const auth = String(req.headers.authorization || '');
-  let headers, mode;
-  if (serverKey) {
-    mode = 'public';
-    headers = serverKey.startsWith('sb_secret_') ? { apikey: serverKey } : { apikey: serverKey, Authorization: `Bearer ${serverKey}` };
-  } else if (/^Bearer [A-Za-z0-9._-]{20,}$/.test(auth)) {
-    mode = 'member';
-    headers = { apikey: process.env.SUPABASE_ANON_KEY || PUBLISHABLE_KEY, Authorization: auth };
-  } else {
-    res.setHeader('Cache-Control', 'no-store');
-    return res.status(401).json({ ok: false, error: 'auth_required' });
-  }
   try {
-    const rows = await readRows(headers);
-    if (!rows.length) {
-      res.setHeader('Cache-Control', 'no-store');
-      return res.status(mode === 'member' ? 403 : 404).json({ ok: false, error: mode === 'member' ? 'no_access' : 'no_games' });
-    }
-    const payload = buildTicker(rows);
-    payload.mode = mode;
-    res.setHeader('Cache-Control', mode === 'public'
-      ? 'public, max-age=15, s-maxage=30, stale-while-revalidate=120'
-      : 'private, no-store');
+    const now = Date.now();
+    const [rows, teamRows] = await Promise.all([loadHitmenGames(now), loadTeams(now)]);
+    if (!rows.length) throw fail(404, 'no_games');
+    const payload = buildTicker(rows, teamRows, now);
+    payload.mode = 'public';
+    res.setHeader('Cache-Control', 'public, max-age=15, s-maxage=30, stale-while-revalidate=120');
     return res.status(200).json(payload);
   } catch (error) {
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(error.status || 500).json({ ok: false, error: error.code || 'server_error' });
+    return res.status(error.status || 502).json({ ok: false, error: error.code || 'upstream_error' });
   }
 }
