@@ -43,7 +43,7 @@ pg_cron ──▶ private.lgchl_kick_sync(mode) ──pg_net──▶ Edge Funct
   | job | cron | does |
   |---|---|---|
   | `lgchl-league-full` | `15 */6 * * *` | standings + all 62 team schedule pages (64 LG requests, about 12 MB, ~5 min across 2 calls) |
-  | `lgchl-league-delta` | `*/10 0-5,23 * * 0,1,2,3` | only when games started 35 min+ ago (within 8 h) have no score: re-reads the fewest team pages that cover them (greedy vertex cover, ≤34 pages for a 93-game night), then standings |
+  | `lgchl-league-delta` | `*/6 0-5,23 * * 0,1,2,3` (was `*/10`; see 20261004175000 migration, pending approval) | only when games started 35 min+ ago (within 8 h) have no score: re-reads the fewest team pages that cover them (greedy vertex cover, ≤34 pages for a 93-game night), then standings |
   | `lgchl-league-worker` | `*/3 * * * *` | resumes a running refresh after its 100 s call budget. Pure SQL check, no request when idle |
 
 ### Big games (OHL / QMJHL)
