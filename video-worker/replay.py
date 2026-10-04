@@ -340,7 +340,16 @@ def retrieve(job_id):
                 metadata['scan_current_period'] = 1
             unit_index = max(0, int(metadata.get('scan_unit_index') or 0))
             if unit_index >= len(units):
-                raise worker.Problem(409, 'Replay period scan is already complete.')
+                # The local OCR scan already finished (e.g. a restart turned a
+                # needs_periods job into 'failed'). Do not re-download or call AI:
+                # go back to waiting for confirmed boundaries via PUT /periods.
+                result = dict(job.get('result') or {})
+                result['stage'] = 'needs_period_boundaries'
+                result['failure_code'] = 'period_detection_failed'
+                worker.update_metadata(
+                    job_id, metadata, 'needs_periods', result,
+                    'Confirm actual period boundaries and any restart/OT mapping. No AI analysis was run.')
+                return
             unit = units[unit_index]
             metadata['active_replay_unit'] = {
                 'kind': 'scan', 'label': 'Period scan',

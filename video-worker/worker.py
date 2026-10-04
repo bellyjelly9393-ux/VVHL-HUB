@@ -92,9 +92,17 @@ def initialize():
           error TEXT NOT NULL DEFAULT '')''')
         # Resume processing from persisted per-chunk results. Incomplete uploads are not queued.
         db.execute("UPDATE jobs SET status='queued' WHERE status='processing'")
-        # Older builds paused jobs when OCR could not find P1/P2/P3. The current
-        # worker can safely review the full recording instead, so resume them.
-        db.execute("UPDATE jobs SET status='queued', error='' WHERE status='needs_periods'")
+        # Older builds paused uploads when OCR could not find P1/P2/P3; re-run them.
+        # Streamed Twitch replays have no source.mp4 while waiting for boundaries
+        # (each scan slice is deleted), so re-queuing them only produced a 410
+        # 'slice is missing' failure that locked out PUT /periods. Leave them waiting.
+        for row in db.execute("SELECT id,metadata FROM jobs WHERE status='needs_periods'").fetchall():
+            try:
+                streamed = json.loads(row['metadata']).get('streamed_replay')
+            except (TypeError, ValueError):
+                streamed = False
+            if not streamed:
+                db.execute("UPDATE jobs SET status='queued', error='' WHERE id=?", (row['id'],))
         # One-time recovery for automatic captures that failed while the AI model
         # configuration was being corrected. Preserve the recording and all results.
         failed = db.execute("SELECT id,metadata,error FROM jobs WHERE status='failed'").fetchall()
@@ -1534,8 +1542,22 @@ class Handler(BaseHTTPRequestHandler):
                     raise Problem(409, 'Wait for the current analysis to finish before starting a fresh scout pass.')
                 meta = dict(job['metadata'])
                 meta.pop('ai_rate_limit_retries', None)
+                if meta.get('streamed_replay'):
+                    # A fresh pass must not inherit a finished scan/analysis cursor,
+                    # otherwise retrieve() fails with 'scan is already complete'.
+                    for key in ('active_replay_unit', 'scan_units', 'scan_unit_index', 'scan_current_period'):
+                        meta.pop(key, None)
+                    if meta.get('period_source') == 'manual' and meta.get('periods'):
+                        meta.update({'period_units': bounded_period_units(meta['periods']),
+                                     'period_unit_index': 0, 'replay_phase': 'analyze_periods'})
+                    else:
+                        for key in ('period_units', 'period_unit_index', 'period_source'):
+                            meta.pop(key, None)
+                        meta.update({'periods': [], 'replay_phase': 'scan_periods'})
                 with connect() as db:
                     db.execute('UPDATE jobs SET metadata=? WHERE id=?', (json.dumps(meta), job_id))
+                if meta.get('streamed_replay') and (directory / 'source.mp4').exists():
+                    release_job_media(job_id)  # stale slice from the old cursor
                 if not (directory / 'source.mp4').exists():
                     if meta.get('source_kind') != 'twitch_replay':
                         raise Problem(410, 'Recording expired. Upload the recording again for a fresh scout pass.')
