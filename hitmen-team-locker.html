@@ -1,58 +1,141 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
-<title>Calgary Hitmen Team Locker Room</title>
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="management.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-team-locker.css"><link rel="stylesheet" href="hitmen-stall-scene.css?v=2"><link rel="stylesheet" href="hitmen-stall-upgrade.css?v=2">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0A0B0C">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Calgary Hitmen Team Locker Room</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="hub.css">
+  <link rel="stylesheet" href="wildman.css">
+  <link rel="stylesheet" href="management.css">
+  <link rel="stylesheet" href="network-v2.css">
+  <link rel="stylesheet" href="hitmen-team-locker.css">
+  <link rel="stylesheet" href="hitmen-stall-scene.css?v=2">
+  <link rel="stylesheet" href="hitmen-stall-upgrade.css?v=2">
+  <link rel="stylesheet" href="broadcast-tokens.css?v=20261004-brand">
+  <link rel="stylesheet" href="team-hitmen.css?v=20261004-broadcast">
+  <link rel="stylesheet" href="broadcast-components.css?v=20261004-brand">
+  <link rel="stylesheet" href="war-room-tonight.css?v=20261004-lab">
+  <link rel="stylesheet" href="lineup-lab.css?v=20261004-lab">
+  <link rel="stylesheet" href="hitmen-neutral.css?v=20261004-neutral" data-hn-last>
 </head>
-<body class="wildman-site management-protected hitmen-team-locker-page">
-<header class="site-header locker-header">
-<a class="brand" href="hitmen-team-locker.html"><span class="locker-brand-mark">H</span><span class="brand-copy">CALGARY HITMEN<br><b>TEAM LOCKER ROOM</b></span></a>
-<button class="menu-toggle" type="button" aria-label="Open navigation">☰</button>
-<nav class="main-nav"><a href="hitmen-game-center.html">Game Center</a><a class="active-nav" href="hitmen-team-locker.html">Locker Room</a><a href="hitmen-player-locker.html">My Stall</a><a data-management-nav href="hitmen-workspace.html">War Room</a><a data-management-nav href="hitmen-locker-room.html">Lineups</a><a data-management-nav href="hitmen-opponents.html">Opponents</a><a data-management-nav href="hitmen-battle-plan.html">Battle Plan</a><a data-management-nav href="vod-lab.html?team=calgary-hitmen">VOD</a></nav>
+<body class="wildman-site management-protected hitmen-team-locker-page hm-neutral">
+<div class="hn-net"><img class="ec-mark" src="assets/brand/elitechel-mark-48@2x.png?v=20261004-brand" width="22" height="22" alt=""><span class="ec-name">EliteChel Series Media</span><span class="hn-sep" aria-hidden="true">&middot;</span><span class="hn-season">LGCHL Season 55</span><span class="hn-sp"></span><span class="hn-page">Team locker room</span></div>
+<header class="site-header locker-header hn-header">
+  <a class="brand hn-brand" href="hitmen-team-locker.html"><img class="hn-crest" src="assets/lgchl/s55/team412.png?v=20261004-broadcast" width="34" height="34" alt=""><span class="brand-copy">CALGARY HITMEN<br><b>TEAM LOCKER ROOM</b></span></a>
+  <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <nav class="main-nav hn-nav" aria-label="Calgary Hitmen">
+    <a href="hitmen-game-center.html">Game Center</a>
+    <a href="hitmen-team-locker.html">Locker Room</a>
+    <a href="hitmen-player-locker.html">My Stall</a>
+    <a data-management-nav href="hitmen-workspace.html">War Room</a>
+    <a href="hitmen-team-locker.html#lineupLab">Lineup Lab</a>
+    <a data-management-nav href="hitmen-opponents.html">Opponents</a>
+    <a data-management-nav href="hitmen-team-locker.html#labSim">Battle Plan</a>
+    <a data-management-nav href="vod-lab.html?team=calgary-hitmen">VOD</a>
+    <a data-management-nav href="hitmen-gm-ai.html">GM AI</a>
+    <a data-management-nav href="obs-control.html">Broadcast Studio</a>
+  </nav>
 </header>
 
-<main>
-<section class="section-shell locker-access-shell">
-<div class="section-heading"><div><div class="eyebrow">PRIVATE · CALGARY HITMEN</div><h2>TEAM ACCESS</h2></div><div id="lockerAccessStatus" class="status-pill">PRIVATE</div></div>
-<section id="accountPanel" class="panel account-panel"></section>
-<div id="managementLockedMessage" class="wm-card"><b>Calgary Hitmen team sign-in required.</b><p>Use the Discord account linked to your active Season 55 roster spot.</p></div>
-</section>
+<main class="hn-main">
+  <section class="section-shell locker-access-shell hn-access">
+    <div class="section-heading"><div><div class="eyebrow">PRIVATE · CALGARY HITMEN</div><h2>TEAM ACCESS</h2></div><div id="lockerAccessStatus" class="status-pill">PRIVATE</div></div>
+    <section id="accountPanel" class="panel account-panel"></section>
+    <div id="managementLockedMessage" class="wm-card"><b>Calgary Hitmen team sign-in required.</b><p>Use the Discord account linked to your active Season 55 roster spot.</p></div>
+  </section>
 
-<div data-management-content hidden>
-<section class="section-shell locker-hero">
-<div>
-<div class="eyebrow">LGCHL SEASON 55 · PLAYER DEVELOPMENT</div>
-<h1>THE<br><span>LOCKER ROOM.</span></h1>
-<p>Your team space for weekly performance, player reports, lineup chemistry and personal development throughout the season.</p>
-</div>
-<div class="locker-hero-meta"><div><small>ACTIVE ROSTER</small><strong id="lockerRosterCount">15</strong></div><div><small>TC PLAYERS</small><strong id="lockerTcCount">2</strong></div><div><small>PLAYER REPORTS</small><strong id="lockerReportCount">0</strong></div></div>
-</section>
+  <div data-management-content hidden class="hn-content">
+    <section class="bc-broadcast team-hitmen" id="hitmenBroadcast" data-hb-autoload aria-label="Calgary Hitmen scoreboard and this week's matchups">
+      <div class="bc-stage-wrap">
+        <div class="bc-stage">
+          <picture><source srcset="assets/broadcast/arena-tunnel.webp?v=20261004-broadcast" type="image/webp"><img class="bc-stage-photo" src="assets/broadcast/arena-tunnel.jpg?v=20261004-broadcast" width="1280" height="720" alt="View from the Zamboni tunnel onto the ice, with the scoreboard hanging over centre ice" decoding="async"></picture>
+          <div class="bc-spill bc-spill-halo"></div><div class="bc-spill bc-spill-under"></div><div class="bc-spill bc-spill-ice"></div>
+          <div class="bc-q bc-jt-left"></div>
+          <div class="bc-q bc-jt-front" id="hitmenJumbo" aria-hidden="true"><div class="bc-jt-empty">Schedule TBA</div></div>
+          <div class="bc-q bc-jt-right"></div>
+        </div>
+        <img class="ec-bug" src="assets/brand/elitechel-mark-96@2x.png?v=20261004-brand" alt="" aria-hidden="true">
+        <ul class="bc-sr" id="hitmenJumboSr" aria-label="This week's matchups"><li>Schedule TBA</li></ul>
+      </div>
+      <div class="bc-scorebug">
+        <section class="bc-sb-team">
+          <img class="bc-sb-crest" src="assets/lgchl/s55/team412.png?v=20261004-broadcast" width="104" height="104" alt="Calgary Hitmen crest">
+          <div><span class="bc-k">LGCHL &middot; Season 55</span><h2 class="bc-wordmark"><span>Calgary</span> <b>Hitmen</b></h2></div>
+        </section>
+        <section class="bc-sb-record">
+          <span class="bc-k">Season record</span>
+          <div class="bc-sb-big" id="hitmenSbRecord" aria-label="Season record W-L-OTL">&mdash;</div>
+          <dl class="bc-sb-line">
+            <div><dd id="hitmenSbPts">&mdash;</dd><dt>PTS</dt></div>
+            <div><dd id="hitmenSbGf">&mdash;</dd><dt>GF</dt></div>
+            <div><dd id="hitmenSbGa">&mdash;</dd><dt>GA</dt></div>
+            <div><dd id="hitmenSbDiff">&mdash;</dd><dt>DIFF</dt></div>
+            <div><dd id="hitmenSbStreak">&mdash;</dd><dt>STRK</dt></div>
+          </dl>
+        </section>
+        <section class="bc-sb-next">
+          <div class="bc-sb-next-hd"><span class="bc-k" id="hitmenSbNextTag">Next game</span><span class="bc-k" id="hitmenSbNextDate">&mdash;</span></div>
+          <div class="bc-sb-opp"><span class="bc-crest" id="hitmenSbOppCrest" aria-hidden="true"></span><div><small>VS</small><h3 id="hitmenSbOppName">Schedule TBA</h3></div></div>
+          <div class="bc-sb-cd"><b id="hitmenSbCountdown" role="timer" aria-label="Time to puck drop">--:--:--</b><span id="hitmenSbTimes">&mdash; ET<br>&mdash; MT</span></div>
+        </section>
+        <div class="bc-sb-rail"><span id="hitmenSbRailLeft">LGCHL &middot; Season 55</span><span id="hitmenSbRailRight">Puck drop &middot; ET / MT</span></div>
+      </div>
+    </section>
 
-<link rel="stylesheet" href="broadcast-tokens.css?v=20261004-brand"><link rel="stylesheet" href="war-room-tonight.css?v=20261004-six">
-<div class="wr-shell wr-lockers wr-scope" id="wrLockerTVs" aria-label="Enter the War Room and the locker room TVs"></div>
+    <div class="wr-shell wr-lockers wr-scope" id="wrLockerTVs" aria-label="Enter the War Room and the locker room TVs"></div>
 
-<section class="section-shell locker-section">
-<div class="locker-section-head"><div><div class="eyebrow">CALGARY HITMEN</div><h2>ACTIVE ROSTER STALLS</h2></div><p>See the full roster and open your own stall for stats, scouting feedback and development.</p></div>
-<div id="lockerRoster" class="locker-stall-grid"></div>
-</section>
+    <section class="wr-shell wr-scope lab" id="lineupLab" data-lab-team="calgary" aria-labelledby="labTitle" hidden>
+      <header class="lab-hd"><div><span class="wr-k">Game night · one room · three panels</span><h2 id="labTitle">Lineup Lab</h2></div>
+        <p>Tonight's posted six, a sandbox to build your own, and a box-score simulation against each of tonight's opponents. Nothing here writes to the team: sandbox lineups stay on this device.</p></header>
+      <section class="lab-panel lab-p1" id="labPanelSix" aria-labelledby="labSixTitle"><div id="labSix"></div></section>
+      <section class="lab-panel lab-p2" id="labSandbox" aria-labelledby="labSbTitle"></section>
+      <section class="lab-panel lab-p3" id="labSim" aria-labelledby="labSimTitle"></section>
+    </section>
 
-<section class="section-shell locker-section">
-<div class="locker-section-head"><div><div class="eyebrow">TRAINING CAMP</div><h2>TC PLAYER STALLS</h2></div><p>TC players live in the same room so management can evaluate or call them into a lineup without losing context.</p></div>
-<div id="lockerTcRoster" class="locker-stall-grid"></div>
-</section>
+    <section class="section-shell locker-section hn-section hn-room" aria-labelledby="hnRoomTitle">
+      <div class="hn-section-head">
+        <div><span class="hn-k">Active roster stalls</span><h2 id="hnRoomTitle" class="hn-h2">The room</h2></div>
+        <dl class="hn-meta">
+          <div><dt>Active roster</dt><dd id="lockerRosterCount">&mdash;</dd></div>
+          <div><dt>TC players</dt><dd id="lockerTcCount">&mdash;</dd></div>
+          <div><dt>Player reports</dt><dd id="lockerReportCount">&mdash;</dd></div>
+        </dl>
+      </div>
+      <p class="hn-lede">Your team space for weekly performance, player reports, lineup chemistry and development. Open your own stall for stats, scouting feedback and your kit.</p>
+      <div id="lockerRoster" class="locker-stall-grid hn-stalls"></div>
+    </section>
 
-<section class="section-shell locker-section">
-<div class="locker-section-head"><div><div class="eyebrow">THIS WEEK</div><h2>LINE PERFORMANCE</h2></div><p>How each saved unit performed together across the week.</p></div>
-<div id="lockerLineReports" class="locker-line-grid"></div>
-</section>
-</div>
+    <section class="section-shell locker-section hn-section" aria-labelledby="hnTcTitle">
+      <div class="hn-section-head"><div><span class="hn-k">Training camp</span><h2 id="hnTcTitle" class="hn-h2">TC stalls</h2></div></div>
+      <p class="hn-lede">TC players live in the same room so management can evaluate them or call them into a lineup without losing context.</p>
+      <div id="lockerTcRoster" class="locker-stall-grid hn-stalls"></div>
+    </section>
+
+    <section class="section-shell locker-section hn-section" aria-labelledby="hnLineTitle">
+      <div class="hn-section-head"><div><span class="hn-k">This week</span><h2 id="hnLineTitle" class="hn-h2">Line performance</h2></div></div>
+      <p class="hn-lede">How each saved unit performed together across the week.</p>
+      <div id="lockerLineReports" class="locker-line-grid hn-lines"></div>
+    </section>
+  </div>
 </main>
 
-<footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN · TEAM LOCKER ROOM</b><span>Player development · weekly reports · team chemistry</span></div><p>Private team access</p></div></footer>
+<footer class="hn-footer"><div class="section-shell footer-inner"><div><b>CALGARY HITMEN · TEAM LOCKER ROOM</b><span>Player development · weekly reports · team chemistry</span></div><div class="ec-foot-col"><p>Private team access</p><span class="ec-foot"><img src="assets/brand/elitechel-mark-48@2x.png?v=20261004-brand" width="20" height="20" alt="">Presented by EliteChel Series Media</span></div></div></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
-<script src="backend.js"></script><script src="management-guard.js"></script><script src="script.js"></script><script src="hitmen-team-locker.js?v=20260928-playeraccess1"></script>
-<script src="hitmen-stall-scene.js?v=2"></script><script src="hitmen-stall-upgrade.js?v=2"></script>
-<script src="war-room-rink.js?v=20261004-six"></script><script src="war-room-tonight.js?v=20261004-six"></script>
-</body></html>
+<script src="backend.js"></script>
+<script src="management-guard.js"></script>
+<script src="script.js"></script>
+<script src="hitmen-team-locker.js?v=20261004-neutral"></script>
+<script src="hitmen-stall-scene.js?v=2"></script>
+<script src="hitmen-stall-upgrade.js?v=2"></script>
+<script src="hitmen-broadcast.js?v=20261004-neutral"></script>
+<script src="war-room-rink.js?v=20261004-lab"></script>
+<script src="war-room-tonight.js?v=20261004-lab"></script>
+<script src="lineup-lab-model.js?v=20261004-lab"></script>
+<script src="lineup-lab.js?v=20261004-lab2"></script>
+<script src="hitmen-neutral.js?v=20261004-neutral"></script>
+</body>
+</html>

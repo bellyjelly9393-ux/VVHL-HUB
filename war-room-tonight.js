@@ -61,7 +61,10 @@ function parseReport(row){
   const opp=lu.opponent?POS.filter(p=>lu.opponent[p]).map(p=>{const raw=String(lu.opponent[p]);const m=raw.match(/^(.*?)\s*\((.+)\)\s*$/);return {pos:p,name:m?m[1]:raw,note:m?m[2]:''}}):[];
   return {id:row.id,created:row.created_at?new Date(row.created_at):null,approved:ev.approved===true,
     six:lu.calgary||null,opp,jobs,hasJobs:!!jobsSec,
-    threats:points(threatSec),plan:points(planSec)};
+    threats:points(threatSec),plan:points(planSec),
+    // for the Lineup Lab matchup model (names only; no new text is shown)
+    threatText:clean((threatSec?.lines||[]).join(' ')),warnings:Array.isArray(ev.identity_warnings)?ev.identity_warnings:[],
+    resolutions:Array.isArray(ev.identity_resolutions)?ev.identity_resolutions:[],status:ev.status||null};
 }
 
 /* ---------- data ---------- */
@@ -97,7 +100,8 @@ async function load(){
     games.forEach(g=>{const mine=reps.filter(r=>r.scheduled_game_id===g.id&&(v.mgmt||r.evidence_summary?.approved===true));
       const pick=mine.find(r=>r.evidence_summary?.lineups?.calgary)||mine[0];g.report=pick?parseReport(pick):null});
   }
-  const lockerFor=name=>lockers.find(l=>norm(l.gamertag)===norm(name))||null;
+  const current=lockers.filter(l=>l.roster_class!=='historical'); // archived past players never feed a jersey or TV
+  const lockerFor=name=>current.find(l=>norm(l.gamertag)===norm(name))||null;
   const cgy=standings.find(t=>t.lg_team_id===CGY)||null;
   return {v,schedule,lockers,standings,games,day,today:day===ref,cgy,teamFor,lockerFor,errors};
 }
@@ -131,14 +135,8 @@ function mountWarRoom(host,D){
    <div class="wr-tn-main">
     <h3 class="wr-sec">${D.today?'Tonight':'Next game day'} · ${n} game${n>1?'s':''} <span>${esc(dayLabel(D))}</span></h3>
     <div class="wr-games n${Math.min(n,4)}">${D.games.map(g=>gameCard(D,g)).join('')}</div>
-    <section class="wr-panel wr-six" aria-label="Tonight's six">
-      <div class="wr-six-hd"><div><span class="wr-k">Posted lineup · ${esc(dayLabel(D))}</span><h3>Tonight's Six</h3></div><div class="wr-six-st" id="wrSixStatus"></div></div>
-      <div id="wrTabs"></div>
-      <div class="wr-six-bd"><div class="wr-rink-host"><div id="wrRink"></div></div><ol class="wr-roll" id="wrRoll"></ol></div>
-      <div class="wr-jobs-hd" id="wrJobsHd"></div>
-      <div class="wr-jobs" id="wrJobs"></div>
-      <p class="wr-note">Pick a game to switch the kit, the six, every job and the scouting panel. Kit: home black, away white (from <code>hitmen_schedule_games</code>). Lineup and jobs from that game's pregame report; names and numbers from <code>team_player_lockers</code>. Players see jobs only after management approves the report.</p>
-    </section>
+    ${sixPanelHTML(D,'wr',{links:D.v.mgmt?'<nav class="wr-links" aria-label="Lineup tools"><a href="hitmen-team-locker.html#lineupLab">Open the Lineup Lab →</a><a href="hitmen-team-locker.html#labSim">Game sheet →</a></nav>':'',
+      note:'Pick a game to switch the kit, the six, every job and the scouting panel.'})}
     <section class="wr-panel wr-reel" aria-label="Highlight reel (coming soon)">
       <div class="wr-reel-hd"><div><span class="wr-k">Coming soon · reserved slot</span><h3>Highlight Reel</h3></div><span class="wr-chip">Player-safe only</span></div>
       <p>Great plays, big hits and big saves, flagged by management from game film and published here as short clips once approved.</p>
@@ -149,15 +147,43 @@ function mountWarRoom(host,D){
     <section class="wr-panel wr-across" id="wrAcross" aria-live="polite"></section>
     ${raceHTML(D)}
    </aside></div>`;
-  WRRink.tabs($('wrTabs'),$('wrRink'),{games:tabsGames(D),active:initialGm(D),size:'sm',rink:{scale:3.85,jersey:72,small:true},
+  mountSix(D,'wr',g=>{$('wrAcross').innerHTML=acrossHTML(D,g)});
+}
+/* Tonight's Six panel (rink tabs, kits, roll, jobs). Shared by the War Room and the Lineup Lab; p = id prefix. */
+function sixPanelHTML(D,p,o){
+  o=o||{};
+  return `<section class="wr-panel wr-six${o.cls?' '+o.cls:''}" aria-label="Tonight's six"${o.labelledby?` aria-labelledby="${o.labelledby}"`:''}>
+      <div class="wr-six-hd"><div>${o.head||`<span class="wr-k">Posted lineup · ${esc(dayLabel(D))}</span><h3>Tonight's Six</h3>`}</div><div class="wr-six-st" id="${p}SixStatus"></div></div>
+      ${o.links||''}
+      <div id="${p}Tabs" class="wr-tabs-slot"></div>
+      <div class="wr-six-bd"><div class="wr-rink-host"><div id="${p}Rink"></div></div><ol class="wr-roll" id="${p}Roll"></ol></div>
+      <div class="wr-jobs-hd" id="${p}JobsHd"></div>
+      <div class="wr-jobs" id="${p}Jobs"></div>
+      <p class="wr-note">${o.note||''} Kit: home black, away white (from <code>hitmen_schedule_games</code>). Lineup and jobs from that game's pregame report; names and numbers from <code>team_player_lockers</code>. Players see jobs only after management approves the report.</p>
+    </section>`;
+}
+function mountSix(D,p,after){
+  WRRink.tabs($(p+'Tabs'),$(p+'Rink'),{games:tabsGames(D),active:initialGm(D),size:'sm',rink:{scale:3.85,jersey:72,small:true},
     playersFor:t=>sixFor(D,t.g),empty:(el,t)=>{el.removeAttribute('style');el.removeAttribute('data-w');el.className='wr-rink-empty';el.parentElement.style.height='';el.innerHTML=`<div><b>Lineup posts before puck drop</b><span>${esc(emptyMsg(D,'lineup'))}</span></div>`},
     onChange:t=>{const g=t.g,r=g.report,ps=sixFor(D,g);
-      $('wrSixStatus').innerHTML=statusChip(r);
-      $('wrRoll').innerHTML=ps.length?ps.map(p=>`<li class="${p.me?'me':''}"><span>${p.pos}</span><b>${esc(p.locker?.gamertag||p.name)}</b><i>${esc(p.no||'–')}</i></li>`).join(''):'';
-      $('wrJobsHd').innerHTML=`<b>GM ${g.gm} jobs · ${g.home?'vs':'@'} ${esc(g.short)} · ${esc(g.time)} ET</b><span>${reportLine(g,r)}</span>`;
-      $('wrJobs').innerHTML=jobsHTML(D,g,ps);
-      $('wrAcross').innerHTML=acrossHTML(D,g);
+      $(p+'SixStatus').innerHTML=statusChip(r);
+      $(p+'Roll').innerHTML=ps.length?ps.map(x=>`<li class="${x.me?'me':''}"><span>${x.pos}</span><b>${esc(x.locker?.gamertag||x.name)}</b><i>${esc(x.no||'–')}</i></li>`).join(''):'';
+      $(p+'JobsHd').innerHTML=`<b>GM ${g.gm} jobs · ${g.home?'vs':'@'} ${esc(g.short)} · ${esc(g.time)} ET</b><span>${reportLine(g,r)}</span>`;
+      $(p+'Jobs').innerHTML=jobsHTML(D,g,ps);
+      if(after) after(g,ps);
     }});
+}
+const emitSix=d=>{if(window.WRTonight)window.WRTonight.lastSix=d;window.dispatchEvent(new CustomEvent('wr-six-change',{detail:d}))};
+/* ---------- Lineup Lab panel 1: Tonight's Six (same component; hands the six to the lab's shared lineup object) ---------- */
+function mountLabSix(host,D){
+  const head=`<header class="lab-ph"><span class="lab-no">1</span><div><span class="wr-k">Posted lineup · ${esc(dayLabel(D)||'next game day')}</span><h3 id="labSixTitle">Tonight's Six</h3></div><div class="lab-ph-r" id="labSixChem"></div></header>`;
+  if(!D.games.length){host.innerHTML=`<div class="lab-p1-in">${head}<hr class="lab-div"><div class="wr-empty-row">No games on the schedule. Tonight's Six appears here on the next game day.</div></div>`;
+    emitSix({gm:null,game:null,six:null});return}
+  host.innerHTML=`<div class="lab-p1-in">${head}<hr class="lab-div">${sixPanelHTML(D,'labSix',{cls:'lab-six',head:'<span class="wr-k">Pick a game</span>',note:'Same rink, kits and jobs as the War Room.'})}</div>`;
+  mountSix(D,'labSix',(g,ps)=>{
+    const six={};ps.forEach(x=>{if(x.locker)six[x.pos]=x.locker.id});
+    emitSix({gm:g.gm,gameId:g.id,game:g,six:ps.length?six:null,approved:!!g.report?.approved});
+  });
 }
 function gameCard(D,g){
   const t=g.team,r=g.report,blurb=r&&r.threats[0]?r.threats[0]:(D.v.mgmt?'No pregame report for this game yet.':'Matchup notes post once management approves the report.');
@@ -172,15 +198,16 @@ function jobsHTML(D,g,ps){
     return `<article class="wr-job${p.me?' me':''}"><header><span>${p.pos}${p.me?' · YOU':p.role?' · '+esc(p.role):''}</span><b>${esc(p.locker?.gamertag||r.six[p.pos])}</b><i>${p.no?'#'+esc(p.no):'no #'}</i></header>
       <p>${job?esc(job):`<span class="wr-dim">No job for this player in the GM ${g.gm} report.</span>`}</p></article>`}).join('');
 }
+const acrossLinks=D=>D.v.mgmt?'<nav class="wr-links" aria-label="Opponent tools"><a href="hitmen-opponents.html">Full opponent file →</a><a href="vod-lab.html?team=calgary-hitmen">Film →</a></nav>':'';
 function acrossHTML(D,g){
   const r=g.report;
   const head=`<div class="wr-across-hd">${crest(g.lg,44,g.abbr)}<div><span class="wr-k">Across from us · GM ${g.gm} · ${esc(g.time)} ET</span><h3>${esc(g.short)}</h3></div></div>`;
-  if(!r) return head+`<div class="wr-empty-row">${D.v.mgmt?'No scouting report for this game yet.':'Scouting posts here once management approves tonight\'s report.'}</div>`;
+  if(!r) return head+`<div class="wr-empty-row">${D.v.mgmt?'No scouting report for this game yet.':'Scouting posts here once management approves tonight\'s report.'}</div>`+acrossLinks(D);
   return head+
    (r.opp.length?`<span class="wr-k wr-sub">Projected six</span><dl class="wr-opp">${r.opp.map(o=>`<div><dt>${o.pos}</dt><dd>${esc(o.name)}${o.note?`<small>${esc(o.note)}</small>`:''}</dd></div>`).join('')}</dl>`:'')+
    (r.threats.length?`<span class="wr-k wr-sub">Key threats</span><ul class="wr-threats">${r.threats.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'')+
    (r.plan.length?`<span class="wr-k wr-sub">Game plan</span><ol class="wr-plan">${r.plan.map(t=>`<li>${esc(t)}</li>`).join('')}</ol>`:'')+
-   `<p class="wr-note">${r.approved?'Approved':'Draft · not approved'}. Condensed from the report text; nothing added.</p>`;
+   `<p class="wr-note">${r.approved?'Approved':'Draft · not approved'}. Condensed from the report text; nothing added.</p>`+acrossLinks(D);
 }
 function raceHTML(D){
   const div=D.cgy?.division; const rows=div?D.standings.filter(t=>t.division===div).sort((a,b)=>(a.division_rank||99)-(b.division_rank||99)):[];
@@ -280,7 +307,7 @@ function mountStall(host,D){
 }
 
 /* ---------- boot ---------- */
-const MOUNTS=[['wrTonight',mountWarRoom],['wrLockerTVs',mountLockerTVs],['wrStallTonight',mountStall]];
+const MOUNTS=[['wrTonight',mountWarRoom],['wrLockerTVs',mountLockerTVs],['wrStallTonight',mountStall],['labSix',mountLabSix]];
 async function run(){
   const hosts=MOUNTS.filter(([id])=>$(id)); if(!hosts.length||!window.WRRink) return;
   if(!viewer().user) return;
@@ -292,5 +319,5 @@ async function run(){
 let lastUid;
 window.addEventListener('vvhl-auth-change',()=>{const uid=viewer().user?.id||null;if(uid!==lastUid){lastUid=uid;cache=null}run()});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
-window.WRTonight={reload:()=>{cache=null;return run()},parseReport};
+window.WRTonight={reload:()=>{cache=null;return run()},parseReport,data,viewer,sixFor,tabsGames,initialGm,crest,esc,norm,etDay,POS};
 })();
