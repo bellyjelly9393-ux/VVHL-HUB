@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="broadcast-tokens.css?v=20261004-brand">
   <link rel="stylesheet" href="team-hitmen.css?v=20261004-broadcast">
   <link rel="stylesheet" href="broadcast-components.css?v=20261004-brand">
-  <link rel="stylesheet" href="war-room-tonight.css?v=20261004-neutral">
+  <link rel="stylesheet" href="war-room-tonight.css?v=20261004-lab">
   <link rel="stylesheet" href="network-v2.css">
   <link rel="stylesheet" href="hitmen-neutral.css?v=20261004-neutral" data-hn-last>
 </head>
@@ -29,9 +29,9 @@
     <a href="hitmen-team-locker.html">Locker Room</a>
     <a href="hitmen-player-locker.html">My Stall</a>
     <a data-management-nav href="hitmen-workspace.html">War Room</a>
-    <a data-management-nav href="hitmen-locker-room.html">Lineups</a>
+    <a data-management-nav href="hitmen-team-locker.html#lineupLab">Lineup Lab</a>
     <a data-management-nav href="hitmen-opponents.html">Opponents</a>
-    <a data-management-nav href="hitmen-battle-plan.html">Battle Plan</a>
+    <a data-management-nav href="hitmen-team-locker.html#labSim">Battle Plan</a>
     <a data-management-nav href="vod-lab.html?team=calgary-hitmen">VOD</a>
     <a data-management-nav href="hitmen-gm-ai.html">GM AI</a>
     <a data-management-nav href="obs-control.html">Broadcast Studio</a>
@@ -100,9 +100,9 @@
     <div class="hn-wide hn-section-head hn-deck-head"><div><span class="hn-k">Management tools</span><h2 class="hn-h2">Stations</h2></div></div>
     <section class="hn-wide hm-command-deck" aria-label="Calgary Hitmen command stations">
       <a class="hm-command-card" href="hitmen-team-locker.html"><span class="hm-command-icon">▦</span><small>ROSTER + DEVELOPMENT</small><h3>Locker Room</h3><p>Every active roster and TC player gets a stall with jersey, status, scouting notes, reports and development context.</p></a>
-      <a class="hm-command-card" href="hitmen-locker-room.html"><span class="hm-command-icon">⌗</span><small>LINES + MATCHUPS</small><h3>Lineup Room</h3><p>Set both 6s lines, scratches and availability, then run opponent-aware AI matchup analysis.</p></a>
+      <a class="hm-command-card" href="hitmen-team-locker.html#lineupLab"><span class="hm-command-icon">⌗</span><small>LINES + MATCHUPS</small><h3>Lineup Lab</h3><p>Tonight's six, a lineup sandbox with live chemistry, and a box-score simulation against each of tonight's opponents.</p></a>
       <a class="hm-command-card" href="hitmen-opponents.html"><span class="hm-command-icon">◎</span><small>SEASON INTELLIGENCE</small><h3>Opponents</h3><p>Roster, tendencies, results, danger players and linked VOD evidence for every Season 55 opponent.</p></a>
-      <a class="hm-command-card" href="hitmen-battle-plan.html"><span class="hm-command-icon">⚔</span><small>GAME PREP</small><h3>Battle Plan</h3><p>Turn lineup analysis and opponent evidence into assignments and concise keys to win.</p></a>
+      <a class="hm-command-card" href="hitmen-team-locker.html#labSim"><span class="hm-command-icon">⚔</span><small>GAME PREP</small><h3>Battle Plan</h3><p>Now the game sheet inside Simulate Tonight. Keys to win and assignments, next to the matchup for each game.</p></a>
       <a class="hm-command-card" href="vod-lab.html?team=calgary-hitmen"><span class="hm-command-icon">▶</span><small>PRIVATE FILM ROOM</small><h3>VOD</h3><p>Period review, clips, player evidence and game scouting reports stay inside management.</p></a>
       <a class="hm-command-card" href="hitmen-gm-ai.html"><span class="hm-command-icon">AI</span><small>HOCKEY OPS</small><h3>GM AI</h3><p>Database-first roster, player and matchup questions with evidence-aware reasoning.</p></a>
       <a class="hm-command-card" href="#hitmen-live-session"><span class="hm-command-icon">▣</span><small>PREPARE · EXECUTE</small><h3>Game Night</h3><p>Active series controls, stream bridge, results and postgame handoff.</p></a>
@@ -134,8 +134,8 @@
       <article class="hm-upcoming-card">
         <div class="eyebrow">NEXT ACTION</div>
         <h3>BUILD TONIGHT'S PLAN</h3>
-        <p>Set the lineup, choose the opponent, run the AI matchup breakdown and carry the result into the Battle Plan.</p>
-        <a class="hm-red-btn" href="hitmen-locker-room.html">Open Lineup Room →</a>
+        <p>Check tonight's six, try changes in the sandbox and simulate each matchup. The game sheet sits under the simulation.</p>
+        <a class="hm-red-btn" href="hitmen-team-locker.html#lineupLab">Open the Lineup Lab →</a>
       </article>
     </section>
 
@@ -180,8 +180,8 @@
 <script src="script.js"></script>
 <script src="hitmen-broadcast.js?v=20261004-neutral"></script>
 <script src="hitmen-workspace.js?v=20261004-neutral"></script>
-<script src="war-room-rink.js?v=20261004-six"></script>
-<script src="war-room-tonight.js?v=20261004-neutral"></script>
+<script src="war-room-rink.js?v=20261004-lab"></script>
+<script src="war-room-tonight.js?v=20261004-lab"></script>
 <script src="live-pipeline-status.js?v=20260928-routing"></script>
 <script src="hitmen-game-center-sync.js"></script>
 <script src="hitmen-vod-handoff.js"></script>

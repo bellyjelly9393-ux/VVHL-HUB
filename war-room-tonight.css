@@ -264,3 +264,4 @@
 .wr-scope .wr-across .wr-links{margin:12px 0 0}
 .wr-scope .wr-links a{font:700 11px/1.2 var(--wr-label);letter-spacing:.16em;text-transform:uppercase;color:var(--bc-soft,#B4B7BC);text-decoration:none;border-bottom:1px solid var(--bc-hair,rgba(255,255,255,.085));padding-bottom:2px}
 .wr-scope .wr-links a:hover,.wr-scope .wr-links a:focus-visible{color:var(--bc-offwhite,#F2F3F4);border-bottom-color:rgba(255,255,255,.4)}
+.wr-scope .wr-tabs-slot{margin-bottom:10px}

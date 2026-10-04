@@ -17,7 +17,8 @@
   <link rel="stylesheet" href="broadcast-tokens.css?v=20261004-brand">
   <link rel="stylesheet" href="team-hitmen.css?v=20261004-broadcast">
   <link rel="stylesheet" href="broadcast-components.css?v=20261004-brand">
-  <link rel="stylesheet" href="war-room-tonight.css?v=20261004-neutral">
+  <link rel="stylesheet" href="war-room-tonight.css?v=20261004-lab">
+  <link rel="stylesheet" href="lineup-lab.css?v=20261004-lab">
   <link rel="stylesheet" href="hitmen-neutral.css?v=20261004-neutral" data-hn-last>
 </head>
 <body class="wildman-site management-protected hitmen-team-locker-page hm-neutral">
@@ -30,9 +31,9 @@
     <a href="hitmen-team-locker.html">Locker Room</a>
     <a href="hitmen-player-locker.html">My Stall</a>
     <a data-management-nav href="hitmen-workspace.html">War Room</a>
-    <a data-management-nav href="hitmen-locker-room.html">Lineups</a>
+    <a href="hitmen-team-locker.html#lineupLab">Lineup Lab</a>
     <a data-management-nav href="hitmen-opponents.html">Opponents</a>
-    <a data-management-nav href="hitmen-battle-plan.html">Battle Plan</a>
+    <a data-management-nav href="hitmen-team-locker.html#labSim">Battle Plan</a>
     <a data-management-nav href="vod-lab.html?team=calgary-hitmen">VOD</a>
     <a data-management-nav href="hitmen-gm-ai.html">GM AI</a>
     <a data-management-nav href="obs-control.html">Broadcast Studio</a>
@@ -86,6 +87,14 @@
 
     <div class="wr-shell wr-lockers wr-scope" id="wrLockerTVs" aria-label="Enter the War Room and the locker room TVs"></div>
 
+    <section class="wr-shell wr-scope lab" id="lineupLab" data-lab-team="calgary" aria-labelledby="labTitle" hidden>
+      <header class="lab-hd"><div><span class="wr-k">Game night · one room · three panels</span><h2 id="labTitle">Lineup Lab</h2></div>
+        <p>Tonight's posted six, a sandbox to build your own, and a box-score simulation against each of tonight's opponents. Nothing here writes to the team: sandbox lineups stay on this device.</p></header>
+      <section class="lab-panel lab-p1" id="labPanelSix" aria-labelledby="labSixTitle"><div id="labSix"></div></section>
+      <section class="lab-panel lab-p2" id="labSandbox" aria-labelledby="labSbTitle"></section>
+      <section class="lab-panel lab-p3" id="labSim" aria-labelledby="labSimTitle"></section>
+    </section>
+
     <section class="section-shell locker-section hn-section hn-room" aria-labelledby="hnRoomTitle">
       <div class="hn-section-head">
         <div><span class="hn-k">Active roster stalls</span><h2 id="hnRoomTitle" class="hn-h2">The room</h2></div>
@@ -123,8 +132,10 @@
 <script src="hitmen-stall-scene.js?v=2"></script>
 <script src="hitmen-stall-upgrade.js?v=2"></script>
 <script src="hitmen-broadcast.js?v=20261004-neutral"></script>
-<script src="war-room-rink.js?v=20261004-six"></script>
-<script src="war-room-tonight.js?v=20261004-neutral"></script>
+<script src="war-room-rink.js?v=20261004-lab"></script>
+<script src="war-room-tonight.js?v=20261004-lab"></script>
+<script src="lineup-lab-model.js?v=20261004-lab"></script>
+<script src="lineup-lab.js?v=20261004-lab"></script>
 <script src="hitmen-neutral.js?v=20261004-neutral"></script>
 </body>
 </html>
