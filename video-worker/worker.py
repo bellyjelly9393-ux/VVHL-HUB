@@ -4,6 +4,7 @@ import hmac
 import json
 import math
 import os
+import re
 from pathlib import Path
 import shutil
 import sqlite3
@@ -448,14 +449,104 @@ def ai_config():
     raise Problem(503, 'Unsupported AI_PROVIDER. Use openrouter or openai.')
 
 
+# Worker-only model routing (Railway env). The site chat and the shared Hitmen GM
+# profile keep using Vercel CLAUDE_MODEL; these variables only affect this analyzer.
+#   VOD_ANALYZER_MODEL  one model for every analyzer step (e.g. all-Sonnet)
+#   VOD_MODEL_BASIC     first-pass frame review of each chunk (bulk of the image tokens).
+#                       May be an ordered comma-separated list, e.g. several ':free' models.
+#   VOD_MODEL_DEEP      closer gameplay looks + period and game reports
+#   VOD_MODEL_FALLBACK  tried after every BASIC model is rate limited, missing, rejects
+#                       the request or returns unusable output (defaults to the deep model)
+#   VOD_MODEL_COOLDOWN_SECONDS  skip a rate-limited basic model for this long (default 600)
+# Unset variables fall back to the current behaviour (GM profile model, then OPENROUTER_MODEL).
+MODEL_TIERS = {'overview': 'basic', 'sequence': 'deep', 'period_rollup': 'deep', 'game_rollup': 'deep'}
+MODEL_ID = re.compile(r'^~?[a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]*(:[a-z0-9._-]+)?$')
+_MODEL_COOLDOWN = {}
+
+
+def _env_models(name):
+    values = [v.strip() for v in os.getenv(name, '').split(',') if v.strip()]
+    for value in values:
+        if not MODEL_ID.match(value):
+            raise Problem(503, f'{name} contains an invalid OpenRouter model ID.')
+    return values
+
+
+def _env_model(name):
+    values = _env_models(name)
+    if len(values) > 1:
+        raise Problem(503, f'{name} must name a single OpenRouter model ID.')
+    return values[0] if values else ''
+
+
+def step_models(step):
+    """Ordered, de-duplicated model chain for one analyzer step (primary first)."""
+    provider, _, default, _ = ai_config()
+    if provider != 'OpenRouter':
+        return [default] if default else []
+    analyzer = _env_model('VOD_ANALYZER_MODEL') or default
+    deep = _env_model('VOD_MODEL_DEEP') or analyzer
+    if MODEL_TIERS.get(step, 'deep') == 'basic':
+        chain = (_env_models('VOD_MODEL_BASIC') or [analyzer]) + [_env_model('VOD_MODEL_FALLBACK') or deep]
+    else:
+        chain = [deep]
+    out = []
+    for model in chain:
+        if model and model not in out:
+            out.append(model)
+    return out
+
+
+def model_routing():
+    """Public, non-secret summary for /health so an env change can be verified."""
+    try:
+        return {step: step_models(step) for step in MODEL_TIERS}
+    except Problem:
+        return {}
+
+
 def ai_configured():
     _, key, model, _ = ai_config()
-    return bool(key and model)
+    if not key:
+        return False
+    try:
+        return bool(step_models('overview') and step_models('game_rollup'))
+    except Problem:
+        return False
 
 
-def request_ai(request_payload):
+def request_routed(step, payload, parse):
+    """Run one analyzer step on its model chain. Only the basic step has a fallback.
+
+    A fallback is used for rate limits (429) and model/output problems (502). Billing
+    (402), shutdown and configuration errors are never masked by another model.
+    """
+    chain = step_models(step)
+    if not chain:
+        raise Problem(503, 'AI connection is not configured.')
+    now = time.time()
+    # A rate-limited free model is skipped for a while instead of costing a request
+    # per chunk. The final model in the chain is always attempted.
+    chain = [m for m in chain[:-1] if _MODEL_COOLDOWN.get(m, 0) <= now] + chain[-1:]
+    for index, model in enumerate(chain):
+        last = index == len(chain) - 1
+        try:
+            # With a fallback available, do not sit through long 429 backoffs on a
+            # free model: hand the chunk to the fallback immediately.
+            result = request_ai(payload, model=model, rate_limit_retries=2 if last else 0)
+            return parse(result), model
+        except Problem as exc:
+            if last or STOP.is_set() or exc.status not in (429, 502):
+                raise
+            if exc.status == 429:
+                _MODEL_COOLDOWN[model] = time.time() + max(0, float(os.getenv('VOD_MODEL_COOLDOWN_SECONDS', '600') or 0))
+            print(f'VOD {step}: {model} failed ({exc.status}: {exc.message}); falling back to {chain[index + 1]}', flush=True)
+
+
+def request_ai(request_payload, model=None, rate_limit_retries=2):
     """Use the same bounded provider recovery for chunks and the final report."""
-    provider, key, model, endpoint = ai_config()
+    provider, key, default_model, endpoint = ai_config()
+    model = model or default_model
     if not key or not model:
         raise Problem(503, 'AI connection is not configured.')
     request_payload = dict(request_payload)
@@ -491,7 +582,7 @@ def request_ai(request_payload):
                     pass
                 if code in ('insufficient_quota', 'billing_hard_limit_reached', 'credit_balance_exhausted', 'organization_usage_limit_exceeded', 'organization_spend_limit_exceeded', 'project_spend_limit_exceeded'):
                     raise Problem(402, f'{provider} API quota/billing is unavailable. Check credits and spending limits.')
-                if attempt < 2:
+                if attempt < min(2, rate_limit_retries):
                     try:
                         retry_after = float(exc.headers.get('Retry-After', '0') or 0)
                     except (TypeError, ValueError):
@@ -523,9 +614,9 @@ def request_ai(request_payload):
     raise Problem(502, 'AI output was incomplete. Completed analysis is saved; retry to continue.')
 
 
-def analyze(frames, chunk, metadata, frame_step=FRAME_STEP):
-    _, key, model, _ = ai_config()
-    if not key or not model:
+def analyze(frames, chunk, metadata, frame_step=FRAME_STEP, step='overview'):
+    _, key, _, _ = ai_config()
+    if not key:
         raise Problem(503, 'AI connection is not configured.')
     prompt = '''Act as an elite professional hockey video scout and EA Sports hockey analyst.
 Your standard is an NHL pro-scout/video-coach report adapted to competitive EA hockey.
@@ -630,13 +721,19 @@ Return structured JSON. Every player evaluation and observation remains NEEDS HU
         }
     }
     request_payload = {
-        'model': model, 'store': False,
+        'store': False,
         'input': [{'role': 'user', 'content': content}],
         'max_output_tokens': 3200 if int(metadata.get('ai_rate_limit_retries', 0) or 0) else 4800,
         'text': {'format': {'type': 'json_schema', 'name': 'elite_hockey_review',
                             'strict': True, 'schema': schema}}
     }
-    result = request_ai(request_payload)
+    parsed, model = request_routed(step, request_payload,
+                                   lambda result: parse_review(result, chunk, frame_step))
+    parsed['model'] = model
+    return parsed
+
+
+def parse_review(result, chunk, frame_step):
     text = ''.join(c.get('text', '') for item in result.get('output', []) for c in item.get('content', []) if c.get('type') == 'output_text')
     try:
         parsed = json.loads(text)
@@ -673,7 +770,7 @@ Return structured JSON. Every player evaluation and observation remains NEEDS HU
     parsed['usage'] = result.get('usage', {})
     return parsed
 
-def build_rollup(chunks):
+def build_rollup(chunks, step='game_rollup'):
     """Turn chunk-level evidence into an elite full-game scouting report."""
     empty = {
         'summary': '', 'patterns': '', 'strengths': '', 'corrections': '',
@@ -681,8 +778,7 @@ def build_rollup(chunks):
     }
     if not chunks:
         return empty
-    _, key, model, _ = ai_config()
-    if not key or not model:
+    if not ai_configured():
         empty['summary'] = ' '.join(
             (c.get('review') or {}).get('summary', '')
             for c in chunks if (c.get('review') or {}).get('summary')
@@ -746,9 +842,8 @@ Use direct, confident hockey language without hype. If identity or evidence is u
         }
     }
     schema = extend_schema(schema)
-    response = request_ai(
+    payload = (
         {
-            'model': model,
             'store': False,
             'input': [{'role': 'user', 'content': [
                 {'type': 'input_text', 'text': prompt + HOCKEY_RUBRIC + REPORT_RUBRIC + '''
@@ -764,6 +859,11 @@ Any section without evidence must explicitly say insufficient evidence, never fi
                                 'strict': True, 'schema': schema}},
         }
     )
+    report, _ = request_routed(step, payload, lambda response: parse_rollup(response, chunks))
+    return report
+
+
+def parse_rollup(response, chunks):
     if response.get('status') != 'completed':
         raise Problem(502, 'AI scouting rollup was incomplete.')
     output_text = ''.join(
@@ -1030,7 +1130,7 @@ def process_streamed_replay(job_id):
     if period_complete and not existing_report:
         result['stage'] = 'writing_period_report'
         update(job_id, 'processing', result)
-        report = build_rollup(period_chunks)
+        report = build_rollup(period_chunks, step='period_rollup')
         result['period_reports'].append({'label': label, 'report': report})
         update(job_id, 'processing', result)
 
@@ -1076,7 +1176,7 @@ def review_sequences(job_id, source, chunks, metadata, result,
                            'review_pass': 'closer gameplay sequence'}
                 # An independent look: do not supply the first-pass verdict.
                 context.pop('previous_chunk', None)
-                detail = analyze(frames, window, context, .5)
+                detail = analyze(frames, window, context, .5, step='sequence')
                 saved['sequence_review'] = {**window, 'frame_step_seconds': .5, 'review': detail}
             finally:
                 shutil.rmtree(frame_dir, ignore_errors=True)

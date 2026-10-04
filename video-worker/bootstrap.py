@@ -22,6 +22,7 @@ class Handler(worker.Handler):
                 'aiConfigured': worker.ai_configured(),
                 'aiProvider': worker.ai_config()[0],
                 'aiModel': worker.ai_config()[2],
+                'aiModelRouting': worker.model_routing(),
                 'maxUploadBytes': worker.MAX_UPLOAD,
                 'maxActiveJobs': worker.MAX_ACTIVE_JOBS,
                 'autoReleaseTwitchMedia': worker.AUTO_RELEASE_TWITCH_MEDIA,

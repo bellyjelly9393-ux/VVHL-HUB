@@ -95,7 +95,7 @@ class ScoutSequenceTests(unittest.TestCase):
                 patch.object(worker, 'ai_configured', return_value=True), \
                 patch.object(worker, 'AUTO_RELEASE_TWITCH_MEDIA', False), \
                 patch.object(worker, 'review_sequences', side_effect=lambda *a, **k: order.append('closer')) as closer, \
-                patch.object(worker, 'build_rollup', side_effect=lambda *a: order.append('report') or {'summary': 'Reviewed'}):
+                patch.object(worker, 'build_rollup', side_effect=lambda *a, **k: order.append('report') or {'summary': 'Reviewed'}):
             worker.process_streamed_replay('job')
             self.assertEqual(order[:3], ['closer', 'report', 'cleanup'])
             self.assertEqual(closer.call_args.kwargs['source_offset'], 600)
