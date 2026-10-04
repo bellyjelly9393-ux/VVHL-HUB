@@ -145,7 +145,7 @@ html.lt-sticky body .site-header{top:calc(44px + 12px)}
   #live-ticker .lt-seq{gap:14px; padding:0 12px}
 }
 @media (max-width:480px){
-  #live-ticker .lt-brand-copy,#live-ticker .lt-vs,#live-ticker .lt-self{display:none}
+  #live-ticker .lt-brand-copy,#live-ticker .lt-self{display:none}
   #live-ticker .lt-brand{padding-right:6px}
   #live-ticker .lt-feature{gap:6px}
   #live-ticker .lt-clock{letter-spacing:0}

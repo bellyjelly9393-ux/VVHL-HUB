@@ -71,6 +71,12 @@
     return `${pad(m)}:${pad(sec)}`;
   }
 
+  // Home/away marker. The API derives `home` from calgary_side ('right' = Calgary home,
+  // 'left' = Calgary away; verified against official LGCHL home/away splits).
+  // Home -> "vs OPP", away -> "@ OPP", unknown -> "vs".
+  const venue = g => (g && g.home === false ? '@' : 'vs');
+  const venueLabel = g => (g && g.home === false ? 'away at' : g && g.home === true ? 'home vs' : 'vs');
+
   function badge(team, cls = '') {
     const abbr = esc(team?.abbr || '?');
     if (team?.logo) {
@@ -103,7 +109,7 @@
       featureKey = 'live:' + live.id;
       return `<div class="lt-feature" data-mode="live">
         <span class="lt-flag lt-flag-live"><i class="lt-dot" aria-hidden="true"></i>Live</span>
-        <span class="lt-matchup"><span class="lt-self">${badge(d.team)}<b class="lt-abbr">${esc(d.team.abbr)}</b></span><span class="lt-vs">vs</span>${badge(live.opponent)}<b class="lt-abbr">${esc(live.opponent.abbr)}</b><span class="lt-oppname">${esc(live.opponent.name)}</span></span>
+        <span class="lt-matchup"><span class="lt-self">${badge(d.team)}<b class="lt-abbr">${esc(d.team.abbr)}</b></span><span class="lt-vs" title="${esc(venueLabel(live))}">${esc(venue(live))}</span>${badge(live.opponent)}<b class="lt-abbr">${esc(live.opponent.abbr)}</b><span class="lt-oppname">${esc(live.opponent.name)}</span></span>
         <span class="lt-when">In progress</span>
         <span class="lt-clock" data-elapsed="${esc(live.at)}" aria-label="Time since puck drop"></span>
       </div>`;
@@ -113,7 +119,7 @@
       const at = Date.parse(next.at);
       return `<div class="lt-feature" data-mode="next">
         <span class="lt-flag">Next</span>
-        <span class="lt-matchup"><span class="lt-vs">vs</span>${badge(next.opponent)}<b class="lt-abbr">${esc(next.opponent.abbr)}</b><span class="lt-oppname">${esc(next.opponent.name)}</span></span>
+        <span class="lt-matchup"><span class="lt-vs" title="${esc(venueLabel(next))}">${esc(venue(next))}</span>${badge(next.opponent)}<b class="lt-abbr">${esc(next.opponent.abbr)}</b><span class="lt-oppname">${esc(next.opponent.name)}</span></span>
         <span class="lt-when"><span class="lt-day">${esc(fmtDay(at))}</span> <time class="lt-time" datetime="${esc(next.at)}">${esc(fmtTime(at, true))}</time></span>
         <span class="lt-clock" data-until="${esc(next.at)}" aria-label="Countdown to puck drop"></span>
       </div>`;
@@ -129,7 +135,7 @@
     if (pending.length) {
       parts.push(`<span class="lt-label">Awaiting final</span>`);
       for (const g of pending.slice(-3)) {
-        parts.push(`<span class="lt-item">${badge(g.opponent)}<span class="lt-abbr">${esc(g.opponent.abbr)}</span><span class="lt-muted">${esc(fmtShortDay(Date.parse(g.at)))} ${esc(fmtTime(Date.parse(g.at)))}</span></span>`);
+        parts.push(`<span class="lt-item"><span class="lt-vs">${esc(venue(g))}</span>${badge(g.opponent)}<span class="lt-abbr">${esc(g.opponent.abbr)}</span><span class="lt-muted">${esc(fmtShortDay(Date.parse(g.at)))} ${esc(fmtTime(Date.parse(g.at)))}</span></span>`);
       }
     }
     if (d.recent?.length) {
@@ -138,7 +144,7 @@
         const tag = g.source_url ? 'a' : 'span';
         const href = g.source_url ? ` href="${esc(g.source_url)}" target="_blank" rel="noopener"` : '';
         const res = g.result === 'OTL' ? 'OTL' : g.result;
-        parts.push(`<${tag} class="lt-item lt-res-${esc(res)}"${href}><span class="lt-chip">${esc(res === 'OTL' ? 'OTL' : res)}</span>${badge(g.opponent)}<span class="lt-abbr">${esc(g.opponent.abbr)}</span><span class="lt-score">${esc(g.gf)}<span class="lt-dash">–</span>${esc(g.ga)}</span>${g.ot ? '<span class="lt-ot">OT</span>' : ''}</${tag}>`);
+        parts.push(`<${tag} class="lt-item lt-res-${esc(res)}"${href}><span class="lt-chip">${esc(res)}</span><span class="lt-vs">${esc(venue(g))}</span>${badge(g.opponent)}<span class="lt-abbr">${esc(g.opponent.abbr)}</span><span class="lt-score">${esc(g.gf)}<span class="lt-dash">–</span>${esc(g.ga)}</span>${g.ot ? '<span class="lt-ot">OT</span>' : ''}</${tag}>`);
       }
     }
     const later = (d.upcoming || []).filter(g => g.id !== next?.id && g.id !== live?.id && Date.parse(g.at) > now()).slice(0, 6);
@@ -146,7 +152,7 @@
       parts.push(`<span class="lt-label">Up next</span>`);
       for (const g of later) {
         const at = Date.parse(g.at);
-        parts.push(`<span class="lt-item"><span class="lt-date">${esc(fmtShortDay(at))} ${esc(fmtTime(at))}</span>${badge(g.opponent)}<span class="lt-abbr">${esc(g.opponent.abbr)}</span></span>`);
+        parts.push(`<span class="lt-item"><span class="lt-date">${esc(fmtShortDay(at))} ${esc(fmtTime(at))}</span><span class="lt-vs">${esc(venue(g))}</span>${badge(g.opponent)}<span class="lt-abbr">${esc(g.opponent.abbr)}</span></span>`);
       }
     }
     const r = d.record;
@@ -184,8 +190,8 @@
   function summary(d) {
     const { live, next } = pickFeature(d);
     let s = `Calgary Hitmen ${d.record.label}${d.streak ? ', streak ' + d.streak.label : ''}.`;
-    if (live) s += ` Live now versus ${live.opponent.name}.`;
-    else if (next) s += ` Next: ${next.opponent.name}, ${fmtDay(Date.parse(next.at))} ${fmtTime(Date.parse(next.at), true)}.`;
+    if (live) s += ` Live now, ${venueLabel(live)} ${live.opponent.name}.`;
+    else if (next) s += ` Next: ${venueLabel(next)} ${next.opponent.name}, ${fmtDay(Date.parse(next.at))} ${fmtTime(Date.parse(next.at), true)}.`;
     return s;
   }
 

@@ -36,6 +36,28 @@ const TEAMS = {
   'Vancouver Giants': ['VAN', 386], 'Victoria Royals': ['VIC', 419], 'Windsor Spitfires': ['WSR', 381],
 };
 
+// calgary_side -> home/away. Verified 2026-10-04 against official LGCHL S55 data:
+// the LG standings list Calgary 1-3-0 at home / 3-2-0 away, which matches exactly the
+// 'right' rows (EDM L, LET L, BDN L, SAS W) and the 'left' rows (MHT W, CHW W, RDR W, REG L, SCB L).
+// LG game pages agree: the away team is listed first, and that is the 'left' side here.
+//   'right' = Calgary is HOME  ->  ticker shows "vs OPP"
+//   'left'  = Calgary is AWAY  ->  ticker shows "@ OPP"
+const SIDE_HOME = { right: true, left: false };
+
+// STOPGAP: official LeagueGaming game ids for S55 finals whose hitmen_schedule_games.source_url
+// is still NULL (looked up on LG's team_page_schedule for team 412, 2026-10-04). The key matches
+// the table's unique (scheduled_at, opponent_name) pair. A DB value always wins over this map.
+// Remove these entries once the rows have source_url populated.
+const LG_GAME_URL = 'https://www.leaguegaming.com/forums/index.php?leaguegaming/league&action=league&page=game&gameid=';
+const FALLBACK_LG_GAME_IDS = {
+  '2026-09-28T01:00:00.000Z|Edmonton Oil Kings': 916747,
+  '2026-09-28T01:35:00.000Z|Medicine Hat Tigers': 916774,
+  '2026-09-28T02:10:00.000Z|Chilliwack Bruins': 916805,
+  '2026-09-30T01:00:00.000Z|Regina Pats': 916925,
+  '2026-09-30T01:35:00.000Z|Saskatoon Blades': 916958,
+  '2026-09-30T02:10:00.000Z|Swift Current Broncos': 916986,
+};
+
 const fail = (status, code) => Object.assign(new Error(code), { status, code });
 
 function initials(name) {
@@ -71,21 +93,30 @@ function gameState(g, now) {
   return 'pending'; // window passed, no final recorded yet
 }
 
+function sourceUrl(g, at) {
+  if (/^https:\/\/(www\.)?leaguegaming\.com\//.test(g.source_url || '')) return g.source_url;
+  const id = at && FALLBACK_LG_GAME_IDS[`${at}|${String(g.opponent_name || '').trim()}`];
+  return id ? LG_GAME_URL + id : null;
+}
+
 function shape(g, now) {
   const result = resultOf(g);
+  const at = g.scheduled_at ? new Date(g.scheduled_at).toISOString() : null;
+  const home = Object.prototype.hasOwnProperty.call(SIDE_HOME, g.calgary_side) ? SIDE_HOME[g.calgary_side] : null;
   return {
     id: g.id,
     week: g.week,
-    at: g.scheduled_at ? new Date(g.scheduled_at).toISOString() : null,
+    at,
     opponent: teamInfo(g.opponent_name),
     side: g.calgary_side || null,
+    home, // true = Calgary home ("vs"), false = away ("@"), null = unknown
     status: g.status,
     state: gameState(g, now),
     result,
     gf: g.calgary_score,
     ga: g.opponent_score,
     ot: !!g.overtime,
-    source_url: /^https:\/\/(www\.)?leaguegaming\.com\//.test(g.source_url || '') ? g.source_url : null,
+    source_url: sourceUrl(g, at),
   };
 }
 
