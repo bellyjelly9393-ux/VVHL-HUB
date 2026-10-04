@@ -32,3 +32,7 @@ test('EA snapshots keep club stats distinct and never fill missing assists with 
   const p=eaMembers({members:[{name:'A',gamesPlayed:'3',goals:'2'}]})[0];
   assert.equal(p.games_played,3);assert.equal(p.points,null);assert.match(p.raw_stats.scope,/not LG/);
 });
+test('LG rating links cannot replace names and Training Camp stays separate',()=>{
+  const html='<table><th>Tri City Americans</th>'+Array.from({length:50},(_,i)=>'<tr><td>'+i+'. <a href="?page=team_user_pk&userid='+(i+1)+'">88</a><a href="?page=team_user&userid='+(i+1)+'">Actual '+i+'</a> LD</td></tr>').join('')+'<tr><th>Training Camp Roster</th></tr><tr><td>51. <a href="?page=team_user&userid=99">Reserve GT</a> G</td></tr></table>';
+  const p=parseRosters(html);assert.equal(p[0].name,'Actual 0');assert.equal(p[0].team,'Tri-City Americans');assert.equal(p[50].roster_role,'Training Camp');
+});

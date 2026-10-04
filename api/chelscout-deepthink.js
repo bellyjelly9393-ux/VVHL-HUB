@@ -19,7 +19,8 @@ EVIDENCE DISCIPLINE
 - Claims about specific players, opponents, stats, prices, schedules, results or footage must cite source IDs like [E4].
 - Evidence strength, highest to lowest: current official team rosters/line assignments and timestamped VOD observations; verified game results and game stats; structured current-season statistics; direct management scouting observations; imported third-party scouting; historical market/draft data; model-generated projections.
 - A model-generated report is a hypothesis, not a fact. Never upgrade it to confirmed video evidence.
-- State sample size, season, game format and recency when they matter.
+- State sample size, season, game format and recency when they matter. LG season player totals may include earlier teams. EA club games are not verified LG games and cannot establish league standings.
+- Roster membership, including Training Camp, does not confirm game-night availability. Report dated roster differences as observed changes, not confirmed trades. Flag stale source dates and unmatched stats.
 - Surface contradictions instead of averaging them away.
 - Do not infer defensive quality from points, chemistry from ratings, causation from a win/loss, or a repeatable tendency from one game without labeling the limitation.
 - If evidence is absent, say "unknown" and identify the next useful check.
@@ -194,11 +195,12 @@ async function contextFor(token,names,question,scenario,requestedLens){
   relevantGames=scheduleRows.filter(g=>opponentNames.includes(g.opponent_name));
   add('Calgary head-to-head schedule/results',relevantGames,{evidenceClass:'verified_game_record'});
 
+  const opponentFilter='&opponent_name=in.'+encodeURIComponent('('+opponentNames.map(n=>JSON.stringify(n)).join(',')+')');
   const [rosterResult,snapshotResult,playerStatsResult,sourceSnapshotResult]=await Promise.allSettled([
-   read(`hitmen_opponent_roster_players?select=*&team_id=eq.${TEAM}&season=eq.${SEASON}&active=eq.true&limit=1500`),
-   read(`hitmen_opponent_stat_snapshots?select=*&team_id=eq.${TEAM}&season=eq.${SEASON}&order=as_of.desc&limit=500`),
-   read(`hitmen_opponent_player_stats?select=*&team_id=eq.${TEAM}&season=eq.${SEASON}&order=source_updated_at.desc&limit=2000`),
-   read(`hitmen_opponent_source_snapshots?select=id,opponent_name,source,source_label,source_url,payload,fetched_at&team_id=eq.${TEAM}&season=eq.${SEASON}&order=fetched_at.desc&limit=120`)
+   read(`hitmen_opponent_roster_players?select=*&team_id=eq.${TEAM}&season=eq.${SEASON}&active=eq.true${opponentFilter}&limit=1500`),
+   read(`hitmen_opponent_stat_snapshots?select=*&team_id=eq.${TEAM}&season=eq.${SEASON}&order=as_of.desc${opponentFilter}&limit=100`),
+   read(`hitmen_opponent_player_stats?select=*&team_id=eq.${TEAM}&season=eq.${SEASON}&order=source_updated_at.desc${opponentFilter}&limit=500`),
+   read(`hitmen_opponent_source_snapshots?select=id,opponent_name,source,source_label,source_url,payload,fetched_at&team_id=eq.${TEAM}&season=eq.${SEASON}&order=fetched_at.desc${opponentFilter}&limit=60`)
   ]);
   if(rosterResult.status==='fulfilled'){
    const rows=rosterResult.value.filter(r=>opponentNames.includes(r.opponent_name));

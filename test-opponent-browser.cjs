@@ -37,6 +37,9 @@ document.getElementById('hoiDetail').hidden=false;
    assert.match(await page.locator('#hoiRefreshStatus').innerText(),/1 partial/);
    await page.locator('summary').filter({hasText:'Source status'}).click();assert.match(await page.locator('#hoiRefreshDetails').innerText(),/previous roster retained/);
    await page.locator('#hoiRefreshOpponents').click();assert.equal(await page.evaluate(()=>window.calls.length),1);
+   await page.locator('#hoiSyncLg').click();assert.equal(await page.evaluate(()=>window.calls.length),2);
+   assert.equal(await page.evaluate(()=>window.calls[1].name),'hitmen_request_opponent_refresh');
+   assert.match(await page.locator('#hoiRosterStatus').innerText(),/Server refresh queued/);
    await page.evaluate(()=>{window.VVHLBackend.state.profile.role='player';window.dispatchEvent(new Event('vvhl-auth-change'));});
    assert.equal(await page.locator('#hoiRefreshOpponents').isDisabled(),true);assert.deepEqual(errors,[]);await page.close();
   }

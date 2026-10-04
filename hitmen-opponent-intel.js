@@ -93,15 +93,12 @@
 
   async function syncLg(){
     if(!canWrite())return;
-    const b=E('hoiSyncLg');if(b)b.disabled=true;setStatus('Pulling public LGCHL Season 55 rosters…');
+    const b=E('hoiSyncLg');if(b)b.disabled=true;
     try{
-      const r=await fetch('/api/hitmen-opponent-rosters',{cache:'no-store'}),body=await r.json();
-      if(!r.ok)throw new Error(body.error||'LG roster sync failed.');
-      const rpc=await DB().rpc('apply_hitmen_opponent_roster_snapshot',{p_rows:body.players,p_source_updated_at:body.fetched_at});
-      if(rpc.error)throw rpc.error;
-      setStatus('LG roster refresh: '+(rpc.data?.teams_updated||0)+' teams updated; '+(rpc.data?.teams_preserved?.length||0)+' teams retained for source checks.');
-      await loadSelected();
-    }catch(e){setStatus('LG roster sync failed. '+e.message)}
+      const r=await DB().rpc('hitmen_request_opponent_refresh',{p_reason:'management-roster-refresh'});
+      if(r.error)throw r.error;
+      setStatus(r.data?'Server refresh queued. LG rosters and stats use the scheduled importer; check Source status above.':'No future scheduled opponents remain in Season 55.');
+    }catch(e){setStatus('Could not queue roster refresh. '+e.message)}
     finally{if(b)b.disabled=false;}
   }
 

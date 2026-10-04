@@ -8,9 +8,9 @@ const UA = 'Wildman-Hockey-Esports/1.0 (opponent scouting; scheduled twice weekl
 async function lgRoster() {
   const res = await fetch(ROSTER_URL, {headers: {'User-Agent': UA, Accept: 'text/html'}, signal: AbortSignal.timeout(20000)});
   if (!res.ok) throw new Error('LG roster returned HTTP ' + res.status + '; previous roster retained');
-  const players = parseRosters(await res.text());
-  const teams = [...new Set(players.map(p => p.team))].map(name => ({name, players: players.filter(p => p.team === name).length, positions: [...new Set(players.filter(p => p.team === name).map(p => p.position))]}));
-  return {status: 'complete', as_of: new Date().toISOString(), players, detail: {source: ROSTER_URL, parsed_teams: teams, sample_players: players.slice(0,35)}};
+  const html = await res.text();
+  const players = parseRosters(html);
+  return {status: 'complete', as_of: new Date().toISOString(), players, detail: {source: ROSTER_URL}};
 }
 
 async function league(task: any) {
