@@ -1,263 +1,54 @@
-// LGCHL (LeagueGaming CHL, league 39) league-wide schedule/scores crawler.
-// Shared by api/lgchl-scores.js (site ticker) and, later, the War Room landing crawl.
-//
-// SOURCE (public LG HTML; there is no league-wide schedule/scores page or JSON API):
-//   1. Standings   index.php?leaguegaming/league&action=league&page=standing&leagueid=39&seasonid=55
-//      -> all 62 teams, their table (WHL/OHL/QMJHL Eastern/Western) and GP/W/L/OTW/OTL/PTS...
-//   2. Per-team full season schedule
-//      index.php?leaguegaming/league&action=league_page&page=team_page_schedule&teamid=ID&leagueid=39&seasonid=55
-//      -> every game for that team: LG game id, away team (left), home team (right), score if final,
-//         date/time in US Eastern ("Sun Oct 04 09:00pm", no year). Each game appears on 2 teams' pages.
-//   OT/SO is NOT shown on schedule rows; only on each game page (period columns) and as season
-//   OTW/OTL totals on the standings. This prototype therefore does not flag OT for league games.
-//
-// POLITENESS: identified User-Agent, max 2 concurrent requests with a gap between requests,
-// in-memory cache per warm function instance + CDN caching on the endpoint.
-//   full crawl  = 1 standings + 62 schedule pages (~11-12 MB), at most every FULL_TTL.
-//   delta crawl = standings + a minimum set of team pages that covers games that should have
-//                 finished but have no score yet (greedy vertex cover), at most every DELTA_TTL.
-// Long term this belongs in a scheduled job writing to a table (see docs/lgchl-league-feed.md).
+// LGCHL (LeagueGaming CHL, league 39, S55) league feed: read side.
+// The data is scraped by the Supabase Edge Function `lgchl-league-sync` (pg_cron) into
+// public.lgchl_teams / lgchl_games / lgchl_standings_snapshots and read here through the public
+// views lgchl_standings_current + lgchl_games_board with the publishable key (public, read-only
+// RLS). Vercel never contacts LeagueGaming. Shared by api/lgchl-scores.js (site ticker) and the
+// War Room landing league crawl. See docs/lgchl-league-feed.md.
 
 export const LEAGUE_ID = 39;
 export const SEASON = 55;
-const LG = 'https://www.leaguegaming.com/forums/index.php?leaguegaming/league';
-const UA = 'WildmanHockeyHub/1.0 (+https://wildmanhockey-elitechelmedia.app; league ticker, cached)';
-const LOGO_DIR = '/assets/lgchl/s55/48/'; // 48px webp crests; 100px PNGs in /assets/lgchl/s55/
-const FULL_TTL = 6 * 3600e3;      // full season re-crawl
-const DELTA_TTL = 10 * 60e3;      // pending-finals refresh on game nights
-const GAME_LEN = 35 * 60e3;       // LG games are slotted 35 minutes apart
-const PENDING_GIVE_UP = 8 * 3600e3;
-const CONCURRENCY = 2;
-const GAP_MS = 250;
+export const HITMEN_LG_TEAM_ID = 412;
+const BASE = 'https://lrgllzvwgvqagcpiyvfd.supabase.co';
+const PUBLISHABLE_KEY = 'sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
+const CACHE_MS = 60e3;          // per warm instance; the CDN adds s-maxage on top
+const GAME_LEN = 35 * 60e3;     // LG slots games 35 minutes apart
+const PAGE = 1000;              // PostgREST max rows per request
 
-// id -> [abbr, nickname]. Names/tables come live from the standings page.
-export const TEAM_META = {
-  413: ['PAR', 'Raiders'], 377: ['SCB', 'Broncos'], 411: ['MJW', 'Warriors'], 379: ['SAS', 'Blades'],
-  414: ['REG', 'Pats'], 409: ['BDN', 'Wheat Kings'], 415: ['EDM', 'Oil Kings'], 385: ['RDR', 'Rebels'],
-  416: ['MHT', 'Tigers'], 412: ['CGY', 'Hitmen'], 418: ['LET', 'Hurricanes'], 2983: ['CHW', 'Bruins'],
-  419: ['VIC', 'Royals'], 2981: ['PEN', 'Vees'], 423: ['KAM', 'Blazers'], 400: ['KEL', 'Rockets'],
-  422: ['PGC', 'Cougars'], 386: ['VAN', 'Giants'], 420: ['SPO', 'Chiefs'], 399: ['TCA', 'Americans'],
-  421: ['SEA', 'Thunderbirds'], 380: ['EVT', 'Silvertips'], 2604: ['WEN', 'Wild'], 398: ['POR', 'Winterhawks'],
-  445: ['PBO', 'Petes'], 444: ['KGN', 'Frontenacs'], 446: ['OTT', "67's"], 306: ['BFD', 'Bulldogs'],
-  401: ['OSH', 'Generals'], 448: ['NBB', 'Battalion'], 402: ['BRM', 'Steelheads'], 447: ['SBY', 'Wolves'],
-  375: ['NIA', 'IceDogs'], 449: ['BAR', 'Colts'], 450: ['SSM', 'Greyhounds'], 451: ['SAR', 'Sting'],
-  514: ['FLT', 'Firebirds'], 408: ['SAG', 'Spirit'], 381: ['WSR', 'Spitfires'], 452: ['GUE', 'Storm'],
-  370: ['LDN', 'Knights'], 383: ['ERI', 'Otters'], 454: ['KIT', 'Rangers'], 453: ['OSA', 'Attack'],
-  364: ['HFX', 'Mooseheads'], 455: ['CBE', 'Eagles'], 468: ['CHI', 'Saguenéens'], 365: ['MON', 'Wildcats'],
-  457: ['CHA', 'Islanders'], 469: ['BAC', 'Drakkar'], 465: ['RIM', 'Océanic'], 467: ['QUE', 'Remparts'],
-  397: ['SJS', 'Sea Dogs'], 2982: ['NFD', 'Regiment'], 459: ['DRU', 'Voltigeurs'], 460: ['VDO', 'Foreurs'],
-  382: ['SHA', 'Cataractes'], 466: ['VVL', 'Tigres'], 461: ['GAT', 'Olympiques'], 463: ['SHE', 'Phoenix'],
-  462: ['RNH', 'Huskies'], 458: ['BLB', 'Armada'],
-};
+const GAME_COLS = 'lg_game_id,week,game_at,status,decided_in,away_lg_team_id,home_lg_team_id,away_score,home_score,league,interleague,big_game,big_reasons,source_url,updated_at';
+const TEAM_COLS = 'lg_team_id,name,abbr,nickname,league,conference,division,logo_path,gp,w,l,otw,otl,pts,gf,ga,gd,streak,last10,division_rank,conference_rank,conference_size,standings_at';
 
-const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', eacute: 'é', egrave: 'è', ocirc: 'ô' };
-const decode = s => String(s || '').replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, e) => {
-  if (e[0] === '#') { const n = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return Number.isFinite(n) ? String.fromCodePoint(n) : m; }
-  return ENT[e.toLowerCase()] ?? m;
-});
-const text = s => decode(String(s || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+let restFetch = (url, init) => fetch(url, init); // injectable for tests
+export function setRestFetcher(fn) { restFetch = fn; }
 
-// ---- time: LG anonymous pages render US Eastern; convert "Sun Oct 04 09:00pm" -> UTC ISO.
-const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
-function nyOffsetMs(utcMs) {
-  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' })
-    .formatToParts(utcMs).filter(x => x.type !== 'literal').map(x => [x.type, Number(x.value)]));
-  return Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute, p.second) - utcMs;
-}
-function easternToUtc(y, mo, d, h, mi) {
-  const wall = Date.UTC(y, mo, d, h, mi);
-  let t = wall - nyOffsetMs(wall);
-  t = wall - nyOffsetMs(t); // second pass handles DST edges
-  return t;
-}
-export function parseLgDate(label, now = Date.now()) {
-  const m = /([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{1,2}):(\d{2})\s*([ap]m)/i.exec(label || '');
-  if (!m || !(m[1] in MONTHS)) return null;
-  let h = Number(m[3]) % 12; if (m[5].toLowerCase() === 'pm') h += 12;
-  const year = new Date(now).getUTCFullYear();
-  let best = null;
-  for (const y of [year - 1, year, year + 1]) { // no year on LG; pick the closest
-    const t = easternToUtc(y, MONTHS[m[1]], Number(m[2]), h, Number(m[4]));
-    if (best == null || Math.abs(t - now) < Math.abs(best - now)) best = t;
-  }
-  return new Date(best).toISOString();
-}
-
-// ---- parsers (pure; tested against saved HTML fixtures)
-export function parseStandings(html) {
+async function rest(pathAndQuery) {
   const out = [];
-  const chunks = String(html).split('<th rowspan="2">').slice(1);
-  const seen = {};
-  for (const chunk of chunks) {
-    const name = text(chunk.slice(0, chunk.indexOf('<')));
-    const body = chunk.slice(0, chunk.indexOf('</table>') >= 0 ? chunk.indexOf('</table>') : undefined);
-    seen[name] = (seen[name] || 0) + 1;
-    const table = `${name} ${seen[name]}`; // LG repeats each conference title for its two divisions
-    const rows = body.match(/<tr[^>]*>[\s\S]*?<\/tr>/g) || [];
-    for (const row of rows) {
-      const link = /teamid=(\d+)&(?:amp;)?leagueid=\d+&(?:amp;)?seasonid=\d+">([^<]+)<\/a>/.exec(row);
-      if (!link) continue;
-      const cells = (row.match(/<td[^>]*>[\s\S]*?<\/td>/g) || []).slice(1).map(text);
-      const n = i => (cells[i] === undefined || cells[i] === '' ? null : Number(cells[i]));
-      out.push({
-        lg_team_id: Number(link[1]), name: decode(link[2]).trim(), league: name.split(' ')[0], conference: name, table,
-        rank: Number((/opacity:0\.7;">(\d+)\)/.exec(row) || [])[1]) || null,
-        gp: n(0), w: n(1), l: n(2), otw: n(3), otl: n(4), pts: n(5), streak: cells[6] || null,
-        gf: n(7), ga: n(8), gd: n(9), l10: cells[10] || null, home: cells[11] || null, away: cells[12] || null,
-      });
-    }
-  }
-  return out;
-}
-
-export function parseTeamSchedule(html, now = Date.now()) {
-  const s = String(html);
-  const games = [];
-  let week = null;
-  const re = /<th colspan="5">Week (\d+)<\/th>|<tr class="td_bg_\d*">([\s\S]*?)<\/tr>/g;
-  let m;
-  while ((m = re.exec(s))) {
-    if (m[1]) { week = Number(m[1]); continue; }
-    const row = m[2];
-    const gid = /page=game&(?:amp;)?gameid=(\d+)/.exec(row);
-    const teams = [...row.matchAll(/page=team_page&(?:amp;)?teamid=(\d+)/g)].map(x => Number(x[1]));
-    if (!gid || teams.length < 2) continue;
-    const center = /<td style="text-align:center">([\s\S]*?)<\/td>/.exec(row);
-    const scoreText = center ? text(center[1].split('<br>')[0]) : '';
-    const sc = /^(\d+)\s*vs\s*(\d+)$/.exec(scoreText);
-    const when = center ? text(center[1].split('<br>').slice(1).join(' ')) : '';
-    games.push({
-      lg_game_id: Number(gid[1]), season: SEASON, week,
-      at: parseLgDate(when, now), at_label_et: when || null,
-      away_id: teams[0], home_id: teams[1],              // LG lists the away team first
-      away_score: sc ? Number(sc[1]) : null, home_score: sc ? Number(sc[2]) : null,
-      final: !!sc,
+  for (let from = 0; ; from += PAGE) {
+    const r = await restFetch(`${process.env.SUPABASE_URL || BASE}/rest/v1/${pathAndQuery}`, {
+      headers: { apikey: process.env.SUPABASE_ANON_KEY || PUBLISHABLE_KEY, Accept: 'application/json', Range: `${from}-${from + PAGE - 1}`, 'Range-Unit': 'items' },
+      signal: AbortSignal.timeout(10000),
     });
-  }
-  return games;
-}
-
-// ---- fetching
-// NOTE (2026-10-04): from the dev box, LG's Cloudflare front served plain curl normally but
-// answered Node's built-in fetch with a "Just a moment..." managed challenge (403). Whether
-// Vercel's egress is challenged is untested. Do not try to evade the challenge; if production
-// gets 403s, ask LeagueGaming for an allowlist/feed or run the crawl from an approved worker.
-let htmlFetcher = null; // injectable for tests / local fixtures
-export function setHtmlFetcher(fn) { htmlFetcher = fn; }
-async function getHtml(url) {
-  if (htmlFetcher) return htmlFetcher(url);
-  const r = await fetch(url, { headers: { 'user-agent': UA, accept: 'text/html' }, redirect: 'follow', signal: AbortSignal.timeout(15000) });
-  if (!r.ok) throw Object.assign(new Error('lg ' + r.status), { status: r.status });
-  return r.text();
-}
-const standingsUrl = () => `${LG}&action=league&page=standing&leagueid=${LEAGUE_ID}&seasonid=${SEASON}`;
-const scheduleUrl = id => `${LG}&action=league_page&page=team_page_schedule&teamid=${id}&leagueid=${LEAGUE_ID}&seasonid=${SEASON}`;
-export const gameUrl = gid => `${LG}&action=league&page=game&gameid=${gid}`;
-
-async function pool(items, fn) {
-  const results = []; let i = 0;
-  const worker = async () => {
-    while (i < items.length) {
-      const idx = i++;
-      try { results[idx] = await fn(items[idx]); } catch (e) { results[idx] = { error: e }; }
-      await new Promise(r => setTimeout(r, GAP_MS));
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, items.length) }, worker));
-  return results;
-}
-
-// ---- cache (per warm instance)
-const state = { games: new Map(), standings: [], teams: {}, fullAt: 0, deltaAt: 0, requests: 0, errors: 0, inflight: null };
-
-function mergeGames(list) {
-  for (const g of list) {
-    const prev = state.games.get(g.lg_game_id);
-    // never let a page without the score overwrite a known final
-    if (prev && prev.final && !g.final) continue;
-    state.games.set(g.lg_game_id, { ...prev, ...g });
+    if (!r.ok && r.status !== 206) throw Object.assign(new Error('supabase ' + r.status), { status: 502 });
+    const rows = await r.json();
+    out.push(...rows);
+    if (rows.length < PAGE) return out;
   }
 }
 
-function teamsFromStandings(rows) {
-  const teams = {};
-  for (const r of rows) {
-    const meta = TEAM_META[r.lg_team_id] || [];
-    teams[r.lg_team_id] = {
-      id: r.lg_team_id, name: r.name, abbr: meta[0] || r.name.slice(0, 3).toUpperCase(), nick: meta[1] || r.name,
-      logo: TEAM_META[r.lg_team_id] ? `${LOGO_DIR}team${r.lg_team_id}.webp` : null,
-      league: r.league, table: r.table,
-      record: `${r.w}-${r.l}-${r.otl}`, pts: r.pts, // LG convention: W includes OT wins
-    };
-  }
-  return teams;
+const cache = new Map();
+async function cached(key, fn, now) {
+  const hit = cache.get(key);
+  if (hit && now - hit.at < CACHE_MS) return hit.value;
+  try { const value = await fn(); cache.set(key, { at: now, value }); return value; }
+  catch (e) { if (hit) return hit.value; throw e; } // serve last good copy if Supabase blips
 }
 
-async function fetchStandings() {
-  state.requests++;
-  const rows = parseStandings(await getHtml(standingsUrl()));
-  if (rows.length >= 40) { state.standings = rows; state.teams = teamsFromStandings(rows); }
-  return rows;
-}
-
-async function fetchSchedules(ids, now) {
-  const res = await pool(ids, async id => { state.requests++; return parseTeamSchedule(await getHtml(scheduleUrl(id)), now); });
-  for (const r of res) { if (r && !r.error) mergeGames(r); else state.errors++; }
-}
-
-function pendingGames(now) {
-  return [...state.games.values()].filter(g => !g.final && g.at && now > Date.parse(g.at) + GAME_LEN && now - Date.parse(g.at) < PENDING_GIVE_UP);
-}
-// Greedy vertex cover: fewest team pages that include every pending game.
-export function coverTeams(games) {
-  const left = new Set(games.map(g => g.lg_game_id)); const pick = [];
-  while (left.size) {
-    const count = new Map();
-    for (const g of games) if (left.has(g.lg_game_id)) for (const t of [g.away_id, g.home_id]) count.set(t, (count.get(t) || 0) + 1);
-    const [best] = [...count.entries()].sort((a, b) => b[1] - a[1])[0];
-    pick.push(best);
-    for (const g of games) if (g.away_id === best || g.home_id === best) left.delete(g.lg_game_id);
-  }
-  return pick;
-}
-
-export async function ensureFresh(now = Date.now()) {
-  if (state.inflight) return state.inflight;
-  const run = (async () => {
-    if (!state.fullAt || now - state.fullAt > FULL_TTL || state.games.size === 0) {
-      await fetchStandings();
-      const ids = Object.keys(state.teams).map(Number);
-      await fetchSchedules(ids.length ? ids : Object.keys(TEAM_META).map(Number), now);
-      state.fullAt = state.deltaAt = Date.now();
-      return 'full';
-    }
-    const pend = pendingGames(now);
-    if (pend.length && now - state.deltaAt > DELTA_TTL) {
-      await fetchStandings();
-      await fetchSchedules(coverTeams(pend), now);
-      state.deltaAt = Date.now();
-      return 'delta';
-    }
-    return 'cache';
-  })();
-  // If LG is unreachable (outage, Cloudflare challenge) but we already hold data, keep serving it
-  // as 'stale' and back off for one delta window instead of failing the ticker.
-  const guarded = run.catch(error => {
-    if (!state.games.size) throw error;
-    state.errors++; state.deltaAt = Date.now();
-    return 'stale';
-  });
-  state.inflight = guarded;
-  try { return await guarded; } finally { state.inflight = null; }
-}
-
-// ---- views
 const ET_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
 export const etDay = ms => ET_DAY.format(ms);
 
 export function gameState(g, now) {
-  if (g.final) return 'final';
-  const t = Date.parse(g.at);
+  if (g.status === 'final') return 'final';
+  if (g.status === 'postponed' || g.status === 'cancelled') return g.status;
+  const t = Date.parse(g.game_at);
   if (!Number.isFinite(t)) return 'tbd';
   if (now < t) return 'scheduled';
   if (now < t + GAME_LEN) return 'live';
@@ -265,40 +56,83 @@ export function gameState(g, now) {
 }
 function shape(g, now) {
   return {
-    id: g.lg_game_id, week: g.week, at: g.at, state: gameState(g, now),
-    away: g.away_id, home: g.home_id, away_score: g.away_score, home_score: g.home_score,
-    url: gameUrl(g.lg_game_id),
+    id: g.lg_game_id, week: g.week, at: g.game_at, state: gameState(g, now),
+    away: g.away_lg_team_id, home: g.home_lg_team_id, away_score: g.away_score, home_score: g.home_score,
+    league: g.league, big: g.big_game ? g.big_reasons : null, url: g.source_url,
+  };
+}
+function team(t) {
+  return {
+    id: t.lg_team_id, name: t.name, abbr: t.abbr, nick: t.nickname, logo: t.logo_path,
+    league: t.league, conference: t.conference, table: t.division,
+    record: `${t.w}-${t.l}-${t.otl}`, pts: t.pts, gp: t.gp, conf_rank: t.conference_rank, div_rank: t.division_rank,
   };
 }
 
-export function snapshot() {
-  return { games: [...state.games.values()], standings: state.standings, teams: state.teams, fullAt: state.fullAt, deltaAt: state.deltaAt, requests: state.requests, errors: state.errors };
+async function loadTeams(now) {
+  return cached('teams', async () => {
+    const rows = await rest(`lgchl_standings_current?select=${TEAM_COLS}&order=league.asc,conference.asc,conference_rank.asc`);
+    return rows;
+  }, now);
+}
+async function loadGames(fromIso, toIso, now) {
+  const key = `games|${fromIso}|${toIso}`;
+  return cached(key, () => rest(`lgchl_games_board?select=${GAME_COLS}&season=eq.${SEASON}` +
+    (fromIso ? `&game_at=gte.${fromIso}` : '') + (toIso ? `&game_at=lt.${toIso}` : '') + '&order=game_at.asc,lg_game_id.asc'), now);
 }
 
-export function view(name, now = Date.now()) {
-  const all = [...state.games.values()].filter(g => g.at).sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || a.lg_game_id - b.lg_game_id);
-  const meta = { ok: true, league: 'LGCHL', league_id: LEAGUE_ID, season: SEASON, source: 'leaguegaming.com public team schedules + standings', fetched_at: state.fullAt ? new Date(Math.max(state.fullAt, state.deltaAt)).toISOString() : null, full_crawl_at: state.fullAt ? new Date(state.fullAt).toISOString() : null, game_window_min: GAME_LEN / 60e3, counts: { teams: Object.keys(state.teams).length, games: all.length, finals: all.filter(g => g.final).length } };
-  if (name === 'season') return { ...meta, teams: state.teams, standings: state.standings, games: all.map(g => shape(g, now)) };
-  if (name === 'standings') return { ...meta, teams: state.teams, standings: state.standings };
-  // ticker: the latest night with finals + today's slate (ET game days)
-  const today = etDay(now);
-  const todayGames = all.filter(g => etDay(Date.parse(g.at)) === today);
-  const past = all.filter(g => g.final && etDay(Date.parse(g.at)) < today);
-  const lastDay = past.length ? etDay(Date.parse(past[past.length - 1].at)) : null;
-  const lastNight = lastDay ? all.filter(g => etDay(Date.parse(g.at)) === lastDay) : [];
-  let upcomingDay = null, upcoming = [];
-  if (!todayGames.length) {
-    const fut = all.find(g => Date.parse(g.at) > now);
-    if (fut) { upcomingDay = etDay(Date.parse(fut.at)); upcoming = all.filter(g => etDay(Date.parse(g.at)) === upcomingDay); }
-  }
-  const used = new Set([...todayGames, ...lastNight, ...upcoming].flatMap(g => [g.away_id, g.home_id]));
-  const teams = Object.fromEntries(Object.entries(state.teams).filter(([id]) => used.has(Number(id))));
+function meta(teams, games) {
+  const lastUpdate = games.reduce((m, g) => (g.updated_at > m ? g.updated_at : m), '');
   return {
-    ...meta, teams,
+    ok: true, league: 'LGCHL', league_id: LEAGUE_ID, season: SEASON,
+    source: 'Supabase lgchl_games (scraped from leaguegaming.com by lgchl-league-sync)',
+    standings_at: teams[0]?.standings_at || null, games_updated_at: lastUpdate || null, game_window_min: GAME_LEN / 60e3,
+  };
+}
+
+// Ticker rule (Seth, 2026-10-04): every WHL game + only the "big games" from OHL/QMJHL
+// (lgchl_games_board.big_game, see the migration for the rule). Hitmen games are excluded from the
+// league section because the Hitmen block already shows them.
+export function featured(g, { scope = 'featured', includeHitmen = false } = {}) {
+  if (!includeHitmen && (g.away_lg_team_id === HITMEN_LG_TEAM_ID || g.home_lg_team_id === HITMEN_LG_TEAM_ID)) return false;
+  if (scope === 'all') return true;
+  if (scope === 'whl') return g.league === 'WHL';
+  if (scope === 'big') return !!g.big_game;
+  return g.league === 'WHL' || !!g.big_game; // featured
+}
+
+export async function view(name, opts = {}, now = Date.now()) {
+  const teamsRows = await loadTeams(now);
+  const teams = Object.fromEntries(teamsRows.map(t => [t.lg_team_id, team(t)]));
+  if (name === 'standings') return { ...meta(teamsRows, []), counts: { teams: teamsRows.length }, teams, standings: teamsRows };
+  if (name === 'season') {
+    const games = await loadGames(null, null, now);
+    return { ...meta(teamsRows, games), counts: { teams: teamsRows.length, games: games.length, finals: games.filter(g => g.status === 'final').length, big: games.filter(g => g.big_game).length }, teams, standings: teamsRows, games: games.map(g => shape(g, now)) };
+  }
+  // ticker: latest ET night with finals before today + today's slate (+ next night if today is empty)
+  const from = new Date(now - 8 * 864e5).toISOString(), to = new Date(now + 8 * 864e5).toISOString();
+  const window = await loadGames(from, to, now);
+  const all = window.filter(g => g.game_at && featured(g, opts));
+  const today = etDay(now);
+  const day = g => etDay(Date.parse(g.game_at));
+  const todayGames = all.filter(g => day(g) === today);
+  const past = window.filter(g => g.status === 'final' && day(g) < today);
+  const lastDay = past.length ? day(past[past.length - 1]) : null;
+  const lastNight = lastDay ? all.filter(g => day(g) === lastDay) : [];
+  let nextDay = null, next = [];
+  if (!todayGames.length) {
+    const fut = window.find(g => Date.parse(g.game_at) > now);
+    if (fut) { nextDay = day(fut); next = all.filter(g => day(g) === nextDay); }
+  }
+  const used = new Set([...todayGames, ...lastNight, ...next].flatMap(g => [g.away_lg_team_id, g.home_lg_team_id]));
+  return {
+    ...meta(teamsRows, window),
+    scope: opts.scope || 'featured', hitmen_excluded: !opts.includeHitmen,
+    counts: { teams: teamsRows.length, window_games: window.length, featured: todayGames.length + lastNight.length + next.length },
+    teams: Object.fromEntries(Object.entries(teams).filter(([id]) => used.has(Number(id)))),
     last_night: lastDay ? { day: lastDay, games: lastNight.map(g => shape(g, now)) } : null,
     today: { day: today, games: todayGames.map(g => shape(g, now)) },
-    next_night: upcomingDay ? { day: upcomingDay, games: upcoming.map(g => shape(g, now)) } : null,
+    next_night: nextDay ? { day: nextDay, games: next.map(g => shape(g, now)) } : null,
   };
 }
-
-export function __setStateForTests(s) { Object.assign(state, s); }
+export function __clearCache() { cache.clear(); }

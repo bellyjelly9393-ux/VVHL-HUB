@@ -1,13 +1,15 @@
 // GET /api/lgchl-scores?view=ticker|season|standings
-// League-wide LGCHL (S55) schedule, scores and standings, crawled from public LeagueGaming pages
-// by api/_lgchl.js. Public league data only; no Supabase access and no secrets involved.
+// League-wide LGCHL (S55) schedule, scores and standings read from Supabase (public read-only
+// tables filled by the lgchl-league-sync Edge Function). No LeagueGaming traffic from Vercel.
 //   ticker    (default) last night's finals + today's slate (+ next night when today is empty)
+//             scope=featured (default: all WHL + OHL/QMJHL big games) | all | whl | big
+//             hitmen=1 to include Calgary games (excluded by default; the Hitmen block has them)
 //   season    every game + standings + teams (War Room landing / race panel)
 //   standings standings + teams
-// CDN caching keeps LG traffic low; the module cache limits re-crawls per warm instance.
-import { ensureFresh, view } from './_lgchl.js';
+import { view } from './_lgchl.js';
 
 const VIEWS = new Set(['ticker', 'season', 'standings']);
+const SCOPES = new Set(['featured', 'all', 'whl', 'big']);
 
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -15,19 +17,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ ok: false, error: 'method_not_allowed' });
   }
   const name = String(req.query?.view || 'ticker');
-  if (!VIEWS.has(name)) return res.status(400).json({ ok: false, error: 'unknown_view' });
+  const scope = String(req.query?.scope || 'featured');
+  if (!VIEWS.has(name) || !SCOPES.has(scope)) return res.status(400).json({ ok: false, error: 'bad_request' });
   res.setHeader('X-Content-Type-Options', 'nosniff');
   try {
-    const mode = await ensureFresh();
-    const body = view(name);
-    if (!body.counts.games) throw Object.assign(new Error('empty'), { status: 502 });
-    body.crawl = mode;
-    res.setHeader('Cache-Control', mode === 'stale' ? 'public, max-age=60, s-maxage=60, stale-while-revalidate=600' : name === 'ticker'
-      ? 'public, max-age=60, s-maxage=300, stale-while-revalidate=1800'
-      : 'public, max-age=300, s-maxage=900, stale-while-revalidate=3600');
+    const body = await view(name, { scope, includeHitmen: req.query?.hitmen === '1' });
+    if (!body.counts.teams) throw Object.assign(new Error('empty'), { status: 503 });
+    res.setHeader('Cache-Control', name === 'ticker'
+      ? 'public, max-age=60, s-maxage=120, stale-while-revalidate=600'
+      : 'public, max-age=300, s-maxage=600, stale-while-revalidate=3600');
     return res.status(200).json(body);
   } catch (error) {
     res.setHeader('Cache-Control', 'no-store');
-    return res.status(error.status || 502).json({ ok: false, error: 'league_source_unavailable' });
+    return res.status(error.status || 502).json({ ok: false, error: 'league_feed_unavailable' });
   }
 }

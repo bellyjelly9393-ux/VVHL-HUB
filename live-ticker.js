@@ -2,12 +2,13 @@
  * Drop-in: <script src="/live-ticker.js" defer></script>
  * Two independent feeds, rendered Hitmen-first:
  *   1. Calgary Hitmen  /api/live-ticker   (record, streak, next game, LIVE window, results, upcoming)
- *   2. LGCHL league    /api/lgchl-scores  (last night's finals + today's slate, all 62 teams)
+ *   2. LGCHL league    /api/lgchl-scores  (last night's finals + today's slate from Supabase lgchl_games:
+ *                      every WHL game + OHL/QMJHL big games; Hitmen games excluded)
  * Either feed can fail without taking the other down.
  * Optional attributes on the script tag:
  *   data-endpoint="/api/live-ticker"    Hitmen feed
  *   data-league-endpoint="/api/lgchl-scores?view=ticker"
- *   data-league="all"                   all | whl | ohl | qmjhl | off   (league section scope)
+ *   data-league="featured"              featured (WHL + OHL/QMJHL big games) | whl | big | all | off
  *   data-tz="America/Edmonton"          force a display time zone (default: viewer's zone)
  *   data-sticky="true"                  pin the ticker to the top while scrolling
  *   data-href="/hitmen-hub.html"        make the team block a link
@@ -23,7 +24,7 @@
   const cfg = {
     endpoint: ds.endpoint || '/api/live-ticker',
     leagueEndpoint: ds.leagueEndpoint || '/api/lgchl-scores?view=ticker',
-    league: (ds.league || 'all').toLowerCase(),
+    league: (ds.league || 'featured').toLowerCase(),
     tz: ds.tz || undefined,
     sticky: ds.sticky === 'true',
     href: ds.href || '',
@@ -31,7 +32,7 @@
     leaguePoll: 300000,
     pxPerSecond: 60,
   };
-  const CACHE_KEY = 'wm-live-ticker:v2';
+  const CACHE_KEY = 'wm-live-ticker:v3';
   const AUTH_KEY = 'sb-lrgllzvwgvqagcpiyvfd-auth-token';
   const LEAGUE_ORDER = ['WHL', 'OHL', 'QMJHL']; // Calgary's league first
   const qsNow = (() => {
@@ -175,8 +176,9 @@
     if (now() < t + win) return 'live';
     return 'pending';
   }
-  function leagueOf(d, g) { return d.teams?.[g.home]?.league || d.teams?.[g.away]?.league || 'LGCHL'; }
-  function inScope(d, g) { return cfg.league === 'all' || leagueOf(d, g).toLowerCase() === cfg.league; }
+  function leagueOf(d, g) { return g.league || d.teams?.[g.home]?.league || d.teams?.[g.away]?.league || 'LGCHL'; }
+  // Scope is applied server-side (?scope=); OHL/QMJHL groups only carry big games unless scope=all.
+  const groupName = lg => (lg !== 'WHL' && cfg.league !== 'all' ? `${lg} big games` : lg);
   function byLeague(d, games) {
     const groups = new Map(LEAGUE_ORDER.map(k => [k, []]));
     for (const g of games) { const k = leagueOf(d, g); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(g); }
@@ -201,18 +203,18 @@
     if (d.today?.games?.length) nights.push({ kind: 'today', day: d.today.day, games: d.today.games });
     else if (d.next_night?.games?.length) nights.push({ kind: 'next', day: d.next_night.day, games: d.next_night.games });
     for (const n of nights) {
-      const games = n.games.filter(g => inScope(d, g)).map(g => ({ ...g, st: leagueState(g, win) }));
+      const games = n.games.map(g => ({ ...g, st: leagueState(g, win) }));
       if (!games.length) continue;
       const dayLabel = fmtDate(Date.parse(games[0].at));
       const finals = games.filter(g => g.st === 'final');
       const active = games.filter(g => g.st === 'live' || g.st === 'pending');
       const slate = games.filter(g => g.st === 'scheduled');
       if (finals.length) for (const [lg, list] of byLeague(d, finals)) {
-        parts.push(`<span class="lt-label">${esc(lg)} · ${esc(n.kind === 'today' ? 'Tonight' : dayLabel)} · Final</span>`);
+        parts.push(`<span class="lt-label">${esc(groupName(lg))} · ${esc(n.kind === 'today' ? 'Tonight' : dayLabel)} · Final</span>`);
         for (const g of list) parts.push(leagueFinal(d, g));
       }
       if (active.length) for (const [lg, list] of byLeague(d, active)) {
-        parts.push(`<span class="lt-label">${esc(lg)} · In progress</span>`);
+        parts.push(`<span class="lt-label">${esc(groupName(lg))} · In progress</span>`);
         for (const g of list) parts.push(leagueMatchup(d, g, g.st === 'live' ? 'In prog' : 'Awaiting'));
       }
       if (slate.length) {
@@ -221,7 +223,7 @@
         for (const [at, list] of [...slots.entries()].sort((a, b) => Date.parse(a[0]) - Date.parse(b[0]))) {
           const ms = Date.parse(at);
           for (const [lg, glist] of byLeague(d, list)) {
-            parts.push(`<span class="lt-label">${esc(lg)} · ${esc(fmtDay(ms))} ${esc(fmtTime(ms, true))}</span>`);
+            parts.push(`<span class="lt-label">${esc(groupName(lg))} · ${esc(fmtDay(ms))} ${esc(fmtTime(ms, true))}</span>`);
             for (const g of glist) parts.push(leagueMatchup(d, g));
           }
         }
@@ -322,7 +324,9 @@
     const b = await r.json(); if (!b?.ok) throw new Error('hitmen payload'); return b;
   }
   async function loadLeague() {
-    const r = await getJson(cfg.leagueEndpoint);
+    const u = new URL(cfg.leagueEndpoint, location.href);
+    if (!u.searchParams.has('scope')) u.searchParams.set('scope', ['all', 'whl', 'big'].includes(cfg.league) ? cfg.league : 'featured');
+    const r = await getJson(u.pathname + u.search);
     if (!r.ok) throw new Error('league ' + r.status);
     const b = await r.json(); if (!b?.ok) throw new Error('league payload'); return b;
   }

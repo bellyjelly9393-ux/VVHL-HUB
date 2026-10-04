@@ -1,106 +1,81 @@
 # LGCHL league feed (S55): live ticker + War Room
 
-Status: **prototype on `feature/live-ticker`**. Not deployed. No tables exist yet. The SQL is a
-draft only (`docs/sql/lgchl_games_DRAFT.sql`, not applied).
+Status: **live in Supabase** (project `lrgllzvwgvqagcpiyvfd`, applied 2026-10-04). The site side is on
+branch `feature/live-ticker` and is not deployed yet.
 
-## What LeagueGaming offers
-* **No league-wide schedule, scores page or JSON** for league 39. I tried `page=schedule`, `scores`,
-  `league_schedule` and others; none of them list games.
-* **Standings**: `index.php?leaguegaming/league&action=league&page=standing&leagueid=39&seasonid=55`
-  * One request returns 62 teams in 10 division tables.
-  * Columns: GP W L OTW OTL PTS STK F A GD L10 Home Away. W includes OTW.
-* **Per-team full schedule**: `action=league_page&page=team_page_schedule&teamid={id}&leagueid=39&seasonid=55`
-  * Each page is about 186 KB.
-  * It lists all 66 games for that team: `gameid`, away team then home team, score when final,
-    and the date as "Sun Oct 04 09:00pm" (US Eastern, no year), plus week headers.
-* **Game page**: `page=game&gameid={id}`
-  * This is the only place OT/SO shows up (as period columns). Not used yet.
-* **Coverage**
-  * 62 teams × 66 = 2,046 unique games (each team page shows half of every game it plays in).
-  * 93 games per night, Sun–Tue. Slots run 7:00–10:30 PM ET. Week 4 has an extra slot (124 games).
-* **Update cadence**
-  * LG writes a score to the schedule page once the game is reported. There is no push or feed.
-  * Snapshot taken 2026-10-04: last finals were 2026-09-29 (93 games). Standings GP/W match the
-    schedule finals exactly, so both pages update from the same source.
-* **Request cost**
-  * Full refresh: 63 requests, about 12 MB.
-  * Game-night delta: re-read only the teams that cover every game that has started but has no
-    score yet. A greedy vertex cover needs **34 pages** for a 93-game night. About 30 pages per
-    10-minute window while games finish, then zero.
-* **Cloudflare**
-  * curl from the box gets 200. Node's built-in fetch from the same box gets the Cloudflare
-    "Just a moment" challenge (403).
-  * Supabase egress does reach LG today: `lg-stats-sync` (pg_cron `lg-stats-worker`) finished 130
-    jobs in the last 21 days. Its last run was 2026-10-04 03:30Z.
-  * We do **not** try to get around a challenge. If LG challenges our host, the feed serves its last
-    good data as `crawl: "stale"`, or a 502 when it has none.
-
-## Prototype (this branch)
-* `api/_lgchl.js`: shared fetch, parse and cache module. It is not a route; the underscore keeps
-  Vercel from deploying it.
-  * Parsers: `parseStandings`, `parseTeamSchedule`, `parseLgDate` (ET → UTC, handles DST, picks the
-    closest year).
-  * Team table `TEAM_META` (abbr + nickname for all 62 teams).
-  * Cache: full crawl every 6 h; delta every 10 min only while games are pending (gives up after 8 h).
-  * Polite fetching: 2 requests at a time, 250 ms apart, identifying User-Agent.
-  * Fetcher is injectable (`setHtmlFetcher`) so tests can use fixtures.
-* `api/lgchl-scores.js`: `GET /api/lgchl-scores?view=ticker|season|standings`
-  * `ticker`: `last_night` finals, `today` (finals, live, awaiting, scheduled) and `next_night` when
-    today has no games. Includes only the teams it references. About 56 KB raw / 5 KB gzip.
-    CDN `s-maxage=300, stale-while-revalidate=1800`.
-  * `season`: every game, plus standings and teams. Meant for the War Room landing crawl, race
-    panels and standings. CDN 15 min.
-  * `standings`: standings + teams.
-  * Team object: `{id,name,abbr,nick,logo,league,table,record,pts}`. The War Room mockups use
-    `nick`; the ticker uses `abbr`.
-* `live-ticker.js`
-  * Hitmen rail first: finals, next game, S55 stats.
-  * Then the separator plate `LGCHL · League scores`.
-  * League section: finals grouped WHL → OHL → QMJHL, in-progress/awaiting games, then tonight's
-    slate grouped by time slot.
-  * Polls every 5 min. Re-renders only when the data changes.
-  * Opt-out / scope: `data-league="whl|ohl|qmjhl|off"` on the script tag. Default is `all`.
-  * If the Hitmen feed is unavailable (signed out, no service key), the ticker shows league scores only.
-* Logos: `assets/lgchl/s55/team{id}.png` (originals, 62) and `assets/lgchl/s55/48/team{id}.webp`
-  (48 px, 101 KB total).
-
-## Long-term: a table + a scheduled worker
-Replace the per-request crawl with one writer and many readers:
-
+## Pipeline
 ```
-pg_cron ─▶ Edge Function lgchl-league-sync ─▶ lgchl_games / lgchl_teams / lgchl_standings_snapshots
-                                                     ▲                         ▲
-                          api/lgchl-scores.js (reads table) ──▶ live ticker   War Room landing
+pg_cron ──▶ private.lgchl_kick_sync(mode) ──pg_net──▶ Edge Function lgchl-league-sync ──▶ LeagueGaming
+                                                              │ (service role upserts)
+             public.lgchl_teams · lgchl_games · lgchl_standings_snapshots · lgchl_sync_runs
+                         │ public read-only views
+             lgchl_standings_current · lgchl_games_board (big_game flag)
+                         │ PostgREST + publishable key
+             api/lgchl-scores.js (Vercel, no LG traffic) ──▶ live-ticker.js   ·   War Room landing
 ```
 
-The swap is one function. `ensureFresh()` / `view()` in `api/_lgchl.js` would become a single
-PostgREST select on `lgchl_games_board`. The response shape stays the same, so `live-ticker.js`
-and the War Room do not change.
+### Supabase objects
+* **Migrations**
+  * `lgchl_league_feed`: tables, views, RLS, trigger, kick function.
+  * `lgchl_league_sync_schedule`: cron jobs.
+  * Copies are in `supabase/migrations/`.
+* **Tables**
+  * `lgchl_teams` (62 rows): abbr, nickname, league, conference, division, logo path.
+  * `lgchl_games` (2,046 rows): `lg_game_id` PK; away/home LG team ids; scores; `status`
+    (scheduled/final/postponed/cancelled); `game_at` (UTC, parsed from LG's US Eastern labels);
+    `source_url`.
+    * `decided_in` (REG/OT/SO) exists but is null. Schedule pages don't show OT.
+    * A trigger stops a final from ever being downgraded.
+  * `lgchl_standings_snapshots`: a new row only when a team's standings line changes.
+  * `lgchl_sync_runs`: run log and resume cursor. Service role only; no policies.
+* **RLS**
+  * Enabled on all four tables.
+  * SELECT is open to anon + authenticated on teams, games and standings snapshots.
+  * Writes are service role only. anon INSERT returns 401; anon `lgchl_sync_runs` returns 401.
+  * Views use `security_invoker = true`.
+* **Function**: `lgchl-league-sync` (`verify_jwt=false`, custom `x-sync-token` check)
+  * Uses the same token and fetch pattern as `lg-stats-sync`: plain GET, identified User-Agent,
+    one request at a time with a 1.5 s pause.
+  * Stops and records the error if LG returns a Cloudflare challenge. We do not try to bypass it.
+  * Source: `supabase/functions/lgchl-league-sync/`. Parsers are in `lib.ts`, which is pure and
+    tested against saved HTML.
+* **Schedule** (pg_cron, as postgres)
+  | job | cron | does |
+  |---|---|---|
+  | `lgchl-league-full` | `15 */6 * * *` | standings + all 62 team schedule pages (64 LG requests, about 12 MB, ~5 min across 2 calls) |
+  | `lgchl-league-delta` | `*/10 0-5,23 * * 0,1,2,3` | only when games started 35 min+ ago (within 8 h) have no score: re-reads the fewest team pages that cover them (greedy vertex cover, ≤34 pages for a 93-game night), then standings |
+  | `lgchl-league-worker` | `*/3 * * * *` | resumes a running refresh after its 100 s call budget. Pure SQL check, no request when idle |
 
-### Scheduler options
-| Option | Pros | Cons |
-|---|---|---|
-| **Supabase Edge Function + pg_cron** (recommended; also War Room PLAN §4) | Same pattern as `lg-stats-sync` / `hitmen-opponent-refresh` (x-sync-token in `lg_sync_settings`). Writes with service role inside Supabase. Proven to reach LG. No Vercel secret needed. | Deno port of the parser (it's plain JS, so a small change). Wall-clock limits per call, so the 63-page full refresh may need to be split into batches like the opponent refresh. |
-| Vercel cron (`vercel.json` `crons` → `/api/lgchl-sync`) | Same JS module as the prototype, no port. | Needs `SUPABASE_SERVICE_ROLE_KEY` on Vercel. Hobby crons run at most daily (Pro: any schedule). Cron calls are public URLs, so they need a `CRON_SECRET`. Vercel egress vs Cloudflare is untested. |
-| Railway worker (`wildman-video-worker`) | Long-lived, no duration limits. Can also read game pages to fill `decided_in` (OT/SO). | It's the video capture worker: we'd mix concerns and risk capture jobs. Separate deploy and monitoring. Needs the service key there too. |
+### Big games (OHL / QMJHL)
+The rule is computed live in `lgchl_games_board` from `lgchl_standings_current`. Teams are ranked
+in their conference by PTS, then GD, then GF. A game is `big_game` when ANY of these is true
+(`big_reasons` lists which):
+* `top4_clash`: both teams are top 4 in their conference.
+* `leader_chase`: one team leads the conference and the other is within 2 PTS of it.
+* `division_race`: same division, both in the top half of the conference, within 1 PT of each other.
 
-Suggested cadence:
-* Full refresh every 6 h. It picks up schedule changes and new standings.
-* Every 10 min from 23:00 to 04:59 UTC on Sun–Wed (UTC) during game nights.
-* Optional: one game-page read per new final to fill OT/SO, about 93 requests per night spread out.
-  Only worth it if the War Room needs OT detail.
+Notes:
+* The rule uses **current** standings, so past finals are re-judged as the standings move.
+* On 2026-10-04 it picks 9 of the 57 OHL/QMJHL games tonight: OHL 4, QMJHL 5.
 
-### Naming to settle with War Room
-PLAN.md §4 used `lgchl_league_games`, `lgchl_standings_snapshots` and `lgchl_teams`. This draft
-uses `lgchl_games`. Pick one name before applying anything. The columns line up:
-* PLAN `away_id` / `home_id` = `away_lg_team_id` / `home_lg_team_id` here.
-* PLAN `ot` = `decided_in`.
+### Site API: `GET /api/lgchl-scores`
+* `view=ticker` (default): `last_night`, `today`, and `next_night` when today is empty.
+  * `scope=featured` (default): all WHL games + OHL/QMJHL `big_game`. Other scopes: `whl`, `big`, `all`.
+  * Calgary Hitmen games are excluded (the Hitmen block shows them). Pass `hitmen=1` to include them.
+  * About 32 KB. CDN `s-maxage=120`.
+* `view=season`: all 2,046 games with `big`, plus standings and teams. For the War Room landing crawl.
+* `view=standings`.
+* Reads use the publishable key only, with a 60 s in-memory cache that falls back to the last good
+  copy. Vercel never contacts LG.
 
-## Decisions for Seth
-1. **Permission.** Is it OK to crawl LG league-wide (about 63 requests every 6 h plus about 30 per
-   10 min on game nights)? Or should we ask LG for a feed or an allowlist first?
-2. **Read scope.** Public read (anon) vs authenticated-only for `lgchl_*`.
-3. **Where the writer runs.** Edge Function (recommended), Vercel cron, or Railway.
-4. **Default ticker scope.** All 3 leagues (about 93 finals + 93 upcoming on a game night, a long
-   loop) vs WHL only. Hitmen games also appear in the league section; dedupe or keep.
-5. **Logos.** 62 LG team crests are committed as site assets. Confirm we're fine re-hosting them.
+### Ticker (`live-ticker.js`)
+* Order: Hitmen rail first, then the `LGCHL · League scores` plate, then the league section:
+  * finals by league: "WHL · Tue, Sep 29 · Final", "OHL big games · …";
+  * in progress / awaiting;
+  * tonight's slate by time slot.
+* `data-league` on the script tag: `featured` (default) | `whl` | `big` | `all` | `off`.
+
+## Operations
+* **Health**: `select * from lgchl_sync_runs order by id desc limit 5;`. Look at `error` and `pages_failed`.
+* **Manual run** (SQL editor): `select private.lgchl_kick_sync('full');`
+* **Pause**: `select cron.alter_job(job_id, active := false) from cron.job where jobname like 'lgchl-%';`
