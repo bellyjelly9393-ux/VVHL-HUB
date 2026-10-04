@@ -12,7 +12,7 @@ function msg(text,bad=false){const x=E('lineupStatus');if(x){x.textContent=text;
 function aiMsg(text){if(E('lineupAiStatus'))E('lineupAiStatus').textContent=text}
 function lockerByPlayer(id){return S.lockers.find(x=>x.player_id===id)}
 function snap(l){return S.snapshots.find(x=>x.id===l?.roster_snapshot_id)||{}}
-function isTc(l){return l?.roster_class==='tc'||String(snap(l).acquisition||'').toLowerCase()==='prospect'}
+function isTc(l){return ['tc','training_camp'].includes(String(l?.roster_class||'').toLowerCase())} // TC by roster class; 'Prospect' acquisition players are on the active roster
 function label(l){return l?l.gamertag+' · '+(l.position||'?')+(isTc(l)?' · TC':''):''}
 function selectedIds(){return new Set(Object.values(S.slots).filter(Boolean))}
 function fmtDate(v){return v?new Date(v).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'TBD'}

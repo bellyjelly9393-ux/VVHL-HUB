@@ -183,6 +183,10 @@ html body.hm-neutral.hm-neutral .hn-stalls .stall-footer small{font:600 10px/1.2
 html body.hm-neutral.hm-neutral .hn-stalls .stall-footer .stall-position{padding:0!important;border:0!important;font:inherit!important;color:var(--hn-soft)!important;letter-spacing:inherit!important}
 html body.hm-neutral.hm-neutral .hn-stalls .stall-footer b{font:700 10.5px/1.2 var(--hn-label)!important;letter-spacing:.14em!important;text-transform:uppercase;color:var(--hn-text)!important;background:none!important;border:0!important;padding:0!important}
 html body.hm-neutral.hm-neutral .hn-stalls .locker-stall.is-tc{border-style:dashed!important}
+/* Training camp: dashed stall + a small steel TC tag. No colour (the legacy gold TC nameplate rule is neutralised here). */
+html body.hm-neutral.hm-neutral .hn-stalls .locker-stall{position:relative}
+html body.hm-neutral.hm-neutral .hn-stalls .locker-stall.is-tc .stall-nameplate-v2{border-bottom-color:var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral .hn-tc-tag{position:absolute;top:36px;right:6px;z-index:2;padding:2px 5px;border:1px solid rgba(201,204,208,.34);background:rgba(10,11,12,.82);color:#C9CCD0;font:700 9px/1 var(--hn-label);letter-spacing:.16em;text-transform:uppercase;pointer-events:none}
 html body.hm-neutral.hm-neutral .hs-open-tag{background:rgba(10,11,12,.8)!important;color:var(--hn-soft)!important;border:1px solid var(--hn-hair)!important}
 html body.hm-neutral.hm-neutral .locker-empty{padding:18px!important;border:1px dashed var(--hn-hair)!important;background:rgba(10,11,12,.5)!important;color:var(--hn-muted)!important;font:500 13px/1.5 var(--hn-body)!important;grid-column:1/-1}
 html body.hm-neutral.hm-neutral .hn-lines{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))!important;gap:12px!important}

@@ -101,7 +101,11 @@ async function load(){
       const pick=mine.find(r=>r.evidence_summary?.lineups?.calgary)||mine[0];g.report=pick?parseReport(pick):null});
   }
   const current=lockers.filter(l=>l.roster_class!=='historical'); // archived past players never feed a jersey or TV
-  const lockerFor=name=>current.find(l=>norm(l.gamertag)===norm(name))||null;
+  // LG shows capital I and lower-case l the same ("I Richy 19 I" vs our "l Richy 19 l"); fold them, but only on a unique hit.
+  // Known renames: kraus417827 is offtheyrk (same stall).
+  const ALIAS={kraus417827:'offtheyrk'},fold=s=>norm(String(s||'').replace(/[Il|]/g,'l'));
+  const lockerFor=name=>{const n=ALIAS[norm(name)]||name;const hit=current.find(l=>norm(l.gamertag)===norm(n));if(hit)return hit;
+    const f=current.filter(l=>fold(l.gamertag)===fold(n));return f.length===1?f[0]:null};
   const cgy=standings.find(t=>t.lg_team_id===CGY)||null;
   return {v,schedule,lockers,standings,games,day,today:day===ref,cgy,teamFor,lockerFor,errors};
 }
@@ -110,7 +114,7 @@ function data(){ if(cache) return Promise.resolve(cache); if(!inflight) inflight
 /* six for one game: report lineup + locker names/numbers */
 function sixFor(D,g){
   const six=g?.report?.six; if(!six) return [];
-  return POS.filter(p=>six[p]).map(p=>{const l=D.lockerFor(six[p]);const tag=l?.management_role?String(l.management_role).toUpperCase():'';
+  return POS.filter(p=>six[p]).map(p=>{const l=D.lockerFor(six[p]);const tag=l?.management_role?String(l.management_role).toUpperCase():['tc','training_camp'].includes(String(l?.roster_class||'').toLowerCase())?'TC':'';
     return {pos:p,name:(l?.jersey_name||l?.gamertag||six[p]),tag:l?.gamertag||six[p],no:l?.jersey_number||null,me:!!(l&&D.v.user&&l.user_id===D.v.user.id),role:tag,locker:l}})
     .map(p=>Object.assign(p,{tag:p.me?'':p.role}));
 }

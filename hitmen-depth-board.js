@@ -16,7 +16,7 @@ async function load(){
    DB().from('team_player_game_reports').select('locker_id,stats').eq('team_id',TEAM).eq('season',SEASON)
  ]);
  const err=roster.error||lockers.error||reports.error;if(err){E('hitmenDepthBoard').innerHTML='<div class="hm-depth-card-empty">'+esc(err.message)+'</div>';return}
- const byRoster=new Map((lockers.data||[]).filter(l=>l.roster_class!=='historical').map(l=>[l.roster_snapshot_id,l])),byLocker=new Map();
+ const byRoster=new Map((lockers.data||[]).filter(l=>l.roster_class==='active_roster').map(l=>[l.roster_snapshot_id,l])),byLocker=new Map();
  (reports.data||[]).forEach(r=>{if(!byLocker.has(r.locker_id))byLocker.set(r.locker_id,[]);byLocker.get(r.locker_id).push(r)});
  const rows=(roster.data||[]).map(r=>({...r,locker:byRoster.get(r.id)})).filter(x=>x.locker);
  if(E('hitmenDepthCount'))E('hitmenDepthCount').textContent=rows.length;
