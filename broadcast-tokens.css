@@ -33,6 +33,12 @@
   --bc-arena-photo:url("assets/broadcast/arena-tunnel.webp");
   --bc-arena-photo-jpg:url("assets/broadcast/arena-tunnel.jpg");
   --bc-photo-filter:saturate(.4) contrast(1.05);
+  --bc-arena-soft:url("assets/broadcast/arena-soft.webp");
+  --bc-ice:url("assets/broadcast/ice-texture.webp");
+  /* faded imagery behind panels (desaturated, low opacity, softly masked) */
+  --bc-bg-photo-opacity:.18;
+  --bc-bg-ice-opacity:.07;
+  --bc-watermark-opacity:.07;
 
   /* LED board */
   --bc-led-bg:#060607;
