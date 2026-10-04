@@ -76,7 +76,7 @@
     const rec=seasonRecord(S.schedule);
     const big=$('hitmenSbRecord');
     if(big){
-      if(rec.gp){big.innerHTML=`<span>${rec.w}</span><i>&ndash;</i><span>${rec.l}</span><i>&ndash;</i><span>${rec.otl}</span>`;big.setAttribute('aria-label',`Season record ${rec.w} wins, ${rec.l} losses, ${rec.otl} overtime losses`);}
+      if(rec.gp){big.innerHTML=`<span>${rec.w}<small>W</small></span><i>&ndash;</i><span>${rec.l}<small>L</small></span><i>&ndash;</i><span>${rec.otl}<small>OTL</small></span>`;big.setAttribute('aria-label',`Season record ${rec.w} wins, ${rec.l} losses, ${rec.otl} overtime losses`);}
       else big.textContent='\u2014';
     }
     setText('hitmenSbPts',rec.gp?rec.pts:'\u2014');
@@ -115,6 +115,33 @@
     };
     tick(); countdownTimer=setInterval(tick,1000);
   }
+
+  // Jumbotron: the week's three game nights (Sun-Tue, ET), first game per night.
+  // Rolls to the next Sun-Tue window on Wednesday 06:00 ET: windowStart = the Sunday on or after (now - 2d 6h), in ET dates.
+  const WD=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  function jumboWindowKeys(now=new Date()){
+    const ref=new Date(now.getTime()-(2*86400+6*3600)*1000);
+    const [mm,dd,yy]=etDateKey(ref).split('/').map(Number);
+    const wd=WD.indexOf(fmt(ref,ET,{weekday:'short'}));
+    const add=(7-wd)%7, p=v=>String(v).padStart(2,'0');
+    return [0,1,2].map(k=>{const d=new Date(Date.UTC(yy,mm-1,dd+add+k));return `${p(d.getUTCMonth()+1)}/${p(d.getUTCDate())}/${d.getUTCFullYear()}`;});
+  }
+  let jumboKey='';
+  function renderJumbotron(){
+    const root=$('hitmenJumbo'), sr=$('hitmenJumboSr'); if(!root) return;
+    const keys=jumboWindowKeys(); jumboKey=keys[0];
+    const games=(S.schedule||[]).filter(g=>g.status!=='cancelled'&&g.scheduled_at).map(g=>({g,at:new Date(g.scheduled_at)})).sort((a,b)=>a.at-b.at);
+    const nights=keys.map(k=>games.find(x=>etDateKey(x.at)===k)).filter(Boolean);
+    if(!nights.length){
+      root.innerHTML='<div class="bc-jt-empty">Schedule TBA</div>';
+      if(sr) sr.innerHTML='<li>Schedule TBA</li>';
+      return;
+    }
+    root.innerHTML=nights.map(({g,at})=>`<div class="bc-jt-row"><i>${esc(dayLabel(at))}</i><span class="bc-crest">${crestHtml('Calgary Hitmen')}</span><s>VS</s><span class="bc-crest">${crestHtml(g.opponent_name)}</span></div>`).join('');
+    wireCrestFallbacks(root);
+    if(sr) sr.innerHTML=nights.map(({g,at})=>`<li>${esc(dayLabel(at))}: Calgary Hitmen vs ${esc(g.opponent_name||'TBA')}</li>`).join('');
+  }
+  setInterval(()=>{ if(jumboKey && jumboWindowKeys()[0]!==jumboKey) renderJumbotron(); },60000);
 
   function setStatus(text,tone=''){
     const el=$('hitmenStatus'); if(!el)return;
@@ -233,7 +260,7 @@
     const rec=seasonRecord(S.schedule);
     if($('hitmenRecord')) $('hitmenRecord').textContent=rec.gp?`${rec.w}-${rec.l}-${rec.otl}`:'\u2014';
   }
-  function render(){renderKpis();renderScoreboard();renderActiveSession();renderHistory();}
+  function render(){renderKpis();renderScoreboard();renderJumbotron();renderActiveSession();renderHistory();}
   function bind(){$('createSession')?.addEventListener('click',createSession);}
   bind();
   window.addEventListener('vvhl-auth-change',()=>loadAll());

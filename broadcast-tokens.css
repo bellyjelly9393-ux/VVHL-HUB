@@ -32,7 +32,7 @@
   /* photography */
   --bc-arena-photo:url("assets/broadcast/arena-tunnel.webp");
   --bc-arena-photo-jpg:url("assets/broadcast/arena-tunnel.jpg");
-  --bc-photo-filter:saturate(.7) contrast(1.05);
+  --bc-photo-filter:saturate(.4) contrast(1.05);
 
   /* LED board */
   --bc-led-bg:#060607;
