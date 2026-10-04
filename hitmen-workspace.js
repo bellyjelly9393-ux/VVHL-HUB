@@ -124,8 +124,8 @@
   }
   function renderKpis(){
     if($('hitmenReportCount')) $('hitmenReportCount').textContent=S.reports.length;
-    if($('hitmenRosterCount')) $('hitmenRosterCount').textContent=S.lockers.filter(x=>x.roster_class!=='tc').length;
-    if($('hitmenTcCount')) $('hitmenTcCount').textContent=S.lockers.filter(x=>x.roster_class==='tc').length;
+    if($('hitmenRosterCount')) $('hitmenRosterCount').textContent=S.lockers.filter(x=>!['tc','training_camp'].includes(x.roster_class)).length;
+    if($('hitmenTcCount')) $('hitmenTcCount').textContent=S.lockers.filter(x=>['tc','training_camp'].includes(x.roster_class)).length;
     if($('hitmenLineupCount')) $('hitmenLineupCount').textContent=S.lineups.length;
     const rec=seasonRecord(S.schedule);
     if($('hitmenRecord')) $('hitmenRecord').textContent=rec.gp?`${rec.w}-${rec.l}-${rec.otl}`:'\u2014';

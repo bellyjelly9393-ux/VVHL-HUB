@@ -10,7 +10,9 @@
 'use strict';
 const TEAMS={
   calgary:{key:'calgary',teamId:'b0bcbdda-da9d-419d-8f61-b34937966d49',season:55,league:'LGCHL',seasonLabel:'S55',lgTeamId:412,
-    name:'Calgary Hitmen',nick:'Hitmen',abbr:'CGY',activeClass:'active_roster',
+    name:'Calgary Hitmen',nick:'Hitmen',abbr:'CGY',activeClass:'active_roster',tcClasses:['tc','training_camp'],
+    // same person, older gamertag (LG renamed kraus417827 -> offtheyrk; stall 48174407). Matched both ways.
+    aliases:{offtheyrk:['kraus417827']},
     mgmtRoles:['owner','gm','agm','scout'],manageRoles:['owner','gm','agm'],
     editors:{battlePlan:'hitmen-battle-plan.html',lineups:'hitmen-locker-room.html'}}
 };
@@ -25,6 +27,22 @@ const pct=v=>v==null?'–':(+v).toFixed(1)+'%', sv3=v=>v==null?'–':(+v).toFixe
 const CONF_N={Projected:0,Low:1,Medium:2,High:3};
 const confChip=(c,extra)=>`<span class="lab-conf" data-n="${CONF_N[c]??0}" title="Confidence: ${esc(c)}${extra?' · '+esc(extra):''}"><i></i><i></i><i></i><b>${esc(c)}</b>${extra?`<small>${esc(extra)}</small>`:''}</span>`;
 const PLACEHOLDER='v0 placeholder';
+const TC_TAG='<span class="lab-tc" title="Training camp">TC</span>';
+/* LG names vs our roster names: LeagueGaming renders capital I and lower-case l the same, and our roster
+   was typed from LG pages (e.g. "Bauer I 43 I" here, "Bauer l 43 l" on LG; "l Richy 19 l" vs "I Richy 19 I").
+   We match exact (case-insensitive) first, then known aliases, then an I/l fold, and the fold only counts
+   when exactly one LG gamertag folds to that name. Never fuzzier than that. */
+const fold=s=>String(s||'').trim().replace(/[Il|]/g,'l').toLowerCase();
+function nameResolver(cfg,lockers){
+  const exact=new Map(),folded=new Map();
+  lockers.forEach(l=>{const t=l.gamertag;if(!t)return;[t,...((cfg.aliases||{})[lc(t)]||[])].forEach(n=>{exact.set(lc(n),t);const f=fold(n);folded.set(f,folded.has(f)&&folded.get(f)!==t?null:t)})});
+  return function(rows){
+    const byFold=new Map();rows.forEach(r=>{const f=fold(r.gamertag);if(!byFold.has(f))byFold.set(f,new Set());byFold.get(f).add(lc(r.gamertag))});
+    return t=>{const k=lc(t);if(exact.has(k))return exact.get(k);const f=fold(t),hit=folded.get(f);return hit&&byFold.get(f)?.size===1?hit:null};
+  };
+}
+// ilike pattern that also finds the I/l twin of a name (the result is filtered by nameResolver)
+const ilikeOf=t=>String(t).replace(/[%\\]/g,'\\$&').replace(/[Il|]/g,'_');
 
 function viewer(cfg){
   const s=ST(),pr=String(s.profile?.role||'').toLowerCase();
@@ -65,13 +83,24 @@ async function loadLab(cfg,v,D){
     lgSeason=lgSeason.concat(page); if(page.length<1000) break;
   }
   const lockers=ok(lr), active=lockers.filter(l=>l.roster_class===cfg.activeClass);
-  const tags=[...new Set(lockers.map(l=>l.gamertag).filter(Boolean))];
+  // Training camp: their own group, never counted as active roster, but pickable in the sandbox and Simulate.
+  const tc=lockers.filter(l=>cfg.tcClasses.includes(String(l.roster_class||'').toLowerCase()));
+  const pool=active.concat(tc);
+  const tags=[...new Set(lockers.map(l=>l.gamertag).filter(Boolean).flatMap(t=>[t,...((cfg.aliases||{})[lc(t)]||[])]))];
+  const resolve=nameResolver(cfg,lockers);
+  // LG season rows that belong to one of our players are re-keyed to the roster name (I/l twins, aliases)
+  {const r=resolve(lgSeason);lgSeason=lgSeason.map(x=>{const c=r(x.gamertag);return c&&c!==x.gamertag?Object.assign({},x,{gamertag:c,lgName:x.gamertag}):x})}
   // career prior (out-of-sample): the same league's earlier regular seasons for our players
-  let career=[];
+  let career=[],careerTotals=[];
   if(tags.length){
-    const rows=ok(await db.from('lg_player_season_stats').select(LGSEL).eq('league_code',cfg.league).eq('season_type','regular').lt('season',cfg.season).gt('season',0)
-      .or(tags.map(t=>'gamertag.ilike.'+orQuote(t)).join(',')).limit(1000));
-    const want=new Set(tags.map(lc)); career=rows.filter(r=>want.has(lc(r.gamertag)));
+    const or=tags.map(t=>'gamertag.ilike.'+orQuote(ilikeOf(t))).join(',');
+    const [cr,ct]=await Promise.all([
+      db.from('lg_player_season_stats').select(LGSEL).eq('league_code',cfg.league).eq('season_type','regular').lt('season',cfg.season).gt('season',0).or(or).limit(2000),
+      // LG career totals (season 0): shown as context on the bench only; the chemistry prior uses per-season rows
+      db.from('lg_player_season_stats').select('gamertag,position,games_played,season').eq('league_code',cfg.league).eq('season_type','career').or(or).limit(1000)]);
+    const rc=ok(cr),rt=ok(ct),r1=resolve(rc),r2=resolve(rt);
+    career=rc.map(x=>{const c=r1(x.gamertag);return c?Object.assign({},x,{gamertag:c,lgName:x.gamertag}):null}).filter(Boolean);
+    careerTotals=rt.map(x=>{const c=r2(x.gamertag);return c?Object.assign({},x,{gamertag:c,lgName:x.gamertag}):null}).filter(Boolean);
   }
   const games=D?.games||[];
   const oppNames=[...new Set(games.filter(g=>g.report&&g.report.opp.length).map(g=>g.name))];
@@ -84,7 +113,7 @@ async function loadLab(cfg,v,D){
   // would bias "games together", so the player view uses team-visible rows only (else career projection).
   let reports=ok(gr);
   const shared=v.mgmt?reports.length>0:(reports=reports.filter(r=>r.visibility==='team')).length>0;
-  return {lockers,active,reports,shared,lgSeason,career,opp,plans,errors};
+  return {lockers,active,tc,pool,reports,shared,lgSeason,career,careerTotals,opp,plans,errors};
 }
 
 /* ---------- helpers on loaded data ---------- */
@@ -93,7 +122,9 @@ function makeHelpers(cfg,v,D,L){
   const ctx=m.createContext({schedule:D?.schedule||[],reports:L.reports,lockers:L.lockers,lgSeason:L.lgSeason,lgCareer:L.career,shared:L.shared});
   const byId=new Map(L.lockers.map(l=>[l.id,l]));
   const name=id=>byId.get(id)?.gamertag||'—';
-  const lockerByTag=t=>L.lockers.find(l=>lc(l.gamertag)===lc(t))||null;
+  const isTC=id=>L.tc.some(l=>l.id===id);
+  const rosterName=nameResolver(cfg,L.pool)([]); // exact + alias only for report names (no LG rows to fold against)
+  const lockerByTag=t=>L.pool.find(l=>lc(l.gamertag)===lc(t))||L.pool.find(l=>l.gamertag===rosterName(t))||L.lockers.find(l=>lc(l.gamertag)===lc(t))||null;
   const lgByTag=new Map();L.lgSeason.forEach(r=>{const k=lc(r.gamertag);if(!lgByTag.has(k))lgByTag.set(k,[]);lgByTag.get(k).push(r)});
   // games with a missing position row (e.g. the Sept 30 private-log games have no RD row)
   const gapGames=[];
@@ -121,7 +152,7 @@ function makeHelpers(cfg,v,D,L){
       x={gp:t.gp,g:t.g,a:t.a,s:t.s,h:t.h,tk:t.tk,int:t.int,bs:t.bs,gv:t.gv,fop:t.fopN?t.fopW/t.fopN:null,pass:t.passN?t.passW/t.passN:null,svp:t.svN?t.svW/t.svN:null,sog:t.sog,src:`${cfg.league} ${cfg.seasonLabel}`};
     } else if(L.shared){const b=ctx.playerBase(id);if(b.gp)x={gp:b.gp,g:b.g,a:b.a,s:b.s,h:b.hits,tk:b.tk,int:b.int,bs:0,gv:b.gv,fop:null,pass:null,svp:null,sog:0,src:'box scores'}}
     if(!x) x={gp:0,src:'no data'};
-    x.name=l.gamertag;x.names=[lc(l.gamertag)];
+    x.name=l.gamertag;x.names=[lc(l.gamertag)];x.tc=isTC(id);x.noData=!x.gp;x.noDataLabel=`No ${cfg.seasonLabel} line`;
     if(slot==='C'){const fo=ctx.faceoffs(id);if(fo){x.fop=100*fo.w/Math.max(1,fo.w+fo.l);x.draws=fo.w+fo.l;x.fow=fo.w;x.fol=fo.l;x.drawsEst=false}else{if(!(x.fop>0))x.fop=null;x.draws=x.fop!=null?20*x.gp:0;x.drawsEst=x.fop!=null}}
     if(slot==='G'&&x.svp==null){const gb=ctx.goalieBase(id);if(gb&&gb.sf){x.svp=gb.sv/gb.sf;x.sog=gb.sf;x.src='box scores'}}
     return x;
@@ -163,12 +194,20 @@ function makeHelpers(cfg,v,D,L){
   }
   function bestSwap(six,g,base){
     let best=null;
+    // swap ideas come from the active roster only: a TC player with little or no data would win on the neutral prior, not on evidence
     POS.forEach(p=>{L.active.forEach(l=>{if(Object.values(six).includes(l.id))return;const f=fit(l.id,p);if(f.k==='off')return;
       const t=Object.assign({},six,{[p]:l.id});const s=simulate(t,g);const d=s.vd.T-base.vd.T;
       if(d>=0.10&&s.vd.verdict!=='Risky'&&s.vd.threat.length<=base.vd.threat.length&&(!best||d>best.d))best={p,id:l.id,out:six[p],d,s}})});
     return best;
   }
-  return {ctx,byId,name,lockerByTag,fit,chem,simulate,bestSwap,gapGames};
+  // what LG has on a player (for the bench and the no-data labels): S55 GP, earlier-season GP, career-total GP
+  function lgInfo(id){const l=byId.get(id);if(!l)return {s55:0,prev:0,total:0};const k=lc(l.gamertag);
+    const s55=(lgByTag.get(k)||[]).reduce((a,r)=>a+(+r.games_played||0),0);
+    const prev=L.career.filter(r=>lc(r.gamertag)===k).reduce((a,r)=>a+(+r.games_played||0),0);
+    const total=L.careerTotals.filter(r=>lc(r.gamertag)===k).reduce((a,r)=>Math.max(a,+r.games_played||0),0);
+    const box=L.shared?ctx.playerBase(id).gp:0;
+    return {s55,prev,total,box,none:!s55&&!prev&&!box}}
+  return {ctx,byId,name,isTC,lockerByTag,fit,chem,simulate,bestSwap,gapGames,lgInfo};
 }
 
 /* ---------- local saves (this device only) ---------- */
@@ -180,19 +219,25 @@ const writeStore=(cfg,v,o)=>{try{localStorage.setItem(storeKey(cfg,v),JSON.strin
 const panelHead=(n,kicker,title,id,right)=>`<header class="lab-ph"><span class="lab-no">${n}</span><div><span class="wr-k">${kicker}</span><h3 id="${id}">${title}</h3></div><div class="lab-ph-r">${right||''}</div></header><hr class="lab-div">`;
 
 /* ---------- link rows ---------- */
+const noDataLink=x=>x.source==='projected'&&/^no out-of-sample/.test(x.priorNote||'');
 function linkRow(H,x){
   const pr=x.source==='projected';
+  const tcs=[x.a,x.b].filter(id=>H.isTC(id));
+  if(noDataLink(x)){const who=[x.a,x.b].filter(id=>H.lgInfo(id).none).map(id=>esc(H.name(id))+(H.isTC(id)?' (TC)':''));
+    return `<li class="proj nodata"><span class="lab-lk">${x.sa}–${x.sb}</span><b>${esc(H.name(x.a))}${H.isTC(x.a)?' '+TC_TAG:''} <i>+</i> ${esc(H.name(x.b))}${H.isTC(x.b)?' '+TC_TAG:''}</b><em>—</em>${confChip('No data')}<small>No data: ${who.join(', ')||'no LG history or shared games'} · no games together. Counts as a neutral 50 placeholder in the six, not a measurement.</small></li>`}
   const detail=pr?`Projected · ${esc(x.priorNote)}`:`${x.confidence} · ${x.G} GP together · ${x.W}-${x.L} · GD ${x.gdPg>=0?'+':'−'}${Math.abs(x.gdPg).toFixed(2)}/g · ${x.ptsPg.toFixed(1)} pts/g · shrink ${x.shrink} toward ${x.prior}`;
   const tags=x.tags.filter(Boolean).join(' / ');
-  return `<li class="${pr?'proj':''}"><span class="lab-lk">${x.sa}–${x.sb}</span><b>${esc(H.name(x.a))} <i>+</i> ${esc(H.name(x.b))}</b><em>${x.score}</em>${confChip(x.confidence)}<small>${detail}${tags?' · '+esc(tags):''}</small></li>`;
+  return `<li class="${pr?'proj':''}"><span class="lab-lk">${x.sa}–${x.sb}</span><b>${esc(H.name(x.a))}${tcs.includes(x.a)?' '+TC_TAG:''} <i>+</i> ${esc(H.name(x.b))}${tcs.includes(x.b)?' '+TC_TAG:''}</b><em>${x.score}</em>${confChip(x.confidence)}<small>${detail}${tags?' · '+esc(tags):''}</small></li>`;
 }
 function chemHTML(H,c,L,v){
   if(!c.complete) return `<div class="lab-chem lab-chem-empty"><span class="wr-k">Starter chemistry, based on games played together</span><p>Fill ${c.missing.map(p=>`<b>${p}</b>`).join(', ')} to score this six. The goalie is not part of chemistry; it counts in Simulate Tonight.</p></div>`;
   const bar=(k,lbl,val,w)=>`<div class="lab-bar"><span>${lbl}<small>${w}</small></span><i style="--w:${val}%"></i><b>${val}</b></div>`;
   const note=L.shared?`Box scores: ${H.ctx.gamesWithBox} games, one row per player per game (EA match rows preferred).${H.gapGames.length?` ${H.gapGames.length} game${H.gapGames.length>1?'s are':' is'} missing a ${[...new Set(H.gapGames.flatMap(g=>g.miss))].join('/')} row, so those pairs are unknown there.`:''}`
     :`Teammates' box scores aren't visible in the player view, so every link here is a career projection (Projected) from ${esc(L.lgSeason.length?'LG season stats':'no data')}.`;
-  return `<div class="lab-chem">
-    <div class="lab-chem-top"><div><span class="wr-k">Starter chemistry, based on games played together</span><div class="lab-big"><b>${c.score}</b><span>${esc(c.label)}</span></div></div>${confChip(c.confidence,c.unit.G?`${c.unit.G} GP as this five`:c.medianG?`median ${c.medianG} GP per link`:'no games together')}</div>
+  const all=[...c.links.forwards,c.links.dPair,...c.links.bridges],nd=all.filter(noDataLink).length;
+  const ndNote=nd?`<p class="lab-nd"><b>${nd} of ${all.length} links have no data</b> (no LG history and no games together). They sit at a neutral 50 placeholder, so treat this score as a projection, not a measurement.</p>`:'';
+  return `<div class="lab-chem">${ndNote}
+    <div class="lab-chem-top"><div><span class="wr-k">Starter chemistry, based on games played together</span><div class="lab-big"><b>${c.score}</b><span>${esc(c.label)}</span></div></div><div class="lab-chips">${confChip(c.confidence,c.unit.G?`${c.unit.G} GP as this five`:c.medianG?`median ${c.medianG} GP per link`:'no games together')}${nd?confChip('No data',`${nd} link${nd>1?'s':''}`):''}</div></div>
     <div class="lab-bars">${bar('f','Forward triangle',c.parts.forwards,'35%')}${bar('d','D pair',c.parts.dPair,'20%')}${bar('b','Bridges (F–D)',c.parts.bridges,'25%')}${bar('u','Unit (exact five)',c.parts.unit,'20%')}</div>
     <ol class="lab-links">${[...c.links.forwards,c.links.dPair,...c.links.bridges].map(x=>linkRow(H,x)).join('')}</ol>
     <p class="wr-note"><b>${PLACEHOLDER}.</b> Pair = win 30 · goal diff 20 · production 30 · style 20, shrunk toward an out-of-sample prior (games apart or career, else 50; −10 off-position) by G/(G+3). Six = 0.35 forwards + 0.20 D pair + 0.25 bridges + 0.20 exact-five unit. Dashed links have no games together. ${note}</p>
@@ -203,7 +248,7 @@ function chemHTML(H,c,L,v){
 function mountSandbox(host,cfg,v,D,L,H,lineup){
   const st={slots:Object.fromEntries(POS.map(p=>[p,null])),selP:null,selS:null,msg:''};
   const store=readStore(cfg,v);
-  if(store.draft) POS.forEach(p=>{const id=store.draft[p];st.slots[p]=id&&L.active.some(l=>l.id===id)?id:null});
+  if(store.draft) POS.forEach(p=>{const id=store.draft[p];st.slots[p]=id&&L.pool.some(l=>l.id===id)?id:null});
   let tonight=lineup.get().tonight;
   host.innerHTML=panelHead(2,'Try your own · saves on this device only','Lineup Sandbox','labSbTitle',`<span id="labSbConf"></span>`)+
    `<div class="lab-sb">
@@ -220,7 +265,8 @@ function mountSandbox(host,cfg,v,D,L,H,lineup){
      <div class="lab-sb-r" id="labChem"></div>
    </div>
    <div class="lab-bench" id="labBench" aria-label="Active roster"></div>
-   <p class="wr-note">Tap a player, then a slot (or drag a player onto a slot). Tap two slots to swap them. Only the ${L.active.length} active-roster players are listed; archived past players never appear. Position fit compares the slot with each player's primary and secondary position in <code>team_player_lockers</code> and any games they've played there. ${v.mgmt?`Team lineups still save in the <a href="${cfg.editors.lineups}">Lineup Room editor</a> (management).`:''}</p>`;
+   <div class="lab-bench lab-bench-tc" id="labBenchTc" aria-label="Training camp"></div>
+   <p class="wr-note">Tap a player, then a slot (or drag a player onto a slot). Tap two slots to swap them. The ${L.active.length} active-roster players come first; the ${L.tc.length} training camp (TC) players are listed separately and can be placed in any slot. Archived past players never appear. Each chip shows what LeagueGaming has on that player (${esc(cfg.league)} ${esc(cfg.seasonLabel)} games, earlier seasons, career total); a TC player with none is labelled <b>No data</b> and their links count as a neutral placeholder. Position fit compares the slot with each player's primary and secondary position in <code>team_player_lockers</code> and any games they've played there. ${v.mgmt?`Team lineups still save in the <a href="${cfg.editors.lineups}">Lineup Room editor</a> (management).`:''}</p>`;
   const $=s=>host.querySelector(s);
   const assign=(slot,id)=>{const from=POS.find(p=>st.slots[p]===id);const prev=st.slots[slot];st.slots[slot]=id;if(from&&from!==slot)st.slots[from]=prev||null;st.selP=st.selS=null;commit()};
   const swap=(a,b)=>{const t=st.slots[a];st.slots[a]=st.slots[b];st.slots[b]=t;st.selP=st.selS=null;commit()};
@@ -236,20 +282,25 @@ function mountSandbox(host,cfg,v,D,L,H,lineup){
       return `<button type="button" class="lab-slot${id?' on':''}${st.selS===p?' sel':''}${f&&f.k==='off'?' off':''}" data-slot="${p}" ${id?'draggable="true"':''} style="left:${(x+3)*sc}px;top:${(y+3)*sc}px"
         aria-label="${POS_LONG[p]} slot: ${id?esc(l.gamertag)+', '+esc(f.t):'empty'}">
         ${id?WRRink.jersey({name:l.jersey_name||l.gamertag,no:l.jersey_number},72,kit):'<span class="lab-slot-x"></span>'}
-        <span class="lab-slot-tg"><b>${p}</b>${id?`<em>${esc(l.gamertag)}</em><small>${esc(f.t)}</small>`:'<em>Empty</em>'}</span></button>`}).join(''));
+        <span class="lab-slot-tg"><b>${p}</b>${id?`<em>${esc(l.gamertag)}${H.isTC(id)?' '+TC_TAG:''}</em><small>${esc(f.t)}</small>`:'<em>Empty</em>'}</span></button>`}).join(''));
     // selection line
     const selName=st.selP?H.name(st.selP):'';
     $('#labSel').innerHTML=st.selP?`Pick a slot for <b>${esc(selName)}</b>. <button type="button" class="lab-x" data-act="cancel">Cancel</button>`
       :st.selS?`${st.slots[st.selS]?`<b>${st.selS}</b> · ${esc(H.name(st.slots[st.selS]))}: pick a player or another slot to swap. <button type="button" class="lab-x" data-act="empty">Remove from ${st.selS}</button>`:`Pick a player for <b>${st.selS}</b>.`} <button type="button" class="lab-x" data-act="cancel">Cancel</button>`
       :(st.msg||'Tap a player, then a slot.');
     st.msg='';
-    // bench
+    // bench: active roster, then training camp as its own group
     const grp=[['Forwards',l=>['LW','C','RW'].includes(String(l.position).toUpperCase())],['Defence',l=>['LD','RD'].includes(String(l.position).toUpperCase())],['Goalies',l=>String(l.position).toUpperCase()==='G'],['Other',l=>!POS.includes(String(l.position).toUpperCase())]];
-    $('#labBench').innerHTML=grp.map(([g,f])=>{const ls=L.active.filter(f).sort((a,b)=>POS.indexOf(String(a.position).toUpperCase())-POS.indexOf(String(b.position).toUpperCase())||lc(a.gamertag).localeCompare(lc(b.gamertag)));
+    const byPos=(a,b)=>POS.indexOf(String(a.position).toUpperCase())-POS.indexOf(String(b.position).toUpperCase())||lc(a.gamertag).localeCompare(lc(b.gamertag));
+    const lgTxt=id=>{const i=H.lgInfo(id),bits=[];if(i.box)bits.push(`${i.box} GP with us`);if(i.s55)bits.push(`${cfg.seasonLabel} ${i.s55} GP`);if(i.prev)bits.push(`earlier ${i.prev} GP`);if(!i.prev&&i.total)bits.push(`career ${i.total} GP`);return bits.length?bits.join(' · '):''};
+    const chip=(l,tc)=>{const at=POS.find(p=>st.slots[p]===l.id),info=tc?H.lgInfo(l.id):null,lt=tc?lgTxt(l.id):'';
+      return `<button type="button" class="lab-chip${tc?' tc':''}${at?' in':''}${st.selP===l.id?' sel':''}" draggable="true" data-id="${l.id}" aria-pressed="${st.selP===l.id}">
+          <b>${esc(l.gamertag)}${tc?' '+TC_TAG:''}</b><span>${esc(String(l.position||'?').toUpperCase())}${l.secondary_position&&String(l.secondary_position).toUpperCase()!==String(l.position).toUpperCase()?' · 2nd '+esc(String(l.secondary_position).toUpperCase()):''}${l.jersey_number?' · #'+esc(l.jersey_number):''}</span>${tc?`<small>${info.none?(info.total?`No data · career ${info.total} GP total only`:'No data · no LG history'):esc(lt)}</small>`:''}${at?`<em>In six · ${at}</em>`:''}</button>`};
+    $('#labBench').innerHTML=grp.map(([g,f])=>{const ls=L.active.filter(f).sort(byPos);
       if(!ls.length)return '';
-      return `<div class="lab-bench-g"><span class="wr-k">${g} · ${ls.length}</span><div>${ls.map(l=>{const at=POS.find(p=>st.slots[p]===l.id);
-        return `<button type="button" class="lab-chip${at?' in':''}${st.selP===l.id?' sel':''}" draggable="true" data-id="${l.id}" aria-pressed="${st.selP===l.id}">
-          <b>${esc(l.gamertag)}</b><span>${esc(String(l.position||'?').toUpperCase())}${l.secondary_position&&String(l.secondary_position).toUpperCase()!==String(l.position).toUpperCase()?' · 2nd '+esc(String(l.secondary_position).toUpperCase()):''}${l.jersey_number?' · #'+esc(l.jersey_number):''}</span>${at?`<em>In six · ${at}</em>`:''}</button>`}).join('')}</div></div>`}).join('');
+      return `<div class="lab-bench-g"><span class="wr-k">${g} · ${ls.length}</span><div>${ls.map(l=>chip(l,false)).join('')}</div></div>`}).join('');
+    const tcs=L.tc.slice().sort(byPos);
+    $('#labBenchTc').innerHTML=tcs.length?`<div class="lab-bench-g"><span class="wr-k">Training camp · ${tcs.length} <small>not on the active roster</small></span><div>${tcs.map(l=>chip(l,true)).join('')}</div></div>`:'';
     // saved
     const saved=store.saved||[];
     $('#labSaved').innerHTML=saved.length?`<span class="wr-k">Saved on this device</span><ul>${saved.map((s,i)=>`<li><button type="button" class="lab-x" data-load="${i}">${esc(s.name)}</button><small>${esc(new Date(s.at).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</small><button type="button" class="lab-x" data-del="${i}" aria-label="Delete ${esc(s.name)}">Delete</button></li>`).join('')}</ul>`:'';
@@ -269,14 +320,14 @@ function mountSandbox(host,cfg,v,D,L,H,lineup){
       b.ondragover=e=>{e.preventDefault();b.classList.add('drop')};b.ondragleave=()=>b.classList.remove('drop');
       b.ondrop=e=>{e.preventDefault();const d=e.dataTransfer.getData('text/plain')||'';if(d.startsWith('p:'))assign(p,d.slice(2));else if(d.startsWith('s:')&&d.slice(2)!==p)swap(d.slice(2),p)}});
     host.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{const a=b.dataset.act;
-      if(a==='tonight'){const t=lineup.get().tonight.six||{};POS.forEach(p=>st.slots[p]=t[p]&&L.active.some(l=>l.id===t[p])?t[p]:null);st.msg=`Loaded tonight's six (GM ${lineup.get().tonight.gm}).`;st.selP=st.selS=null;commit()}
+      if(a==='tonight'){const t=lineup.get().tonight.six||{};POS.forEach(p=>st.slots[p]=t[p]&&L.pool.some(l=>l.id===t[p])?t[p]:null);st.msg=`Loaded tonight's six (GM ${lineup.get().tonight.gm}).`;st.selP=st.selS=null;commit()}
       else if(a==='clear'){POS.forEach(p=>st.slots[p]=null);st.selP=st.selS=null;commit()}
       else if(a==='save'){if(!POS.some(p=>st.slots[p])){st.msg='Nothing to save yet.';draw();return}
         store.saved=(store.saved||[]).concat([{name:`Sandbox ${((store.saved||[]).length%99)+1} · ${SK.map(p=>st.slots[p]?H.name(st.slots[p]).slice(0,10):'–').slice(0,3).join('/')}`,slots:Object.assign({},st.slots),at:Date.now()}]).slice(-8);
         st.msg=writeStore(cfg,v,store)?'Saved on this device (not shared with the team).':'This browser blocked local saving.';draw()}
       else if(a==='cancel'){st.selP=st.selS=null;draw()}
       else if(a==='empty'){st.slots[st.selS]=null;st.selS=null;commit()}});
-    host.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>{const s=(store.saved||[])[+b.dataset.load];if(!s)return;POS.forEach(p=>st.slots[p]=s.slots[p]&&L.active.some(l=>l.id===s.slots[p])?s.slots[p]:null);st.msg=`Loaded ${s.name}.`;commit()});
+    host.querySelectorAll('[data-load]').forEach(b=>b.onclick=()=>{const s=(store.saved||[])[+b.dataset.load];if(!s)return;POS.forEach(p=>st.slots[p]=s.slots[p]&&L.pool.some(l=>l.id===s.slots[p])?s.slots[p]:null);st.msg=`Loaded ${s.name}.`;commit()});
     host.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{store.saved.splice(+b.dataset.del,1);writeStore(cfg,v,store);draw()});
   }
   lineup.on(k=>{if(k==='tonight')draw()});
@@ -300,7 +351,7 @@ function reason(l,S){
 }
 function h2hRow(S,l){
   const mark=l.e>=.15?'up':l.e<=-.15?'dn':'eq';
-  const side=(who,p,stat)=>`<div class="lab-h2h-s ${who}"><span>${p||''}</span><b>${esc((who==='us'?S.us:S.them)[p]?.name||(p?'—':''))}</b><small>${stat}</small></div>`;
+  const side=(who,p,stat)=>{const x=(who==='us'?S.us:S.them)[p];return `<div class="lab-h2h-s ${who}"><span>${p||''}</span><b>${esc(x?.name||(p?'—':''))}${who==='us'&&x?.tc?' '+TC_TAG:''}</b><small>${who==='us'&&x?.noData?esc(x.noDataLabel)+' · set to position average':stat}</small></div>`};
   const i=l.inputs;let us='',th='';
   if(l.id==='fo'){us=i.our.raw!=null?`FO ${pct(i.our.raw)}`:'FO n/a';th=i.their.raw!=null?`FO ${pct(i.their.raw)}`:'FO n/a'}
   else if(l.id==='mid'){us=`${f2(i.our.tiRaw)} TK+INT/GP`;th=`${f2(i.their.aRaw)} A/GP`}
@@ -351,6 +402,7 @@ function mountSim(host,cfg,v,D,L,H,lineup){
         <div class="lab-vd"><b>${vd.verdict}</b><span>T = ${sgn(vd.T)}</span>${confChip(S.conf.label,S.conf.why)}</div>
         <ol class="lab-reasons">${vd.reasons.map(x=>`<li><i class="lab-ar ${x.c>0?'up':'dn'}">${x.c>0?'▲':'▼'}</i><span>${reason(x.l,S)}</span><em>${sgn(x.c)}</em></li>`).join('')||'<li><span>Every lane is close to even.</span></li>'}</ol>
         ${vd.threat.length?`<p class="lab-flag">Key-threat lane at ${vd.threat.map(l=>sgn(l.e)).join(', ')} (≤ −0.60) forces Risky.</p>`:''}
+        ${POS.some(p=>S.us[p]?.noData)?`<p class="lab-flag">No ${esc(cfg.league)} ${esc(cfg.seasonLabel)} line for ${POS.filter(p=>S.us[p]?.noData).map(p=>`${p} ${esc(S.us[p].name)}${S.us[p].tc?' (TC)':''}`).join(', ')}: those lanes sit at the ${esc(cfg.seasonLabel)} position average, a placeholder (earlier seasons feed chemistry only). Confidence: ${esc(S.conf.label)}.</p>`:''}
         ${vd.goalieFlag?`<p class="lab-flag">Our goalie's shrunk save % is under .760 against a top-third shot-volume team (rank ${S.shotRank}).</p>`:''}
         <p class="lab-swap">${sw?`Try <b>${esc(H.name(sw.id))}</b> at ${sw.p} for ${esc(H.name(sw.out))}: T ${sgn(S.vd.T)} → ${sgn(sw.s.vd.T)} (+${sw.d.toFixed(2)}).`:'No single swap lifts T by 0.10 or more. At this sample size, smaller differences are noise.'}</p>
       </div>
@@ -360,7 +412,7 @@ function mountSim(host,cfg,v,D,L,H,lineup){
       <div class="lab-in-t" role="table" aria-label="Matchup inputs"><div class="lab-in-r lab-in-h" role="row"><span role="columnheader">Lane</span><span role="columnheader">Weight</span><span role="columnheader">Edge</span><span role="columnheader">Contribution</span><span role="columnheader">Inputs</span></div>
       ${lanes.map(l=>`<div class="lab-in-r" role="row"><span role="cell">${LANE_NAME[l.id]}</span><span role="cell">${l.w.toFixed(3)}</span><span role="cell">${sgn(l.e)}</span><span role="cell">${sgn(l.w*l.e)}</span><span role="cell">${reason(l,S)}</span></div>`).join('')}
       </div>
-      <p class="wr-note"><b>${PLACEHOLDER} — box-score model, not film.</b> Every stat is shrunk toward the ${esc(cfg.league)} ${esc(cfg.seasonLabel)} position average: (n·x + k·base)/(n + k), k = 5 games, 60 draws, 100 shots. Strong: T ≥ +0.15 with no key-threat lane ≤ −0.60. Risky: T ≤ −0.15, a key-threat lane ≤ −0.60, or our goalie under .760 against a top-third shot team. Otherwise Even. Confidence is Low for a draft report or identity warnings, else by median GP (8+ High, 4–7 Medium). Our lines: ${esc(cfg.league)} season stats; theirs: <code>hitmen_opponent_player_stats</code>. Opponent six from the ${r.approved?'approved':'draft'} pregame report. ${POS.filter(p=>S.them[p]?.missing).length?`No stats found for: ${POS.filter(p=>S.them[p]?.missing).map(p=>esc(S.them[p].name)).join(', ')}.`:''}</p>
+      <p class="wr-note"><b>${PLACEHOLDER} — box-score model, not film.</b> Every stat is shrunk toward the ${esc(cfg.league)} ${esc(cfg.seasonLabel)} position average: (n·x + k·base)/(n + k), k = 5 games, 60 draws, 100 shots. Strong: T ≥ +0.15 with no key-threat lane ≤ −0.60. Risky: T ≤ −0.15, a key-threat lane ≤ −0.60, or our goalie under .760 against a top-third shot team. Otherwise Even. Confidence is Low for a draft report or identity warnings, else by median GP (8+ High, 4–7 Medium). Our lines: ${esc(cfg.league)} season stats; theirs: <code>hitmen_opponent_player_stats</code>. Opponent six from the ${r.approved?'approved':'draft'} pregame report. ${POS.filter(p=>S.them[p]?.missing).length?`No stats found for: ${POS.filter(p=>S.them[p]?.missing).map(p=>esc(S.them[p].name)).join(', ')}.`:''} ${POS.filter(p=>S.us[p]?.noData).length?`No ${esc(cfg.league)} ${esc(cfg.seasonLabel)} line or box scores for our ${POS.filter(p=>S.us[p]?.noData).map(p=>esc(S.us[p].name)+(S.us[p].tc?' (TC)':'')).join(', ')}: shrinkage puts them at the position average, which is a placeholder, not a measurement.`:''}</p>
     </details>`;
   }
   WRRink.tabs($('#labSimTabs'),null,{games:TN().tabsGames(D),active:TN().initialGm(D),size:'sm',onChange:t=>{st.gm=t.gm;draw()}});

@@ -26,7 +26,7 @@ function gate(){
 async function choose(){
  const id=new URLSearchParams(location.search).get('player');
  let q=DB().from('team_player_lockers').select('*').eq('team_id',TEAM).eq('season',SEASON);
- if(id)q=q.eq('id',id);else q=q.neq('roster_class','historical');
+ if(id)q=q.eq('id',id);else q=q.eq('roster_class','active_roster'); // default card: an active-roster player (TC and archived players open by ?player=)
  const r=await q.order('gamertag').limit(1).maybeSingle();if(r.error)throw r.error;return r.data;
 }
 function setText(id,v){if(E(id))E(id).textContent=v??'—'}
