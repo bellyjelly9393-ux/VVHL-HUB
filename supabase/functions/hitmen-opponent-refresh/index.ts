@@ -5,9 +5,37 @@ const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SE
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}});
 async function checked(q: any) { const {data, error} = await q; if (error) throw new Error(error.message); return data; }
 const UA = 'Wildman-Hockey-Esports/1.0 (opponent scouting; scheduled twice weekly)';
+async function authenticatedRoster() {
+  const snap = await checked(db.from('lg_auth_snapshots').select('captured_at,source_url').eq('capture_type','roster').eq('parse_status','parsed').eq('league','LGCHL').eq('season',SEASON).order('captured_at',{ascending:false}).limit(1).maybeSingle());
+  if (!snap?.captured_at) return null;
+  const rows: any[] = [];
+  for (let start = 0; start < 2500; start += 1000) {
+    const page = await checked(db.from('lg_roster_players').select('lg_user_id,gamertag,team_name,position,salary,management_role,roster_role,source_updated_at').eq('season',SEASON).eq('league','LGCHL').eq('active',true).not('lg_user_id','is',null).range(start,start+999));
+    rows.push(...page);
+    if (page.length < 1000) break;
+  }
+  if (rows.length < 50) return null;
+  const teams = new Set(rows.map((r:any)=>r.team_name));
+  if (teams.size < 20) return null;
+  const ageMs = Date.now() - Date.parse(snap.captured_at);
+  const players = rows.map((r:any)=>({
+    uid:Number(r.lg_user_id),name:r.gamertag,team:r.team_name,position:r.position,
+    salary:r.salary,management_role:r.management_role,roster_role:r.roster_role||'Active'
+  }));
+  return {
+    status: ageMs <= 48*60*60*1000 ? 'complete' : 'partial',
+    as_of:snap.captured_at,
+    players,
+    detail:{source:'authenticated-browser-capture',source_url:snap.source_url,players:players.length,teams:teams.size,
+      warnings:ageMs <= 48*60*60*1000 ? [] : ['Authenticated LG roster snapshot is older than 48 hours; retained instead of risking an unverified overwrite']}
+  };
+}
+
 async function lgRoster() {
+  const captured = await authenticatedRoster();
+  if (captured) return captured;
   const res = await fetch(ROSTER_URL, {headers: {'User-Agent': UA, Accept: 'text/html'}, signal: AbortSignal.timeout(20000)});
-  if (!res.ok) throw new Error('LG roster returned HTTP ' + res.status + '; previous roster retained');
+  if (!res.ok) throw new Error('LG roster returned HTTP ' + res.status + '; use Wildman Auth Sync, previous roster retained');
   const html = await res.text();
   const players = parseRosters(html);
   return {status: 'complete', as_of: new Date().toISOString(), players, detail: {source: ROSTER_URL}};
