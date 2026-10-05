@@ -41,6 +41,20 @@ def seed_replay_test_batch():
         except (TypeError, ValueError, worker.Problem):
             print('Replay test seed skipped one invalid game.', flush=True)
             continue
+        try:
+            supplied_periods = item.get('periods')
+            confirmed_periods = []
+            if supplied_periods is not None:
+                if not isinstance(supplied_periods, list) or not supplied_periods:
+                    raise ValueError()
+                confirmed_periods = [
+                    {'label': str(p['label'])[:80], 'start': float(p['start']), 'end': float(p['end'])}
+                    for p in supplied_periods
+                ]
+                worker.segments(confirmed_periods, end - start)
+        except (KeyError, TypeError, ValueError, worker.Problem):
+            print('Replay test seed skipped invalid confirmed period ranges.', flush=True)
+            continue
         metadata = {
             'review_id': review_id, 'game_id': review_id,
             'title': str(item.get('title') or 'Replay test')[:200],
@@ -50,10 +64,21 @@ def seed_replay_test_batch():
             'vod_offset_seconds': start,
             'source_start_seconds': start,
             'source_end_seconds': end,
-            'periods': [],
+            'periods': confirmed_periods,
             'source_kind': 'twitch_replay',
             'replay_test_seed_token': token,
+            'period_pipeline_version': 2,
         }
+        if confirmed_periods:
+            metadata.update({
+                'streamed_replay': True,
+                'replay_phase': 'analyze_periods',
+                'period_source': 'manual',
+                'period_units': worker.bounded_period_units(confirmed_periods),
+                'period_unit_index': 0,
+            })
+        else:
+            metadata['replay_phase'] = 'scan_periods'
         with worker.WRITE_LOCK, worker.connect() as db:
             rows = db.execute('SELECT id,metadata,status FROM jobs WHERE owner=? ORDER BY created DESC', (owner,)).fetchall()
             existing_id = None
@@ -78,10 +103,8 @@ def seed_replay_test_batch():
                 source = worker.ROOT / existing_id / 'source.mp4'
                 if source.parent.exists():
                     worker.release_job_media(existing_id)
-                metadata.update({
-                    'period_pipeline_version': 2,
-                    'replay_phase': 'scan_periods',
-                })
+                # metadata already contains the correct period pipeline state.
+                # Confirmed periods start directly in analyze_periods; otherwise OCR scans first.
                 db.execute(
                     'UPDATE jobs SET metadata=?,status=?,result=?,error=? WHERE id=?',
                     (json.dumps(metadata), 'retrieving', '{}', '', existing_id)

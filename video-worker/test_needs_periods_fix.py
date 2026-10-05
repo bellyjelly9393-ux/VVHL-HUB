@@ -28,5 +28,41 @@ class NeedsPeriodsFix(unittest.TestCase):
         self.assertEqual(job['status'], 'needs_periods')
         self.assertEqual(job['result']['stage'], 'needs_period_boundaries')
 
+
+    def test_seed_can_skip_ocr_with_confirmed_periods(self):
+        owner = str(uuid4())
+        review_id = str(uuid4())
+        os.environ['REPLAY_TEST_SEED_TOKEN'] = 'confirmed-periods-test-v1'
+        os.environ['REPLAY_TEST_SEED'] = json.dumps([{
+            'owner': owner,
+            'review_id': review_id,
+            'title': 'Confirmed periods',
+            'vod_url': 'https://www.twitch.tv/videos/123456',
+            'source_start_seconds': 1,
+            'source_end_seconds': 1440,
+            'game_format': '6s',
+            'periods': [
+                {'label': 'Period 1', 'start': 0, 'end': 432},
+                {'label': 'Period 2', 'start': 432, 'end': 816},
+                {'label': 'Period 3', 'start': 816, 'end': 1439},
+            ],
+        }])
+        try:
+            seeded = replay.seed_replay_test_batch()
+            self.assertEqual(len(seeded), 1)
+            job = worker.get_job(seeded[0]['job_id'], owner)
+            meta = job['metadata']
+            self.assertEqual(job['status'], 'retrieving')
+            self.assertTrue(meta['streamed_replay'])
+            self.assertEqual(meta['replay_phase'], 'analyze_periods')
+            self.assertEqual(meta['period_source'], 'manual')
+            self.assertEqual(meta['period_unit_index'], 0)
+            self.assertEqual([p['label'] for p in meta['periods']], ['Period 1', 'Period 2', 'Period 3'])
+            self.assertTrue(meta['period_units'])
+            self.assertEqual(meta['period_units'][0]['label'], 'Period 1')
+        finally:
+            os.environ.pop('REPLAY_TEST_SEED', None)
+            os.environ.pop('REPLAY_TEST_SEED_TOKEN', None)
+
 if __name__ == '__main__':
     unittest.main()
