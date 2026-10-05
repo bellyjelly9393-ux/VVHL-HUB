@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>Opponent Deep Scout | Calgary Hitmen</title>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="management.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-war-tools.css"><link rel="stylesheet" href="hitmen-opponent-scout.css?v=20261005-deep-scout">
+</head>
+<body class="wildman-site management-protected hitmen-tool-page">
+<header class="site-header hitmen-tool-header">
+<a class="brand" href="hitmen-workspace.html"><span class="wm-brand-mark">H</span><span class="brand-copy">CALGARY HITMEN<br><b>WAR ROOM</b></span></a>
+<button class="menu-toggle" type="button" aria-label="Open navigation">☰</button>
+<nav class="main-nav"><a href="hitmen-workspace.html">War Room</a><a href="hitmen-team-locker.html">Locker Room</a><a href="hitmen-locker-room.html">Lineups</a><a class="active-nav" href="hitmen-opponents.html">Opponents</a><a href="hitmen-battle-plan.html">Battle Plan</a><a href="vod-lab.html?team=calgary-hitmen">VOD</a><a href="hitmen-gm-ai.html">GM AI</a></nav>
+</header>
+<main>
+<section class="section-shell section-block management-login-shell"><div class="section-heading"><div><div class="eyebrow">PRIVATE · CALGARY HITMEN</div><h2>DEEP SCOUT ACCESS</h2></div><div id="managementAccessStatus" class="status-pill">PRIVATE</div></div><section id="accountPanel" class="panel account-panel"></section><div id="managementLockedMessage" class="wm-card"><b>Management sign-in required.</b></div></section>
+
+<div data-management-content hidden>
+<section class="section-shell hs-hero">
+  <div>
+    <div class="eyebrow">LGCHL SEASON 55 · DEEP OPPONENT SCOUTING</div>
+    <h1 id="hsOpponent">OPPONENT<br><span>SCOUTING LAB.</span></h1>
+    <p id="hsScope">Loading current and historical player evidence…</p>
+  </div>
+  <div class="hs-hero-actions"><a id="hsBack" class="hm-save" href="hitmen-opponents.html">← Opponent Intelligence</a><a class="hm-save" href="hitmen-battle-plan.html">Battle Plan</a></div>
+</section>
+
+<section class="section-shell hs-kpis" id="hsKpis">
+  <div><small>Current Roster</small><b id="hsCurrentCount">0</b></div>
+  <div><small>Players Tracked</small><b id="hsTrackedCount">0</b></div>
+  <div><small>Shot Snapshots</small><b id="hsSnapshotCount">0</b></div>
+  <div><small>Official LG Games</small><b id="hsGameCount">0</b></div>
+  <div><small>EA-Matched Games</small><b id="hsEaGameCount">0</b></div>
+</section>
+
+<section class="section-shell section-block hs-team-grid">
+  <article class="hs-panel">
+    <div class="hs-panel-head"><div><div class="eyebrow">TEAM SHOT PROFILE</div><h2>Current Roster Heat Map</h2><p>EA 16-zone shooting totals aggregated across active skaters.</p></div></div>
+    <div id="hsTeamHeat" class="hs-team-heat"></div>
+  </article>
+  <article class="hs-panel">
+    <div class="hs-panel-head"><div><div class="eyebrow">AUTO SCOUT</div><h2>Team Tendencies</h2><p>Statistical read. It stays separate from film-confirmed claims.</p></div></div>
+    <div id="hsTeamScout" class="hs-scout-copy"></div>
+  </article>
+</section>
+
+<section class="section-shell section-block hs-workspace">
+  <aside class="hs-sidebar hs-panel">
+    <div class="hs-panel-head"><div><div class="eyebrow">PERSONNEL FILE</div><h2>Players</h2></div></div>
+    <input id="hsSearch" class="hs-input" type="search" placeholder="Search player">
+    <div class="hs-filter-row"><button class="active" data-hs-filter="current">Current roster</button><button data-hs-filter="all">All tracked</button></div>
+    <div id="hsPlayers" class="hs-player-list"></div>
+  </aside>
+
+  <article class="hs-panel hs-player-panel">
+    <div id="hsEmpty" class="hs-empty">Choose a player to open the scouting file.</div>
+    <div id="hsPlayerDetail" hidden>
+      <div class="hs-player-head">
+        <div><div class="eyebrow" id="hsPlayerStatus">CURRENT ROSTER</div><h2 id="hsPlayerName">Player</h2><p id="hsPlayerMeta"></p></div>
+        <div class="hs-position" id="hsPlayerPos">—</div>
+      </div>
+
+      <div id="hsPlayerStats" class="hs-stat-grid"></div>
+
+      <section class="hs-subsection">
+        <div class="hs-panel-head"><div><div class="eyebrow">SHOOTING IDENTITY</div><h3>Player Heat Map</h3><p>EA club shooting locations. Use the tracking timeline below to see how the totals changed between captures.</p></div>
+          <div class="hs-metric-tabs"><button class="active" data-hs-metric="shots">Shots</button><button data-hs-metric="goals">Goals</button><button data-hs-metric="efficiency">Efficiency</button></div>
+        </div>
+        <div class="hs-player-heat-layout"><div id="hsPlayerHeat"></div><div id="hsZoneBreakdown" class="hs-zone-breakdown"></div></div>
+      </section>
+
+      <section class="hs-subsection">
+        <div class="hs-panel-head"><div><div class="eyebrow">FUTURE REFERENCE</div><h3>Shot Tracking Timeline</h3><p>Every successful EA refresh now stores a permanent player snapshot, including players who later leave the roster.</p></div></div>
+        <div id="hsHistory"></div>
+      </section>
+
+      <section class="hs-subsection">
+        <div class="hs-panel-head"><div><div class="eyebrow">STATISTICAL SCOUT</div><h3>Computed Player Read</h3><p>Generated from LG totals, EA club stats and the 16-zone shooting profile.</p></div></div>
+        <div id="hsAutoScout" class="hs-scout-copy"></div>
+        <div id="hsReportMentions" class="hs-report-mentions"></div>
+      </section>
+
+      <section class="hs-subsection hs-management-scout">
+        <div class="hs-panel-head"><div><div class="eyebrow">MANAGEMENT MEMORY</div><h3>Player Scouting Report</h3><p>Persistent Calgary notes. These remain attached to the player file for future matchups.</p></div></div>
+        <div class="hs-form">
+          <label class="wide">Summary<textarea id="hsScoutSummary"></textarea></label>
+          <label>Strengths<textarea id="hsScoutStrengths"></textarea></label>
+          <label>Concerns<textarea id="hsScoutConcerns"></textarea></label>
+          <label>Tendencies<textarea id="hsScoutTendencies"></textarea></label>
+          <label>How we defend them<textarea id="hsScoutPlan"></textarea></label>
+          <label>Confidence<select id="hsScoutConfidence"><option value="">Unrated</option><option value="1">1 · Early</option><option value="2">2</option><option value="3">3 · Useful</option><option value="4">4</option><option value="5">5 · Strong evidence</option></select></label>
+        </div>
+        <button id="hsSaveScout" class="hm-save" data-write-only type="button">Save Player Scout</button><span id="hsSaveStatus"></span>
+      </section>
+    </div>
+  </article>
+</section>
+</div>
+</main>
+<footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN DEEP SCOUT</b><span>Team tendencies · player heat maps · persistent shot history · management scouting memory</span></div><p>Private management</p></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js"></script><script src="management-guard.js"></script><script src="script.js"></script>
+<script src="shot-zone-map.js?v=20261005-zone-map"></script><script src="hitmen-opponent-scout.js?v=20261005-deep-scout"></script>
+</body></html>
