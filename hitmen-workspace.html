@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="broadcast-components.css?v=20261004-brand">
   <link rel="stylesheet" href="war-room-tonight.css?v=20261004-lab">
   <link rel="stylesheet" href="network-v2.css">
+  <link rel="stylesheet" href="hitmen-stall-requests.css?v=20261004-sr">
   <link rel="stylesheet" href="hitmen-neutral.css?v=20261004-tc" data-hn-last>
 </head>
 <body class="wildman-site management-protected hitmen-war-room hm-neutral">
@@ -139,6 +140,9 @@
       </article>
     </section>
 
+    <div class="hn-wide hn-section-head sr-head" id="stallReqHead" hidden><div><span class="hn-k">Roster desk · management only</span><h2 class="hn-h2">Stall requests</h2></div><span class="hn-k" id="stallReqCount"></span></div>
+    <section class="hn-wide sr-admin" id="stallReqPanel" hidden aria-live="polite" aria-label="Stall requests"></section>
+
     <div class="hn-wide hn-section-head"><div><span class="hn-k">Prepare · execute</span><h2 class="hn-h2">Game night</h2></div></div>
     <section class="section-shell hitmen-shell">
       <div id="hitmenStatus" class="hitmen-status" hidden aria-live="polite">Loading Calgary Hitmen War Room…</div>
@@ -180,6 +184,7 @@
 <script src="script.js"></script>
 <script src="hitmen-broadcast.js?v=20261004-neutral"></script>
 <script src="hitmen-workspace.js?v=20261004-tc"></script>
+<script src="hitmen-stall-requests-admin.js?v=20261004-sr"></script>
 <script src="war-room-rink.js?v=20261004-lab"></script>
 <script src="war-room-tonight.js?v=20261004-tc"></script>
 <script src="live-pipeline-status.js?v=20260928-routing"></script>

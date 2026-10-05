@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="hitmen-stall-scene.css?v=20260928-playeraccess3">
 <link rel="stylesheet" href="broadcast-tokens.css?v=20261004-brand">
 <link rel="stylesheet" href="war-room-tonight.css?v=20261004-lab">
+<link rel="stylesheet" href="hitmen-stall-requests.css?v=20261004-sr">
 <link rel="stylesheet" href="hitmen-neutral.css?v=20261004-tc" data-hn-last>
 </head>
 <body class="wildman-site hitmen-player-locker-page hitmen-reference-ui hm-neutral" data-hn-navsync>
@@ -28,6 +29,10 @@
 <section class="section-shell locker-access-shell">
   <section id="accountPanel" class="panel account-panel"></section>
   <div id="lockerLockedMessage" class="wm-card"><b>Team sign-in required.</b><p>This player dashboard is restricted to Calgary Hitmen team accounts.</p></div>
+</section>
+
+<section class="section-shell sr-shell" id="stallRequestShell" hidden aria-label="Request your stall">
+  <div id="stallRequest" class="sr-card" hidden aria-live="polite"></div>
 </section>
 
 <div data-locker-content hidden class="hitmen-app">
@@ -230,6 +235,7 @@
 <script src="hitmen-stall-scene.js?v=20260928-playeraccess3"></script>
 <script src="vod-review-model.js"></script>
 <script src="hitmen-player-locker.js?v=20260928-playeraccess3"></script>
+<script src="hitmen-stall-request.js?v=20261004-sr"></script>
 <script src="war-room-rink.js?v=20261004-lab"></script>
 <script src="war-room-tonight.js?v=20261004-tc"></script>
 <script src="hitmen-neutral.js?v=20261004-neutral"></script>
