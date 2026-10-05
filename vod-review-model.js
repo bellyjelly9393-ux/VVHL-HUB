@@ -21,7 +21,8 @@
     const rawFailure=['failed','expired'].includes(rawStatus);
     const writeup=Boolean(text(review.review_document?.summary||review.full_game_summary).trim());
     const published=Boolean(publication?.active&&approved&&text(publication.report?.summary).trim());
-    return {periods,usableEvidence:evidence.length>0,analysisComplete,approved,writeup,published,
+    const refreshing=published&&['retrieving','queued','processing','awaiting_ai'].includes(rawStatus);
+    return {periods,usableEvidence:evidence.length>0,analysisComplete,approved,writeup,published,refreshing,
       recovered:rawFailure&&evidence.length>0,rawFailure,rawStatus,
       stages:[
         {name:'Game Review',label:'1 · Source',done:Boolean(review.id)},
@@ -31,7 +32,7 @@
         {name:approved?'Human Approved':'Human Review',label:'5 · Verify',done:approved},
         {name:published?'Published':writeup?'Write-Up Saved':'Write-Up',label:'6 · Publish',done:published}
       ],
-      next:published?'Published scouting reports are current. Re-publish only after reviewed evidence changes.':approved?'All required periods are approved. Publish / Refresh Scouting Reports when ready.':analysisComplete?'Saved analysis is complete. Review and approve the remaining periods.':evidence.length?'Saved period evidence is preserved. Finish the remaining periods before publishing.':rawFailure?'Recording retrieval failed. Retry to continue analysis.':'Analyze the game to detect periods and prepare scouting evidence.'};
+      next:refreshing?'Fresh VOD analysis is running. The current published report stays live until the new reviewed evidence is ready.':published?'Published scouting reports are current. Re-publish only after reviewed evidence changes.':approved?'All required periods are approved. Publish / Refresh Scouting Reports when ready.':analysisComplete?'Saved analysis is complete. Review and approve the remaining periods.':evidence.length?'Saved period evidence is preserved. Finish the remaining periods before publishing.':rawFailure?'Recording retrieval failed. Retry to continue analysis.':'Analyze the game to detect periods and prepare scouting evidence.'};
   }
   function periodErrors(review,segments,{approved=false}={}){
     const errors=[],periods=activeSegments(segments).filter(s=>['period','overtime'].includes(s.segment_type)).sort((a,b)=>a.start_seconds-b.start_seconds);
