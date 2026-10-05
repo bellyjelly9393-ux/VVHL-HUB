@@ -14,6 +14,7 @@
   var pollTimer=null;
   var lastRowKey='';
   var lastRow=null;
+  var clockTimer=null;
   // Tonight's Calgary opponent from the public, cached /api/live-ticker feed (built from the public
   // lgchl_games_board / lgchl_standings_current views). Used only when the Studio leaves the away
   // name blank or on the old 'OPPONENT' placeholder.
@@ -69,6 +70,32 @@
   function text(id,value,fallback){
     if(el[id]) el[id].textContent=(value===undefined||value===null||value==='')?(fallback||''):String(value);
   }
+  function parseClock(value,fallback){
+    var raw=String(value||'').trim(),parts=raw.split(':');
+    if(parts.length===2){
+      var m=parseInt(parts[0],10),s=parseInt(parts[1],10);
+      if(Number.isFinite(m)&&Number.isFinite(s)&&m>=0&&s>=0&&s<60)return m*60+s;
+    }
+    return fallback==null?1200:fallback;
+  }
+  function formatClock(seconds){
+    var total=Math.max(0,Math.round(Number(seconds)||0));
+    return String(Math.floor(total/60))+':'+String(total%60).padStart(2,'0');
+  }
+  function liveClock(payload){
+    var p=payload||{};
+    var base=Number.isFinite(Number(p.clockBaseSeconds))?Math.max(0,Number(p.clockBaseSeconds)):parseClock(p.clock||'20:00',1200);
+    if(p.clockRunning!==true||!p.clockStartedAt)return formatClock(base);
+    var start=Date.parse(p.clockStartedAt);
+    if(!Number.isFinite(start))return formatClock(base);
+    var elapsed=Math.max(0,(Date.now()-start)/1000);
+    var rate=Number(p.clockRate)||1;
+    return formatClock(Math.max(0,base-elapsed*rate));
+  }
+  function updateLiveClock(){
+    if(!lastRow)return;
+    text('scoreClock',liveClock(lastRow.payload||{}),'20:00');
+  }
   function sceneLabel(scene){
     return {
       starting:'STARTING SOON',
@@ -99,7 +126,7 @@
 
     text('scoreEvent',payload.event,'LIVE GAME');
     text('scorePeriod',payload.period,'1ST');
-    text('scoreClock',payload.clock,'20:00');
+    text('scoreClock',liveClock(payload),'20:00');
     text('homeName',payload.homeName,isHitmen?'CALGARY HITMEN':'WILDMAN HOCKEY');
     text('homeScore',payload.homeScore,0);
     text('awayName',awayName,'');
@@ -156,5 +183,6 @@
   window.addEventListener('beforeunload',function(){db.removeChannel(realtime);});
   refresh();
   schedulePoll();
+  clockTimer=setInterval(updateLiveClock,250);
   if(channel==='hitmen-main'){loadTonightOpponent();setInterval(loadTonightOpponent,TICKER_REFRESH_MS);}
 })();
