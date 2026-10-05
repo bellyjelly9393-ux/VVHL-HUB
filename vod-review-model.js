@@ -31,7 +31,7 @@
         {name:approved?'Human Approved':'Human Review',label:'5 · Verify',done:approved},
         {name:published?'Published':writeup?'Write-Up Saved':'Write-Up',label:'6 · Publish',done:published}
       ],
-      next:published?'Approved scouting reports are published. Refresh them only when reviewed evidence changes.':approved?'All required periods are approved. Publish / Refresh Scouting Reports when ready.':analysisComplete?'Saved analysis is complete. Review and approve the remaining periods.':evidence.length?'Saved period evidence is preserved. Finish the remaining periods before publishing.':rawFailure?'Recording retrieval failed. Retry to continue analysis.':'Analyze the game to detect periods and prepare scouting evidence.'};
+      next:published?'Published scouting reports are current. Re-publish only after reviewed evidence changes.':approved?'All required periods are approved. Publish / Refresh Scouting Reports when ready.':analysisComplete?'Saved analysis is complete. Review and approve the remaining periods.':evidence.length?'Saved period evidence is preserved. Finish the remaining periods before publishing.':rawFailure?'Recording retrieval failed. Retry to continue analysis.':'Analyze the game to detect periods and prepare scouting evidence.'};
   }
   function periodErrors(review,segments,{approved=false}={}){
     const errors=[],periods=activeSegments(segments).filter(s=>['period','overtime'].includes(s.segment_type)).sort((a,b)=>a.start_seconds-b.start_seconds);

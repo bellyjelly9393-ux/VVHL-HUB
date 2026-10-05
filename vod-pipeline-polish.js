@@ -27,10 +27,10 @@
     if(!panel||document.getElementById('vodPipelineVisual'))return;
     const box=document.createElement('div');
     box.id='vodPipelineVisual';
-    box.innerHTML=`<div class="vod-pipeline-health"><div id="vpWorker"><small>Video Worker</small><strong>Checking…</strong></div><div id="vpAi"><small>AI Analysis</small><strong>Checking…</strong></div></div><div id="vodPipelineTrack" class="vod-pipeline-track"></div><div id="vodPipelineNext" class="vod-pipeline-next">Select a review to see the next action.</div><details><summary>Advanced pipeline tools</summary><div class="vod-writeup-actions"><button id="copyWriteupPacket" class="small-btn" type="button">Copy Write-Up Packet</button><button id="refreshPipelineVisual" class="small-btn" type="button">Refresh Pipeline</button></div></details>`;
+    box.innerHTML=`<div class="vod-pipeline-health"><div id="vpWorker"><small>Video Worker</small><strong>Checking…</strong></div><div id="vpAi"><small>AI Analysis</small><strong>Checking…</strong></div></div><div id="vodPipelineTrack" class="vod-pipeline-track"></div><div id="vodPipelineNext" class="vod-pipeline-next">Select a review to see the next action.</div><details><summary>Advanced pipeline tools</summary><div class="vod-writeup-actions"><button id="copyWriteupPacket" class="small-btn" type="button">Copy Write-Up Packet</button><button id="refreshPipelineVisual" class="small-btn" type="button">Refresh Status</button></div></details>`;
     panel.appendChild(box);
     document.getElementById('copyWriteupPacket')?.addEventListener('click',copyPacket);
-    document.getElementById('refreshPipelineVisual')?.addEventListener('click',refresh);
+    document.getElementById('refreshPipelineVisual')?.addEventListener('click',()=>refresh(true));
     refresh();
   }
 
@@ -43,14 +43,21 @@
     document.getElementById('vodPipelineNext').textContent=state.next+(state.recovered?' Raw recording retrieval previously failed; saved evidence remains usable.':'');
   }
 
-  async function refresh(){
+  async function refresh(userInitiated=false){
     install();
     const selected=reviewId();
+    const button=document.getElementById('refreshPipelineVisual');
+    const original=button?.textContent||'Refresh Status';
+    if(userInitiated&&button){button.disabled=true;button.textContent='Refreshing…';}
     const [h,d]=await Promise.all([health(),fetchReview().catch(()=>null)]);
     const w=document.getElementById('vpWorker'),a=document.getElementById('vpAi');
     if(w){w.dataset.tone=h?'good':'bad';w.querySelector('strong').textContent=h?'ONLINE':'UNREACHABLE';}
     if(a){a.dataset.tone=h?.aiConfigured?'good':'warn';a.querySelector('strong').textContent=h?.aiConfigured?'CONNECTED':'NOT CONNECTED';}
     if(selected===reviewId())drawSteps(d);
+    if(userInitiated&&button){
+      button.textContent='Refreshed ✓';
+      setTimeout(()=>{button.disabled=false;button.textContent=original;},1400);
+    }
   }
 
   function fmt(sec){sec=Math.max(0,Math.floor(Number(sec)||0));const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return h?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`;}
