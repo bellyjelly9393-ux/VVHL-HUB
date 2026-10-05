@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Wildman Broadcast Overlay</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="obs-overlay.css?v=20261005d">
+  <link rel="stylesheet" href="obs-overlay.css?v=20261005simple1">
 </head>
 <body data-brand="wildman" data-scene="game">
   <main id="obsRoot" class="obs-root" aria-live="polite">
@@ -80,6 +80,21 @@
       </div>
 
       <p id="sceneMessage">WILDMAN HOCKEY ESPORTS NETWORK</p>
+
+      <section class="obs-break-grid" aria-label="Game night information">
+        <article class="obs-break-card">
+          <small>PREVIOUS GAME</small>
+          <strong id="breakLastMatchup">Waiting for league feed</strong>
+          <b id="breakLastScore"></b>
+        </article>
+        <article class="obs-break-card">
+          <small>UP NEXT</small>
+          <strong id="breakNextMatchup">Waiting for league feed</strong>
+          <b id="breakNextRecord"></b>
+          <span id="breakNextTime"></span>
+        </article>
+      </section>
+
       <div class="obs-full-footer">
         <span id="fullEvent">LIVE GAME</span>
         <b id="fullRecord"></b>
@@ -100,6 +115,6 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
-  <script src="obs-overlay.js?v=20261005clock1"></script>
+  <script src="obs-overlay.js?v=20261005simple1"></script>
 </body>
 </html>
