@@ -97,7 +97,10 @@
     currentScene=row.scene||'game';
     byId('obsEvent').value=p.event||'';
     byId('obsHomeName').value=p.homeName||config().name;
-    byId('obsAwayName').value=p.awayName||'OPPONENT';
+    // 'OPPONENT' was the old placeholder; blank lets the overlay use tonight's opponent.
+    byId('obsAwayName').value=String(p.awayName||'').trim().toUpperCase()==='OPPONENT'?'':(p.awayName||'');
+    byId('obsBugPosition').value=['left','right','hidden'].includes(p.bugPosition)?p.bugPosition:'right';
+    byId('obsShowScoreboard').checked=p.showScoreboard!==false;
     byId('obsHomeScore').value=Number(p.homeScore||0);
     byId('obsAwayScore').value=Number(p.awayScore||0);
     byId('obsPeriod').value=p.period||'1ST';
@@ -123,7 +126,9 @@
     return {
       event:val('obsEvent'),
       homeName:val('obsHomeName')||config().name,
-      awayName:val('obsAwayName')||'OPPONENT',
+      awayName:val('obsAwayName'),
+      bugPosition:val('obsBugPosition')||'right',
+      showScoreboard:Boolean(byId('obsShowScoreboard')?.checked),
       homeScore:numberVal('obsHomeScore'),
       awayScore:numberVal('obsAwayScore'),
       period:val('obsPeriod')||'1ST',
@@ -211,6 +216,8 @@
         await publish();
       });
     });
+    byId('obsBugPosition').addEventListener('change',function(){publish();});
+    byId('obsShowScoreboard').addEventListener('change',function(){publish();});
     byId('obsStreamUrl').addEventListener('input',feedSummary);
     byId('obsStreamProvider').addEventListener('change',feedSummary);
     byId('obsStreamMuted').addEventListener('change',feedSummary);

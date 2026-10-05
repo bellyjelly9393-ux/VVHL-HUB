@@ -256,3 +256,10 @@ body[data-brand="wildman"] .obs-lower-third{
   background:linear-gradient(105deg,rgba(5,4,7,.97),rgba(15,11,18,.94));
   box-shadow:0 26px 70px rgba(0,0,0,.46),0 0 36px rgba(216,173,85,.08);
 }
+/* Studio layout toggles (payload.bugPosition / payload.showScoreboard). Default bug corner is top
+   right so it never sits on the in-game score bug that EA streams draw top left. */
+body[data-bug="right"] .obs-corner-bug{left:auto;right:38px}
+body[data-bug="hidden"] .obs-corner-bug{display:none!important}
+body[data-scoreboard="off"] .obs-scorebar{display:none!important}
+body[data-bug="right"] .obs-status{right:auto;left:20px}
+.obs-team span:empty{visibility:hidden}

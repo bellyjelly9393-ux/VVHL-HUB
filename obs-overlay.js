@@ -13,6 +13,24 @@
   var realtimeUp=false;
   var pollTimer=null;
   var lastRowKey='';
+  var lastRow=null;
+  // Tonight's Calgary opponent from the public, cached /api/live-ticker feed (built from the public
+  // lgchl_games_board / lgchl_standings_current views). Used only when the Studio leaves the away
+  // name blank or on the old 'OPPONENT' placeholder.
+  var TICKER_REFRESH_MS=5*60*1000;
+  var tickerOpponent='';
+  function isPlaceholderName(name){var n=String(name||'').trim().toUpperCase();return !n||n==='OPPONENT';}
+  async function loadTonightOpponent(){
+    try{
+      var res=await fetch('/api/live-ticker',{headers:{accept:'application/json'}});
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      var data=await res.json();
+      var game=data&&(data.live||data.next);
+      var soon=game&&game.at&&Math.abs(Date.parse(game.at)-Date.now())<12*3600e3;
+      var name=(data&&data.live&&data.live.opponent&&data.live.opponent.name)||(soon&&game.opponent&&game.opponent.name)||'';
+      if(name!==tickerOpponent){tickerOpponent=name;if(lastRow)render(lastRow);}
+    }catch(err){console.warn('Tonight opponent lookup failed',err);}
+  }
   var params=new URLSearchParams(location.search);
   var channel=params.get('channel')||'wildman-main';
   var forcedScene=params.get('scene')||'';
@@ -36,11 +54,15 @@
   }
   function render(row){
     if(!row) return;
+    lastRow=row;
     var payload=row.payload||{};
     var brand=row.brand==='hitmen'?'hitmen':'wildman';
     var scene=forcedScene||row.scene||'game';
     document.body.dataset.brand=brand;
     document.body.dataset.scene=scene;
+    document.body.dataset.bug=['left','right','hidden'].indexOf(payload.bugPosition)>=0?payload.bugPosition:'right';
+    document.body.dataset.scoreboard=payload.showScoreboard===false?'off':'on';
+    var awayName=isPlaceholderName(payload.awayName)?(brand==='hitmen'?tickerOpponent:''):payload.awayName;
 
     var isHitmen=brand==='hitmen';
     text('bugEyebrow',isHitmen?'CALGARY HITMEN':'WILDMAN HOCKEY');
@@ -53,14 +75,14 @@
     text('scoreClock',payload.clock,'20:00');
     text('homeName',payload.homeName,isHitmen?'CALGARY HITMEN':'WILDMAN HOCKEY');
     text('homeScore',payload.homeScore,0);
-    text('awayName',payload.awayName,'OPPONENT');
+    text('awayName',awayName,'');
     text('awayScore',payload.awayScore,0);
 
     text('fullEyebrow',isHitmen?'CALGARY HITMEN · LGCHL SEASON 55':'WILDMAN HOCKEY ESPORTS NETWORK');
     text('sceneTitle',sceneLabel(scene));
     text('fullHomeName',payload.homeName,isHitmen?'CALGARY HITMEN':'WILDMAN HOCKEY');
     text('fullHomeScore',payload.homeScore,0);
-    text('fullAwayName',payload.awayName,'OPPONENT');
+    text('fullAwayName',awayName,'');
     text('fullAwayScore',payload.awayScore,0);
     text('sceneMessage',payload.message,isHitmen?'CALGARY HITMEN':'WILDMAN HOCKEY ESPORTS NETWORK');
     text('fullEvent',payload.event,'LIVE GAME');
@@ -107,4 +129,5 @@
   window.addEventListener('beforeunload',function(){db.removeChannel(realtime);});
   refresh();
   schedulePoll();
+  if(channel==='hitmen-main'){loadTonightOpponent();setInterval(loadTonightOpponent,TICKER_REFRESH_MS);}
 })();
