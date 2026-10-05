@@ -61,15 +61,15 @@ async function getGame(report){
  if(r.error)throw r.error;return r.data||null;
 }
 async function getVods(report,game){
+ const gameId=game?.id||report?.scheduled_game_id||'';
+ const opponent=report?.opponent_name||game?.opponent_name||params.get('opponent')||'';
+ if(!gameId&&!opponent)return [];
  let q=DB().from('vod_review_sessions').select('id,title,opponent_label,game_date,status,worker_status,tactical_report,full_game_summary,schedule_game_id,created_at,vod_url,source_provider').eq('team_id',TEAM).order('created_at',{ascending:false}).limit(30);
- if(game?.id||report?.scheduled_game_id)q=q.eq('schedule_game_id',game?.id||report.scheduled_game_id);
- else{
-  const opp=report?.opponent_name||params.get('opponent');
-  if(opp)q=q.ilike('opponent_label',opp);
- }
+ if(gameId)q=q.eq('schedule_game_id',gameId);
+ else q=q.ilike('opponent_label',opponent);
  const r=await q;if(r.error)throw r.error;
- const opp=norm(report?.opponent_name||game?.opponent_name||params.get('opponent'));
- return (r.data||[]).filter(x=>!opp||x.schedule_game_id||(norm(x.opponent_label)===opp));
+ const opp=norm(opponent);
+ return (r.data||[]).filter(x=>gameId?x.schedule_game_id===gameId:norm(x.opponent_label)===opp);
 }
 function setHero(report,game,v){
  const opp=report?.opponent_name||game?.opponent_name||params.get('opponent')||'Opponent';
