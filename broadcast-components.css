@@ -1,0 +1,175 @@
+/* Broadcast components (War Room). Neutral by design: uses broadcast-tokens.css and
+   the team file (team-*.css) for identity. Sharp corners, hairlines, smoked glass. */
+
+/* ---------- block ---------- */
+.bc-broadcast{position:relative;width:min(1500px,calc(100% - 24px));margin:0 auto 18px;isolation:isolate;overflow:hidden;
+  background:#09090A;
+  border:1px solid var(--bc-hair-soft);border-radius:var(--bc-radius);color:var(--bc-text);font-family:var(--bc-font-body)}
+.bc-broadcast *,.bc-broadcast *::before,.bc-broadcast *::after{box-sizing:border-box}
+/* faint ice under the whole block (where the scorebug sits below the photo) */
+.bc-broadcast::before{content:"";position:absolute;left:0;right:0;bottom:0;height:55%;z-index:0;pointer-events:none;background:var(--bc-ice) 0 0/420px auto repeat;opacity:.05;filter:grayscale(1);
+  -webkit-mask-image:linear-gradient(0deg,#000 0,transparent 100%);mask-image:linear-gradient(0deg,#000 0,transparent 100%)}
+.bc-broadcast .bc-k{display:block;font:700 11px/1 var(--bc-font-label);letter-spacing:var(--bc-track-label);text-transform:uppercase;color:var(--bc-muted)}
+.bc-sr{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ---------- scorebug: matte broadcast hardware, lit from above ---------- */
+.bc-scorebug{position:relative;z-index:4;margin:var(--bc-space-5) auto;width:min(1120px,calc(100% - 2*var(--bc-space-5)));
+  display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1.14fr) minmax(0,1fr);
+  background:linear-gradient(180deg,rgba(30,31,34,.94) 0,rgba(17,18,20,.95) 38%,rgba(11,12,13,.96) 100%);
+  border:1px solid rgba(255,255,255,.07);border-top-color:var(--bc-hair-top);border-radius:var(--bc-radius);
+  box-shadow:var(--bc-shadow);backdrop-filter:var(--bc-glass-blur);-webkit-backdrop-filter:var(--bc-glass-blur)}
+.bc-scorebug::after{content:"";position:absolute;inset:0;pointer-events:none;background:var(--bc-grain);opacity:var(--bc-grain-opacity);mix-blend-mode:overlay}
+.bc-scorebug>section{position:relative;min-width:0;padding:22px 26px 20px}
+.bc-scorebug>section+section{box-shadow:inset 1px 0 0 rgba(255,255,255,.07),inset 2px 0 0 rgba(0,0,0,.55)}
+
+.bc-sb-team{display:flex;align-items:center;gap:18px}
+.bc-sb-crest{flex:none;width:104px;height:104px;object-fit:contain;filter:drop-shadow(0 8px 14px rgba(0,0,0,.7))}
+.bc-broadcast .bc-wordmark{margin:10px 0 0;padding:0;font:900 28px/.9 var(--bc-font-display);letter-spacing:.06em;text-transform:uppercase;color:var(--bc-soft);text-shadow:none}
+.bc-broadcast .bc-wordmark span{display:block}
+.bc-broadcast .bc-wordmark b{display:block;margin-top:2px;font-size:74px;font-weight:900;line-height:.84;letter-spacing:.005em;color:var(--team-wordmark,var(--bc-offwhite))}
+
+.bc-sb-record{text-align:center}
+.bc-sb-big{margin-top:12px;font:900 112px/.8 var(--bc-font-display);font-variant-numeric:tabular-nums;color:var(--bc-offwhite);display:flex;justify-content:center;align-items:flex-start;gap:6px;text-shadow:0 2px 0 rgba(0,0,0,.5);white-space:nowrap}
+.bc-sb-big>span{display:flex;flex-direction:column;align-items:center}
+.bc-sb-big small{margin-top:10px;font:700 11px/1 var(--bc-font-label);letter-spacing:var(--bc-track-label);color:var(--bc-dim);text-shadow:none}
+.bc-sb-big i{font-style:normal;color:var(--bc-faint);font-size:.62em;font-weight:700;margin-top:.32em}
+.bc-broadcast .bc-sb-line{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:16px 0 0;padding:12px 0 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.bc-sb-line>div{min-width:0}
+.bc-broadcast .bc-sb-line dd{margin:0;font:800 26px/1 var(--bc-font-display);font-variant-numeric:tabular-nums;letter-spacing:.02em;color:var(--bc-text)}
+.bc-broadcast .bc-sb-line dt{margin-top:5px;font:700 10.5px/1 var(--bc-font-label);letter-spacing:var(--bc-track-label);color:var(--bc-dim)}
+
+.bc-sb-next{display:flex;flex-direction:column}
+.bc-sb-next-hd{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.bc-sb-next-hd .bc-k:last-child{color:var(--bc-soft)}
+.bc-broadcast .bc-onair{display:inline-flex;align-items:center;gap:7px;color:var(--bc-text)}
+.bc-broadcast .bc-onair::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--bc-live);box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+.bc-sb-opp{display:flex;align-items:center;gap:14px;margin:14px 0 12px}
+.bc-sb-opp .bc-crest{flex:none;width:68px;height:68px}
+.bc-sb-opp small{display:block;font:700 11px/1 var(--bc-font-label);letter-spacing:var(--bc-track-label);color:var(--bc-dim)}
+.bc-broadcast .bc-sb-opp h3{margin:4px 0 0;font:900 32px/.9 var(--bc-font-display);text-transform:uppercase;letter-spacing:.01em;color:var(--bc-offwhite);overflow-wrap:anywhere}
+.bc-sb-cd{margin-top:auto;padding-top:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.bc-sb-cd b{font:700 40px/1 var(--bc-font-display);font-variant-numeric:tabular-nums;letter-spacing:.04em;color:var(--bc-offwhite);white-space:nowrap}
+.bc-sb-cd span{font:600 12px/1.35 var(--bc-font-label);letter-spacing:.12em;text-transform:uppercase;color:var(--bc-muted);text-align:right;white-space:nowrap}
+
+/* FX backplate (matches the mockups' .sbs): faded roof-lights photo behind the scorebug,
+   greyscale, low opacity, soft radial mask. Content sits above it. */
+.bc-scorebug::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:var(--bc-fx,var(--bc-fx-lights)) var(--bc-fx-pos,center top)/var(--bc-fx-size,cover) no-repeat;
+  opacity:var(--bc-fx-o,.18);filter:grayscale(1) contrast(1.05);
+  -webkit-mask-image:var(--bc-fx-mask,var(--bc-fx-soft));mask-image:var(--bc-fx-mask,var(--bc-fx-soft))}
+.bc-scorebug{border-top-color:var(--bc-steel-hi)}
+
+/* crest image with abbreviation fallback */
+.bc-crest{display:inline-grid;place-items:center;overflow:hidden}
+.bc-crest img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,.7))}
+.bc-crest .bc-abbr{font:800 18px/1 var(--bc-font-label);letter-spacing:.08em;color:var(--bc-text);border:1px solid var(--bc-hair);padding:6px 5px;background:rgba(255,255,255,.03)}
+
+/* brushed-metal base rail */
+.bc-sb-rail{grid-column:1/-1;position:relative;display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:26px;padding:0 18px;
+  background:var(--bc-steel) 0 0/512px 26px,linear-gradient(180deg,#1E1F22,#151618);background-blend-mode:screen,normal;box-shadow:inset 0 1px 0 rgba(255,255,255,.1),inset 0 -1px 0 rgba(0,0,0,.6)}
+.bc-sb-rail span{font:700 10.5px/1.2 var(--bc-font-label);letter-spacing:var(--bc-track-label);text-transform:uppercase;color:#7D8187;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+@media(max-width:1100px){
+  .bc-scorebug{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .bc-sb-team{grid-column:1/-1;box-shadow:inset 0 -1px 0 rgba(255,255,255,.07)}
+  .bc-scorebug>section.bc-sb-record{box-shadow:none}
+}
+@media(max-width:700px){
+  .bc-broadcast{width:calc(100% - 14px)}
+  .bc-scorebug{width:calc(100% - 20px);margin:12px auto;grid-template-columns:1fr}
+  .bc-scorebug>section{padding:18px 16px 16px}
+  .bc-scorebug>section+section{box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+  .bc-scorebug>section.bc-sb-record{box-shadow:none}
+  .bc-sb-team{gap:14px}
+  .bc-sb-crest{width:72px;height:72px}
+  .bc-broadcast .bc-wordmark{font-size:20px}
+  .bc-broadcast .bc-wordmark b{font-size:52px}
+  .bc-sb-big{font-size:88px}
+  .bc-broadcast .bc-sb-line dd{font-size:22px}
+  .bc-broadcast .bc-sb-line dt{letter-spacing:.12em}
+  .bc-sb-opp .bc-crest{width:56px;height:56px}
+  .bc-broadcast .bc-sb-opp h3{font-size:28px}
+  .bc-sb-cd b{font-size:34px}
+  .bc-sb-rail{padding:6px 16px}
+  .bc-sb-rail span:first-child:not(:only-child){display:none}
+  .bc-sb-rail span+span{white-space:normal;overflow:visible}
+}
+
+/* ---------- arena + jumbotron (one game day: up to 3 games) ----------
+   The tunnel photo is shown at its native 1280x720 on a fixed stage, so the LED faces stay
+   locked to the scoreboard hanging over centre ice (front face corners ~ (601,170) (716,162)
+   (714,245) (605,250) in image px). Re-measure the matrix3d values if the photo is replaced.
+   Narrow screens scale the stage and crop the dark tunnel walls; the board stays centred. */
+.bc-stage-wrap{--bc-stage-scale:1;position:relative;height:calc(720px * var(--bc-stage-scale));overflow:hidden}
+.bc-stage{position:absolute;top:0;left:50%;width:1280px;height:720px;margin-left:-640px;transform-origin:50% 0}
+.bc-stage-photo{position:absolute;inset:0;width:1280px;height:720px;max-width:none;display:block;filter:var(--bc-photo-filter)}
+/* depth: soft vignette, wall falloff at the sides, floor melting into the page */
+.bc-stage::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:
+  radial-gradient(75% 60% at 50% 36%,rgba(0,0,0,0) 55%,rgba(0,0,0,.38) 100%),
+  linear-gradient(90deg,#09090A 0,rgba(9,9,10,0) 9%,rgba(9,9,10,0) 91%,#09090A 100%)}
+.bc-stage-wrap::after{content:"";position:absolute;left:0;right:0;bottom:0;height:150px;z-index:3;pointer-events:none;background:linear-gradient(0deg,#09090A 0,rgba(9,9,10,.6) 45%,rgba(9,9,10,0) 100%)}
+.bc-stage-wrap::before{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;background:var(--bc-grain);opacity:.35;mix-blend-mode:overlay}
+
+.bc-q{position:absolute;left:0;top:0;z-index:2;transform-origin:0 0;overflow:hidden}
+/* front face: dark LED panel, pixel mask, glass sheen. Content is neutral; colour only from crests. */
+.bc-jt-front{width:240px;height:176px;padding:6px 12px 8px;display:grid;grid-template-rows:14px;grid-auto-rows:44px;align-content:center;gap:3px;
+  transform:matrix3d(0.38111975,-0.05551713,0,-0.00013694,0.20987456,0.53187904,0,0.00030933,0,0,1,0,601,170,0,1);
+  background:radial-gradient(120% 90% at 50% 0%,#17181A,var(--bc-led-bg) 70%);box-shadow:inset 0 0 18px rgba(0,0,0,.85)}
+.bc-jt-front::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:radial-gradient(rgba(0,0,0,.5) 38%,transparent 40%) 0 0/3px 3px}
+.bc-jt-front::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.07),transparent 40%)}
+.bc-jt-front>.bc-jt-day{height:14px;position:relative;z-index:2;text-align:center;font:800 10px/14px var(--bc-font-label);letter-spacing:.18em;color:var(--bc-led-dim)}
+.bc-jt-row{position:relative;z-index:2;display:grid;grid-template-columns:32px 42px 1fr 42px;align-items:center;justify-items:center}
+.bc-jt-row+.bc-jt-row::before{content:"";position:absolute;left:0;right:0;top:-3px;height:1px;background:rgba(255,255,255,.06)}
+.bc-jt-row i{font:800 10px/1 var(--bc-font-label);font-style:normal;letter-spacing:.1em;color:var(--bc-led-dim);white-space:nowrap}
+.bc-jt-row s{text-decoration:none;font:900 13px/1 var(--bc-font-display);letter-spacing:.06em;color:var(--bc-led-text)}
+.bc-jt-row .bc-crest{width:40px;height:40px}
+.bc-jt-row s.bc-jt-final{display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:0 3px;font:600 13px/1 var(--bc-font-display);color:var(--bc-led-dim);letter-spacing:.02em}
+.bc-jt-final b{font-weight:900;color:var(--bc-led-text)}
+.bc-jt-final em{font-style:normal;color:var(--bc-faint)}
+.bc-jt-final small{flex-basis:100%;text-align:center;margin-top:2px;font:700 7px/1 var(--bc-font-label);letter-spacing:.18em;color:var(--bc-dim)}
+.bc-jt-row .bc-crest img{filter:brightness(1.12) drop-shadow(0 0 3px rgba(255,255,255,.18))}
+.bc-jt-row .bc-abbr{border:0;background:none;padding:0;font:800 14px/1 var(--bc-font-label);letter-spacing:.06em;color:var(--bc-led-text)}
+/* 4-game days: tighter rows and smaller crests so four rows fit the same face (3-game days unchanged) */
+.bc-jt-front.bc-jt-n4{grid-auto-rows:33px}
+.bc-jt-n4 .bc-jt-row{grid-template-columns:32px 34px 1fr 34px}
+.bc-jt-n4 .bc-jt-row .bc-crest{width:30px;height:30px}
+.bc-jt-n4 .bc-jt-row i{font-size:9px}
+.bc-jt-n4 .bc-jt-row s{font-size:11px}
+.bc-jt-n4 .bc-jt-row s.bc-jt-final{font-size:11px}
+.bc-jt-n4 .bc-jt-final small{margin-top:1px;font-size:6px}
+.bc-jt-n4 .bc-jt-row .bc-abbr{font-size:11px}
+.bc-jt-empty{position:absolute;inset:0;z-index:2;display:grid;place-items:center;text-align:center;font:800 20px/1.1 var(--bc-font-label);letter-spacing:.14em;text-transform:uppercase;color:var(--bc-led-text)}
+/* side faces: same dark LED housing, no content */
+.bc-jt-right{width:60px;height:200px;transform:matrix3d(2.19959806,1.02062068,0,0.00236493,0.19405777,0.47279305,0,0.00033932,0,0,1,0,745,166,0,1);background:radial-gradient(circle at 50% 45%,#141517,#070708 80%)}
+.bc-jt-left{width:40px;height:200px;transform:matrix3d(0.30420489,-0.23814985,0,-0.00007645,2.30559633,1.32917431,0,0.00376147,0,0,1,0,585,181,0,1);background:radial-gradient(circle at 50% 45%,#111214,#060607 80%)}
+.bc-jt-right::before,.bc-jt-left::before{content:"";position:absolute;inset:0;background:radial-gradient(rgba(0,0,0,.5) 38%,transparent 40%) 0 0/3px 3px}
+/* LED light spill: neutral, low intensity (halo, glow under the board, reflection on the ice) */
+.bc-spill{position:absolute;z-index:1;pointer-events:none;mix-blend-mode:screen}
+.bc-spill-halo{left:540px;top:120px;width:290px;height:190px;background:radial-gradient(50% 50% at 50% 50%,var(--bc-led-spill),rgba(225,230,238,.04) 45%,transparent 70%);filter:blur(6px);animation:bc-flicker 6s ease-in-out infinite}
+.bc-spill-under{left:585px;top:240px;width:150px;height:56px;background:radial-gradient(50% 60% at 50% 20%,rgba(230,234,240,.12),transparent 75%)}
+.bc-spill-ice{left:555px;top:376px;width:220px;height:54px;background:radial-gradient(50% 50% at 50% 50%,rgba(230,234,240,.10),transparent 75%);filter:blur(4px)}
+@keyframes bc-flicker{0%,100%{opacity:.85}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.bc-spill-halo{animation:none}}
+
+/* scorebug stands on the tunnel floor, in front of the shot */
+.bc-stage-wrap+.bc-scorebug{margin-top:-150px}
+@media(max-width:1100px){.bc-stage-wrap+.bc-scorebug{margin-top:-120px}}
+@media(max-width:700px){
+  .bc-stage-wrap{--bc-stage-scale:.62}
+  .bc-stage{transform:scale(var(--bc-stage-scale))}
+  .bc-stage-wrap+.bc-scorebug{margin-top:-46px}
+}
+
+/* ---------- network brand: EliteChel Series Media (DESIGN-SYSTEM.md section 7) ----------
+   Brand content like a crest: small only (22px top bar, 20px footer, 44px corner bug at 50%).
+   Never recoloured, outlined, glowing or animated; never on the jumbotron LED face. */
+.ec-net{display:inline-flex;align-items:center;gap:8px;flex:none;font:700 11px/1 var(--bc-font-label);letter-spacing:var(--bc-track-label);text-transform:uppercase;color:#C9CCD0;white-space:nowrap}
+.ec-net img{width:22px;height:22px;object-fit:contain;filter:drop-shadow(0 1px 1px rgba(0,0,0,.7))}
+.ec-foot{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font:700 10.5px/1 var(--bc-font-label);letter-spacing:.18em;text-transform:uppercase;color:var(--bc-muted);white-space:nowrap}
+.ec-foot-col{display:grid;justify-items:end;gap:10px}
+.ec-foot-col p{margin:0}
+.ec-foot img{width:20px;height:20px;object-fit:contain;opacity:.9}
+.ec-bug{position:absolute;right:18px;bottom:calc(var(--ec-bug-lift,150px) + 16px);z-index:5;height:44px;width:auto;opacity:.5;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.7))}
+@media(max-width:1100px){.ec-bug{--ec-bug-lift:120px}}
+@media(max-width:1180px){.ec-net span{display:none}}
+@media(max-width:700px){.ec-bug{--ec-bug-lift:46px;height:32px}.ec-foot{margin-left:0;white-space:normal}.ec-foot-col{justify-items:start}}

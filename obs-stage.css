@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@500;600&display=swap");
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
 body{font-family:Inter,system-ui,sans-serif}
@@ -15,3 +16,13 @@ linear-gradient(135deg,#030304,#0b0809 55%,#020203);color:#eee;text-align:center
 body.obs-stage-preview .obs-stage-status{display:block}
 body.obs-stage-preview .obs-stage{outline:1px solid rgba(255,255,255,.12);outline-offset:-1px}
 .obs-stage.has-feed .obs-stage-placeholder{display:none}
+/* Feed offline state: graphite panel over arena photography, off-white type, steel hairlines. */
+.obs-stage-offline{display:none;position:absolute;inset:0;z-index:1;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(11,13,16,.72),rgba(11,13,16,.92)),url("assets/broadcast/arena-blur.webp") center/cover no-repeat,#0b0d10;color:#f2f4f7;font-family:Inter,system-ui,sans-serif}
+.obs-stage.feed-offline .obs-stage-offline{display:flex}
+.obs-stage.feed-offline .obs-stage-placeholder{display:none}
+.obs-stage-offline-panel{display:grid;gap:10px;min-width:440px;padding:30px 38px;border:1px solid #2a2f38;border-left:3px solid #8b95a3;border-radius:5px;background:rgba(19,22,27,.9);text-align:left}
+.obs-stage-offline-panel small{color:#9aa3af;font:700 13px/1 "Barlow Condensed",Inter,sans-serif;letter-spacing:.18em}
+.obs-stage-offline-panel strong{font:800 52px/.95 "Barlow Condensed",Impact,sans-serif;letter-spacing:.02em}
+.obs-stage-offline-panel span{color:#d5dae1;font:600 18px/1.2 "JetBrains Mono",ui-monospace,monospace}
+.obs-stage-offline-panel em{color:#9aa3af;font-style:normal;font-size:14px}
+.obs-stage-offline-brand{position:absolute;right:28px;bottom:24px;width:34px;height:34px;opacity:.8}

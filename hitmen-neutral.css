@@ -1,0 +1,333 @@
+/* Calgary Hitmen pages: full neutral broadcast pass (DESIGN-SYSTEM.md).
+   Loaded last on hitmen-team-locker.html, hitmen-player-locker.html and hitmen-workspace.html
+   (hitmen-neutral.js keeps it last when legacy scripts append stylesheets at runtime).
+   Black, graphite, steel and off-white over faded arena photography; sharp corners;
+   Barlow Condensed labels, Inter body, Big Shoulders for big numbers. Red only on the Hitmen
+   crest (image), the HITMEN wordmark and the one live dot. The EliteChel mark is brand content
+   like a crest: small only. Everything is prefixed with `html body.hm-neutral.hm-neutral` so it
+   beats the legacy theme layers (styles.css, wildman.css, network-v2.css, hitmen-*.css). */
+
+/* ---------- 1. tokens; legacy colour tokens collapsed to neutrals on purpose ---------- */
+html body.hm-neutral.hm-neutral, html body.hm-neutral.hm-neutral *{
+  --hn-bg:#0A0B0C;--hn-surface:#121315;--hn-raised:#1A1B1E;--hn-hair:rgba(255,255,255,.085);--hn-hair2:rgba(255,255,255,.05);
+  --hn-text:#ECEDEE;--hn-soft:#B4B7BC;--hn-muted:#8C9096;--hn-dim:#5E6268;--hn-glass:rgba(17,18,20,.80);--hn-steel-hi:rgba(206,211,217,.20);
+  --hn-display:"Big Shoulders Display","Barlow Condensed",Impact,sans-serif;--hn-label:"Barlow Condensed","Arial Narrow",sans-serif;--hn-body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --hn-fx-seats:url("assets/war-room/fx-seats.webp");--hn-fx-arena:url("assets/war-room/fx-arena.webp");--hn-fx-ice:url("assets/war-room/fx-ice.webp");
+  --hn-fx-lights:url("assets/broadcast/fx-lights.webp");--hn-fx-crest:url("assets/war-room/fx-crest.webp");--hn-fx-rink:url("assets/war-room/rink-neutral.svg");
+  --hn-soft-mask:radial-gradient(130% 110% at 72% 18%,#000 0,rgba(0,0,0,.55) 55%,transparent 100%);
+  /* styles.css */--bg:#0A0B0C;--bg-2:#121315;--panel:rgba(17,18,20,.8);--panel-2:#1A1B1E;--line:rgba(255,255,255,.085);--text:#ECEDEE;--muted:#8C9096;
+  --red:#9A9EA4;--gold:#B4B7BC;--cyan:#C9CCD0;--cyan-2:#B4B7BC;--green:#C9CCD0;--ice:#C9CCD0;--shadow:0 30px 60px -30px rgba(0,0,0,.9);
+  /* wildman.css */--wm-black:#0A0B0C;--wm-ink:#ECEDEE;--wm-gold:#B4B7BC;--wm-gold-2:#C9CCD0;--wm-gold-soft:rgba(255,255,255,.06);--wm-green:#C9CCD0;--wm-green-bright:#ECEDEE;
+  --wm-purple:#2A2C30;--wm-purple-bright:#B4B7BC;--wm-silver:#C9CCD0;--wm-line:rgba(255,255,255,.085);--wm-line-strong:rgba(255,255,255,.14);--wm-panel:rgba(17,18,20,.8);--wm-panel-2:#1A1B1E;
+  /* management.css */--mgmt-bg:#0A0B0C;--mgmt-gold:#B4B7BC;--mgmt-purple:#2A2C30;
+  /* network-v2.css */--wm-charcoal:#121315;--wm-graphite:#1A1B1E;--wm-crimson:#5E6268;--wm-crimson-bright:#9A9EA4;--wm-danger:#C9CCD0;--wm-ember:#9A9EA4;--wm-home-gold:#B4B7BC;--wm-home-gold2:#C9CCD0;--wm-home-purple:#2A2C30;
+  --wm-info:#C9CCD0;--wm-live:#C9CCD0;--wm-metal:#8C9096;--wm-muted:#8C9096;--wm-success:#C9CCD0;--wm-warning:#C9CCD0;--wm-ice:#C9CCD0;
+  --wm-purple-300:#C9CCD0;--wm-purple-400:#B4B7BC;--wm-purple-500:#8C9096;--wm-purple-600:#5E6268;--wm-purple-700:#2A2C30;--wm-purple-800:#1A1B1E;--wm-purple-850:#151619;--wm-purple-900:#121315;--wm-purple-950:#0A0B0C;
+  --wm-shadow:0 30px 60px -30px rgba(0,0,0,.9);--wm-soft-shadow:0 10px 30px -12px rgba(0,0,0,.8);--wm-radius-sm:0;--wm-radius-md:0;--wm-radius-lg:0;--wm-radius-xl:0;--wm-segment-image:none;
+  /* hitmen-team-locker.css / hitmen-workspace.css */--hm-gold:#B4B7BC;--hm-ink:#0A0B0C;--hm-panel:rgba(17,18,20,.8);--hm-red:#9A9EA4;--hm-red2:#5E6268;--hm-red-bright:#C9CCD0;--hm-steel:#8C9096;--hm-line:rgba(255,255,255,.085);--hm-silver:#C9CCD0;
+  /* hitmen-player-locker.css */--bg-burgundy:#0A0B0C;--bg-deep:#0A0B0C;--line-pink:rgba(255,255,255,.12);--line-soft:rgba(255,255,255,.07);--panel-hi:#1A1B1E;--panel-lo:#121315;
+  --stall-border:rgba(255,255,255,.085);--stall-panel:rgba(17,18,20,.8);--stall-panel-2:#1A1B1E;--stall-pink:#C9CCD0;--stall-pink-soft:rgba(255,255,255,.06);--text-main:#ECEDEE;--text-muted:#8C9096;--text-soft:#B4B7BC;
+  --font-display:"Barlow Condensed",Impact,sans-serif;--font-ui:Inter,system-ui,sans-serif;
+  /* pipeline-finish.css */--jp:#B4B7BC;--js:#8C9096;--jt:#ECEDEE;
+}
+
+/* ---------- 2. environment ---------- */
+html:has(body.hm-neutral){background:#0A0B0C}
+html body.hm-neutral.hm-neutral{background:linear-gradient(180deg,rgba(10,11,12,.5) 0,rgba(10,11,12,.86) 560px,#0A0B0C 1000px),url("assets/broadcast/arena-blur.webp") center top/1400px auto no-repeat,#0A0B0C!important;
+  color:var(--hn-text)!important;font-family:var(--hn-body)!important;background-attachment:scroll!important}
+html body.hm-neutral.hm-neutral::before{content:""!important;position:fixed!important;inset:0!important;z-index:-1!important;pointer-events:none;background:var(--hn-fx-seats) center 120%/cover no-repeat!important;opacity:.06!important;filter:grayscale(1)!important;display:block!important}
+html body.hm-neutral.hm-neutral::after{content:""!important;position:fixed!important;inset:0!important;pointer-events:none!important;z-index:1000!important;background:url("assets/broadcast/grain.png")!important;opacity:.35!important;mix-blend-mode:overlay!important;display:block!important}
+html body.hm-neutral.hm-neutral *, html body.hm-neutral.hm-neutral *::before, html body.hm-neutral.hm-neutral *::after{border-radius:0!important}
+html body.hm-neutral.hm-neutral .bc-onair::before{border-radius:50%!important}
+html body.hm-neutral.hm-neutral ::selection{background:rgba(255,255,255,.18);color:#fff}
+html body.hm-neutral.hm-neutral a{color:inherit}
+html body.hm-neutral.hm-neutral :focus-visible{outline:1px solid rgba(255,255,255,.7)!important;outline-offset:2px}
+
+/* every legacy block: no glows, no coloured edges, no coloured gradients, no coloured text shadows */
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall), html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall)::before, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall)::after{text-shadow:none!important;box-shadow:none!important}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall){border-color:var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall):not(img):not(picture):not(.hn-photo){background-image:none!important}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall)::before, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall)::after{background-image:none!important;filter:none!important}
+
+/* ---------- 3. EliteChel network bar + shared Hitmen nav ---------- */
+html body.hm-neutral.hm-neutral .hn-net{position:relative;z-index:61;display:flex;align-items:center;gap:10px;height:34px;padding:0 max(18px,calc((100% - 1240px)/2));background:#060607;border-bottom:1px solid var(--hn-hair2);
+  font:700 11.5px/1 var(--hn-label);letter-spacing:.16em;text-transform:uppercase;color:var(--hn-muted);white-space:nowrap;overflow:hidden}
+html body.hm-neutral.hm-neutral .hn-net .ec-mark{width:22px;height:22px;object-fit:contain;flex:none}
+html body.hm-neutral.hm-neutral .hn-net .ec-name{color:#C9CCD0}
+html body.hm-neutral.hm-neutral .hn-net .hn-sep{color:var(--hn-dim)}
+html body.hm-neutral.hm-neutral .hn-net .hn-sp{flex:1}
+html body.hm-neutral.hm-neutral .hn-net .hn-page{color:var(--hn-dim);overflow:hidden;text-overflow:ellipsis}
+html body.hm-neutral.hm-neutral .site-header.hn-header{position:sticky!important;top:0!important;z-index:60!important;width:100%!important;max-width:none!important;min-height:60px!important;margin:0!important;
+  padding:0 max(18px,calc((100% - 1240px)/2))!important;border:0!important;border-bottom:1px solid var(--hn-hair)!important;border-radius:0!important;
+  background:linear-gradient(180deg,#141517,#0F1012)!important;backdrop-filter:none!important;box-shadow:0 1px 0 rgba(0,0,0,.6)!important;gap:22px!important;justify-content:flex-start!important}
+html body.hm-neutral.hm-neutral .hn-header .hn-brand{display:flex;align-items:center;gap:11px;flex:none;text-decoration:none}
+html body.hm-neutral.hm-neutral .hn-header .hn-crest{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+html body.hm-neutral.hm-neutral .hn-header .brand-copy{display:block!important;font:700 11px/1.1 var(--hn-label)!important;letter-spacing:.16em!important;color:var(--hn-muted)!important;text-transform:uppercase}
+html body.hm-neutral.hm-neutral .hn-header .brand-copy b{display:block;font:800 17px/1 var(--hn-label)!important;letter-spacing:.06em!important;color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .hn-header .main-nav{display:flex!important;flex:1;gap:2px!important;min-width:0;overflow-x:auto;scrollbar-width:none}
+html body.hm-neutral.hm-neutral .hn-header .main-nav::-webkit-scrollbar{display:none}
+html body.hm-neutral.hm-neutral .hn-header .main-nav a{flex:none;padding:0 11px!important;height:60px;display:inline-flex;align-items:center;border-radius:0!important;background:transparent!important;box-shadow:none!important;transform:none!important;
+  font:700 12.5px/1 var(--hn-label)!important;letter-spacing:.12em!important;text-transform:uppercase;color:var(--hn-muted)!important;text-decoration:none;border:0!important}
+html body.hm-neutral.hm-neutral .hn-header .main-nav a:hover{color:var(--hn-text)!important;background:rgba(255,255,255,.03)!important}
+html body.hm-neutral.hm-neutral .hn-header .main-nav a.active-nav{color:var(--hn-text)!important;background:rgba(255,255,255,.05)!important;box-shadow:inset 0 -1px 0 var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .hn-header .main-nav a[hidden]{display:none!important}
+html body.hm-neutral.hm-neutral .hn-header .menu-toggle{display:none;margin-left:auto;width:42px;height:38px;padding:0!important;border:1px solid var(--hn-hair)!important;background:transparent!important;color:var(--hn-text)!important;font-size:20px!important;box-shadow:none!important}
+html body.hm-neutral.hm-neutral .hn-header .hm-private-pill{flex:none;padding:8px 10px!important;border:1px solid var(--hn-hair)!important;background:transparent!important;color:var(--hn-muted)!important;
+  font:700 11px/1 var(--hn-label)!important;letter-spacing:.14em!important;text-transform:uppercase;text-decoration:none;box-shadow:none!important}
+html body.hm-neutral.hm-neutral .hn-header .hm-private-pill:hover{color:var(--hn-text)!important;border-color:rgba(255,255,255,.25)!important}
+@media (max-width:1100px){
+  html body.hm-neutral.hm-neutral .site-header.hn-header{gap:12px!important;flex-wrap:nowrap}
+  html body.hm-neutral.hm-neutral .hn-header .menu-toggle{display:inline-grid!important;place-items:center}
+  html body.hm-neutral.hm-neutral .hn-header .main-nav{display:none!important;position:absolute!important;top:100%!important;left:0!important;right:0!important;flex-direction:column!important;padding:6px 0!important;
+    background:#0F1012!important;border:0!important;border-bottom:1px solid var(--hn-hair)!important;overflow:visible}
+  html body.hm-neutral.hm-neutral .hn-header .main-nav.open{display:flex!important}
+  html body.hm-neutral.hm-neutral .hn-header .main-nav a{height:46px;padding:0 max(18px,calc((100% - 1240px)/2))!important;border-top:1px solid var(--hn-hair2)!important}
+  html body.hm-neutral.hm-neutral .hn-header .main-nav a.active-nav{box-shadow:inset 2px 0 0 var(--hn-text)!important}
+  html body.hm-neutral.hm-neutral .hn-header .hm-private-pill{display:none}
+}
+@media (max-width:520px){
+  html body.hm-neutral.hm-neutral .hn-net{padding:0 14px;font-size:10.5px;gap:8px}
+  html body.hm-neutral.hm-neutral .hn-net .hn-page,html body.hm-neutral.hm-neutral .hn-net .hn-sep,html body.hm-neutral.hm-neutral .hn-net .hn-season{display:none}
+  html body.hm-neutral.hm-neutral .site-header.hn-header{padding:0 14px!important;min-height:56px!important}
+  html body.hm-neutral.hm-neutral .hn-header .hn-crest{width:30px;height:30px}
+  html body.hm-neutral.hm-neutral .hn-header .brand-copy b{font-size:15px!important}
+}
+
+/* ---------- 4. page frame, section heads, type ---------- */
+html body.hm-neutral.hm-neutral .hn-main{display:flex;flex-direction:column;padding:22px 0 10px}
+html body.hm-neutral.hm-neutral .hn-main > *{order:1}
+html body.hm-neutral.hm-neutral.management-authorized .hn-main > .hn-access{order:9}
+html body.hm-neutral.hm-neutral .hn-content{display:flex;flex-direction:column;gap:26px}
+html body.hm-neutral.hm-neutral .hn-content[hidden]{display:none!important}
+html body.hm-neutral.hm-neutral :is(.section-shell,.hn-wide){width:min(1240px,calc(100% - 36px))!important;margin-left:auto!important;margin-right:auto!important}
+html body.hm-neutral.hm-neutral .hn-section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;margin-bottom:12px}
+html body.hm-neutral.hm-neutral .hn-k, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) .eyebrow{display:block;font:700 11px/1.2 var(--hn-label)!important;letter-spacing:.18em!important;text-transform:uppercase;color:var(--hn-muted)!important;-webkit-text-fill-color:currentColor!important}
+html body.hm-neutral.hm-neutral .hn-h2{margin:6px 0 0;font:800 34px/.95 var(--hn-label);letter-spacing:.02em;text-transform:uppercase;color:var(--hn-text)}
+html body.hm-neutral.hm-neutral .hn-lede{margin:0 0 14px;max-width:72ch;font:500 13.5px/1.55 var(--hn-body);color:var(--hn-muted)}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) h1, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) h2, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) h3, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) h4{font-family:var(--hn-label)!important;color:var(--hn-text)!important;-webkit-text-fill-color:currentColor!important;background:none!important;letter-spacing:.02em}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) h1 span, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) h2 span, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) h3 span{color:inherit!important;-webkit-text-fill-color:currentColor!important;background:none!important}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) p, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) li, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) small{color:var(--hn-muted)}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) strong, html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) b{color:var(--hn-text)}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) code{background:rgba(255,255,255,.05)!important;color:#D5D7DA!important}
+@media (max-width:520px){html body.hm-neutral.hm-neutral .hn-h2{font-size:28px} html body.hm-neutral.hm-neutral :is(.section-shell,.hn-wide){width:calc(100% - 24px)!important}}
+
+/* ---------- 5. materials: smoked glass + hairline + steel top edge + greyscale FX plate ---------- */
+html body.hm-neutral.hm-neutral :is(.hn-glass,.locker-access-shell,.wm-card,.panel:not(.wr-panel),.hm-command-card,.hm-mission-card,.hm-status-card,.hm-upcoming-card,.hitmen-panel,.live-pipeline-panel,.game-center-bridge,.line-report-card,
+  .stall-dashboard-card,.player-panel,.stall-bio-card,.stall-tab-card,.locker-edit-box,.reference-player-pane,.reference-locker-pane,.player-ratings-grid > article,.session-card){
+  position:relative;isolation:isolate;background:linear-gradient(180deg,rgba(255,255,255,.035),transparent 120px),var(--hn-glass)!important;
+  border:1px solid var(--hn-hair)!important;border-top-color:var(--hn-steel-hi)!important;backdrop-filter:blur(14px) saturate(.6);-webkit-backdrop-filter:blur(14px) saturate(.6);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 30px 60px -30px rgba(0,0,0,.9)!important;color:var(--hn-text)}
+html body.hm-neutral.hm-neutral :is(.locker-access-shell,.hm-command-card,.hm-mission-card,.hm-status-card,.hm-upcoming-card,.hitmen-panel,.live-pipeline-panel,.line-report-card,.stall-dashboard-card,.player-panel,.stall-bio-card,.reference-player-pane)::before{
+  content:""!important;display:block!important;position:absolute!important;inset:0!important;z-index:-1!important;pointer-events:none;
+  background:var(--fx,var(--hn-fx-seats)) var(--fx-pos,center top)/var(--fx-size,cover) no-repeat!important;opacity:var(--fx-o,.16)!important;filter:grayscale(1) contrast(1.05)!important;
+  -webkit-mask-image:var(--fx-mask,var(--hn-soft-mask));mask-image:var(--fx-mask,var(--hn-soft-mask));width:auto!important;height:auto!important;transform:none!important}
+html body.hm-neutral.hm-neutral .hm-command-card{--fx:var(--hn-fx-lights);--fx-o:.12}
+html body.hm-neutral.hm-neutral .hm-mission-card{--fx:var(--hn-fx-crest);--fx-pos:right -40px center;--fx-size:260px auto;--fx-o:.07;--fx-mask:none}
+html body.hm-neutral.hm-neutral :is(.hm-status-card,.line-report-card){--fx:var(--hn-fx-arena);--fx-o:.12}
+html body.hm-neutral.hm-neutral .stall-dashboard-card,html body.hm-neutral.hm-neutral .player-panel{--fx:var(--hn-fx-seats);--fx-o:.12}
+html body.hm-neutral.hm-neutral .reference-player-pane{--fx:var(--hn-fx-ice);--fx-o:.14}
+html body.hm-neutral.hm-neutral .live-pipeline-panel{--fx:var(--hn-fx-rink);--fx-size:160% auto;--fx-o:.08}
+
+/* ---------- 6. controls: quiet tags, neutral buttons, fields ---------- */
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) :is(.status-pill,.wm-status,.directory-pill){display:inline-flex;align-items:center;padding:5px 8px 4px!important;background:transparent!important;border:1px solid rgba(255,255,255,.13)!important;
+  color:#C9CCD0!important;font:700 10.5px/1 var(--hn-label)!important;letter-spacing:.14em!important;text-transform:uppercase}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) :is(button:not(.menu-toggle):not(.hs-flip),.small-btn,.btn,.hm-red-btn,.hub-tabs a,.reference-edit){border:1px solid rgba(255,255,255,.16)!important;background:rgba(255,255,255,.04)!important;color:var(--hn-text)!important;
+  border-radius:0!important;box-shadow:none!important;transform:none!important;font-family:var(--hn-label)!important;font-weight:700!important;letter-spacing:.14em!important;text-transform:uppercase;text-shadow:none!important}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) :is(button:not(.menu-toggle):not(.hs-flip),.small-btn,.btn,.hm-red-btn):hover{border-color:rgba(255,255,255,.34)!important;background:rgba(255,255,255,.08)!important}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) :is(.small-btn.primary,button.primary,.hm-red-btn,#uploadChelImage,#saveJersey){background:#ECEDEE!important;color:#0A0B0C!important;border-color:#ECEDEE!important}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) :is(.small-btn.primary,button.primary,.hm-red-btn,#uploadChelImage,#saveJersey):hover{background:#fff!important}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea,.field,.select-field){background:#0D0E10!important;border:1px solid var(--hn-hair)!important;color:var(--hn-text)!important;border-radius:0!important;box-shadow:none!important;font-family:var(--hn-body)!important}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) :is(input,select,textarea):focus{border-color:rgba(255,255,255,.4)!important;outline:none}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) input[type=file]{color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral :is(.hn-main,.hitmen-app,.hn-footer) :not(:is(.wr-scope,.bc-broadcast,.hs-stall,.player-stall-photo,.hn-net,.hn-header,.ec-foot,.ec-net,.hn-meta,.hn-section-head) *):not(.wr-scope):not(.bc-broadcast):not(.hs-stall) input[type=file]::file-selector-button{background:rgba(255,255,255,.06);color:var(--hn-text);border:1px solid var(--hn-hair);padding:6px 10px;font:700 11px/1 var(--hn-label);letter-spacing:.12em;text-transform:uppercase}
+
+/* ---------- 7. access block (unchanged logic; sits at the bottom as a slim account strip once signed in) ---------- */
+html body.hm-neutral.hm-neutral .locker-access-shell, html body.hm-neutral.hm-neutral .management-login-shell{padding:18px 20px!important;margin-top:0!important;margin-bottom:0!important}
+html body.hm-neutral.hm-neutral .locker-access-shell .section-heading, html body.hm-neutral.hm-neutral .management-login-shell .section-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin:0 0 12px!important;padding:0!important;border:0!important}
+html body.hm-neutral.hm-neutral .locker-access-shell .section-heading h2, html body.hm-neutral.hm-neutral .management-login-shell .section-heading h2{font-size:28px!important;line-height:1!important;margin:4px 0 0!important}
+html body.hm-neutral.hm-neutral .account-panel{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;justify-content:space-between;padding:14px 16px!important;margin:0!important;background:rgba(10,11,12,.55)!important;border:1px solid var(--hn-hair)!important;backdrop-filter:none}
+html body.hm-neutral.hm-neutral .account-panel h3{font-size:19px!important;margin:4px 0 2px!important}
+html body.hm-neutral.hm-neutral .account-panel p{margin:0!important;font-size:12.5px!important}
+html body.hm-neutral.hm-neutral .account-panel .account-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+html body.hm-neutral.hm-neutral .account-panel:empty{display:none}
+html body.hm-neutral.hm-neutral .wm-card#managementLockedMessage, html body.hm-neutral.hm-neutral .wm-card#lockerLockedMessage{margin-top:12px!important;padding:14px 16px!important}
+html body.hm-neutral.hm-neutral.management-authorized .hn-access .section-heading{margin-bottom:10px!important}
+html body.hm-neutral.hm-neutral.management-authorized .hn-access .section-heading h2{font-size:18px!important}
+html body.hm-neutral.hm-neutral.management-authorized .hn-access .section-heading .eyebrow::after{content:" · account"}
+
+/* ---------- 8. footer with the EliteChel mark ---------- */
+html body.hm-neutral.hm-neutral footer.hn-footer{margin-top:34px!important;padding:18px 0 22px!important;border-top:1px solid var(--hn-hair)!important;background:linear-gradient(180deg,rgba(10,11,12,.6),#08090A)!important}
+html body.hm-neutral.hm-neutral footer.hn-footer .footer-inner{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border:0!important;padding:0!important;background:none!important}
+html body.hm-neutral.hm-neutral footer.hn-footer .footer-inner b{font:800 13px/1.2 var(--hn-label)!important;letter-spacing:.14em;color:var(--hn-soft)!important}
+html body.hm-neutral.hm-neutral footer.hn-footer .footer-inner span, html body.hm-neutral.hm-neutral footer.hn-footer .footer-inner p{font:500 12px/1.4 var(--hn-body)!important;color:var(--hn-dim)!important;margin:0}
+html body.hm-neutral.hm-neutral footer.hn-footer .ec-foot-col{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+html body.hm-neutral.hm-neutral .ec-foot{display:inline-flex!important;align-items:center;gap:8px;font:700 10.5px/1 var(--hn-label)!important;letter-spacing:.16em!important;text-transform:uppercase;color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .ec-foot img{width:20px;height:20px;object-fit:contain}
+@media (max-width:640px){html body.hm-neutral.hm-neutral footer.hn-footer .ec-foot-col{align-items:flex-start}}
+
+/* ---------- 9. team locker (e1) ---------- */
+html body.hm-neutral.hm-neutral .hn-content > .bc-broadcast{width:min(1240px,calc(100% - 36px));margin:0 auto}
+html body.hm-neutral.hm-neutral .hn-meta{display:flex;gap:0;margin:0;border:1px solid var(--hn-hair);background:rgba(10,11,12,.55)}
+html body.hm-neutral.hm-neutral .hn-meta > div{padding:8px 14px;border-left:1px solid var(--hn-hair)}
+html body.hm-neutral.hm-neutral .hn-meta > div:first-child{border-left:0}
+html body.hm-neutral.hm-neutral .hn-meta dt{font:700 10px/1.1 var(--hn-label);letter-spacing:.16em;text-transform:uppercase;color:var(--hn-muted)}
+html body.hm-neutral.hm-neutral .hn-meta dd{margin:4px 0 0;font:900 24px/1 var(--hn-display);color:var(--hn-text)}
+html body.hm-neutral.hm-neutral .hn-section{padding:0!important;margin-top:0!important;margin-bottom:0!important;background:none!important;border:0!important}
+html body.hm-neutral.hm-neutral .hn-stalls{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(138px,1fr))!important;gap:10px!important}
+html body.hm-neutral.hm-neutral .hn-stalls .locker-stall{display:flex!important;flex-direction:column;min-height:0!important;height:auto!important;padding:0!important;margin:0!important;overflow:hidden;background:#090909!important;
+  border:1px solid var(--hn-hair)!important;transform:none!important;text-decoration:none;color:var(--hn-text)}
+html body.hm-neutral.hm-neutral .hn-stalls a.locker-stall:hover{border-color:rgba(255,255,255,.28)!important}
+html body.hm-neutral.hm-neutral .hn-stalls .locker-stall .hs-stall.hs-mini{width:100%!important;max-width:none!important;margin:0!important;border:0!important}
+html body.hm-neutral.hm-neutral .hn-stalls .stall-footer{display:flex!important;flex-direction:column;align-items:flex-start;grid-template-columns:none!important;gap:3px;padding:7px 8px 8px!important;margin:0!important;background:linear-gradient(180deg,#121315,#0D0E10)!important;border:0!important;border-top:1px solid var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral .hn-stalls .stall-footer small{font:600 10px/1.25 var(--hn-label)!important;letter-spacing:.1em!important;text-transform:uppercase;color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .hn-stalls .stall-footer .stall-position{padding:0!important;border:0!important;font:inherit!important;color:var(--hn-soft)!important;letter-spacing:inherit!important}
+html body.hm-neutral.hm-neutral .hn-stalls .stall-footer b{font:700 10.5px/1.2 var(--hn-label)!important;letter-spacing:.14em!important;text-transform:uppercase;color:var(--hn-text)!important;background:none!important;border:0!important;padding:0!important}
+html body.hm-neutral.hm-neutral .hn-stalls .locker-stall.is-tc{border-style:dashed!important}
+/* Training camp: dashed stall + a small steel TC tag. No colour (the legacy gold TC nameplate rule is neutralised here). */
+html body.hm-neutral.hm-neutral .hn-stalls .locker-stall{position:relative}
+html body.hm-neutral.hm-neutral .hn-stalls .locker-stall.is-tc .stall-nameplate-v2{border-bottom-color:var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral .hn-tc-tag{position:absolute;top:36px;right:6px;z-index:2;padding:2px 5px;border:1px solid rgba(201,204,208,.34);background:rgba(10,11,12,.82);color:#C9CCD0;font:700 9px/1 var(--hn-label);letter-spacing:.16em;text-transform:uppercase;pointer-events:none}
+html body.hm-neutral.hm-neutral .hs-open-tag{background:rgba(10,11,12,.8)!important;color:var(--hn-soft)!important;border:1px solid var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral .locker-empty{padding:18px!important;border:1px dashed var(--hn-hair)!important;background:rgba(10,11,12,.5)!important;color:var(--hn-muted)!important;font:500 13px/1.5 var(--hn-body)!important;grid-column:1/-1}
+html body.hm-neutral.hm-neutral .hn-lines{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))!important;gap:12px!important}
+html body.hm-neutral.hm-neutral .line-report-card{padding:16px!important}
+html body.hm-neutral.hm-neutral .line-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+html body.hm-neutral.hm-neutral .line-meta span{padding:4px 7px!important;border:1px solid rgba(255,255,255,.13)!important;background:transparent!important;color:#C9CCD0!important;font:700 10.5px/1 var(--hn-label)!important;letter-spacing:.12em}
+@media (max-width:520px){
+  html body.hm-neutral.hm-neutral .hn-stalls{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+  html body.hm-neutral.hm-neutral .hn-stalls .stall-footer{padding:5px 6px 6px!important}
+  html body.hm-neutral.hm-neutral .hn-stalls .stall-footer small:nth-of-type(2){display:none}
+  html body.hm-neutral.hm-neutral .hn-meta > div{padding:7px 10px}
+  html body.hm-neutral.hm-neutral .hn-meta dd{font-size:20px}
+}
+
+/* ---------- 10. War Room (a / f / g) ---------- */
+html body.hm-neutral.hm-neutral .hm-war-hero{width:min(1240px,calc(100% - 36px));margin:0 auto!important;border:1px solid var(--hn-hair)!important;border-top-color:var(--hn-steel-hi)!important;background:#0A0B0C!important;overflow:hidden}
+html body.hm-neutral.hm-neutral .hm-war-hero .hm-war-hero-image{filter:saturate(.9) contrast(1.02)}
+html body.hm-neutral.hm-neutral .hm-war-hero .hm-war-shade{background:linear-gradient(180deg,rgba(10,11,12,.15) 0,rgba(10,11,12,0) 40%,rgba(10,11,12,.86) 100%)!important}
+html body.hm-neutral.hm-neutral .hm-war-topline{gap:8px}
+html body.hm-neutral.hm-neutral .hm-war-topline span, html body.hm-neutral.hm-neutral .hm-war-topline b{padding:5px 8px 4px!important;background:rgba(10,11,12,.7)!important;border:1px solid rgba(255,255,255,.14)!important;color:#C9CCD0!important;font:700 10.5px/1 var(--hn-label)!important;letter-spacing:.16em!important}
+html body.hm-neutral.hm-neutral .hm-command-trio strong{font:800 clamp(15px,2vw,22px)/1 var(--hn-label)!important;letter-spacing:.06em;color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .hm-command-trio span{display:inline-block;margin-top:5px;padding:4px 6px 3px;border:1px solid rgba(255,255,255,.14);background:rgba(10,11,12,.7)!important;color:#C9CCD0!important;font:700 10px/1 var(--hn-label)!important;letter-spacing:.14em}
+html body.hm-neutral.hm-neutral .hm-command-deck{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;margin-top:0!important;padding:0!important}
+html body.hm-neutral.hm-neutral .hm-command-card{padding:14px 16px 16px!important;min-height:0!important;text-decoration:none;transform:none!important}
+html body.hm-neutral.hm-neutral .hm-command-card:hover{border-color:rgba(255,255,255,.26)!important}
+html body.hm-neutral.hm-neutral .hm-command-card .hm-command-icon{display:inline-grid!important;place-items:center;width:30px!important;height:30px!important;margin-bottom:10px;border:1px solid rgba(255,255,255,.16)!important;background:rgba(255,255,255,.03)!important;color:var(--hn-soft)!important;font:800 12px/1 var(--hn-label)!important}
+html body.hm-neutral.hm-neutral .hm-command-card small{display:block;font:700 10.5px/1.2 var(--hn-label)!important;letter-spacing:.16em;color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .hm-command-card h3{margin:4px 0 6px!important;font:800 21px/1 var(--hn-label)!important;text-transform:uppercase}
+html body.hm-neutral.hm-neutral .hm-command-card p{margin:0;font:500 12.5px/1.5 var(--hn-body)!important;color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .hm-command-card::after{display:none!important}
+html body.hm-neutral.hm-neutral .hm-war-dashboard{display:grid!important;grid-template-columns:1.4fr 1fr 1fr 1.1fr!important;gap:10px!important;margin-top:0!important;padding:0!important}
+html body.hm-neutral.hm-neutral .hm-war-dashboard > article{padding:16px 18px!important;min-height:0!important}
+html body.hm-neutral.hm-neutral .hm-mission-card h2{font:800 26px/1 var(--hn-label)!important;text-transform:uppercase;margin:6px 0 10px!important}
+html body.hm-neutral.hm-neutral .hm-mission-card blockquote{margin:12px 0 0!important;padding:0 0 0 12px!important;border-left:1px solid rgba(255,255,255,.3)!important;color:var(--hn-soft)!important;font:italic 500 13px/1.5 var(--hn-body)!important;background:none!important}
+html body.hm-neutral.hm-neutral .hm-status-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0!important;border-bottom:1px solid var(--hn-hair2)!important;background:none!important}
+html body.hm-neutral.hm-neutral .hm-status-row span{font:600 12.5px/1.2 var(--hn-body)!important;color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .hm-status-row strong{font:900 18px/1 var(--hn-display)!important;letter-spacing:.02em;color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .hm-upcoming-card h3{font:800 22px/1 var(--hn-label)!important;text-transform:uppercase;margin:6px 0 8px!important}
+html body.hm-neutral.hm-neutral .hm-upcoming-card .hm-red-btn{display:inline-flex;margin-top:12px;padding:10px 14px!important;font-size:12px!important;text-decoration:none}
+html body.hm-neutral.hm-neutral .hitmen-shell{padding:0!important;margin-top:0!important;background:none!important;border:0!important}
+html body.hm-neutral.hm-neutral .hitmen-grid{gap:10px!important}
+html body.hm-neutral.hm-neutral .hitmen-panel{padding:16px 18px!important}
+html body.hm-neutral.hm-neutral .hitmen-panel h3{font:800 22px/1 var(--hn-label)!important;text-transform:uppercase;margin:6px 0 8px!important}
+html body.hm-neutral.hm-neutral .hitmen-status{background:rgba(10,11,12,.7)!important;border:1px solid var(--hn-hair)!important;color:var(--hn-soft)!important}
+html body.hm-neutral.hm-neutral :is(.session-card,.session-history-row,.scout-empty){background:rgba(10,11,12,.55)!important;border:1px solid var(--hn-hair)!important;color:var(--hn-soft)!important}
+html body.hm-neutral.hm-neutral .series-score{color:var(--hn-text)!important;font-family:var(--hn-display)!important}
+html body.hm-neutral.hm-neutral .live-pipeline-panel{padding:16px 18px!important}
+html body.hm-neutral.hm-neutral .hm-war-footerline{display:flex!important;align-items:center;gap:14px;padding:6px 0!important;background:none!important;border:0!important}
+html body.hm-neutral.hm-neutral .hm-war-footerline span{flex:1;height:1px;background:var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral .hm-war-footerline strong{font:800 13px/1 var(--hn-label)!important;letter-spacing:.22em;color:var(--hn-dim)!important;text-align:center}
+@media (max-width:1000px){html body.hm-neutral.hm-neutral .hm-command-deck{grid-template-columns:repeat(2,minmax(0,1fr))!important} html body.hm-neutral.hm-neutral .hm-war-dashboard{grid-template-columns:1fr 1fr!important}}
+@media (max-width:520px){
+  html body.hm-neutral.hm-neutral .hm-command-deck{grid-template-columns:1fr 1fr!important;gap:6px!important}
+  html body.hm-neutral.hm-neutral .hm-command-card{padding:12px!important}
+  html body.hm-neutral.hm-neutral .hm-command-card p{display:none}
+  html body.hm-neutral.hm-neutral .hm-command-card h3{font-size:17px!important}
+  html body.hm-neutral.hm-neutral .hm-war-dashboard{grid-template-columns:1fr!important}
+  html body.hm-neutral.hm-neutral .hm-war-hero{width:calc(100% - 24px)}
+}
+
+/* ---------- 11. player stall (e2) ---------- */
+html body.hm-neutral.hm-neutral .hn-net{z-index:70}
+html body.hm-neutral.hm-neutral.hitmen-player-locker-page .hn-net{position:sticky;top:0}
+html body.hm-neutral.hm-neutral.hitmen-player-locker-page .hitmen-app-sidebar{top:34px!important;background:linear-gradient(180deg,#121315,#0D0E10)!important;border-right:1px solid var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral.hitmen-reference-ui .hitmen-app{background:transparent!important}
+html body.hm-neutral.hm-neutral .hitmen-app-brand{gap:10px!important;justify-content:flex-start!important;padding:14px 16px!important;min-height:76px!important}
+html body.hm-neutral.hm-neutral .hitmen-app-crest{width:40px!important;height:40px!important;transform:none!important;clip-path:none!important;background:none!important;border:0!important}
+html body.hm-neutral.hm-neutral .hitmen-app-crest img{width:40px;height:40px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+html body.hm-neutral.hm-neutral .hitmen-app-brand strong{font:800 15px/1 var(--hn-label)!important;letter-spacing:.06em!important;color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .hitmen-app-brand strong small{display:block;margin-top:3px;font:700 10.5px/1 var(--hn-label);letter-spacing:.16em;color:var(--hn-muted)}
+html body.hm-neutral.hm-neutral .hitmen-app-side-nav a{color:var(--hn-muted)!important;background:transparent!important;border:0!important;border-left:2px solid transparent!important;font-family:var(--hn-label)!important}
+html body.hm-neutral.hm-neutral .hitmen-app-side-nav a b{color:inherit!important;font-weight:700!important;letter-spacing:.06em}
+html body.hm-neutral.hm-neutral .hitmen-app-side-nav a:hover{color:var(--hn-text)!important;background:rgba(255,255,255,.03)!important}
+html body.hm-neutral.hm-neutral .hitmen-app-side-nav a.active{color:var(--hn-text)!important;background:rgba(255,255,255,.05)!important;border-left-color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .hitmen-app-side-nav a[hidden], html body.hm-neutral.hm-neutral .hitmen-top-tabs a[hidden]{display:none!important}
+html body.hm-neutral.hm-neutral .rail-glyph{color:var(--hn-dim)!important;background:none!important;border:0!important}
+html body.hm-neutral.hm-neutral .hitmen-app-sidebar-footer{background:none!important;border-top:1px solid var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral .hitmen-app-sidebar-footer .sidebar-skull{color:var(--hn-dim)!important;background:none!important;border:1px solid var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral .hitmen-app-sidebar-footer strong, html body.hm-neutral.hm-neutral .hitmen-app-sidebar-footer span{color:var(--hn-soft)!important}
+html body.hm-neutral.hm-neutral .hitmen-app-sidebar-footer small{color:var(--hn-muted)!important;border-color:var(--hn-hair)!important;background:transparent!important}
+html body.hm-neutral.hm-neutral .hitmen-app-topbar{background:linear-gradient(180deg,#141517,#0F1012)!important;border-bottom:1px solid var(--hn-hair)!important;backdrop-filter:none!important}
+html body.hm-neutral.hm-neutral .hitmen-top-tabs a{color:var(--hn-muted)!important;background:transparent!important;border:0!important;font:700 12px/1 var(--hn-label)!important;letter-spacing:.12em!important;box-shadow:none!important}
+html body.hm-neutral.hm-neutral .hitmen-top-tabs a:hover{color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .hitmen-top-tabs a.active{color:var(--hn-text)!important;background:rgba(255,255,255,.05)!important;box-shadow:inset 0 -1px 0 var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .hitmen-search, html body.hm-neutral.hm-neutral .hitmen-notify{display:none!important}
+html body.hm-neutral.hm-neutral .hitmen-top-avatar{background:#121315!important;border:1px solid var(--hn-hair)!important;color:var(--hn-soft)!important}
+html body.hm-neutral.hm-neutral .reference-locker-pane{background:#08090A!important}
+html body.hm-neutral.hm-neutral .reference-flip-controls{background:rgba(10,11,12,.82)!important;border:1px solid var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral .reference-flip-controls span{color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .reference-flip-controls button{background:transparent!important;border:0!important;color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .reference-flip-controls button.active{background:#ECEDEE!important;color:#0A0B0C!important}
+html body.hm-neutral.hm-neutral .reference-flip-caption{color:var(--hn-dim)!important}
+html body.hm-neutral.hm-neutral .stall-profile-topline b{color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .stall-profile-topline small{color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .profile-live-dot, html body.hm-neutral.hm-neutral .profile-status-dot{background:#8C9096!important;box-shadow:none!important;border-radius:50%!important}
+html body.hm-neutral.hm-neutral #playerTitle{font:800 clamp(40px,6vw,64px)/.9 var(--hn-label)!important;letter-spacing:.01em!important;text-transform:uppercase;color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .stall-profile-meta span{color:var(--hn-soft)!important;border-color:var(--hn-hair)!important;background:transparent!important}
+html body.hm-neutral.hm-neutral .stall-profile-tabs{border-bottom:1px solid var(--hn-hair)!important;background:none!important}
+html body.hm-neutral.hm-neutral .stall-profile-tabs button{background:transparent!important;border:0!important;color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .stall-profile-tabs button.active{color:var(--hn-text)!important;background:rgba(255,255,255,.05)!important;box-shadow:inset 0 -1px 0 var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .stall-profile-stats{background:rgba(10,11,12,.5)!important;border:1px solid var(--hn-hair)!important}
+html body.hm-neutral.hm-neutral .stall-profile-stats > div{border-color:var(--hn-hair)!important;background:none!important}
+html body.hm-neutral.hm-neutral .stall-profile-stats strong{font:900 34px/1 var(--hn-display)!important;color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .stall-profile-stats small{color:var(--hn-muted)!important;font-family:var(--hn-label)!important;letter-spacing:.12em}
+html body.hm-neutral.hm-neutral .stall-card-title h2, html body.hm-neutral.hm-neutral .stall-card-title h3, html body.hm-neutral.hm-neutral .player-panel-head h2{font:800 20px/1 var(--hn-label)!important;text-transform:uppercase;color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .stall-card-title span, html body.hm-neutral.hm-neutral .player-panel-head > span{color:var(--hn-muted)!important;font:700 10.5px/1.2 var(--hn-label)!important;letter-spacing:.14em;text-transform:uppercase;background:none!important;border:0!important}
+html body.hm-neutral.hm-neutral .stall-bio-layout dt{color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .stall-bio-layout dd{color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .stall-bio-avatar{background:#0D0E10!important;border:1px solid var(--hn-hair)!important;color:var(--hn-dim)!important}
+html body.hm-neutral.hm-neutral .recent-stat-list > div{border-color:var(--hn-hair2)!important;background:none!important}
+html body.hm-neutral.hm-neutral .recent-stat-list span{color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .recent-stat-list b{color:var(--hn-text)!important;font-family:var(--hn-display)!important;font-size:18px!important}
+html body.hm-neutral.hm-neutral .player-tool-list button{background:rgba(10,11,12,.5)!important;border:1px solid var(--hn-hair)!important;color:var(--hn-text)!important;text-transform:none!important;letter-spacing:0!important;font-family:var(--hn-body)!important;font-weight:500!important}
+html body.hm-neutral.hm-neutral .player-tool-list button > span{background:transparent!important;border:1px solid var(--hn-hair)!important;color:var(--hn-soft)!important}
+html body.hm-neutral.hm-neutral .player-tool-list small{color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .player-tool-list i{color:var(--hn-dim)!important}
+html body.hm-neutral.hm-neutral .weekly-performance-chart{background:rgba(10,11,12,.5)!important;border:1px solid var(--hn-hair2)!important;color:var(--hn-dim)!important}
+html body.hm-neutral.hm-neutral .weekly-performance-chart :is(i,span,b,div)[style*="height"]{background:#8C9096!important}
+html body.hm-neutral.hm-neutral .player-ratings-grid > article{padding:14px!important}
+html body.hm-neutral.hm-neutral .player-ratings-grid h3{font-size:15px!important;letter-spacing:.14em!important;color:var(--hn-soft)!important}
+html body.hm-neutral.hm-neutral :is(#offenseMetrics,#defenseMetrics,#teamMetrics) > *{border-color:var(--hn-hair2)!important;background:none!important;color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral :is(#offenseMetrics,#defenseMetrics,#teamMetrics) b, html body.hm-neutral.hm-neutral :is(#offenseMetrics,#defenseMetrics,#teamMetrics) strong{color:var(--hn-text)!important}
+html body.hm-neutral.hm-neutral .upload-preview{background:#0D0E10!important;border:1px dashed var(--hn-hair)!important;color:var(--hn-dim)!important}
+html body.hm-neutral.hm-neutral :is(.player-report-list,#playerWeeklyReport,.stall-note-stack) :is(.empty,.player-empty,.locker-empty,[class*=empty]){background:rgba(10,11,12,.5)!important;border:1px dashed var(--hn-hair)!important;color:var(--hn-muted)!important}
+html body.hm-neutral.hm-neutral .hn-app-footer{margin:28px 0 0!important;padding:16px 0 20px!important}
+html body.hm-neutral.hm-neutral .hn-app-footer .footer-inner{width:min(1240px,calc(100% - 32px));margin:0 auto}
+@media (max-width:760px){html body.hm-neutral.hm-neutral.hitmen-player-locker-page .hn-net{position:relative}}
+
+@media (max-width:680px){
+  html body.hm-neutral.hm-neutral .hn-access, html body.hm-neutral.hm-neutral .hn-access *{text-align:left!important}
+  html body.hm-neutral.hm-neutral .hn-access .section-heading{flex-direction:row!important;align-items:center!important}
+  html body.hm-neutral.hm-neutral .hn-access .status-pill{width:auto!important;max-width:max-content}
+  html body.hm-neutral.hm-neutral .account-panel{flex-direction:column;align-items:flex-start!important}
+  html body.hm-neutral.hm-neutral footer.hn-footer .footer-inner, html body.hm-neutral.hm-neutral footer.hn-footer .footer-inner *{text-align:left!important}
+  html body.hm-neutral.hm-neutral footer.hn-footer .footer-inner{flex-direction:column;align-items:flex-start!important}
+}
+
+/* stall art: the photo keeps its own light; the live nameplate print is off-white, no neon */
+html body.hm-neutral.hm-neutral .hs-stall :is(.hs-name,.hs-num,.hs-bname,.hs-bnum,.hs-sleeve,.hs-helmet){text-shadow:0 0 6px rgba(255,255,255,.28),0 1px 2px rgba(0,0,0,.8)!important}
+html body.hm-neutral.hm-neutral .hs-stall .hs-flip{background-image:none!important;background-color:transparent!important;box-shadow:none!important}
+html body.hm-neutral.hm-neutral .hitmen-app-side-nav a::after, html body.hm-neutral.hm-neutral .hitmen-top-tabs a::after{background:var(--hn-text)!important;box-shadow:none!important;opacity:.0}
+html body.hm-neutral.hm-neutral .live-pipeline-health{color:var(--hn-soft)!important;background:transparent!important;border:1px solid rgba(255,255,255,.14)!important}
+/* no sideways drift on phones (sub-pixel bleed from the scaled arena stage) */
+html:has(body.hm-neutral),html body.hm-neutral.hm-neutral{overflow-x:clip}

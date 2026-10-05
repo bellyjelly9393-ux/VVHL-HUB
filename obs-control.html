@@ -65,7 +65,7 @@
           <div class="obs-feed-editor">
             <div class="eyebrow">LIVE STREAM FEED</div>
             <h3>Attach the gameplay source</h3>
-            <p>Paste the Twitch or YouTube link from the player whose feed you are using. The combined OBS Stage puts this feed underneath the Hitmen/Wildman graphics.</p>
+            <p>Paste the Twitch or YouTube link from the player whose feed you are using. The Calgary channel defaults to twitch.tv/ctbli. Scenes drive the feed: Game and Player ID play it with audio, Starting Soon, Intermission, Final and BRB mute it under the full-screen card.</p>
             <div class="obs-field-grid two">
               <label>Stream URL<input id="obsStreamUrl" class="field" type="url" placeholder="https://www.twitch.tv/channel"></label>
               <label>Provider<select id="obsStreamProvider" class="select-field">
@@ -164,7 +164,16 @@
           <a id="openObsUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Stage</a>
         </div>
         <div class="obs-overlay-only">
-          <small>OVERLAY ONLY</small>
+          <small>FEED LAYER · USE FOR TWITCH (BOTTOM SOURCE)</small>
+          <div class="obs-source-row">
+            <input id="obsFeedLayerUrl" class="field" readonly>
+            <button id="copyFeedLayerUrl" class="small-btn" type="button">Copy Feed URL</button>
+            <a id="openFeedLayerUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Feed</a>
+          </div>
+          <p class="obs-preview-note">Twitch pauses its player when anything sits on top of it, so for a Twitch feed add two Browser Sources at 1280 × 720: this Feed Layer at the bottom and the Overlay Only source above it. Both follow every Studio control.</p>
+        </div>
+        <div class="obs-overlay-only">
+          <small>OVERLAY ONLY · TOP SOURCE</small>
           <div class="obs-source-row">
             <input id="obsOverlayOnlyUrl" class="field" readonly>
             <button id="copyOverlayUrl" class="small-btn" type="button">Copy Overlay URL</button>
@@ -188,6 +197,7 @@
 <script src="backend.js"></script>
 <script src="management-guard.js"></script>
 <script src="script.js"></script>
-<script src="obs-control.js?v=20260930b"></script>
+<script src="obs-config.js?v=20261005a"></script>
+<script src="obs-control.js?v=20261005a"></script>
 </body>
 </html>

@@ -130,16 +130,31 @@
 
   let analysisGeneration=0;
   let nextDepth=null;
+  let currentAnalysis=null;
+  function resetDepth(){nextDepth=null;if($('gmAiGoDeeper'))$('gmAiGoDeeper').hidden=true;}
+  function preserveAnalysis(){
+    if(!currentAnalysis)return;
+    const list=$('gmAiHistoryList');if(!list)return;
+    const entry=document.createElement('details'),summary=document.createElement('summary'),body=document.createElement('div');
+    summary.textContent=currentAnalysis.label;body.innerHTML=currentAnalysis.html;
+    entry.append(summary,body);list.prepend(entry);
+    while(list.children.length>4)list.lastElementChild.remove();
+    $('gmAiHistory').hidden=false;currentAnalysis=null;
+  }
   async function deepAsk(forceMode='auto'){
     if(!team||!canUse())return;
     const question=$('gmAiQuestion').value.trim();if(!question)return;
+    const provider=$('gmAiProvider')?.value||'claude';
+    const analyst=provider==='grok'?'Grok':'Claude';
     const generation=++analysisGeneration, userId=auth().user.id;
+    preserveAnalysis();resetDepth();
+    if($('gmAiProvider'))$('gmAiProvider').disabled=true;
     $('gmAiDeepAsk').disabled=true;$('gmAiAsk').disabled=true;if($('gmAiGoDeeper'))$('gmAiGoDeeper').disabled=true;
     setStatus(forceMode==='auto'?'CHOOSING DEPTH · LOADING EVIDENCE':'DEEPER ANALYSIS · LOADING EVIDENCE');
     try{
       const {data,error}=await db().auth.getSession();if(error)throw error;
       if(!data.session?.access_token)throw new Error('Sign in again before analyzing.');
-      const response=await fetch('/api/chelscout-deepthink',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+data.session.access_token},body:JSON.stringify({question,playerNames:$('gmAiPlayers').value.split('\n').map(x=>x.trim()).filter(Boolean),scenario:$('gmAiScenario').value.trim(),mode:forceMode,lens:$('gmAiLens')?.value||'auto'}),signal:AbortSignal.timeout(115000)});
+      const response=await fetch('/api/chelscout-deepthink',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+data.session.access_token},body:JSON.stringify({question,playerNames:$('gmAiPlayers').value.split('\n').map(x=>x.trim()).filter(Boolean),scenario:$('gmAiScenario').value.trim(),mode:forceMode,lens:$('gmAiLens')?.value||'auto',provider}),signal:AbortSignal.timeout(115000)});
       const result=await response.json();if(!response.ok)throw new Error(result.error||'Analysis failed.');
       if(generation!==analysisGeneration||auth().user?.id!==userId)return;
       const coverage=result.coverage||{},matched=(coverage.matchedOpponents||[]).join(', ')||'None',players=(coverage.selectedPlayers||[]).join(', ')||'None',warn=(coverage.warnings||[]);
@@ -151,13 +166,15 @@
           (warn.length?'<div class="gm-ai-warnings">'+warn.map(x=>'<p>'+esc(x)+'</p>').join('')+'</div>':'')+
           (result.sources||[]).map(x=>'<details class="gm-ai-source"><summary>['+esc(x.id)+'] '+esc(x.source)+(x.meta?.evidenceClass?' · '+esc(String(x.meta.evidenceClass).replaceAll('_',' ')):'')+'</summary><pre>'+esc(JSON.stringify(x.data,null,2))+'</pre></details>').join('')+
         '</details>';
-      nextDepth=result.nextDepth||null;const deeper=$('gmAiGoDeeper');if(deeper){deeper.hidden=!nextDepth;deeper.disabled=false;deeper.textContent=nextDepth==='max'?'Go Deeper · Max Analysis':'Go Deeper · Deep Analysis';}setStatus('CLAUDE ANALYSIS READY · '+String(result.depthMode||'').toUpperCase());
+      currentAnalysis={label:analyst+' · '+question,html:$('gmAiAnswer').innerHTML};
+      nextDepth=result.nextDepth||null;const deeper=$('gmAiGoDeeper');if(deeper){deeper.hidden=!nextDepth;deeper.disabled=false;deeper.textContent=nextDepth==='max'?'Go Deeper · Max Analysis':'Go Deeper · Deep Analysis';}setStatus(analyst.toUpperCase()+' ANALYSIS READY · '+String(result.depthMode||'').toUpperCase());
     }catch(e){if(generation===analysisGeneration&&auth().user?.id===userId){$('gmAiAnswer').textContent=e.name==='TimeoutError'?'Analysis timed out. Narrow the question slightly and retry.':e.message;setStatus('ANALYSIS UNAVAILABLE');}}
-    finally{if(generation===analysisGeneration){$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;if($('gmAiGoDeeper'))$('gmAiGoDeeper').disabled=false;}}
+    finally{if(generation===analysisGeneration){$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;if($('gmAiProvider'))$('gmAiProvider').disabled=false;if($('gmAiGoDeeper'))$('gmAiGoDeeper').disabled=false;}}
   }
   $('gmAiDeepAsk')?.addEventListener('click',()=>deepAsk('auto'));
   $('gmAiGoDeeper')?.addEventListener('click',()=>{if(nextDepth)deepAsk(nextDepth);});
-  window.addEventListener('vvhl-auth-change',()=>{analysisGeneration++;nextDepth=null;$('gmAiAnswer').textContent='Ask a new question to load evidence for this session.';$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;if($('gmAiGoDeeper'))$('gmAiGoDeeper').hidden=true;});
+  ['gmAiProvider','gmAiQuestion','gmAiPlayers','gmAiScenario','gmAiLens'].forEach(id=>$(id)?.addEventListener('input',resetDepth));
+  window.addEventListener('vvhl-auth-change',()=>{analysisGeneration++;resetDepth();currentAnalysis=null;if($('gmAiHistoryList'))$('gmAiHistoryList').replaceChildren();if($('gmAiHistory'))$('gmAiHistory').hidden=true;if($('gmAiProvider'))$('gmAiProvider').disabled=false;$('gmAiAnswer').textContent='Ask a new question to load evidence for this session.';$('gmAiDeepAsk').disabled=false;$('gmAiAsk').disabled=false;});
 
   $('gmAiAsk')?.addEventListener('click',ask);
   $('gmAiQuestion')?.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')ask();});

@@ -6,7 +6,12 @@
   const $ = id => document.getElementById(id);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const n = v => Number(v) || 0;
-  const S = { team:null, sessions:[], games:[], lockers:[], reports:[], lineups:[], loading:false };
+  const S = { team:null, sessions:[], games:[], schedule:[], lockers:[], reports:[], lineups:[], loading:false };
+
+  // Scoreboard + jumbotron live in hitmen-broadcast.js (shared with the team locker).
+  const HB = () => window.HitmenBroadcast;
+  const seasonRecord = rows => HB()?.seasonRecord(rows) || {w:0,l:0,otl:0,gp:0,pts:0,gf:0,ga:0,diff:0,streak:''};
+  function renderBroadcast(){ HB()?.render(S.schedule); }
 
   function setStatus(text,tone=''){
     const el=$('hitmenStatus'); if(!el)return;
@@ -42,14 +47,17 @@
     try{
       const allowed=await loadTeam();
       if(!allowed){setStatus('Calgary Hitmen workspace access is restricted.','error');return;}
-      const [sessions,lockers,reports,lineups]=await Promise.all([
+      const [sessions,lockers,reports,lineups,schedule]=await Promise.all([
         db().from('team_competitive_sessions').select('*').eq('team_id',S.team.id).order('created_at',{ascending:false}),
         db().from('team_player_lockers').select('id,roster_class,gamertag,position,management_role').eq('team_id',S.team.id).eq('season',55),
         db().from('hitmen_player_reports').select('id').eq('team_id',S.team.id).eq('season',55),
-        db().from('lineups').select('id,status,is_active,updated_at').eq('team_id',S.team.id).eq('league','LGCHL')
+        db().from('lineups').select('id,status,is_active,updated_at').eq('team_id',S.team.id).eq('league','LGCHL'),
+        db().from('hitmen_schedule_games').select('id,week,scheduled_at,opponent_name,calgary_side,status,calgary_score,opponent_score,overtime').eq('team_id',S.team.id).eq('season',55).order('scheduled_at')
       ]);
       if(sessions.error||lockers.error||reports.error||lineups.error) throw (sessions.error||lockers.error||reports.error||lineups.error);
-      S.sessions=sessions.data||[]; S.lockers=lockers.data||[]; S.reports=reports.data||[]; S.lineups=lineups.data||[];
+      S.sessions=sessions.data||[]; S.lockers=(lockers.data||[]).filter(x=>x.roster_class!=='historical'); // archived past players are not counted S.reports=reports.data||[]; S.lineups=lineups.data||[];
+      if(schedule.error) console.warn('hitmen_schedule_games unavailable',schedule.error);
+      S.schedule=schedule.error?[]:(schedule.data||[]);
       const ids=S.sessions.map(x=>x.id);
       if(ids.length){
         const games=await db().from('team_competitive_games').select('*').in('session_id',ids).order('game_number');
@@ -116,14 +124,13 @@
   }
   function renderKpis(){
     if($('hitmenReportCount')) $('hitmenReportCount').textContent=S.reports.length;
-    if($('hitmenRosterCount')) $('hitmenRosterCount').textContent=S.lockers.filter(x=>x.roster_class!=='tc').length;
-    if($('hitmenTcCount')) $('hitmenTcCount').textContent=S.lockers.filter(x=>x.roster_class==='tc').length;
+    if($('hitmenRosterCount')) $('hitmenRosterCount').textContent=S.lockers.filter(x=>!['tc','training_camp'].includes(x.roster_class)).length;
+    if($('hitmenTcCount')) $('hitmenTcCount').textContent=S.lockers.filter(x=>['tc','training_camp'].includes(x.roster_class)).length;
     if($('hitmenLineupCount')) $('hitmenLineupCount').textContent=S.lineups.length;
-    const finals=S.games.filter(g=>g.status==='final');
-    const w=finals.filter(g=>n(g.team_score)>n(g.opponent_score)).length,l=finals.filter(g=>n(g.opponent_score)>n(g.team_score)).length;
-    if($('hitmenRecord')) $('hitmenRecord').textContent=`${w}-${l}`;
+    const rec=seasonRecord(S.schedule);
+    if($('hitmenRecord')) $('hitmenRecord').textContent=rec.gp?`${rec.w}-${rec.l}-${rec.otl}`:'\u2014';
   }
-  function render(){renderKpis();renderActiveSession();renderHistory();}
+  function render(){renderKpis();renderBroadcast();renderActiveSession();renderHistory();}
   function bind(){$('createSession')?.addEventListener('click',createSession);}
   bind();
   window.addEventListener('vvhl-auth-change',()=>loadAll());

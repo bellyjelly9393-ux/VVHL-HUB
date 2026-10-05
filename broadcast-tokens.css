@@ -1,0 +1,68 @@
+/* Broadcast design tokens (War Room).
+   Premium hockey-broadcast look: 90-95% neutral, sharp corners, thin neutral hairlines,
+   smoked glass, soft physical shadows, fine grain. Colour comes only from logos,
+   photography and the team file (team-*.css). Do not add accent colours here. */
+:root{
+  /* neutrals */
+  --bc-black:#070708;
+  --bc-charcoal:#0D0E10;
+  --bc-graphite:#151619;
+  --bc-gunmetal:#1E2023;
+  --bc-steel:#2A2C30;
+  --bc-offwhite:#F2F3F4;
+  --bc-text:#E2E3E5;
+  --bc-soft:#B4B7BC;
+  --bc-muted:#8C9096;
+  --bc-dim:#62666C;
+  --bc-faint:#3E4146;
+
+  /* lines + separators (low contrast) */
+  --bc-hair:rgba(255,255,255,.085);
+  --bc-hair-soft:rgba(255,255,255,.05);
+  --bc-hair-top:rgba(255,255,255,.15);
+
+  /* materials */
+  --bc-glass:rgba(13,14,16,.80);
+  --bc-glass-hi:rgba(255,255,255,.04);
+  --bc-glass-blur:blur(14px) saturate(.6);
+  --bc-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 40px 70px -24px rgba(0,0,0,.95),0 10px 22px rgba(0,0,0,.55);
+  --bc-grain:url("assets/broadcast/grain.png");
+  --bc-grain-opacity:.5;
+
+  /* photography */
+  --bc-arena-photo:url("assets/broadcast/arena-tunnel.webp");
+  --bc-arena-photo-jpg:url("assets/broadcast/arena-tunnel.jpg");
+  --bc-photo-filter:saturate(.4) contrast(1.05);
+  --bc-ice:url("assets/broadcast/ice-texture.webp");
+  /* FX backplates (DESIGN-SYSTEM.md section 3): greyscale, low opacity, soft-masked imagery behind panels */
+  --bc-fx-lights:url("assets/broadcast/fx-lights.webp");
+  --bc-fx-soft:radial-gradient(130% 110% at 72% 18%,#000 0,rgba(0,0,0,.55) 55%,transparent 100%);
+  /* silver / steel: cold top edge on panels, brushed metal on rails */
+  --bc-steel-hi:rgba(206,211,217,.20);
+  --bc-steel:url("assets/broadcast/brushed.png");
+
+  /* LED board */
+  --bc-led-bg:#060607;
+  --bc-led-text:#E9EAEC;
+  --bc-led-dim:#9A9DA2;
+  --bc-led-spill:rgba(225,230,238,.16);
+
+  /* geometry */
+  --bc-radius:0;
+  --bc-radius-sm:2px;
+  --bc-space-1:4px;
+  --bc-space-2:8px;
+  --bc-space-3:12px;
+  --bc-space-4:18px;
+  --bc-space-5:26px;
+  --bc-space-6:40px;
+
+  /* type (only fonts the site already loads: Barlow Condensed + Inter) */
+  --bc-font-display:"Barlow Condensed",Impact,"Arial Narrow",sans-serif;
+  --bc-font-label:"Barlow Condensed","Arial Narrow",sans-serif;
+  --bc-font-body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --bc-track-label:.2em;
+
+  /* the single live / tonight indicator; team files may override */
+  --bc-live:#E0262F;
+}

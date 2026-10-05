@@ -18,27 +18,38 @@
 <link rel="stylesheet" href="hitmen-team-locker.css">
 <link rel="stylesheet" href="hitmen-player-locker.css?v=20261001-stallalign1">
 <link rel="stylesheet" href="hitmen-stall-scene.css?v=20260928-playeraccess3">
-<script src="live-ticker.js?v=20261004" defer></script></head>
-<body class="wildman-site hitmen-player-locker-page hitmen-reference-ui">
+<link rel="stylesheet" href="broadcast-tokens.css?v=20261004-brand">
+<link rel="stylesheet" href="war-room-tonight.css?v=20261004-lab">
+<link rel="stylesheet" href="hitmen-stall-requests.css?v=20261004-sr">
+<link rel="stylesheet" href="hitmen-neutral.css?v=20261004-tc" data-hn-last>
+<script src="live-ticker.js?v=20261004" defer></script>
+</head>
+<body class="wildman-site hitmen-player-locker-page hitmen-reference-ui hm-neutral" data-hn-navsync>
+<div class="hn-net"><img class="ec-mark" src="assets/brand/elitechel-mark-48@2x.png?v=20261004-brand" width="22" height="22" alt=""><span class="ec-name">EliteChel Series Media</span><span class="hn-sep" aria-hidden="true">&middot;</span><span class="hn-season">LGCHL Season 55</span><span class="hn-sp"></span><span class="hn-page">My stall</span></div>
 
 <section class="section-shell locker-access-shell">
   <section id="accountPanel" class="panel account-panel"></section>
   <div id="lockerLockedMessage" class="wm-card"><b>Team sign-in required.</b><p>This player dashboard is restricted to Calgary Hitmen team accounts.</p></div>
 </section>
 
+<section class="section-shell sr-shell" id="stallRequestShell" hidden aria-label="Request your stall">
+  <div id="stallRequest" class="sr-card" hidden aria-live="polite"></div>
+</section>
+
 <div data-locker-content hidden class="hitmen-app">
 
   <aside class="hitmen-app-sidebar">
     <a class="hitmen-app-brand" href="hitmen-game-center.html">
-      <div class="hitmen-app-crest"><span>H</span></div>
-      <strong>CALGARY<br>HITMEN</strong>
+      <div class="hitmen-app-crest"><img src="assets/lgchl/s55/team412.png?v=20261004-broadcast" width="40" height="40" alt=""></div>
+      <strong>CALGARY HITMEN<small>MY STALL</small></strong>
     </a>
 
     <nav class="hitmen-app-side-nav">
       <a href="hitmen-game-center.html"><span class="rail-glyph">⌂</span><b>Game Center</b></a>
-      <a href="hitmen-team-locker.html"><span class="rail-glyph">◎</span><b>Roster</b></a>
-      <a class="active" href="hitmen-player-locker.html"><span class="rail-glyph">▣</span><b>Locker Room</b></a>
-      <a href="hitmen-game-center.html#schedule"><span class="rail-glyph">□</span><b>Game Schedule</b></a>
+      <a href="hitmen-team-locker.html"><span class="rail-glyph">◎</span><b>Locker Room</b></a>
+      <a class="active" href="hitmen-player-locker.html"><span class="rail-glyph">▣</span><b>My Stall</b></a>
+      <a data-management-nav href="hitmen-workspace.html"><span class="rail-glyph">◆</span><b>War Room</b></a>
+        <a href="hitmen-game-center.html#schedule"><span class="rail-glyph">□</span><b>Game Schedule</b></a>
       <a href="#performance"><span class="rail-glyph">▥</span><b>Stats & Analytics</b></a>
       <a href="#scouting"><span class="rail-glyph">⌁</span><b>Scouting</b></a>
       <a href="#weekly"><span class="rail-glyph">↗</span><b>Development</b></a>
@@ -57,8 +68,9 @@
     <header class="hitmen-app-topbar">
       <nav class="hitmen-top-tabs">
         <a href="hitmen-game-center.html">GAME CENTER</a>
-        <a href="hitmen-team-locker.html">ROSTER</a>
-        <a class="active" href="hitmen-player-locker.html">LOCKER ROOM</a>
+        <a href="hitmen-team-locker.html">LOCKER ROOM</a>
+        <a class="active" href="hitmen-player-locker.html">MY STALL</a>
+        <a data-management-nav href="hitmen-workspace.html">WAR ROOM</a>
         <a href="hitmen-game-center.html#schedule">SCHEDULE</a>
         <a href="#performance">STATS</a>
         <a href="#scouting">SCOUTING</a>
@@ -150,6 +162,7 @@
           </div>
         </aside>
       </section>
+      <section class="wr-stall wr-scope" id="wrStallTonight" hidden aria-label="Tonight in the War Room and your kit"></section>
 
       <section id="performance" class="reference-dashboard-row">
         <article class="stall-dashboard-card weekly-performance-card">
@@ -213,6 +226,7 @@
         </section>
       </section>
     </main>
+    <footer class="hn-footer hn-app-footer"><div class="footer-inner"><div><b>CALGARY HITMEN · MY STALL</b><span>Private team area</span></div><span class="ec-foot"><img src="assets/brand/elitechel-mark-48@2x.png?v=20261004-brand" width="20" height="20" alt="">Presented by EliteChel Series Media</span></div></footer>
   </div>
 </div>
 
@@ -222,5 +236,9 @@
 <script src="hitmen-stall-scene.js?v=20260928-playeraccess3"></script>
 <script src="vod-review-model.js"></script>
 <script src="hitmen-player-locker.js?v=20260928-playeraccess3"></script>
+<script src="hitmen-stall-request.js?v=20261004-sr"></script>
+<script src="war-room-rink.js?v=20261004-lab"></script>
+<script src="war-room-tonight.js?v=20261004-tc"></script>
+<script src="hitmen-neutral.js?v=20261004-neutral"></script>
 </body>
 </html>

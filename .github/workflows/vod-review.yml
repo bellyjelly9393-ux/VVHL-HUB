@@ -1,7 +1,7 @@
 name: VOD management review
 on:
   push:
-    branches: [main, fix/vod-management-review, fix/vod-evidence-reconciliation]
+    branches: [main, fix/vod-management-review, fix/vod-evidence-reconciliation, feature/grok-scouting-coding]
   pull_request:
     paths:
       - 'vod-*'
@@ -9,6 +9,10 @@ on:
       - 'api/chelscout-deepthink.js'
       - 'test-vod-*'
       - 'test-deep-scout.cjs'
+      - 'hitmen-gm-ai*'
+      - 'lib/grok-client.cjs'
+      - 'scripts/grok-code.cjs'
+      - 'test-grok*.cjs'
       - '.github/workflows/vod-review.yml'
 permissions:
   contents: read
@@ -21,6 +25,7 @@ jobs:
         with:
           node-version: '24'
       - run: node --test test-vod-review.cjs test-deep-scout.cjs
+      - run: node test-grok.cjs && node test-grok-code.cjs
       - run: npm install --prefix /tmp/vod-browser playwright@1.56.1
       - run: /tmp/vod-browser/node_modules/.bin/playwright install --with-deps chromium
       - name: Management workflow browser checks
@@ -29,3 +34,4 @@ jobs:
         run: |
           export CHROMIUM_PATH="$(node -p 'require("playwright").chromium.executablePath()')"
           node test-vod-browser.cjs
+          node test-grok-browser.cjs

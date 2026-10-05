@@ -1,0 +1,267 @@
+/* War Room: Tonight's Six, landing, locker TVs and stall cards. Neutral broadcast standard
+   (DESIGN-SYSTEM.md): 90-95% neutral, sharp corners, 1px neutral hairlines, smoked glass, steel top
+   edge, faded greyscale FX plates behind panels. Colour only from crests, jerseys and photography.
+   Needs broadcast-tokens.css. Everything is scoped to .wr-scope so host-page styles can't leak in. */
+@font-face{font-family:"Big Shoulders Display";src:url("assets/fonts/BigShouldersDisplay.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+.wr-scope{--wr-display:"Big Shoulders Display","Barlow Condensed",Impact,sans-serif;--wr-label:"Barlow Condensed","Arial Narrow",sans-serif;--wr-body:Inter,system-ui,sans-serif;
+  --wr-fx-seats:url("assets/war-room/fx-seats.webp");--wr-fx-ice:url("assets/war-room/fx-ice.webp");--wr-fx-arena:url("assets/war-room/fx-arena.webp");
+  --wr-fx-crest:url("assets/war-room/fx-crest.webp");--wr-fx-rink:url("assets/war-room/rink-neutral.svg");--wr-fx-lights:url("assets/broadcast/fx-lights.webp");
+  --wr-soft:radial-gradient(130% 110% at 72% 18%,#000 0,rgba(0,0,0,.55) 55%,transparent 100%);
+  color:var(--bc-text,#E2E3E5);font-family:var(--wr-body)}
+.wr-scope *,.wr-scope *::before,.wr-scope *::after{box-sizing:border-box;border-radius:0}
+.wr-scope h2,.wr-scope h3,.wr-scope h4,.wr-scope p,.wr-scope ol,.wr-scope ul,.wr-scope dl,.wr-scope dd{margin:0;padding:0;text-shadow:none}
+.wr-scope .wr-k{display:block;font:700 11px/1.2 var(--wr-label);letter-spacing:.18em;text-transform:uppercase;color:var(--bc-muted,#8C9096)}
+.wr-scope .wr-note{margin-top:10px;font:500 12px/1.5 var(--wr-body);color:var(--bc-dim,#62666C)}
+.wr-scope .wr-note b{color:var(--bc-soft,#B4B7BC)}
+.wr-scope code{font:500 11.5px/1 ui-monospace,Menlo,monospace;color:#C9CCD0;background:rgba(255,255,255,.05);padding:1px 3px}
+.wr-scope .wr-dim{color:var(--bc-dim,#62666C)}
+.wr-scope .wr-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 7px 3px;border:1px solid rgba(255,255,255,.13);font:700 10.5px/1 var(--wr-label);letter-spacing:.14em;text-transform:uppercase;color:#C9CCD0;white-space:nowrap}
+.wr-scope .wr-crest{flex:none;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+.wr-scope .wr-crest-x{display:inline-grid;place-items:center;font:800 10px/1 var(--wr-label);letter-spacing:.08em;color:var(--bc-muted);border:1px solid var(--bc-hair)}
+.wr-sr{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.wr-scope .wr-empty-row{padding:16px 2px;font:500 13px/1.5 var(--wr-body);color:var(--bc-muted,#8C9096)}
+
+/* panels: smoked glass + 1px hairline + steel top edge + FX plate */
+.wr-scope .wr-panel,.wr-scope .wr-g,.wr-scope .wr-tv{position:relative;isolation:isolate;background:linear-gradient(180deg,rgba(255,255,255,.035),transparent 120px),rgba(17,18,20,.80);
+  border:1px solid var(--bc-hair,rgba(255,255,255,.085));border-top-color:var(--bc-steel-hi,rgba(206,211,217,.2));
+  backdrop-filter:blur(16px) saturate(.6);-webkit-backdrop-filter:blur(16px) saturate(.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 30px 60px -30px rgba(0,0,0,.9)}
+.wr-scope .wr-panel::before,.wr-scope .wr-g::before,.wr-scope .wr-tv::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:var(--fx,var(--wr-fx-seats)) var(--fx-pos,center top)/var(--fx-size,cover) no-repeat;opacity:var(--fx-o,.2);filter:grayscale(1) contrast(1.05);
+  -webkit-mask-image:var(--fx-mask,var(--wr-soft));mask-image:var(--fx-mask,var(--wr-soft))}
+.wr-scope .wr-panel{padding:16px 18px}
+.wr-scope .wr-g{--fx:var(--wr-fx-ice);--fx-pos:center bottom;--fx-o:.2;--fx-mask:linear-gradient(0deg,#000,rgba(0,0,0,.2) 70%,transparent)}
+.wr-scope .wr-across{--fx:var(--wr-fx-crest);--fx-pos:center bottom 30px;--fx-size:220px auto;--fx-o:.075;--fx-mask:none}
+.wr-scope .wr-race{--fx:var(--wr-fx-rink);--fx-size:170% auto;--fx-pos:30% 40%;--fx-o:.10}
+.wr-scope .wr-reel{--fx:var(--wr-fx-arena);--fx-pos:center 64%;--fx-o:.14}
+.wr-scope .wr-entry{--fx:var(--wr-fx-lights);--fx-o:.16}
+.wr-scope .wr-tv{--fx:var(--wr-fx-lights);--fx-o:.10}
+.wr-scope .wr-kit{--fx:var(--wr-fx-crest);--fx-pos:right -60px top 40px;--fx-size:320px auto;--fx-o:.06;--fx-mask:none}
+
+/* ---------- War Room landing grid ---------- */
+/* own shell (not .section-shell: live-pipeline-status.js injects into the first .section-shell) */
+.wr-shell{width:min(1450px,calc(100% - 36px));margin-left:auto;margin-right:auto}
+@media (max-width:760px){.wr-shell{width:calc(100% - 20px)}}
+.wr-tonight{margin:0 auto 22px}
+.wr-scope .wr-tn-grid{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:18px;align-items:start}
+.wr-scope .wr-tn-main,.wr-scope .wr-tn-side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.wr-scope .wr-sec{display:flex;align-items:baseline;gap:10px;font:800 18px/1 var(--wr-label);letter-spacing:.14em;text-transform:uppercase;color:#E4E5E7}
+.wr-scope .wr-sec span{font-size:12px;color:var(--bc-dim)}
+.wr-scope .wr-games{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.wr-scope .wr-games.n1{grid-template-columns:minmax(0,1fr)}.wr-scope .wr-games.n2{grid-template-columns:repeat(2,minmax(0,1fr))}.wr-scope .wr-games.n4{grid-template-columns:repeat(2,minmax(0,1fr))}
+.wr-scope .wr-g{padding:14px}
+.wr-scope .wr-g .row{display:flex;align-items:center;gap:10px}
+.wr-scope .wr-g h4{margin-top:4px;font:800 22px/1 var(--wr-label);letter-spacing:.03em;text-transform:uppercase;color:#F1F2F3}
+.wr-scope .wr-g .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.wr-scope .wr-g p{margin-top:10px;font:400 13px/1.45 var(--wr-body);color:#AEB1B6}
+
+/* Tonight's Six */
+.wr-scope .wr-six-hd,.wr-scope .wr-reel-hd{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:10px}
+.wr-scope .wr-six h3,.wr-scope .wr-reel h3{margin-top:6px;font:900 34px/.95 var(--wr-display);letter-spacing:.01em;text-transform:uppercase;color:var(--bc-offwhite,#F2F3F4)}
+.wr-scope #wrTabs{margin-bottom:10px}
+.wr-scope .wr-six-bd{display:flex;gap:16px;align-items:center}
+.wr-scope .wr-rink-host{flex:1 1 auto;min-width:0;max-width:516px;position:relative}
+.wr-scope .wr-roll{list-style:none;flex:0 0 210px;min-width:0;border-top:1px solid var(--bc-hair)}
+.wr-scope .wr-roll li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:8px 2px;border-bottom:1px solid var(--bc-hair-soft)}
+.wr-scope .wr-roll span{font:800 11px/1 var(--wr-label);letter-spacing:.16em;color:var(--bc-muted)}
+.wr-scope .wr-roll b{font:800 15px/1.1 var(--wr-label);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--bc-text)}
+.wr-scope .wr-roll i{font:900 18px/1 var(--wr-display);font-style:normal;color:#9A9EA4}
+.wr-scope .wr-roll li.me{background:rgba(255,255,255,.05);box-shadow:inset 2px 0 0 #ECEDEE}
+.wr-scope .wr-roll li.me span,.wr-scope .wr-roll li.me i{color:#ECEDEE}
+.wr-scope .wr-jobs-hd{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--bc-hair)}
+.wr-scope .wr-jobs-hd b{font:800 13px/1.2 var(--wr-label);letter-spacing:.16em;text-transform:uppercase;color:#D5D7DA}
+.wr-scope .wr-jobs-hd span{font:500 11.5px/1.2 ui-monospace,Menlo,monospace;color:var(--bc-dim)}
+.wr-scope .wr-jobs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--bc-hair);border:1px solid var(--bc-hair)}
+.wr-scope .wr-jobs>.wr-empty-row{grid-column:1/-1;background:rgba(12,13,14,.9);padding:16px}
+.wr-scope .wr-job{background:rgba(12,13,14,.92);padding:12px 12px 14px;min-width:0}
+.wr-scope .wr-job header{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.wr-scope .wr-job header span{font:800 10.5px/1 var(--wr-label);letter-spacing:.16em;color:var(--bc-muted);white-space:nowrap}
+.wr-scope .wr-job header b{font:800 15px/1.1 var(--wr-label);letter-spacing:.02em;color:var(--bc-offwhite);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.wr-scope .wr-job header i{margin-left:auto;font:900 17px/1 var(--wr-display);font-style:normal;color:#9A9EA4;white-space:nowrap}
+.wr-scope .wr-job p{font:400 13px/1.5 var(--wr-body);color:#BFC2C6}
+.wr-scope .wr-job.me{background:rgba(30,31,34,.96);box-shadow:inset 0 2px 0 #ECEDEE}
+.wr-scope .wr-rink-empty{display:grid;place-items:center;min-height:220px;width:100%;border:1px dashed rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(8,9,10,.4),rgba(8,9,10,.8)),url("assets/war-room/ice-neutral.webp") center/240px auto;text-align:center;padding:18px}
+.wr-scope .wr-rink-empty.sm{min-height:150px}
+.wr-scope .wr-rink-empty b{display:block;font:800 15px/1.2 var(--wr-label);letter-spacing:.14em;text-transform:uppercase;color:#D5D7DA}
+.wr-scope .wr-rink-empty span{display:block;margin-top:6px;font:500 12.5px/1.45 var(--wr-body);color:var(--bc-muted)}
+
+/* Across from us */
+.wr-scope .wr-across-hd{display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--bc-hair)}
+.wr-scope .wr-across-hd h3{margin-top:4px;font:900 28px/.95 var(--wr-display);text-transform:uppercase;color:var(--bc-offwhite)}
+.wr-scope .wr-sub{margin:14px 0 6px}
+.wr-scope .wr-opp div{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;padding:6px 0;border-bottom:1px solid var(--bc-hair-soft)}
+.wr-scope .wr-opp dt{font:800 11px/1.3 var(--wr-label);letter-spacing:.16em;color:var(--bc-muted)}
+.wr-scope .wr-opp dd{font:800 15px/1.2 var(--wr-label);letter-spacing:.02em;color:var(--bc-text);overflow-wrap:anywhere}
+.wr-scope .wr-opp small{display:block;margin-top:2px;font:500 11.5px/1.3 var(--wr-body);letter-spacing:0;color:var(--bc-dim)}
+.wr-scope .wr-threats{list-style:none}
+.wr-scope .wr-threats li{padding:7px 0;border-bottom:1px solid var(--bc-hair-soft);font:400 13px/1.45 var(--wr-body);color:#C9CCD0}
+.wr-scope .wr-plan{list-style:none;counter-reset:p}
+.wr-scope .wr-plan li{counter-increment:p;display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;padding:6px 0;font:400 13px/1.45 var(--wr-body);color:#C9CCD0}
+.wr-scope .wr-plan li::before{content:counter(p);font:900 18px/1 var(--wr-display);color:var(--bc-offwhite)}
+
+/* Division race */
+.wr-scope .wr-lu{padding-bottom:10px;box-shadow:inset 0 -1px 0 var(--bc-hair);color:#D5D7DA}
+.wr-scope .wr-st{width:100%;border-collapse:collapse;margin-top:6px}
+.wr-scope .wr-st th{font:700 11px/1 var(--wr-label);letter-spacing:.12em;color:var(--bc-dim);text-align:right;padding:6px 4px;border-bottom:1px solid var(--bc-hair)}
+.wr-scope .wr-st th:nth-child(2),.wr-scope .wr-st td:nth-child(2){text-align:left}
+.wr-scope .wr-st td{padding:7px 4px;text-align:right;font:600 13px/1 var(--wr-label);font-variant-numeric:tabular-nums;color:#C9CCD0;border-bottom:1px solid rgba(255,255,255,.045)}
+.wr-scope .wr-st td:nth-child(2){display:flex;align-items:center;gap:8px;font:800 14px/1 var(--wr-label);letter-spacing:.04em}
+.wr-scope .wr-st tr.cg td{background:rgba(255,255,255,.06);color:#fff;font-weight:800}
+
+/* Highlight reel (reserved) */
+.wr-scope .wr-reel p{margin-top:2px;font:400 13px/1.5 var(--wr-body);color:#AEB1B6;max-width:560px}
+.wr-scope .wr-frames{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.wr-scope .wr-frames div{aspect-ratio:16/9;display:flex;flex-direction:column;justify-content:flex-end;padding:8px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(8,8,9,.6),rgba(8,8,9,.92)),url("assets/war-room/fx-ice.webp") center/cover}
+.wr-scope .wr-frames b{font:800 13px/1.1 var(--wr-label);letter-spacing:.08em;text-transform:uppercase;color:#D5D7DA}
+.wr-scope .wr-frames small{font:500 11px/1.3 ui-monospace,Menlo,monospace;color:var(--bc-dim)}
+
+/* ---------- rink + jerseys (war-room-rink.js) ---------- */
+.wr-rk{position:relative;flex:none}
+.wr-rk>svg.ice{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.wr-rk .wr-jy{position:absolute;transform:translate(-50%,-56%);display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 4px 6px rgba(0,0,0,.35))}
+.wr-rk .wr-jy svg{display:block;overflow:visible}
+.wr-rk .wr-jy .tg{margin-top:3px;font:800 10px/1 "Barlow Condensed",sans-serif;letter-spacing:.16em;color:#E9EAEC;background:rgba(10,11,12,.82);border:1px solid rgba(255,255,255,.14);padding:3px 6px 2px;white-space:nowrap}
+.wr-rk .wr-jy .tg em{font-style:normal;color:#8C9096;margin-left:5px}
+.wr-rk .wr-jy.me .tg{background:#ECEDEE;color:#0A0B0C;border-color:#ECEDEE}
+.wr-rk .wr-jy.me .tg em{color:#3A3C40}
+.wr-rk.sm .wr-jy .tg{font-size:8px;padding:2px 4px 1px;letter-spacing:.12em}
+.wr-gmtabs{display:flex;border:1px solid rgba(255,255,255,.09);background:rgba(8,9,10,.6)}
+.wr-gmtabs .gmt{all:unset;box-sizing:border-box;cursor:pointer;flex:1 1 0;min-width:0;display:flex;align-items:center;gap:9px;padding:8px 12px;border-right:1px solid rgba(255,255,255,.07);color:#8C9096}
+.wr-gmtabs .gmt:last-child{border-right:0}
+.wr-gmtabs .gmt:focus-visible{outline:1px solid #ECEDEE;outline-offset:-3px}
+.wr-gmtabs .kit svg{display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+.wr-gmtabs .tx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.wr-gmtabs b{font:800 13px/1 "Barlow Condensed",sans-serif;letter-spacing:.16em;color:#C9CCD0}
+.wr-gmtabs .tx span{font:600 12px/1 "Barlow Condensed",sans-serif;letter-spacing:.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wr-gmtabs em{margin-left:auto;font:700 10px/1 "Barlow Condensed",sans-serif;font-style:normal;letter-spacing:.18em;text-transform:uppercase;color:#5E6268}
+.wr-gmtabs .gmt.on{background:#ECEDEE;color:#3A3C40}
+.wr-gmtabs .gmt.on b{color:#0A0B0C}.wr-gmtabs .gmt.on em{color:#3A3C40}
+.wr-gmtabs.sm .gmt{padding:6px 8px;gap:6px}.wr-gmtabs.sm b{font-size:11.5px}.wr-gmtabs.sm .tx span{font-size:10.5px}.wr-gmtabs.sm em{display:none}
+.wr-gmtabs.xs{margin:2px 0 6px}.wr-gmtabs.xs .gmt{padding:4px 6px;gap:5px}.wr-gmtabs.xs b{font-size:10px}.wr-gmtabs.xs .tx span{font-size:9px;margin-top:2px}.wr-gmtabs.xs em{display:none}
+
+/* ---------- Team locker: entry + TVs (e1) ---------- */
+.wr-lockers{margin:0 auto 26px;display:flex;flex-direction:column;gap:18px}
+.wr-scope .wr-entry{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:0;padding:0}
+.wr-scope .wr-entry-l{padding:22px 24px}
+.wr-scope .wr-entry h2{margin-top:8px;font:900 48px/.92 var(--wr-display);letter-spacing:.005em;text-transform:uppercase;color:var(--bc-offwhite)}
+.wr-scope .wr-entry p{margin-top:10px;max-width:560px;font:400 14px/1.5 var(--wr-body);color:#AEB1B6}
+.wr-scope .wr-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.wr-scope .wr-btn{display:inline-flex;align-items:center;padding:10px 14px 9px;border:1px solid rgba(255,255,255,.16);font:800 12px/1 var(--wr-label);letter-spacing:.16em;text-transform:uppercase;color:#D5D7DA;text-decoration:none;background:rgba(8,9,10,.5)}
+.wr-scope .wr-btn.on{background:#ECEDEE;color:#0A0B0C;border-color:#ECEDEE}
+.wr-scope .wr-btn:hover{border-color:rgba(255,255,255,.4)}
+.wr-scope .wr-entry-r{padding:22px 24px;display:flex;flex-direction:column;justify-content:center;gap:10px;box-shadow:inset 1px 0 0 rgba(255,255,255,.07),inset 2px 0 0 rgba(0,0,0,.55);background:rgba(6,6,7,.35)}
+.wr-scope .wr-cd{display:block;font:700 44px/1 var(--wr-display);font-variant-numeric:tabular-nums;letter-spacing:.04em;color:var(--bc-offwhite);white-space:nowrap}
+.wr-scope .wr-chips{display:flex;flex-wrap:wrap;gap:6px}
+.wr-scope .wr-tvs-hd{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:12px}
+.wr-scope .wr-tvs-hd h2{margin-top:6px;font:900 34px/.95 var(--wr-display);text-transform:uppercase;color:var(--bc-offwhite)}
+.wr-scope .wr-tvs-hd p{font:500 12.5px/1.4 var(--wr-body);color:var(--bc-dim);text-align:right;max-width:360px}
+.wr-scope .wr-tv-row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.wr-scope .wr-tv-row2{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:14px;margin-top:14px}
+.wr-scope .wr-tv{display:flex;flex-direction:column;padding:8px;background:#0B0C0D}
+.wr-scope .wr-tv-scr{flex:1;min-height:230px;padding:12px 12px 10px;background:linear-gradient(180deg,#0A0A0B,#060607);border:1px solid rgba(255,255,255,.06);box-shadow:inset 0 0 40px rgba(0,0,0,.8);display:flex;flex-direction:column;min-width:0}
+.wr-scope .wr-tv-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.wr-scope .wr-tv-hd .wr-k{font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wr-scope .wr-tv-ch{flex:none;font:800 9.5px/1 var(--wr-label);letter-spacing:.16em;text-transform:uppercase;color:#C9CCD0;border:1px solid rgba(255,255,255,.16);padding:3px 5px 2px}
+.wr-scope .wr-tv-l3{display:flex;gap:10px;align-items:center;padding:8px 6px 2px;min-width:0}
+.wr-scope .wr-tv-l3 b{flex:none;font:800 11px/1 var(--wr-label);letter-spacing:.16em;text-transform:uppercase;color:#E4E5E7}
+.wr-scope .wr-tv-l3 span{min-width:0;font:600 11px/1.2 var(--wr-label);letter-spacing:.1em;text-transform:uppercase;color:var(--bc-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wr-scope .wr-tv-vs{display:flex;align-items:center;justify-content:space-around;gap:8px;margin:6px 0 10px;text-align:center}
+.wr-scope .wr-tv-vs>div{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.wr-scope .wr-tv-vs b{font:800 15px/1 var(--wr-label);letter-spacing:.08em;text-transform:uppercase;color:var(--bc-offwhite)}
+.wr-scope .wr-tv-vs small{font:600 11px/1 var(--wr-label);letter-spacing:.1em;color:var(--bc-dim)}
+.wr-scope .wr-tv-vs i{font:800 16px/1 var(--wr-label);font-style:normal;letter-spacing:.14em;color:var(--bc-dim)}
+.wr-scope .wr-tv .wr-cd{text-align:center;font-size:38px;margin-top:auto}
+.wr-scope .wr-tv .wr-plan li{font-size:12.5px;padding:4px 0}
+.wr-scope .wr-tv-empty{margin:auto 0;padding:18px 6px;text-align:center;font:600 12.5px/1.45 var(--wr-body);color:var(--bc-muted)}
+.wr-scope .wr-res{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.wr-scope .wr-res .wr-k{margin-bottom:6px;font-size:10px}
+.wr-scope .wr-res-r{display:flex;align-items:center;gap:8px;padding:6px 6px;margin-bottom:4px;background:rgba(255,255,255,.03)}
+.wr-scope .wr-res-r b{flex:1;min-width:0;font:700 13px/1 var(--wr-label);letter-spacing:.04em;color:#C9CCD0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wr-scope .wr-res-r i{font:600 12.5px/1 var(--wr-label);font-style:normal;letter-spacing:.06em;color:var(--bc-dim);white-space:nowrap}
+.wr-scope .wr-res-r.w b,.wr-scope .wr-res-r.w i{color:var(--bc-offwhite);font-weight:800}
+.wr-scope .wr-st-tv td{padding:6px 4px;font-size:13px}
+.wr-scope .wr-st-tv td:nth-child(2){display:table-cell}
+
+/* ---------- Player stall: tonight + kit (e2) ---------- */
+.wr-stall{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;margin:16px 0}
+.wr-stall[hidden]{display:none}
+.wr-scope .wr-stall-hd{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.wr-scope .wr-stall-g{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center}
+.wr-scope .wr-stall-g p{margin-top:6px;font:400 14px/1.5 var(--wr-body);color:#C9CCD0}
+.wr-scope .wr-stall-g p b{color:var(--bc-offwhite)}
+.wr-scope .wr-stall-cd{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.wr-scope .wr-stall-cd .wr-cd{font-size:34px}
+.wr-scope .wr-kit h3{margin-top:6px;font:900 30px/.95 var(--wr-display);text-transform:uppercase;color:var(--bc-offwhite)}
+.wr-scope .wr-kit-bd{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:10px}
+.wr-scope .wr-kit-jy{flex:0 0 180px;width:180px;margin:0 auto;filter:drop-shadow(0 10px 18px rgba(0,0,0,.6))}
+.wr-scope .wr-kit-jy svg{display:block;width:100%;height:auto;overflow:visible}
+.wr-scope .wr-kit dl{flex:1 1 220px;min-width:0}
+.wr-scope .wr-kit dl div{display:grid;grid-template-columns:78px minmax(0,1fr);gap:8px;padding:6px 0;border-bottom:1px solid var(--bc-hair-soft)}
+.wr-scope .wr-kit dt{font:800 10.5px/1.4 var(--wr-label);letter-spacing:.16em;text-transform:uppercase;color:var(--bc-muted)}
+.wr-scope .wr-kit dd{font:700 13.5px/1.3 var(--wr-label);letter-spacing:.04em;color:var(--bc-text);overflow-wrap:anywhere}
+.wr-scope .wr-kit-sw{display:inline-flex;border:1px solid rgba(255,255,255,.12)}
+.wr-scope .wr-kit-sw button{all:unset;cursor:pointer;padding:4px 7px 3px;font:800 10.5px/1 var(--wr-label);letter-spacing:.12em;text-transform:uppercase;color:var(--bc-muted)}
+.wr-scope .wr-kit-sw button.on{background:#ECEDEE;color:#0A0B0C}
+.wr-scope .wr-kit-sw button:focus-visible{outline:1px solid #ECEDEE;outline-offset:-2px}
+
+/* ---------- responsive ---------- */
+@media (max-width:1100px){
+  .wr-scope .wr-tn-grid{grid-template-columns:minmax(0,1fr)}
+  .wr-scope .wr-tv-row3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wr-scope .wr-tv-row3>.wr-tv:first-child{grid-column:1/-1}
+}
+@media (max-width:760px){
+  .wr-scope .wr-games,.wr-scope .wr-games.n2,.wr-scope .wr-games.n4{grid-template-columns:minmax(0,1fr)}
+  .wr-scope .wr-six-bd{flex-direction:column;align-items:stretch}
+  .wr-scope .wr-rink-host{max-width:none;width:100%}
+  .wr-scope .wr-roll{flex:none;width:100%}
+  .wr-scope .wr-jobs{grid-template-columns:minmax(0,1fr)}
+  .wr-scope .wr-six h3{font-size:30px}
+  .wr-scope .wr-frames{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wr-scope .wr-panel{padding:14px}
+  .wr-scope .wr-gmtabs .gmt{padding:6px 6px;gap:5px}
+  .wr-scope .wr-gmtabs .kit{display:none}
+  .wr-scope .wr-entry{grid-template-columns:minmax(0,1fr)}
+  .wr-scope .wr-entry-r{box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+  .wr-scope .wr-entry h2{font-size:38px}
+  .wr-scope .wr-tvs-hd{flex-direction:column;align-items:flex-start}
+  .wr-scope .wr-tvs-hd p{text-align:left}
+  .wr-scope .wr-tv-row3,.wr-scope .wr-tv-row2{grid-template-columns:minmax(0,1fr)}
+  .wr-scope .wr-res{grid-template-columns:minmax(0,1fr)}
+  .wr-stall{grid-template-columns:minmax(0,1fr)}
+  .wr-scope .wr-stall-g{grid-template-columns:auto minmax(0,1fr)}
+  .wr-scope .wr-stall-cd{grid-column:1/-1;flex-direction:row;align-items:center;justify-content:space-between}
+  .wr-scope .wr-kit-bd{flex-direction:column;align-items:stretch}
+  .wr-scope .wr-kit-jy{flex-basis:auto;width:min(240px,100%);margin:0 auto}
+  .wr-scope .wr-st td,.wr-scope .wr-st th{padding-left:2px;padding-right:2px}
+}
+
+/* host pages style every button (.wildman-site button:not(.menu-toggle){... !important});
+   reset ours back to the neutral broadcast standard */
+.wr-scope.wr-scope.wr-scope .wr-gmtabs button.gmt,.wr-scope.wr-scope.wr-scope .wr-kit-sw button{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;color:#8C9096!important;text-shadow:none!important;min-height:0;margin:0}
+.wr-scope.wr-scope.wr-scope .wr-gmtabs button.gmt{box-shadow:inset -1px 0 0 rgba(255,255,255,.07)!important}
+.wr-scope.wr-scope.wr-scope .wr-gmtabs button.gmt:last-child{box-shadow:none!important}
+.wr-scope.wr-scope.wr-scope .wr-gmtabs button.gmt.on,.wr-scope.wr-scope.wr-scope .wr-kit-sw button.on{background:#ECEDEE!important;color:#3A3C40!important}
+.wr-scope.wr-scope.wr-scope .wr-kit-sw button.on{color:#0A0B0C!important}
+/* single column: put "Across from us" straight after Tonight's Six */
+@media (max-width:1100px){
+  .wr-scope .wr-tn-grid{display:flex;flex-direction:column;gap:14px}
+  .wr-scope .wr-tn-main,.wr-scope .wr-tn-side{display:contents}
+  .wr-scope .wr-tn-grid .wr-panel,.wr-scope .wr-tn-grid .wr-games{min-width:0;max-width:100%}
+  .wr-scope .wr-tn-main>.wr-sec{order:1}.wr-scope .wr-games{order:2}.wr-scope .wr-six{order:3}.wr-scope .wr-across{order:4}.wr-scope .wr-race{order:5}.wr-scope .wr-reel{order:6}
+}
+/* host pages tint every table gold (.wildman-site table ... !important); keep ours neutral */
+.wr-scope.wr-scope table.wr-st thead{background:transparent!important}
+.wr-scope.wr-scope table.wr-st th{color:var(--bc-dim,#62666C)!important;border-color:transparent!important;border-bottom-color:rgba(255,255,255,.085)!important}
+.wr-scope.wr-scope table.wr-st td{border-color:transparent!important;border-bottom-color:rgba(255,255,255,.045)!important}
+.wr-scope.wr-scope table.wr-st tr.cg td{color:#fff!important}
+.wr-scope .wr-empty h3{margin-top:6px;font:900 28px/1 var(--wr-display);text-transform:uppercase;color:var(--bc-offwhite)}
+.wr-scope .wr-empty p{margin-top:6px;font:400 13.5px/1.5 var(--wr-body);color:var(--bc-muted)}
+.wr-scope .wr-tonight>.wr-empty+.wr-race,.wr-scope>.wr-empty+.wr-race{margin-top:14px}
+.wr-scope #wrTvKeys{flex:1;display:flex;flex-direction:column}
+
+/* management shortcuts folded in from the old Lineup Room / Opponents cards (full neutral pass) */
+.wr-scope .wr-links{display:flex;flex-wrap:wrap;gap:6px 14px;margin:2px 0 10px}
+.wr-scope .wr-across .wr-links{margin:12px 0 0}
+.wr-scope .wr-links a{font:700 11px/1.2 var(--wr-label);letter-spacing:.16em;text-transform:uppercase;color:var(--bc-soft,#B4B7BC);text-decoration:none;border-bottom:1px solid var(--bc-hair,rgba(255,255,255,.085));padding-bottom:2px}
+.wr-scope .wr-links a:hover,.wr-scope .wr-links a:focus-visible{color:var(--bc-offwhite,#F2F3F4);border-bottom-color:rgba(255,255,255,.4)}
+.wr-scope .wr-tabs-slot{margin-bottom:10px}
