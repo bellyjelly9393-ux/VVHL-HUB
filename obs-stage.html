@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>Wildman OBS Broadcast Stage</title>
-  <link rel="stylesheet" href="obs-stage.css?v=20260930a">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="obs-stage.css?v=20261005a">
 </head>
 <body>
   <main class="obs-stage" id="obsStage">
@@ -15,12 +16,22 @@
       <strong>STREAM FEED WAITING</strong>
       <span>Attach a Twitch or YouTube URL in Broadcast Studio.</span>
     </div>
+    <div id="streamOffline" class="obs-stage-offline" aria-live="polite">
+      <div class="obs-stage-offline-panel">
+        <small>LIVE FEED</small>
+        <strong>STREAM OFFLINE</strong>
+        <span id="streamOfflineName">twitch.tv</span>
+        <em>The picture returns automatically when the channel goes live.</em>
+      </div>
+      <img class="obs-stage-offline-brand" src="assets/brand/elitechel-mark-48@2x.png" alt="EliteChel Series Media">
+    </div>
     <iframe id="overlayFrame" class="obs-stage-overlay" title="Broadcast graphics"></iframe>
     <div id="stageStatus" class="obs-stage-status">CONNECTING</div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://player.twitch.tv/js/embed/v1.js"></script>
-  <script src="obs-stage.js?v=20261001b"></script>
+  <script src="obs-config.js?v=20261005a"></script>
+  <script src="obs-stage.js?v=20261005a"></script>
 </body>
 </html>

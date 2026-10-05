@@ -1,6 +1,7 @@
 (function(){
   'use strict';
   var PRODUCTION_ORIGIN='https://wildmanhockey-elitechelmedia.app';
+  var OBS_CFG=window.WM_OBS_CONFIG||{defaultFeedFor:function(){return '';}};
   var TEAM_CONFIG={
     '5f36117c-7a51-4514-bf70-d4c672b41e48':{name:'Wildman Hockey',brand:'wildman',channel:'wildman-main'},
     'b0bcbdda-da9d-419d-8f61-b34937966d49':{name:'Calgary Hitmen',brand:'hitmen',channel:'hitmen-main'}
@@ -9,6 +10,12 @@
   var currentScene='game';
   var initialized=false;
   var stateRef=null;
+  var lastUserId='';
+  var previewChannel='';
+  var editCount=0;        // bumps on every manual edit; protects unsaved typing from auto refills
+  var savedEditCount=0;
+  var publishing=false;
+  var publishQueued=false;
 
   function byId(id){return document.getElementById(id);}
   function val(id){return (byId(id)?.value||'').trim();}
@@ -22,6 +29,8 @@
   function config(){return TEAM_CONFIG[currentTeamId]||TEAM_CONFIG['5f36117c-7a51-4514-bf70-d4c672b41e48'];}
   function stageUrl(){return PRODUCTION_ORIGIN+'/obs-stage.html?channel='+encodeURIComponent(config().channel);}
   function overlayUrl(){return PRODUCTION_ORIGIN+'/obs-overlay.html?channel='+encodeURIComponent(config().channel);}
+  function feedLayerUrl(){return stageUrl()+'&layer=feed';}
+  function isDirty(){return editCount!==savedEditCount;}
   function providerFor(url,provided){
     var p=String(provided||'').toLowerCase();
     if(p&&p!=='auto')return p;
@@ -36,7 +45,9 @@
     var status=byId('streamFeedStatus');
     if(!status)return;
     if(!url){status.textContent='No feed attached yet.';return;}
-    status.textContent='Attached · '+providerFor(url,val('obsStreamProvider')).toUpperCase()+(byId('obsStreamMuted')?.checked?' · MUTED':' · AUDIO ON');
+    var provider=providerFor(url,val('obsStreamProvider'));
+    status.textContent='Attached · '+provider.toUpperCase()+(byId('obsStreamMuted')?.checked?' · MUTED':' · AUDIO ON')+
+      (provider==='twitch'?' · In OBS use the Feed Layer source under the Overlay source (Twitch pauses under graphics)':'');
   }
   function updateSourceLinks(){
     var stage=stageUrl(),overlay=overlayUrl();
@@ -45,8 +56,13 @@
     byId('obsOverlayOnlyUrl').value=overlay;
     byId('openOverlayUrl').href=overlay;
     byId('openCombinedStage').href=stage;
+    if(byId('obsFeedLayerUrl')){byId('obsFeedLayerUrl').value=feedLayerUrl();byId('openFeedLayerUrl').href=feedLayerUrl();}
     byId('heroChannel').textContent=config().channel.toUpperCase();
-    byId('obsPreview').src='obs-stage.html?channel='+encodeURIComponent(config().channel)+'&preview=1&t='+Date.now();
+    // Only reload the preview when the channel actually changes; it follows edits through realtime.
+    if(previewChannel!==config().channel){
+      previewChannel=config().channel;
+      byId('obsPreview').src='obs-stage.html?channel='+encodeURIComponent(previewChannel)+'&preview=1';
+    }
   }
   function allowedTeamIds(state){
     var role=String(state.profile?.role||'').toLowerCase();
@@ -61,7 +77,7 @@
     var ids=allowedTeamIds(state);
     if(!ids.length) return false;
     select.innerHTML=ids.map(function(id){return '<option value="'+id+'">'+TEAM_CONFIG[id].name+'</option>';}).join('');
-    var preferred=ids.includes(state.teamId)?state.teamId:ids[0];
+    var preferred=ids.includes(currentTeamId)?currentTeamId:(ids.includes(state.teamId)?state.teamId:ids[0]);
     select.value=preferred;
     currentTeamId=preferred;
     return true;
@@ -91,13 +107,15 @@
     byId('obsPlayerName').value=p.playerName||'PLAYER';
     byId('obsPlayerNumber').value=p.playerNumber||'00';
     byId('obsPlayerRole').value=p.playerRole||'PLAYER';
-    byId('obsStreamUrl').value=p.streamUrl||'';
+    // Channel default feed (obs-config.js) fills the field when nothing is attached yet.
+    byId('obsStreamUrl').value=p.streamUrl||OBS_CFG.defaultFeedFor(config().channel)||'';
     byId('obsStreamProvider').value=['auto','twitch','youtube','video'].includes(String(p.streamProvider||'auto'))?String(p.streamProvider||'auto'):'auto';
     byId('obsStreamMuted').checked=p.streamMuted===true;
     updateScoreDisplay();
     setSceneButtons();
     feedSummary();
     byId('stateUpdated').textContent=row.updated_at?'SYNCED':'READY';
+    savedEditCount=editCount;
   }
   function collectPayload(){
     var streamUrl=val('obsStreamUrl');
@@ -120,18 +138,26 @@
       streamMuted:Boolean(byId('obsStreamMuted')?.checked)
     };
   }
-  async function loadState(){
+  async function loadState(force){
     if(!currentTeamId||!window.VVHLBackend?.db) return;
+    if(!force&&isDirty()) return; // never overwrite unsaved edits with an automatic reload
     setStatus('LOADING');
-    var result=await window.VVHLBackend.db.from('obs_broadcast_state').select('*').eq('channel',config().channel).maybeSingle();
-    if(result.error){setStatus(result.error.message,true);return;}
-    fill(result.data);
-    setStatus('READY');
+    try{
+      var result=await window.VVHLBackend.db.from('obs_broadcast_state').select('*').eq('channel',config().channel).maybeSingle();
+      if(result.error){setStatus(result.error.message,true);return;}
+      fill(result.data);
+      setStatus('READY');
+    }catch(err){setStatus('LOAD FAILED · '+(err?.message||'network'),true);}
   }
   async function publish(sceneOverride){
     if(!currentTeamId||!stateRef?.user) return;
-    currentScene=sceneOverride||currentScene||'game';
+    if(sceneOverride) currentScene=sceneOverride;
+    currentScene=currentScene||'game';
     setSceneButtons();
+    // One write at a time, last edit wins: rapid score taps cannot land out of order.
+    if(publishing){publishQueued=true;return;}
+    publishing=true;
+    var editsAtSend=editCount;
     setStatus('PUBLISHING');
     var row={
       channel:config().channel,
@@ -143,22 +169,34 @@
       updated_by:stateRef.user.id,
       updated_at:new Date().toISOString()
     };
-    var result=await window.VVHLBackend.db.from('obs_broadcast_state').upsert(row,{onConflict:'channel'}).select().single();
-    if(result.error){setStatus(result.error.message,true);return;}
-    fill(result.data);
-    setStatus('LIVE');
-    setTimeout(function(){if(byId('publishStatus')?.textContent==='LIVE') setStatus('READY');},1200);
+    try{
+      var result=await window.VVHLBackend.db.from('obs_broadcast_state').upsert(row,{onConflict:'channel'}).select('channel,updated_at').single();
+      if(result.error){setStatus(result.error.message,true);return;}
+      savedEditCount=editsAtSend;
+      byId('stateUpdated').textContent='SYNCED';
+      setStatus('LIVE');
+      setTimeout(function(){if(byId('publishStatus')?.textContent==='LIVE') setStatus('READY');},1200);
+    }catch(err){
+      setStatus('PUBLISH FAILED · '+(err?.message||'network'),true);
+    }finally{
+      publishing=false;
+      if(publishQueued){publishQueued=false;publish();}
+    }
   }
   async function copyText(inputId,value){
     try{await navigator.clipboard.writeText(value);setStatus('URL COPIED');}
     catch(err){var input=byId(inputId);input.select();document.execCommand('copy');setStatus('URL COPIED');}
   }
   function wire(){
+    document.querySelectorAll('.obs-control-card input,.obs-control-card select:not(#obsTeamSelect)').forEach(function(field){
+      field.addEventListener('input',function(){editCount++;});
+      field.addEventListener('change',function(){editCount++;});
+    });
     byId('obsTeamSelect').addEventListener('change',async function(e){
       currentTeamId=e.target.value;
       window.localStorage.setItem('vvhl-team-context',currentTeamId);
       updateSourceLinks();
-      await loadState();
+      await loadState(true);
     });
     document.querySelectorAll('#obsSceneStrip [data-scene]').forEach(function(button){
       button.addEventListener('click',function(){publish(button.dataset.scene);});
@@ -168,6 +206,7 @@
         var id=button.dataset.score==='home'?'obsHomeScore':'obsAwayScore';
         var input=byId(id);
         input.value=Math.max(0,numberVal(id)+parseInt(button.dataset.delta,10));
+        editCount++;
         updateScoreDisplay();
         await publish();
       });
@@ -184,22 +223,37 @@
       await publish();
     });
     byId('publishObsState').addEventListener('click',function(){publish();});
-    byId('reloadObsState').addEventListener('click',loadState);
+    byId('reloadObsState').addEventListener('click',function(){loadState(true);});
     byId('copyObsUrl').addEventListener('click',function(){copyText('obsSourceUrl',stageUrl());});
     byId('copyOverlayUrl').addEventListener('click',function(){copyText('obsOverlayOnlyUrl',overlayUrl());});
+    byId('copyFeedLayerUrl')?.addEventListener('click',function(){copyText('obsFeedLayerUrl',feedLayerUrl());});
+  }
+  function showNoTeam(){
+    setStatus('NO STUDIO CHANNEL',true);
+    var select=byId('obsTeamSelect');
+    if(select){select.innerHTML='<option>No studio channel for your team</option>';select.disabled=true;}
   }
   async function init(state){
     stateRef=state||window.VVHLBackend?.state||{};
     if(!window.VVHLManagementGuard?.hasAccess(stateRef)) return;
+    var userId=stateRef.user?.id||'';
     if(!initialized){
-      if(!populateTeams(stateRef)) return;
+      if(!populateTeams(stateRef)){showNoTeam();return;}
+      byId('obsTeamSelect').disabled=false;
       wire();
       initialized=true;
-    }else{
-      populateTeams(stateRef);
+      lastUserId=userId;
+      updateSourceLinks();
+      await loadState(true);
+      return;
     }
+    // Auth events repeat (tab focus, token refresh, other tabs). Only react when the account changes.
+    if(userId===lastUserId) return;
+    lastUserId=userId;
+    var previousTeam=currentTeamId;
+    if(!populateTeams(stateRef)){showNoTeam();return;}
     updateSourceLinks();
-    await loadState();
+    if(currentTeamId!==previousTeam) await loadState(true);
   }
   window.addEventListener('vvhl-auth-change',function(event){init(event.detail);});
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){init(window.VVHLBackend?.state);});
