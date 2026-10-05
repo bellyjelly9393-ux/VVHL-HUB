@@ -33,3 +33,23 @@
 .hoi-line-scout-row>b{color:#efd58c;font-size:7px;letter-spacing:.08em}
 .hoi-line-scout-row p{margin:0;color:#c8bec0;font-size:9px;line-height:1.5}
 @media(max-width:650px){.hoi-heat-grid{grid-template-columns:repeat(2,1fr)}.hoi-line-scout-row{grid-template-columns:1fr}.hoi-heat-cell:last-child{grid-column:1/-1}}
+.hoi-season-games{display:grid;gap:10px}
+.hoi-season-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.hoi-season-summary>div{border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);padding:10px}
+.hoi-season-summary small{display:block;color:#8f8386;font-size:7px;letter-spacing:.09em}
+.hoi-season-summary b{display:block;margin-top:3px;font:900 22px/1 "Barlow Condensed",sans-serif}
+.hoi-season-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.hoi-season-game{border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.02);padding:10px}
+.hoi-season-game.verified{border-color:rgba(239,213,140,.22);background:linear-gradient(180deg,rgba(239,213,140,.045),rgba(255,255,255,.018))}
+.hoi-season-game-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.hoi-season-game-head strong{font:900 15px/1.05 "Barlow Condensed",sans-serif;text-transform:uppercase}
+.hoi-season-game-head small{display:block;margin-top:4px;color:#8f8386;font-size:8px}
+.hoi-season-game-head span{white-space:nowrap;border:1px solid rgba(255,255,255,.1);padding:4px 6px;font-size:7px;font-weight:900;letter-spacing:.07em}
+.hoi-season-game.verified .hoi-season-game-head span{color:#efd58c;border-color:rgba(239,213,140,.24)}
+.hoi-season-game-meta{margin-top:8px;color:#9e9295;font-size:8px;line-height:1.45}
+.hoi-season-game-leaders{margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.06);font-size:8px;line-height:1.55;color:#c9c0c2}
+.hoi-season-game-leaders small{display:block;margin-bottom:3px;color:#efd58c;font-weight:900;letter-spacing:.06em}
+.hoi-season-game details{margin-top:8px}
+.hoi-season-game summary{cursor:pointer;color:#9f9496;font-size:8px}
+.hoi-season-game pre{max-height:220px;overflow:auto;white-space:pre-wrap;font-size:7px}
+@media(max-width:760px){.hoi-season-list{grid-template-columns:1fr}.hoi-season-summary{grid-template-columns:repeat(3,1fr)}}
