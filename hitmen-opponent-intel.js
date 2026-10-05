@@ -96,7 +96,9 @@
     const scout=ev.line_scout||{};
     const scoutHtml=Object.keys(scout).length?'<section class="hoi-line-scout"><div class="hoi-heat-head"><div><strong>Posted-line deep scout</strong><small>Player roles and statistical tendencies for the posted six.</small></div></div>'+
       ['forwards','defense','goalie','inference'].filter(k=>scout[k]).map(k=>'<div class="hoi-line-scout-row"><b>'+esc(k.toUpperCase())+'</b><p>'+esc(scout[k])+'</p></div>').join('')+'</section>':'';
-    box.innerHTML='<div class="hoi-report-head"><div><strong>Latest pregame report</strong><small>'+esc(new Date(r.created_at).toLocaleString())+' · '+esc(r.model||'Claude')+(ev.approved===true?' · APPROVED':'')+'</small></div></div><div class="hoi-report-body">'+body+'</div>'+heatHtml+scoutHtml;
+    const reportUrl='hitmen-scouting-report.html?report='+encodeURIComponent(r.id)+(r.opponent_name?'&opponent='+encodeURIComponent(r.opponent_name):'');
+    const vodUrl='hitmen-vod-report.html?'+(r.scheduled_game_id?'game='+encodeURIComponent(r.scheduled_game_id):'report='+encodeURIComponent(r.id)+(r.opponent_name?'&opponent='+encodeURIComponent(r.opponent_name):''));
+    box.innerHTML='<div class="hoi-report-head"><div><strong>Latest pregame report</strong><small>'+esc(new Date(r.created_at).toLocaleString())+' · '+esc(r.model||'Claude')+(ev.approved===true?' · APPROVED':'')+'</small></div><div class="hoi-vod-actions"><a href="'+esc(reportUrl)+'">Full Report</a><a href="'+esc(vodUrl)+'">VOD Reference</a></div></div><div class="hoi-report-body">'+body+'</div>'+heatHtml+scoutHtml;
   }
 
   async function syncLg(){
