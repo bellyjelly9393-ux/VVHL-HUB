@@ -565,9 +565,13 @@ def request_ai(request_payload, model=None, rate_limit_retries=2):
             if result.get('status') == 'completed':
                 return result
             reason = (result.get('incomplete_details') or {}).get('reason')
-            if reason == 'max_output_tokens' and attempt == 0:
-                request_payload['max_output_tokens'] = min(12000, int(request_payload.get('max_output_tokens', 4800)) * 2)
-                continue
+            if reason == 'max_output_tokens' and attempt < 2:
+                current_limit = int(request_payload.get('max_output_tokens', 4800))
+                next_limit = min(12000, max(current_limit + 2000, current_limit * 2))
+                if next_limit > current_limit:
+                    request_payload['max_output_tokens'] = next_limit
+                    print(f'VOD AI output hit token cap at {current_limit}; retrying with {next_limit}.', flush=True)
+                    continue
             raise Problem(502, 'AI output was incomplete. Completed analysis is saved; retry to continue.')
         except urllib.error.HTTPError as exc:
             code = ''
