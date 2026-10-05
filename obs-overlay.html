@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Wildman Broadcast Overlay</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="obs-overlay.css?v=20261005simple1">
+  <link rel="stylesheet" href="obs-overlay.css?v=20261005break1">
 </head>
 <body data-brand="wildman" data-scene="game">
   <main id="obsRoot" class="obs-root" aria-live="polite">
@@ -101,6 +101,102 @@
       </div>
     </section>
 
+
+    <section class="obs-break-board" aria-label="Intermission and postgame board">
+      <div class="obb-main">
+        <div class="obb-watermark" aria-hidden="true">
+          <img src="assets/lgchl/s55/team412.png" alt="">
+          <span>CALGARY HITMEN</span>
+        </div>
+
+        <header class="obb-topline">
+          <div>
+            <small>LGCHL SEASON 55</small>
+            <span>ELITECHEL SERIES MEDIA</span>
+          </div>
+          <img class="obb-team-mark" src="assets/lgchl/s55/team412.png" alt="Calgary Hitmen">
+        </header>
+
+        <div class="obb-title-wrap">
+          <h1 id="obbTitle">INTERMISSION</h1>
+          <p id="obbSubtitle">PERIOD 2 COMPLETE</p>
+        </div>
+
+        <section class="obb-score-card">
+          <div class="obb-team-side obb-home">
+            <img id="obbHomeLogo" src="assets/lgchl/s55/team412.png" alt="">
+            <div>
+              <small>CALGARY</small>
+              <strong id="obbHomeName">HITMEN</strong>
+              <span id="obbHomeRecord"></span>
+            </div>
+          </div>
+
+          <div class="obb-score">
+            <b id="obbHomeScore">0</b>
+            <i>:</i>
+            <b id="obbAwayScore">0</b>
+          </div>
+
+          <div class="obb-team-side obb-away">
+            <div>
+              <small id="obbAwayCity">OPPONENT</small>
+              <strong id="obbAwayName">TEAM</strong>
+              <span id="obbAwayRecord"></span>
+            </div>
+            <img id="obbAwayLogo" src="assets/brand/elitechel-shield-320.webp" alt="">
+          </div>
+
+          <div class="obb-stats">
+            <div><b id="obbStat1Home">—</b><span id="obbStat1Label">SHOTS</span><b id="obbStat1Away">—</b></div>
+            <div><b id="obbStat2Home">—</b><span id="obbStat2Label">HITS</span><b id="obbStat2Away">—</b></div>
+            <div><b id="obbStat3Home">—</b><span id="obbStat3Label">FACEOFFS</span><b id="obbStat3Away">—</b></div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="obb-rail">
+        <img class="obb-rail-hitmen" src="assets/lgchl/s55/team412.png" alt="Calgary Hitmen">
+
+        <section class="obb-rail-section">
+          <h2 id="obbPreviousHeading">PREVIOUS GAME</h2>
+          <article class="obb-mini-card">
+            <div class="obb-mini-score">
+              <img id="obbPrevHomeLogo" src="assets/lgchl/s55/team412.png" alt="">
+              <b id="obbPrevScore">—</b>
+              <img id="obbPrevAwayLogo" src="assets/brand/elitechel-shield-320.webp" alt="">
+            </div>
+            <div class="obb-mini-names">
+              <span>CALGARY HITMEN</span>
+              <span id="obbPrevOpponent">OPPONENT</span>
+            </div>
+            <small id="obbPrevMeta"></small>
+          </article>
+        </section>
+
+        <section class="obb-rail-section">
+          <h2>UP NEXT</h2>
+          <article class="obb-mini-card obb-next-card">
+            <div class="obb-mini-score">
+              <img src="assets/lgchl/s55/team412.png" alt="">
+              <b>VS</b>
+              <img id="obbNextAwayLogo" src="assets/brand/elitechel-shield-320.webp" alt="">
+            </div>
+            <div class="obb-mini-names">
+              <span>CALGARY HITMEN<br><em id="obbNextHomeRecord"></em></span>
+              <span id="obbNextOpponent">OPPONENT<br><em id="obbNextAwayRecord"></em></span>
+            </div>
+            <small id="obbNextTime"></small>
+          </article>
+        </section>
+
+        <footer class="obb-media">
+          <img src="assets/brand/elitechel-shield-320.webp" alt="EliteChel Series Media">
+          <div><strong>EliteChel Series Media</strong><span>LIVE BROADCAST</span></div>
+        </footer>
+      </aside>
+    </section>
+
     <section class="obs-lower-third">
       <div class="obs-lt-accent"></div>
       <div class="obs-lt-number">#<span id="playerNumber">00</span></div>
@@ -115,6 +211,6 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
-  <script src="obs-overlay.js?v=20261005simple1"></script>
+  <script src="obs-overlay.js?v=20261005break1"></script>
 </body>
 </html>
