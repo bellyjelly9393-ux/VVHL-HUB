@@ -72,6 +72,52 @@
       players:[...merged.values()],player_report:text(review.player_report||rollup.player_report)
     };
   }
+  function mergeDocuments(primary={},supplemental={}){
+    const p=primary&&typeof primary==='object'?primary:{},s=supplemental&&typeof supplemental==='object'?supplemental:{};
+    const pick=(a,b)=>text(a).trim()?text(a):text(b);
+    const stamps=(...values)=>[...new Set(values.flatMap(v=>array(v)).filter(n=>typeof n==='number'&&Number.isFinite(n)&&n>=0))].sort((a,b)=>a-b);
+    const out={...p,version:1};
+    out.summary=pick(p.summary,s.summary);
+    out.result=pick(p.result,s.result);
+    out.process=pick(p.process,s.process);
+    out.tactical_report=pick(p.tactical_report,s.tactical_report);
+    out.player_report=pick(p.player_report,s.player_report);
+    out.game_rating=rating(p.game_rating)||rating(s.game_rating);
+    out.team_systems=Object.fromEntries(systems.map(k=>[k,pick(p.team_systems?.[k],s.team_systems?.[k])]));
+
+    const unitKey=u=>[text(u?.type),text(u?.label).toLowerCase(),array(u?.players).map(x=>text(x).toLowerCase()).sort().join('|')].join('::');
+    const units=new Map();
+    for(const source of [array(p.units),array(s.units)]){
+      for(const u of source){
+        const key=unitKey(u);if(!key.replaceAll(':',''))continue;
+        const row=units.get(key)||{label:text(u.label),type:u.type==='defense_pair'?'defense_pair':'line',players:array(u.players).filter(x=>typeof x==='string'),summary:'',strengths:'',concerns:'',adjustments:'',rating:null,evidence_timestamps:[]};
+        for(const k of ['label','summary','strengths','concerns','adjustments'])row[k]=pick(row[k],u[k]);
+        if(!row.players.length)row.players=array(u.players).filter(x=>typeof x==='string');
+        row.rating=rating(row.rating)||rating(u.rating);
+        row.evidence_timestamps=stamps(row.evidence_timestamps,u.evidence_timestamps);
+        units.set(key,row);
+      }
+    }
+    out.units=[...units.values()];
+
+    const players=new Map();
+    for(const source of [array(p.players),array(s.players)]){
+      for(const item of source){
+        const name=text(item?.player).trim();if(!name)continue;
+        const key=name.toLowerCase();
+        const row=players.get(key)||{player:name,position:'',strengths:'',concerns:'',habits:'',coach_note:'',evidence_timestamps:[],rating:null};
+        row.player=pick(row.player,item.player);
+        row.position=pick(row.position,item.position);
+        for(const k of ['strengths','concerns','habits','coach_note'])row[k]=pick(row[k],item[k]);
+        row.rating=rating(row.rating)||rating(item.rating);
+        row.evidence_timestamps=stamps(row.evidence_timestamps,item.evidence_timestamps);
+        players.set(key,row);
+      }
+    }
+    out.players=[...players.values()];
+    return out;
+  }
+
   function baseline(reports){
     const unique=new Map();
     for(const r of reports){
@@ -81,5 +127,5 @@
     const scores=[...unique.values()];
     return {games:scores.length,score:scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null};
   }
-  return {systems,periodErrors,documentFor,rating,baseline,activeSegments,hasAnalysis,protectedEvidence,reconcile};
+  return {systems,periodErrors,documentFor,mergeDocuments,rating,baseline,activeSegments,hasAnalysis,protectedEvidence,reconcile};
 });
