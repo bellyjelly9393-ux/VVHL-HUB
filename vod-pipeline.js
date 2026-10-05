@@ -120,13 +120,14 @@
     const anchor=detail.querySelector('.vod-detail-head'); if(!anchor)return;
     const panel=document.createElement('div');
     panel.id='vodPipelinePanel'; panel.className='analysis-note'; panel.style.marginTop='16px';
-    panel.innerHTML=`<div class="eyebrow">GAME ANALYSIS</div><h3 style="margin:6px 0 8px">Retrieve Recording · Detect Periods · Analyze</h3><p>Analyze Game reuses this game's capture or retrieves its saved Twitch replay. Existing jobs resume without starting again.</p><div class="vod-actions"><button id="vodAnalyzeGame" class="small-btn primary" type="button">Analyze Game</button></div><details id="vodPipelineAdvanced"><summary>Advanced Tools</summary><div class="vod-actions"><button id="vodCheckPipeline" class="small-btn" type="button">Check Status</button><button id="vodRetryPipeline" class="small-btn" type="button">Continue / Retry</button><button id="vodEliteReanalyze" class="small-btn" type="button">Re-run Elite Scout</button></div>
+    panel.innerHTML=`<div class="eyebrow">GAME ANALYSIS</div><h3 style="margin:6px 0 8px">Retrieve Recording · Detect Periods · Analyze</h3><p>Analyze Game reuses this game's capture or retrieves its saved Twitch replay. Existing jobs resume without starting again.</p><div class="vod-actions"><button id="vodAnalyzeGame" class="small-btn primary" type="button">Analyze Game</button></div><details id="vodPipelineAdvanced"><summary>Advanced Tools</summary><div class="vod-actions"><button id="vodCheckPipeline" class="small-btn" type="button">Check Status</button><button id="vodRetryPipeline" class="small-btn" type="button">Continue / Retry</button><button id="vodRefreshReport" class="small-btn" type="button">Refresh Detailed Report</button><button id="vodEliteReanalyze" class="small-btn" type="button">Re-run Elite Scout</button></div>
     <details id="vodTwitchConnect" style="margin-top:12px"><summary>Twitch Retrieval Connection <span id="vodTwitchAuthBadge" class="status-pill" style="margin-left:8px">CHECKING</span></summary><p><strong>Only needed when Twitch blocks anonymous VOD playback.</strong> Paste the Twitch website <code>auth-token</code> here, never into chat. It is stored privately on the Railway worker and is not written to logs.</p><div class="vod-form"><label class="wide">Twitch web auth-token<input id="vodTwitchToken" class="field mono" type="password" autocomplete="off" placeholder="Private token · not your password"></label></div><div class="vod-actions"><button id="vodSaveTwitchAuth" class="small-btn primary" type="button">Connect Twitch Retrieval</button><button id="vodClearTwitchAuth" class="small-btn" type="button">Disconnect</button><span id="vodTwitchAuthMsg" class="copy-feedback"></span></div><small>This token can grant broad Twitch account access. Use it only on this private management page and revoke it from Twitch Security if you no longer want the worker connected.</small></details>
     <details style="margin-top:12px"><summary>Recording source / game window / upload fallback</summary><p>Use the exact Twitch replay plus the start and end of this game inside the full broadcast. The worker retrieves bounded slices of this game and keeps each period separate.</p><div class="vod-form"><label class="wide">Saved Twitch replay URL<input id="vodReplayUrl" class="field" type="url" placeholder="https://www.twitch.tv/videos/..."></label><label>Game starts in full VOD<input id="vodSourceStart" class="field mono" placeholder="0:00"></label><label>Game ends in full VOD<input id="vodSourceEnd" class="field mono" placeholder="28:40"></label><label>Game format<select id="vodGameFormat" class="select-field"><option value="6s">6s</option><option value="4s">4s</option><option value="3s">3s</option><option value="HUT">HUT</option><option value="unknown">Unknown</option></select></label><label class="wide">Lineup / scouting context<textarea id="vodScoutingContext" class="text-input" placeholder="Calgary: LW ..., C ..., RW ..., LD ..., RD ..., G ...&#10;Opponent: ..."></textarea></label></div><button id="vodSaveReplay" class="small-btn" type="button">Save source + game window</button><p>Or upload an MP4 / MOV recording containing this game:</p><input id="vodPipelineFile" class="field" type="file" accept="video/mp4,video/quicktime,.mp4,.mov"><button id="vodStartPipeline" class="small-btn" type="button">Upload & Start Pipeline</button></details></details><small id="vodPipelineStatus">Press Analyze Game to retrieve the saved recording.</small>`;
     anchor.insertAdjacentElement('afterend',panel);
     document.getElementById('vodStartPipeline')?.addEventListener('click',start);
     document.getElementById('vodCheckPipeline')?.addEventListener('click',checkSelected);
     document.getElementById('vodRetryPipeline')?.addEventListener('click',retry);
+    document.getElementById('vodRefreshReport')?.addEventListener('click',refreshDetailedReport);
     document.getElementById('vodEliteReanalyze')?.addEventListener('click',reanalyzeElite);
     document.getElementById('vodAnalyzeGame')?.addEventListener('click',async()=>{
       try{const r=await currentReview();if(!r)return;
@@ -332,6 +333,20 @@
     }catch(e){await showAttemptError(e,'Retry is not available yet.');}
   }
 
+  async function refreshDetailedReport(){
+    try{
+      const review=await currentReview();if(!review)return;
+      ensureScoutMode(review);
+      setStatus('Rebuilding the detailed scouting report from saved reviewed evidence…');
+      const response=await workerFetch(`/reviews/${encodeURIComponent(review.id)}/refresh-report`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+      const job=response?.job;if(!job?.id)throw new Error('The worker did not start the saved-evidence report refresh.');
+      const {error}=await db().from('vod_review_sessions').update({worker_job_id:job.id,worker_status:job.status,worker_updated_at:new Date().toISOString()}).eq('id',review.id);
+      if(error)throw error;
+      setStatus('Saved video evidence is being re-synthesized into the detailed team, unit and player report. The video itself is not being re-analyzed.','good');
+      beginPoll(job.id,review.id);
+    }catch(e){await showAttemptError(e,'Detailed report refresh could not be started.');}
+  }
+
   async function reanalyzeElite(){
     try{
       const review=await currentReview();
@@ -344,7 +359,13 @@
       if(reviewError)throw reviewError;
       setStatus('New analysis queued as a separate draft. Saved period evidence and approvals are preserved.','good');
       beginPoll(review.worker_job_id,review.id);
-    }catch(e){await showAttemptError(e,'Fresh scout pass could not be started.');}
+    }catch(e){
+      if(/review not found|already (?:has )?(?:complete|completed)|period analysis is already complete/i.test(String(e?.message||''))){
+        setStatus('The old replay job cannot be restarted cleanly. Rebuilding the detailed report from the saved reviewed evidence instead.','warn');
+        return refreshDetailedReport();
+      }
+      await showAttemptError(e,'Fresh scout pass could not be started.');
+    }
   }
 
   function beginPoll(jobId,reviewId){
