@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <title>Wildman OBS Broadcast Stage</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="obs-stage.css?v=20261005a">
+  <link rel="stylesheet" href="obs-stage.css?v=20261005b">
 </head>
 <body>
   <main class="obs-stage" id="obsStage">
@@ -25,13 +25,15 @@
       </div>
       <img class="obs-stage-offline-brand" src="assets/brand/elitechel-mark-48@2x.png" alt="EliteChel Series Media">
     </div>
+    <aside id="sidePanel" class="obs-side-panel" aria-live="polite"></aside>
     <iframe id="overlayFrame" class="obs-stage-overlay" title="Broadcast graphics"></iframe>
     <div id="stageStatus" class="obs-stage-status">CONNECTING</div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://player.twitch.tv/js/embed/v1.js"></script>
-  <script src="obs-config.js?v=20261005a"></script>
-  <script src="obs-stage.js?v=20261005a"></script>
+  <script src="obs-config.js?v=20261005b"></script>
+  <script src="obs-side-panel.js?v=20261005a"></script>
+  <script src="obs-stage.js?v=20261005b"></script>
 </body>
 </html>

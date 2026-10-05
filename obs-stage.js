@@ -191,6 +191,8 @@
   function render(row){
     if(!row)return;
     var p=row.payload||{};
+    var panel=Boolean(window.WMSidePanel&&window.WMSidePanel.update(p,channel));
+    stage.classList.toggle('layout-panel',panel);
     var note=renderFeed(p,row.scene||'game',row.brand||'wildman');
     setStatus((row.scene||'game').toUpperCase()+' · '+channel.toUpperCase()+(note?' · '+note:''));
   }

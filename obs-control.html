@@ -67,6 +67,19 @@
             <h3>Attach the gameplay source</h3>
             <p>Paste the Twitch or YouTube link from the player whose feed you are using. The Calgary channel defaults to twitch.tv/ctbli. Scenes drive the feed: Game and Player ID play it with audio, Starting Soon, Intermission, Final and BRB mute it under the full-screen card.</p>
             <div class="obs-field-grid two">
+              <label>Player Stream<select id="obsPlayerStream" class="select-field"></select></label>
+              <label>Feed Layout<select id="obsFeedLayout" class="select-field">
+                <option value="full">Full-frame video</option>
+                <option value="panel">Video + side panel</option>
+              </select></label>
+            </div>
+            <label>Side Panel<select id="obsSidePanel" class="select-field">
+              <option value="brand">Brand: EliteChel shield, Hitmen mark, LIVE</option>
+              <option value="matchup">Matchup: tonight's opponent, records, game number</option>
+              <option value="league">League: scrolling WHL standings</option>
+              <option value="socials">Socials: now streaming + follow</option>
+            </select></label>
+            <div class="obs-field-grid two">
               <label>Stream URL<input id="obsStreamUrl" class="field" type="url" placeholder="https://www.twitch.tv/channel"></label>
               <label>Provider<select id="obsStreamProvider" class="select-field">
                 <option value="auto">Auto detect</option>
@@ -229,7 +242,7 @@
 <script src="backend.js"></script>
 <script src="management-guard.js"></script>
 <script src="script.js"></script>
-<script src="obs-config.js?v=20261005a"></script>
-<script src="obs-control.js?v=20261005c"></script>
+<script src="obs-config.js?v=20261005b"></script>
+<script src="obs-control.js?v=20261005d"></script>
 </body>
 </html>

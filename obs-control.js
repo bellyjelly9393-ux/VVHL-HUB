@@ -83,6 +83,18 @@
     currentTeamId=preferred;
     return true;
   }
+  // Player Stream dropdown: the list lives in obs-config.js (playerStreams); "Custom" = typed URL.
+  function populateStreams(){
+    var select=byId('obsPlayerStream');if(!select)return;
+    var list=(OBS_CFG.playerStreams||[]);
+    select.innerHTML=list.map(function(s,i){return '<option value="'+i+'">'+String(s.label).replace(/[<>&"]/g,'')+'</option>';}).join('')+'<option value="custom">Custom URL (type below)</option>';
+  }
+  function syncStreamSelect(){
+    var select=byId('obsPlayerStream');if(!select)return;
+    var url=val('obsStreamUrl').toLowerCase().replace(/\/+$/,'');
+    var i=(OBS_CFG.playerStreams||[]).findIndex(function(s){return String(s.url).toLowerCase().replace(/\/+$/,'')===url;});
+    select.value=i>=0?String(i):'custom';
+  }
   function updateScoreDisplay(){
     byId('homeScoreDisplay').textContent=numberVal('obsHomeScore');
     byId('awayScoreDisplay').textContent=numberVal('obsAwayScore');
@@ -120,6 +132,9 @@
     byId('obsStreamUrl').value=p.streamUrl||OBS_CFG.defaultFeedFor(config().channel)||'';
     byId('obsStreamProvider').value=['auto','twitch','youtube','video'].includes(String(p.streamProvider||'auto'))?String(p.streamProvider||'auto'):'auto';
     byId('obsStreamMuted').checked=p.streamMuted===true;
+    byId('obsFeedLayout').value=p.feedLayout==='panel'?'panel':'full';
+    byId('obsSidePanel').value=['brand','matchup','league','socials'].includes(p.sidePanel)?p.sidePanel:'brand';
+    syncStreamSelect();
     updateScoreDisplay();
     setSceneButtons();
     feedSummary();
@@ -134,6 +149,8 @@
       homeName:val('obsHomeName')||config().name,
       awayName:val('obsAwayName'),
       bugPosition:val('obsBugPosition')||'right',
+      feedLayout:val('obsFeedLayout')==='panel'?'panel':'full',
+      sidePanel:val('obsSidePanel')||'brand',
       showScoreboard:Boolean(byId('obsShowScoreboard')?.checked),
       logoBug:val('obsLogoBug')||'auto',
       logoPreset:val('obsLogoPreset')||'ea',
@@ -228,6 +245,17 @@
       });
     });
     byId('obsBugPosition').addEventListener('change',function(){publish();});
+    byId('obsFeedLayout').addEventListener('change',function(){publish();});
+    byId('obsSidePanel').addEventListener('change',function(){publish();});
+    byId('obsPlayerStream').addEventListener('change',function(e){
+      var pick=(OBS_CFG.playerStreams||[])[Number(e.target.value)];
+      if(!pick){byId('obsStreamUrl').focus();return;}
+      byId('obsStreamUrl').value=pick.url;
+      byId('obsStreamProvider').value='auto';
+      feedSummary();
+      publish();
+    });
+    byId('obsStreamUrl').addEventListener('input',syncStreamSelect);
     byId('obsShowScoreboard').addEventListener('change',function(){publish();});
     ['obsLogoBug','obsLogoPreset','obsLogoSize','obsLogoX','obsLogoY'].forEach(function(id){
       byId(id).addEventListener('change',function(){publish();});
@@ -264,6 +292,7 @@
     if(!initialized){
       if(!populateTeams(stateRef)){showNoTeam();return;}
       byId('obsTeamSelect').disabled=false;
+      populateStreams();
       wire();
       initialized=true;
       lastUserId=userId;
