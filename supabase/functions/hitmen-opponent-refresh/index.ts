@@ -81,7 +81,7 @@ async function reconcileOfficialGames(task: any, club: string, platform: string,
     .or('home_lg_team_id.eq.'+target.lg_team_id+',away_lg_team_id.eq.'+target.lg_team_id)
     .order('game_at'));
   const nameByLg = new Map(teams.map((t:any)=>[String(t.lg_team_id),t.name]));
-  const clubByName = new Map(links.filter((x:any)=>/^\\d+$/.test(String(x.ea_club_id||''))).map((x:any)=>[x.opponent_name,String(x.ea_club_id)]));
+  const clubByName = new Map(links.filter((x:any)=>/^\d+$/.test(String(x.ea_club_id||''))).map((x:any)=>[x.opponent_name,String(x.ea_club_id)]));
   clubByName.set('Calgary Hitmen',CALGARY_EA_CLUB);
   const matches = Array.isArray(privateMatches) ? privateMatches : [];
   const used = new Set<string>(), rows:any[] = [], unmatched:any[] = [];
@@ -130,7 +130,7 @@ async function reconcileOfficialGames(task: any, club: string, platform: string,
 
 async function ea(task: any) {
   const opponent = await checked(db.from('hitmen_opponents').select('ea_club_id,ea_platform').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',task.opponent_name).single());
-  if (!/^\\d+$/.test(opponent.ea_club_id || '')) throw new Error('No verified EA club link');
+  if (!/^\d+$/.test(opponent.ea_club_id || '')) throw new Error('No verified EA club link');
   const club = String(opponent.ea_club_id), platform = opponent.ea_platform || 'common-gen5';
   if (platform !== 'common-gen5') throw new Error('Unsupported EA platform');
   const calls = [
