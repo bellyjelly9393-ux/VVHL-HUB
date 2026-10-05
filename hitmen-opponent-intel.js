@@ -40,6 +40,7 @@
       renderRoster(q[1].data||[],q[2].data||[]);
       renderEa(q[0].data,q[3].data||[]);
       renderReports(q[4].data||[]);
+      renderIceZoneHeat(q[1].data||[],q[2].data||[],q[4].data||[]);
       renderSeasonGames(q[5].data||[],q[6].data||[]);
       const lg=q[0].data?.lg_roster_updated_at;
       setStatus((q[1].data||[]).length+' active players'+(lg?' · LG synced '+new Date(lg).toLocaleString():' · LG roster not synced yet'));
@@ -76,6 +77,66 @@
     }
     const last=o.ea_updated_at?new Date(o.ea_updated_at).toLocaleString():'never';
     box.innerHTML='<div class="hoi-ea-club-card"><div><strong>'+esc(o.ea_club_name||o.opponent_name)+'</strong><small>EA Club ID '+esc(o.ea_club_id)+' · '+esc(o.ea_platform||'common-gen5')+' · last sync '+esc(last)+' · '+snaps.filter(x=>x.source==='ea_nhl27').length+' saved snapshots</small></div><span class="status">LINKED</span></div>';
+  }
+
+  function latestEaStatsByName(rows){
+    const m=new Map();
+    rows.filter(r=>r.source==='ea_nhl27').forEach(r=>{
+      const k=norm(r.gamertag);if(!k)return;
+      const prev=m.get(k),a=Date.parse(r.source_updated_at||0),b=Date.parse(prev?.source_updated_at||0);
+      if(!prev||a>=b)m.set(k,r);
+    });
+    return m;
+  }
+
+  function zoneRowsFromStats(stats){
+    const out=[];
+    for(let id=1;id<=16;id++){
+      const raw=stats?.raw_stats||{};
+      out.push({id,shots:Number(raw['ShotsLocationOnIce'+id]||0),goals:Number(raw['GoalsLocationOnIce'+id]||0)});
+    }
+    return out;
+  }
+
+  function aggregateEaZones(names,statsMap){
+    const rows=[];
+    for(const name of names){
+      const s=statsMap.get(norm(name));if(!s)continue;
+      rows.push(...zoneRowsFromStats(s));
+    }
+    const agg=new Map();
+    rows.forEach(r=>{const z=agg.get(r.id)||{id:r.id,shots:0,goals:0};z.shots+=r.shots;z.goals+=r.goals;agg.set(r.id,z)});
+    return [...agg.values()];
+  }
+
+  function zoneLeaders(rows){
+    const model=window.WildmanShotZones?.sumRows(rows);if(!model)return '';
+    return [...model.zones].filter(z=>z.shots>0).sort((a,b)=>b.shots-a.shots).slice(0,4)
+      .map(z=>'<div><b>'+esc(z.name)+'</b><span>'+esc(z.shots)+' shots · '+esc(z.goals)+' goals · '+esc(z.efficiency.toFixed(1))+'%</span></div>').join('');
+  }
+
+  function renderZoneCard(title,subtitle,rows){
+    const api=window.WildmanShotZones;if(!api)return '<div class="hoi-empty">Zone map module unavailable.</div>';
+    const model=api.sumRows(rows);
+    if(!model.totalShots)return '<article class="hoi-ice-zone-card"><div class="hoi-heat-head"><div><strong>'+esc(title)+'</strong><small>'+esc(subtitle)+'</small></div></div><div class="hoi-empty">No EA ice-zone totals are available for these skaters yet.</div></article>';
+    return '<article class="hoi-ice-zone-card"><div class="hoi-heat-head"><div><strong>'+esc(title)+'</strong><small>'+esc(subtitle)+'</small></div><span>'+esc(model.totalShots)+' SHOTS</span></div>'+
+      '<div class="hoi-ice-zone-rink">'+api.renderSvg(rows,{metric:'shots',fill:'#d7192d'})+'</div>'+
+      '<div class="hoi-zone-leaders">'+zoneLeaders(rows)+'</div>'+
+      '<div class="hoi-zone-summary"><span>'+esc(model.totalGoals)+' goals</span><span>'+esc((100*model.totalGoals/Math.max(1,model.totalShots)).toFixed(1))+'% zone conversion</span></div></article>';
+  }
+
+  function renderIceZoneHeat(roster,statsRows,reports){
+    const box=E('hoiIceZoneHeat');if(!box)return;
+    const stats=latestEaStatsByName(statsRows);
+    const skaters=roster.filter(r=>r.position!=='G').map(r=>r.gamertag).filter(Boolean);
+    const latest=reports?.[0]?.evidence_summary||{},posted=latest?.lineups?.opponent||{};
+    const postedNames=['LW','C','RW','LD','RD'].map(k=>posted[k]).filter(Boolean);
+    const rosterRows=aggregateEaZones(skaters,stats),postedRows=aggregateEaZones(postedNames,stats);
+    const missing=skaters.filter(n=>!stats.has(norm(n)));
+    box.innerHTML='<div class="hoi-zone-grid">'+
+      renderZoneCard('Current roster shooting zones','EA current-club totals across the active skaters. Not restricted to LG games.',rosterRows)+
+      (postedNames.length?renderZoneCard('Posted line shooting zones','Only the five posted skaters for the next scheduled matchup.',postedRows):'<article class="hoi-ice-zone-card"><div class="hoi-empty">No posted opponent line is attached to the latest report yet.</div></article>')+
+      '</div><p class="hoi-heat-note">Zone values come from EA fields ShotsLocationOnIce1–16 and GoalsLocationOnIce1–16. The rink layout uses the same 16-zone interpretation as Chelstats. '+(missing.length?'EA zone totals missing for: '+esc(missing.join(', '))+'. ':'')+'When Action Tracker X/Y events are available, those coordinates can be normalized into this exact same zone model.</p>';
   }
 
   function eaPlayerSummary(ea){
