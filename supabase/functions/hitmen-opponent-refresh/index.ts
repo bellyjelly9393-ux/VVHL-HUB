@@ -5,9 +5,37 @@ const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SE
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}});
 async function checked(q: any) { const {data, error} = await q; if (error) throw new Error(error.message); return data; }
 const UA = 'Wildman-Hockey-Esports/1.0 (opponent scouting; scheduled twice weekly)';
+async function authenticatedRoster() {
+  const snap = await checked(db.from('lg_auth_snapshots').select('captured_at,source_url').eq('capture_type','roster').eq('parse_status','parsed').eq('league','LGCHL').eq('season',SEASON).order('captured_at',{ascending:false}).limit(1).maybeSingle());
+  if (!snap?.captured_at) return null;
+  const rows: any[] = [];
+  for (let start = 0; start < 2500; start += 1000) {
+    const page = await checked(db.from('lg_roster_players').select('lg_user_id,gamertag,team_name,position,salary,management_role,roster_role,source_updated_at').eq('season',SEASON).eq('league','LGCHL').eq('active',true).not('lg_user_id','is',null).range(start,start+999));
+    rows.push(...page);
+    if (page.length < 1000) break;
+  }
+  if (rows.length < 50) return null;
+  const teams = new Set(rows.map((r:any)=>r.team_name));
+  if (teams.size < 20) return null;
+  const ageMs = Date.now() - Date.parse(snap.captured_at);
+  const players = rows.map((r:any)=>({
+    uid:Number(r.lg_user_id),name:r.gamertag,team:r.team_name,position:r.position,
+    salary:r.salary,management_role:r.management_role,roster_role:r.roster_role||'Active'
+  }));
+  return {
+    status: ageMs <= 48*60*60*1000 ? 'complete' : 'partial',
+    as_of:snap.captured_at,
+    players,
+    detail:{source:'authenticated-browser-capture',source_url:snap.source_url,players:players.length,teams:teams.size,
+      warnings:ageMs <= 48*60*60*1000 ? [] : ['Authenticated LG roster snapshot is older than 48 hours; retained instead of risking an unverified overwrite']}
+  };
+}
+
 async function lgRoster() {
+  const captured = await authenticatedRoster();
+  if (captured) return captured;
   const res = await fetch(ROSTER_URL, {headers: {'User-Agent': UA, Accept: 'text/html'}, signal: AbortSignal.timeout(20000)});
-  if (!res.ok) throw new Error('LG roster returned HTTP ' + res.status + '; previous roster retained');
+  if (!res.ok) throw new Error('LG roster returned HTTP ' + res.status + '; use Wildman Auth Sync, previous roster retained');
   const html = await res.text();
   const players = parseRosters(html);
   return {status: 'complete', as_of: new Date().toISOString(), players, detail: {source: ROSTER_URL}};
@@ -38,9 +66,71 @@ async function league(task: any) {
     label: 'LGCHL Season 55 regular-season player statistics', url: LG_STATS_URL, payload: {players: rows, roster_as_of: roster.map((r: any) => r.source_updated_at).sort()[0]}};
 }
 
+const CALGARY_EA_CLUB='9495';
+
+async function reconcileOfficialGames(task: any, club: string, platform: string, privateMatches: any[], asOf: string) {
+  const [teams, links] = await Promise.all([
+    checked(db.from('lgchl_teams').select('lg_team_id,name').eq('season',SEASON)),
+    checked(db.from('hitmen_opponents').select('opponent_name,ea_club_id').eq('team_id',TEAM).eq('season',SEASON))
+  ]);
+  const target = teams.find((t:any)=>t.name===task.opponent_name);
+  if (!target) return {official_games:0,matched:0,unmatched:[],warning:'LG team mapping missing'};
+  const games = await checked(db.from('lgchl_games')
+    .select('lg_game_id,game_at,home_lg_team_id,away_lg_team_id,home_score,away_score,status,source_url')
+    .eq('season',SEASON).eq('status','final')
+    .or('home_lg_team_id.eq.'+target.lg_team_id+',away_lg_team_id.eq.'+target.lg_team_id)
+    .order('game_at'));
+  const nameByLg = new Map(teams.map((t:any)=>[String(t.lg_team_id),t.name]));
+  const clubByName = new Map(links.filter((x:any)=>/^\\d+$/.test(String(x.ea_club_id||''))).map((x:any)=>[x.opponent_name,String(x.ea_club_id)]));
+  clubByName.set('Calgary Hitmen',CALGARY_EA_CLUB);
+  const matches = Array.isArray(privateMatches) ? privateMatches : [];
+  const used = new Set<string>(), rows:any[] = [], unmatched:any[] = [];
+
+  for (const g of games) {
+    const home = String(g.home_lg_team_id)===String(target.lg_team_id);
+    const otherLg = home ? g.away_lg_team_id : g.home_lg_team_id;
+    const otherName = nameByLg.get(String(otherLg)) || '';
+    const otherClub = clubByName.get(otherName);
+    const gf = Number(home ? g.home_score : g.away_score);
+    const ga = Number(home ? g.away_score : g.home_score);
+    if (!otherClub) { unmatched.push({lg_game_id:g.lg_game_id,opponent:otherName,reason:'EA club link missing'}); continue; }
+
+    const scheduled = Date.parse(g.game_at||'');
+    const candidates = matches.map((m:any)=>{
+      const tc=m?.clubs?.[club], oc=m?.clubs?.[otherClub];
+      const ts=Number(m?.timestamp||0)*1000;
+      const diff=Number.isFinite(scheduled)&&ts ? Math.abs(ts-scheduled) : Number.MAX_SAFE_INTEGER;
+      return {m,tc,oc,diff};
+    }).filter((x:any)=>x.tc&&x.oc&&Number(x.tc.score)===gf&&Number(x.oc.score)===ga&&!used.has(String(x.m.matchId))&&x.diff<=24*60*60*1000)
+      .sort((a:any,b:any)=>a.diff-b.diff);
+
+    if (!candidates.length) {
+      unmatched.push({lg_game_id:g.lg_game_id,opponent:otherName,score:gf+'-'+ga,reason:'No exact EA club/score match within 24h'});
+      continue;
+    }
+    const pick=candidates[0], m=pick.m;
+    used.add(String(m.matchId));
+    const playedAt=new Date(Number(m.timestamp)*1000).toISOString();
+    const confidence=pick.diff<=4*60*60*1000?1:0.98;
+    rows.push({
+      team_id:TEAM,season:SEASON,opponent_name:task.opponent_name,source_game_id:String(m.matchId),
+      ea_club_id:club,opponent_club_id:otherClub,played_at:playedAt,
+      result:gf>ga?'W':gf<ga?'L':'T',goals_for:gf,goals_against:ga,
+      team_stats:pick.tc||{},opponent_stats:pick.oc||{},
+      player_stats:{team:m?.players?.[club]||{},opponent:m?.players?.[otherClub]||{}},
+      raw_payload:{...m,reconciliation:{official_lg_game:true,lg_game_id:g.lg_game_id,lg_game_at:g.game_at,lg_source_url:g.source_url,other_team:otherName,time_difference_seconds:Math.round(pick.diff/1000)}},
+      source_updated_at:asOf,updated_at:asOf,
+      lg_game_id:g.lg_game_id,verified_official:true,verification_confidence:confidence,
+      verification_basis:'Exact EA club IDs + exact final score + nearest timestamp to official LGCHL game'
+    });
+  }
+  if (rows.length) await checked(db.from('hitmen_opponent_ea_games').upsert(rows,{onConflict:'team_id,season,opponent_name,source_game_id'}));
+  return {official_games:games.length,matched:rows.length,unmatched,club_id:club,platform};
+}
+
 async function ea(task: any) {
   const opponent = await checked(db.from('hitmen_opponents').select('ea_club_id,ea_platform').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',task.opponent_name).single());
-  if (!/^\d+$/.test(opponent.ea_club_id || '')) throw new Error('No verified EA club link');
+  if (!/^\\d+$/.test(opponent.ea_club_id || '')) throw new Error('No verified EA club link');
   const club = String(opponent.ea_club_id), platform = opponent.ea_platform || 'common-gen5';
   if (platform !== 'common-gen5') throw new Error('Unsupported EA platform');
   const calls = [
@@ -63,8 +153,15 @@ async function ea(task: any) {
   if (!Object.keys(payload).length) throw new Error('EA source unavailable: ' + warnings.join('; '));
   const players = eaMembers(payload.members), asOf = new Date().toISOString();
   if (!players.length) warnings.push('No parsed EA member stat lines; raw source retained');
-  return {status: warnings.length ? 'partial' : 'complete', as_of: asOf, players, payload: {...payload,club_id:club,platform,scope:'EA club games; not confirmed LG league matches'},
-    label:'EA NHL 27 club stats and recent game logs (all club play)',url:'https://www.ea.com/games/nhl/nhl-27/pro-clubs',detail:{players:players.length,warnings}};
+  let reconciliation:any={official_games:0,matched:0,unmatched:[]};
+  if (Array.isArray(payload.privateMatches)) {
+    try { reconciliation=await reconcileOfficialGames(task,club,platform,payload.privateMatches,asOf); }
+    catch (e) { warnings.push('Official LG/EA reconciliation: '+String(e instanceof Error?e.message:e)); }
+  } else warnings.push('Private EA match history unavailable; official game reconciliation skipped');
+  return {status: warnings.length ? 'partial' : 'complete', as_of: asOf, players,
+    payload: {...payload,club_id:club,platform,scope:'EA club feed plus LG-verified official game reconciliation',official_reconciliation:reconciliation},
+    label:'EA NHL 27 club stats + LG-verified Season 55 game logs',url:'https://www.ea.com/games/nhl/nhl-27/pro-clubs',
+    detail:{players:players.length,warnings,official_games:reconciliation.official_games,official_matches_saved:reconciliation.matched,official_unmatched:reconciliation.unmatched}};
 }
 
 Deno.serve(async req => {
