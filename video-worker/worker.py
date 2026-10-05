@@ -1582,12 +1582,24 @@ class Handler(BaseHTTPRequestHandler):
             periods = data.get('periods', [])
             if not isinstance(periods, list) or not periods:
                 raise Problem(400, 'Add the real period ranges first.')
+            window_update = None
             try:
                 clean = [{'label': str(p['label'])[:80], 'start': float(p['start']), 'end': float(p['end'])} for p in periods]
                 job = get_job(job_id, owner)
                 meta = job['metadata']
-                duration = (float(meta['source_end_seconds']) - float(meta['source_start_seconds'])
-                            if meta.get('streamed_replay') else probe(directory / 'source.mp4'))
+                if meta.get('streamed_replay'):
+                    raw_start = data.get('source_start_seconds', meta.get('source_start_seconds'))
+                    raw_end = data.get('source_end_seconds', meta.get('source_end_seconds'))
+                    if raw_end in (None, ''):
+                        raw_end = meta.get('source_end_seconds')
+                    start = float(raw_start)
+                    end = float(raw_end)
+                    if not 0 <= start < end <= 86400:
+                        raise Problem(400, 'Corrected replay window is invalid.')
+                    window_update = (start, end)
+                    duration = end - start
+                else:
+                    duration = probe(directory / 'source.mp4')
                 segments(clean, duration)
             except (KeyError, TypeError, ValueError):
                 raise Problem(400, 'Invalid period ranges')
@@ -1596,6 +1608,14 @@ class Handler(BaseHTTPRequestHandler):
                 if job['status'] != 'needs_periods':
                     raise Problem(409, 'This review is not waiting for period boundaries.')
                 meta = dict(job['metadata'])
+                if window_update and meta.get('streamed_replay'):
+                    start, end = window_update
+                    meta.update({
+                        'vod_offset_seconds': start,
+                        'source_start_seconds': start,
+                        'source_end_seconds': end
+                    })
+                    meta.pop('active_replay_unit', None)
                 meta['periods'] = clean
                 status='queued'
                 if meta.get('streamed_replay'):
