@@ -59,6 +59,84 @@
     var t=teams[String(id)]||{};
     return t.record||'';
   }
+  function cleanName(v){return String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
+  function teamInfoByName(name){
+    var target=cleanName(name),teams=standingsData&&standingsData.teams||{};
+    var list=Object.keys(teams).map(function(k){return teams[k];});
+    return list.find(function(t){return cleanName(t.name)===target||cleanName(t.nick)===target||cleanName(t.abbr)===target;})||null;
+  }
+  function setImg(id,src,fallback){
+    var node=document.getElementById(id);if(node)node.src=src||fallback||'assets/brand/elitechel-shield-320.webp';
+  }
+  function setNode(id,value,fallback){
+    var node=document.getElementById(id);if(node)node.textContent=(value===undefined||value===null||value==='')?(fallback||''):String(value);
+  }
+  function cityAndNick(name){
+    var raw=String(name||'OPPONENT').trim(),parts=raw.split(/\s+/);
+    if(parts.length<2)return {city:raw.toUpperCase(),nick:''};
+    return {city:parts.slice(0,-1).join(' ').toUpperCase(),nick:parts.slice(-1).join(' ').toUpperCase()};
+  }
+  function breakStat(value){return String(value||'').trim()||'—';}
+  function renderBreakBoard(scene,payload,awayName){
+    var info=teamInfoByName(awayName);
+    var oppRecord=(info&&info.record)||'';
+    var oppLogo=(info&&info.logo)||'';
+    var parts=cityAndNick(awayName);
+    var homeRecord=(tickerData&&tickerData.record&&tickerData.record.label)||payload.record||'';
+
+    setNode('obbTitle',scene==='final'?'FINAL':'INTERMISSION');
+    var subtitle=String(payload.message||'').trim();
+    if(!subtitle||subtitle.toUpperCase()==='CALGARY HITMEN'){
+      subtitle=scene==='final'?'FINAL SCORE':('PERIOD '+String(payload.period||'').replace(/[^0-9]/g,'')+' COMPLETE').replace('PERIOD  COMPLETE','PERIOD COMPLETE');
+    }
+    setNode('obbSubtitle',subtitle);
+    setNode('obbHomeName','HITMEN');
+    setNode('obbHomeRecord',homeRecord);
+    setNode('obbAwayCity',parts.city||'OPPONENT');
+    setNode('obbAwayName',parts.nick||String(awayName||'TEAM').toUpperCase());
+    setNode('obbAwayRecord',oppRecord);
+    setNode('obbHomeScore',payload.homeScore,0);
+    setNode('obbAwayScore',payload.awayScore,0);
+    setImg('obbAwayLogo',oppLogo);
+
+    if(scene==='final'){
+      setNode('obbStat1Label','SHOTS'); setNode('obbStat1Home',breakStat(payload.finalShotsHome)); setNode('obbStat1Away',breakStat(payload.finalShotsAway));
+      setNode('obbStat2Label','POWER PLAY'); setNode('obbStat2Home',breakStat(payload.finalPpHome)); setNode('obbStat2Away',breakStat(payload.finalPpAway));
+      setNode('obbStat3Label','SAVES'); setNode('obbStat3Home',breakStat(payload.finalSavesHome)); setNode('obbStat3Away',breakStat(payload.finalSavesAway));
+      setNode('obbPreviousHeading','JUST FINISHED');
+    }else{
+      setNode('obbStat1Label','SHOTS'); setNode('obbStat1Home',breakStat(payload.intShotsHome)); setNode('obbStat1Away',breakStat(payload.intShotsAway));
+      setNode('obbStat2Label','HITS'); setNode('obbStat2Home',breakStat(payload.intHitsHome)); setNode('obbStat2Away',breakStat(payload.intHitsAway));
+      setNode('obbStat3Label','FACEOFFS'); setNode('obbStat3Home',breakStat(payload.intFaceoffsHome)); setNode('obbStat3Away',breakStat(payload.intFaceoffsAway));
+      setNode('obbPreviousHeading','PREVIOUS GAME');
+    }
+
+    var recent=(tickerData&&tickerData.recent&&tickerData.recent[0])||null;
+    if(scene==='final'){
+      setNode('obbPrevScore',String(payload.homeScore==null?'—':payload.homeScore)+' - '+String(payload.awayScore==null?'—':payload.awayScore));
+      setNode('obbPrevOpponent',String(awayName||'OPPONENT').toUpperCase());
+      setImg('obbPrevAwayLogo',oppLogo);
+      setNode('obbPrevMeta','FINAL');
+    }else if(recent){
+      setNode('obbPrevScore',String(recent.gf==null?'—':recent.gf)+' - '+String(recent.ga==null?'—':recent.ga));
+      setNode('obbPrevOpponent',String(recent.opponent&&recent.opponent.name||'OPPONENT').toUpperCase());
+      setImg('obbPrevAwayLogo',recent.opponent&&recent.opponent.logo);
+      setNode('obbPrevMeta','FINAL');
+    }
+
+    var next=tickerData&&(tickerData.live||tickerData.next||((tickerData.upcoming||[])[0]||null));
+    if(scene==='final'&&tickerData&&tickerData.upcoming&&tickerData.upcoming.length){
+      next=tickerData.upcoming.find(function(g){return !tickerData.live||g.id!==tickerData.live.id;})||next;
+    }
+    if(next){
+      var nopp=next.opponent||{};
+      setNode('obbNextOpponent',String(nopp.name||'OPPONENT').toUpperCase());
+      setImg('obbNextAwayLogo',nopp.logo);
+      setNode('obbNextHomeRecord',(tickerData.record&&tickerData.record.label)||payload.record||'');
+      setNode('obbNextAwayRecord',teamRecord(nopp.id));
+      setNode('obbNextTime',next.state==='live'?'LIVE NOW':etTime(next.at));
+    }
+  }
   function renderBreakInfo(){
     var lastMatch=document.getElementById('breakLastMatchup');
     var lastScore=document.getElementById('breakLastScore');
@@ -189,7 +267,10 @@
     text('sceneMessage',payload.message,isHitmen?'CALGARY HITMEN':'WILDMAN HOCKEY ESPORTS NETWORK');
     text('fullEvent',payload.event,'LIVE GAME');
     text('fullRecord',payload.record,'');
-    if(isHitmen)renderBreakInfo();
+    if(isHitmen){
+      renderBreakInfo();
+      if(scene==='intermission'||scene==='final')renderBreakBoard(scene,payload,awayName);
+    }
 
     text('playerNumber',payload.playerNumber,'00');
     text('playerRole',payload.playerRole,'PLAYER');
