@@ -204,17 +204,23 @@ function jobsHTML(D,g,ps){
     return `<article class="wr-job${p.me?' me':''}"><header><span>${p.pos}${p.me?' · YOU':p.role?' · '+esc(p.role):''}</span><b>${esc(p.locker?.gamertag||r.six[p.pos])}</b><i>${p.no?'#'+esc(p.no):'no #'}</i></header>
       <p>${job?esc(job):`<span class="wr-dim">No job for this player in the GM ${g.gm} report.</span>`}</p></article>`}).join('');
 }
-const acrossLinks=D=>D.v.mgmt?'<nav class="wr-links" aria-label="Opponent tools"><a href="hitmen-opponents.html">Full opponent file →</a><a href="vod-lab.html?team=calgary-hitmen">Film →</a></nav>':'';
+const acrossLinks=(D,g,hasReport)=>{
+  if(!g)return'';
+  const q='game='+encodeURIComponent(g.id);
+  return '<nav class="wr-links" aria-label="Opponent tools">'+
+    (hasReport?'<a href="hitmen-scouting-report.html?'+q+'">Full report →</a>':'')+
+    '<a href="hitmen-vod-report.html?'+q+'">VOD reference →</a></nav>';
+};
 function acrossHTML(D,g){
   const r=g.report;
   const head=`<div class="wr-across-hd">${crest(g.lg,44,g.abbr)}<div><span class="wr-k">Across from us · GM ${g.gm} · ${esc(g.time)} ET</span><h3>${esc(g.short)}</h3></div></div>`;
-  if(!r) return head+`<div class="wr-empty-row">${D.v.mgmt?'No scouting report for this game yet.':'Scouting posts here once management approves tonight\'s report.'}</div>`+acrossLinks(D);
+  if(!r) return head+`<div class="wr-empty-row">${D.v.mgmt?'No scouting report for this game yet.':'Scouting posts here once management approves tonight\'s report.'}</div>`+acrossLinks(D,g,false);
   return head+
    (r.opp.length?`<span class="wr-k wr-sub">Projected six</span><dl class="wr-opp">${r.opp.map(o=>`<div><dt>${o.pos}</dt><dd>${esc(o.name)}${o.note?`<small>${esc(o.note)}</small>`:''}</dd></div>`).join('')}</dl>`:'')+
    (r.threats.length?`<span class="wr-k wr-sub">Key threats</span><ul class="wr-threats">${r.threats.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'')+
    (r.plan.length?`<span class="wr-k wr-sub">Game plan</span><ol class="wr-plan">${r.plan.map(t=>`<li>${esc(t)}</li>`).join('')}</ol>`:'')+
    (r.attackSource.length?`<span class="wr-k wr-sub">Scoring-source heat</span><div class="wr-heat">${r.attackSource.map(z=>`<div><b>${esc(z.pos||'—')}</b><i><em style="width:${Math.max(2,Math.min(100,Number(z.goal_share||0)))}%"></em></i><small>${esc(Number(z.goal_share||0).toFixed(1))}% goals</small></div>`).join('')}</div>`:'')+
-   `<p class="wr-note">${r.approved?'Approved':'Draft · not approved'}. Heat = scoring share by listed position, not rink shot location. Condensed from the report evidence; nothing added.</p>`+acrossLinks(D);
+   `<p class="wr-note">${r.approved?'Approved':'Draft · not approved'}. Heat = scoring share by listed position, not rink shot location. Condensed from the report evidence; nothing added.</p>`+acrossLinks(D,g,true);
 }
 function raceHTML(D){
   const div=D.cgy?.division; const rows=div?D.standings.filter(t=>t.division===div).sort((a,b)=>(a.division_rank||99)-(b.division_rank||99)):[];
