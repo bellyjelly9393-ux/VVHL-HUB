@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="wildman.css">
   <link rel="stylesheet" href="management.css">
   <link rel="stylesheet" href="network-v2.css">
-  <link rel="stylesheet" href="obs-control.css?v=20261005clock1">
+  <link rel="stylesheet" href="obs-control.css?v=20261005simple1">
 </head>
 <body class="wildman-site management-protected obs-control-page">
 <header class="site-header">
@@ -68,16 +68,16 @@
             <p>Paste the Twitch or YouTube link from the player whose feed you are using. The Calgary channel defaults to twitch.tv/ctbli. Scenes drive the feed: Game and Player ID play it with audio, Starting Soon, Intermission, Final and BRB mute it under the full-screen card.</p>
             <div class="obs-field-grid two">
               <label>Player Stream<select id="obsPlayerStream" class="select-field"></select></label>
-              <label>Feed Layout<select id="obsFeedLayout" class="select-field">
-                <option value="full">Full-frame video</option>
-                <option value="panel">Video + side panel</option>
+              <label>Game Layout<select id="obsFeedLayout" class="select-field">
+                <option value="panel" selected>Game + Right Panel</option>
+                <option value="full">Full Game</option>
               </select></label>
             </div>
-            <label>Side Panel<select id="obsSidePanel" class="select-field">
-              <option value="brand">Brand: EliteChel shield, Hitmen mark, LIVE</option>
-              <option value="matchup">Matchup: tonight's opponent, records, game number</option>
-              <option value="league">League: scrolling WHL standings</option>
-              <option value="socials">Socials: now streaming + follow</option>
+            <label>Right Panel<select id="obsSidePanel" class="select-field">
+              <option value="matchup" selected>Next Matchup</option>
+              <option value="brand">Elite Media</option>
+              <option value="league">Standings</option>
+              <option value="socials">Streamer</option>
             </select></label>
             <div class="obs-field-grid two">
               <label>Stream URL<input id="obsStreamUrl" class="field" type="url" placeholder="https://www.twitch.tv/channel"></label>
@@ -97,13 +97,16 @@
             <span id="streamFeedStatus" class="obs-feed-status">No feed attached yet.</span>
           </div>
 
+          <div class="obs-simple-guide">
+            <strong>GAMEPLAY</strong><span>Uses the EA score + clock. We only add the Elite Media logo and your right-side panel.</span>
+          </div>
           <div class="obs-scene-strip" id="obsSceneStrip">
-            <button type="button" data-scene="game">Game</button>
-            <button type="button" data-scene="starting">Starting Soon</button>
-            <button type="button" data-scene="intermission">Intermission</button>
-            <button type="button" data-scene="final">Final</button>
-            <button type="button" data-scene="player">Player ID</button>
-            <button type="button" data-scene="brb">BRB</button>
+            <button type="button" data-scene="game"><b>Gameplay</b><small>EA Scoreboard</small></button>
+            <button type="button" data-scene="starting"><b>Starting Soon</b><small>Full Screen</small></button>
+            <button type="button" data-scene="intermission"><b>Intermission</b><small>Big Scoreboard</small></button>
+            <button type="button" data-scene="final"><b>Final</b><small>Big Scoreboard</small></button>
+            <button type="button" data-scene="player"><b>Player ID</b><small>Lower Third</small></button>
+            <button type="button" data-scene="brb"><b>BRB</b><small>Full Screen</small></button>
           </div>
 
           <div class="obs-score-editor">
@@ -128,67 +131,70 @@
             </div>
           </div>
 
-          <div class="obs-field-grid three">
+          <div class="obs-field-grid two">
             <label>Period<input id="obsPeriod" class="field" placeholder="1ST"></label>
-            <label>Clock Set<input id="obsClock" class="field" placeholder="20:00" inputmode="numeric"></label>
-            <label>Record<input id="obsRecord" class="field" placeholder="2-1-0"></label>
+            <label>Team Record<input id="obsRecord" class="field" placeholder="5-7-0"></label>
           </div>
 
-          <div class="obs-clock-panel">
-            <div class="obs-clock-readout">
-              <small>LIVE SCOREBOARD CLOCK</small>
-              <strong id="obsClockDisplay">20:00</strong>
-              <span id="obsClockStatus">PAUSED</span>
+          <details class="obs-advanced-panel">
+            <summary>Backup Custom Clock</summary>
+            <p>Gameplay normally uses the EA scoreboard and EA clock. Only touch this if you turn on our backup bottom scoreboard.</p>
+            <label>Clock Set<input id="obsClock" class="field" placeholder="20:00" inputmode="numeric"></label>
+            <div class="obs-clock-panel">
+              <div class="obs-clock-readout">
+                <small>BACKUP CLOCK</small>
+                <strong id="obsClockDisplay">20:00</strong>
+                <span id="obsClockStatus">PAUSED</span>
+              </div>
+              <label>Clock Speed
+                <select id="obsClockRate" class="select-field">
+                  <option value="5">5× · EA 4-minute periods</option>
+                  <option value="1">1× · Real-time</option>
+                  <option value="4">4×</option>
+                  <option value="6">6×</option>
+                </select>
+              </label>
+              <div class="obs-clock-actions">
+                <button id="obsClockStart" class="small-btn primary" type="button">Start</button>
+                <button id="obsClockPause" class="small-btn" type="button">Pause</button>
+                <button id="obsClockSet" class="small-btn" type="button">Set</button>
+                <button id="obsClockMinus" class="small-btn" type="button">−5 sec</button>
+                <button id="obsClockPlus" class="small-btn" type="button">+5 sec</button>
+                <button id="obsClockReset" class="small-btn" type="button">Reset</button>
+              </div>
             </div>
-            <label>Clock Speed
-              <select id="obsClockRate" class="select-field">
-                <option value="5">5× · EA 4-minute periods</option>
-                <option value="1">1× · Real-time countdown</option>
-                <option value="4">4×</option>
-                <option value="6">6×</option>
-              </select>
-            </label>
-            <div class="obs-clock-actions">
-              <button id="obsClockStart" class="small-btn primary" type="button">Start</button>
-              <button id="obsClockPause" class="small-btn" type="button">Pause</button>
-              <button id="obsClockSet" class="small-btn" type="button">Set Time</button>
-              <button id="obsClockMinus" class="small-btn" type="button">−5 sec</button>
-              <button id="obsClockPlus" class="small-btn" type="button">+5 sec</button>
-              <button id="obsClockReset" class="small-btn" type="button">Reset 20:00</button>
-            </div>
-            <p class="obs-clock-note">The overlay clock runs locally in OBS from one synced start timestamp, so it updates every second without writing to the database every second. Pause it on whistles/stoppages and tap ±5 seconds if the EA clock needs a quick correction.</p>
-          </div>
+          </details>
 
           <div class="obs-field-grid two">
-            <label>Corner Bug<select id="obsBugPosition" class="select-field">
-              <option value="right">Top right (clear of the in-game score bug)</option>
-              <option value="left">Top left</option>
-              <option value="hidden">Hidden</option>
+            <label>Extra Header<select id="obsBugPosition" class="select-field">
+              <option value="hidden">Off</option>
+              <option value="right">Top Right</option>
+              <option value="left">Top Left</option>
             </select></label>
-            <label class="obs-audio-toggle"><input id="obsShowScoreboard" type="checkbox" checked> Show our bottom scoreboard</label>
+            <label class="obs-audio-toggle"><input id="obsShowScoreboard" type="checkbox"> Elite Media Bottom Scoreboard</label>
           </div>
 
           <div class="obs-player-editor obs-logo-editor">
-            <div class="eyebrow">ELITECHEL LOGO BUG</div>
+            <div class="eyebrow">ELITE MEDIA LOGO</div>
             <div class="obs-field-grid two">
-              <label>Logo Bug<select id="obsLogoBug" class="select-field">
-                <option value="auto">Auto: show when our scoreboard is hidden</option>
-                <option value="on">Always show</option>
+              <label>Show Logo<select id="obsLogoBug" class="select-field">
+                <option value="auto">Auto</option>
+                <option value="on">On</option>
                 <option value="off">Off</option>
               </select></label>
-              <label>Position<select id="obsLogoPreset" class="select-field">
-                <option value="ea">Over the game logo (top left)</option>
-                <option value="top-left">Top left</option>
-                <option value="top-right">Top right</option>
-                <option value="bottom-right">Bottom right</option>
+              <label>Logo Position<select id="obsLogoPreset" class="select-field">
+                <option value="ea">On EA Scoreboard</option>
+                <option value="top-left">Top Left</option>
+                <option value="top-right">Top Right</option>
+                <option value="bottom-right">Bottom Right</option>
               </select></label>
             </div>
             <div class="obs-field-grid three">
-              <label>Size (px)<input id="obsLogoSize" class="field" type="number" min="32" max="160" step="2" value="56"></label>
-              <label>Nudge X (px, + = right)<input id="obsLogoX" class="field" type="number" min="-400" max="400" step="2" value="0"></label>
-              <label>Nudge Y (px, + = down)<input id="obsLogoY" class="field" type="number" min="-400" max="400" step="2" value="0"></label>
+              <label>Logo Size<input id="obsLogoSize" class="field" type="number" min="32" max="160" step="2" value="48"></label>
+              <label>Move Left / Right<input id="obsLogoX" class="field" type="number" min="-400" max="400" step="2" value="0"></label>
+              <label>Move Up / Down<input id="obsLogoY" class="field" type="number" min="-400" max="400" step="2" value="0"></label>
             </div>
-            <div class="obs-actions"><button id="obsLogoReset" class="small-btn" type="button">Reset size + nudge</button></div>
+            <div class="obs-actions"><button id="obsLogoReset" class="small-btn" type="button">Reset Logo</button></div>
           </div>
 
           <label>Scene Message<input id="obsMessage" class="field" placeholder="Tonight's matchup / intermission note / final note"></label>
@@ -268,6 +274,6 @@
 <script src="management-guard.js"></script>
 <script src="script.js"></script>
 <script src="obs-config.js?v=20261005b"></script>
-<script src="obs-control.js?v=20261005clock1"></script>
+<script src="obs-control.js?v=20261005simple1"></script>
 </body>
 </html>
