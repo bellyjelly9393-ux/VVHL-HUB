@@ -62,6 +62,8 @@ function parseReport(row){
   return {id:row.id,created:row.created_at?new Date(row.created_at):null,approved:ev.approved===true,
     six:lu.calgary||null,opp,jobs,hasJobs:!!jobsSec,
     threats:points(threatSec),plan:points(planSec),
+    attackSource:Array.isArray(ev.attack_source_heatmap)?ev.attack_source_heatmap:[],
+    spatialHeatNote:clean(ev.spatial_heatmap_note||''),
     // for the Lineup Lab matchup model (names only; no new text is shown)
     threatText:clean((threatSec?.lines||[]).join(' ')),warnings:Array.isArray(ev.identity_warnings)?ev.identity_warnings:[],
     resolutions:Array.isArray(ev.identity_resolutions)?ev.identity_resolutions:[],status:ev.status||null};
@@ -211,7 +213,8 @@ function acrossHTML(D,g){
    (r.opp.length?`<span class="wr-k wr-sub">Projected six</span><dl class="wr-opp">${r.opp.map(o=>`<div><dt>${o.pos}</dt><dd>${esc(o.name)}${o.note?`<small>${esc(o.note)}</small>`:''}</dd></div>`).join('')}</dl>`:'')+
    (r.threats.length?`<span class="wr-k wr-sub">Key threats</span><ul class="wr-threats">${r.threats.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'')+
    (r.plan.length?`<span class="wr-k wr-sub">Game plan</span><ol class="wr-plan">${r.plan.map(t=>`<li>${esc(t)}</li>`).join('')}</ol>`:'')+
-   `<p class="wr-note">${r.approved?'Approved':'Draft · not approved'}. Condensed from the report text; nothing added.</p>`+acrossLinks(D);
+   (r.attackSource.length?`<span class="wr-k wr-sub">Scoring-source heat</span><div class="wr-heat">${r.attackSource.map(z=>`<div><b>${esc(z.pos||'—')}</b><i><em style="width:${Math.max(2,Math.min(100,Number(z.goal_share||0)))}%"></em></i><small>${esc(Number(z.goal_share||0).toFixed(1))}% goals</small></div>`).join('')}</div>`:'')+
+   `<p class="wr-note">${r.approved?'Approved':'Draft · not approved'}. Heat = scoring share by listed position, not rink shot location. Condensed from the report evidence; nothing added.</p>`+acrossLinks(D);
 }
 function raceHTML(D){
   const div=D.cgy?.division; const rows=div?D.standings.filter(t=>t.division===div).sort((a,b)=>(a.division_rank||99)-(b.division_rank||99)):[];
