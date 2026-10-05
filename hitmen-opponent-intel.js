@@ -88,7 +88,15 @@
       if(/^[-*]\s+/.test(t))return '<div class="bullet"><span>•</span><p>'+inline(t.replace(/^[-*]\s+/,''))+'</p></div>';
       return '<p>'+inline(t)+'</p>';
     }).join('');
-    box.innerHTML='<div class="hoi-report-head"><div><strong>Latest pregame report</strong><small>'+esc(new Date(r.created_at).toLocaleString())+' · '+esc(r.model||'Claude')+'</small></div></div><div class="hoi-report-body">'+body+'</div>';
+    const ev=r.evidence_summary||{},heat=Array.isArray(ev.attack_source_heatmap)?ev.attack_source_heatmap:[];
+    const heatHtml=heat.length?'<section class="hoi-heat"><div class="hoi-heat-head"><div><strong>Scoring-source heat map</strong><small>Season goal / assist / shot share by listed position. This is not a rink-location shot map.</small></div><span>'+esc(ev.data_mode==='stats_only_no_vod'?'STATS ONLY':'EVIDENCE')+'</span></div><div class="hoi-heat-grid">'+heat.map(z=>{
+      const g=Number(z.goal_share||0),a=Number(z.assist_share||0),s=Number(z.shot_share||0);
+      return '<article class="hoi-heat-cell"><b>'+esc(z.pos||'—')+'</b><div class="hoi-heat-meter"><i style="width:'+Math.max(2,Math.min(100,g))+'%"></i></div><strong>'+esc(g.toFixed(1))+'% goals</strong><small>'+esc(a.toFixed(1))+'% assists · '+esc(s.toFixed(1))+'% shots</small></article>'
+    }).join('')+'</div>'+(ev.spatial_heatmap_note?'<p class="hoi-heat-note">'+esc(ev.spatial_heatmap_note)+'</p>':'')+'</section>':'';
+    const scout=ev.line_scout||{};
+    const scoutHtml=Object.keys(scout).length?'<section class="hoi-line-scout"><div class="hoi-heat-head"><div><strong>Posted-line deep scout</strong><small>Player roles and statistical tendencies for the posted six.</small></div></div>'+
+      ['forwards','defense','goalie','inference'].filter(k=>scout[k]).map(k=>'<div class="hoi-line-scout-row"><b>'+esc(k.toUpperCase())+'</b><p>'+esc(scout[k])+'</p></div>').join('')+'</section>':'';
+    box.innerHTML='<div class="hoi-report-head"><div><strong>Latest pregame report</strong><small>'+esc(new Date(r.created_at).toLocaleString())+' · '+esc(r.model||'Claude')+(ev.approved===true?' · APPROVED':'')+'</small></div></div><div class="hoi-report-body">'+body+'</div>'+heatHtml+scoutHtml;
   }
 
   async function syncLg(){
