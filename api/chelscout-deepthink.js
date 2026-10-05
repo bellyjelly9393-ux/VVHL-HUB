@@ -53,6 +53,9 @@ Use the actual Calgary roster and opponent roster when available. Build compleme
 POSTGAME
 Separate RESULT from PROCESS. Compare score to shots, possession proxies, special teams, faceoffs, turnovers and VOD evidence. Identify what was repeatable, what may be finishing/save variance, what the opponent adjusted, what Calgary adjusted, and what should change for the next meeting.
 
+EA ICE-ZONE DATA
+When an EA player raw_stats record includes ShotsLocationOnIce1..16 or GoalsLocationOnIce1..16, treat those as real EA shooting-location buckets, not inferred rink coordinates. Zone legend: 1 Behind Net Center; 2 Behind Net Left; 3 Behind Net Right; 4 Goal Crease; 5 Right Circle; 6 Close Slot Left; 7 Close Slot Center; 8 Close Slot Right; 9 Left Circle; 10 Mid Slot Center; 11 Mid Slot Left; 12 Mid Slot Right; 13 Right Point; 14 High Slot; 15 Left Point; 16 High Point. Current member totals are EA club totals and are NOT automatically LG-only. Use them for player/line shooting tendencies, and say when the scope is broader than league games. If game-specific X/Y events are later supplied, normalize them to the same 16-zone model before describing spatial tendencies.
+
 TRANSACTION / MARKET
 Only when explicitly asked: separate hockey value from acquisition price. Current regular-season roster fit outranks old pre-draft projections. Historical bidding data is context, not current team strength.
 
