@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="hub.css">
   <link rel="stylesheet" href="wildman.css">
   <link rel="stylesheet" href="management.css">
-  <link rel="stylesheet" href="hitmen-workspace.css">
+  <link rel="stylesheet" href="hitmen-workspace.css?v=20261005-games">
   <link rel="stylesheet" href="broadcast-tokens.css?v=20261004-brand">
   <link rel="stylesheet" href="team-hitmen.css?v=20261004-broadcast">
   <link rel="stylesheet" href="broadcast-components.css?v=20261004-brand">
@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="network-v2.css">
   <link rel="stylesheet" href="hitmen-stall-requests.css?v=20261004-sr">
   <link rel="stylesheet" href="hitmen-neutral.css?v=20261004-tc" data-hn-last>
+  <script src="live-ticker.js?v=20261004" defer></script>
 </head>
 <body class="wildman-site management-protected hitmen-war-room hm-neutral">
 <div class="hn-net"><img class="ec-mark" src="assets/brand/elitechel-mark-48@2x.png?v=20261004-brand" width="22" height="22" alt=""><span class="ec-name">EliteChel Series Media</span><span class="hn-sep" aria-hidden="true">&middot;</span><span class="hn-season">LGCHL Season 55</span><span class="hn-sp"></span><span class="hn-page">War Room · management</span></div>
@@ -140,6 +141,9 @@
       </article>
     </section>
 
+    <div class="hn-wide hn-section-head"><div><span class="hn-k">Season 55 · LeagueGaming</span><h2 class="hn-h2">Schedule &amp; league</h2></div></div>
+    <section class="hn-wide wr-scope wrs" id="wrSeason" aria-live="polite" aria-label="Hitmen schedule, WHL standings and league scores"><div class="wr-panel wr-empty-row">Loading the LGCHL schedule…</div></section>
+
     <div class="hn-wide hn-section-head sr-head" id="stallReqHead" hidden><div><span class="hn-k">Roster desk · management only</span><h2 class="hn-h2">Stall requests</h2></div><span class="hn-k" id="stallReqCount"></span></div>
     <section class="hn-wide sr-admin" id="stallReqPanel" hidden aria-live="polite" aria-label="Stall requests"></section>
 
@@ -182,8 +186,8 @@
 <script src="management-guard.js?v=20260922-cleanup"></script>
 <script src="wildman-player-intelligence.js"></script>
 <script src="script.js"></script>
-<script src="hitmen-broadcast.js?v=20261004-neutral"></script>
-<script src="hitmen-workspace.js?v=20261004-tc"></script>
+<script src="hitmen-broadcast.js?v=20261005-games"></script>
+<script src="hitmen-workspace.js?v=20261005-games"></script>
 <script src="hitmen-stall-requests-admin.js?v=20261004-sr"></script>
 <script src="war-room-rink.js?v=20261004-lab"></script>
 <script src="war-room-tonight.js?v=20261004-tc"></script>
