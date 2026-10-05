@@ -22,3 +22,9 @@
 .obs-feed-status{display:block;margin-top:11px;color:#d4ba78;font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
 .obs-overlay-only{padding-top:18px;border-top:1px solid rgba(217,166,59,.11)}
 .obs-overlay-only>small{display:block;margin-bottom:8px;color:#9d843f;font-size:9px;font-weight:900;letter-spacing:.13em}
+
+
+.obs-clock-panel{display:grid;grid-template-columns:minmax(170px,.55fr) minmax(180px,.45fr);gap:14px;align-items:end;margin:4px 0 18px;padding:16px;border:1px solid rgba(217,166,59,.18);border-radius:14px;background:linear-gradient(145deg,rgba(217,166,59,.04),rgba(5,5,7,.96))}
+.obs-clock-readout{min-height:82px;padding:12px 15px;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:#040405}.obs-clock-readout small,.obs-clock-readout span{display:block;font-size:9px;font-weight:900;letter-spacing:.12em}.obs-clock-readout small{color:#918a94}.obs-clock-readout strong{display:block;margin:5px 0 4px;color:#fff;font:900 38px/1 "Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums}.obs-clock-readout span{color:#8f8992}.obs-clock-readout span.running{color:#72e6a4}
+.obs-clock-actions{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}.obs-clock-note{grid-column:1/-1;margin:0;color:#8e8892;font-size:10px;line-height:1.45}
+@media(max-width:720px){.obs-clock-panel{grid-template-columns:1fr}.obs-clock-actions{grid-column:1}.obs-clock-note{grid-column:1}}
