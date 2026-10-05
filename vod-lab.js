@@ -569,6 +569,9 @@
     doc=model.mergeDocuments(doc,model.documentFor(r));
     const approved=model.periodErrors(r,reviewSegments(),{approved:true}).length===0;
     if(approved&&r.pending_worker_result)doc=model.mergeDocuments(doc,workerDocument(r,r.pending_worker_result));
+    // Fill any blank systems/player layers from the approved period notes, so a
+    // missing or failed worker rollup never leaves the published report empty.
+    if(approved)doc=model.mergeDocuments(doc,model.documentFromPeriods(r,reviewSegments()));
     return doc;
   }
   function renderGameLayers(){
