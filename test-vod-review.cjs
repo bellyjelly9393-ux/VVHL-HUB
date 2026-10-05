@@ -72,3 +72,25 @@ test('supplemental analysis fills missing structured detail without overwriting 
  assert.deepEqual(merged.players[0].evidence_timestamps,[1815,1830]);
  assert.equal(merged.players[0].rating.score,74);
 });
+test('approved period notes fill blank report layers when the worker rollup is missing',()=>{
+ const p=periods();
+ p[0].offense_notes='Calgary kept possession on the walls.';p[0].defense_notes='Low slot held.';
+ p[0].analysis_summary='Calgary used the neutral zone regroup to reset possession. Lethbridge protected the slot and kept the box tight.\n\nNeeds review: neutral zone frame unclear and blurry overall.';
+ p[1].player_notes=['THE HITMAN HART (LD) — Strengths: Anchors the blue line. | Concerns: — | Habits: Slides D-to-D. | Coach: Activate weak side. | Confidence: high [evidence: 448, 454s]','Other Guy — Won a board battle.'];
+ p[2].player_notes=['the hitman hart (LD) — Strengths: Covers the crease. | Concerns: No outlet. | Habits: — | Coach: — | Confidence: moderate [evidence: 844s]'];
+ const doc=model.documentFromPeriods({full_game_summary:'Summary'},p);
+ assert.equal(doc.team_systems.offensive_structure,'Period 1: Calgary kept possession on the walls.');
+ assert.match(doc.team_systems.neutral_zone,/^Period 1: Calgary used the neutral zone regroup/);
+ assert.doesNotMatch(doc.team_systems.neutral_zone,/Needs review/);
+ assert.match(doc.team_systems.slot_protection,/protected the slot/);
+ assert.equal(doc.players.length,2);
+ const hart=doc.players.find(x=>x.player==='THE HITMAN HART');
+ assert.equal(hart.position,'LD');assert.deepEqual(hart.evidence_timestamps,[448,454,844]);
+ assert.equal(hart.strengths,'Period 2: Anchors the blue line.\nPeriod 3: Covers the crease.');
+ assert.equal(hart.concerns,'Period 3: No outlet.');assert.equal(hart.coach_note,'Period 2: Activate weak side.');
+ const saved={version:1,summary:'Saved',team_systems:Object.fromEntries(model.systems.map(k=>[k,k==='forecheck'?'Manager wording':''])),units:[],players:[]};
+ const merged=model.mergeDocuments(saved,doc);
+ assert.equal(merged.team_systems.forecheck,'Manager wording');assert.match(merged.team_systems.offensive_structure,/walls/);assert.equal(merged.players.length,2);
+ const pending=periods();pending[0].status='needs_review';pending[0].offense_notes='Unapproved';
+ assert.equal(model.documentFromPeriods({},pending).team_systems.offensive_structure,'');
+});

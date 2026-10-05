@@ -73,6 +73,72 @@
       players:[...merged.values()],player_report:text(review.player_report||rollup.player_report)
     };
   }
+  // Approved period notes are reviewed evidence. When the worker's game rollup is
+  // missing (failed/cleared job), build the structured report layers from them.
+  const directSystems={offensive_structure:'offense_notes',defensive_structure:'defense_notes',forecheck:'forecheck_notes',breakout:'breakout_notes',transition_after_turnovers:'transition_notes',special_teams:'special_teams_notes'};
+  const systemPatterns={
+    breakout:/\bbreak ?outs?\b|first pass|retriev(al|als|e|es|ed|ing)\b|\bd[- ]to[- ]d\b/i,
+    neutral_zone:/neutral[- ]zone|\bregroup|\bNZ\b/i,
+    entries:/\bentr(y|ies)\b|carr(y|ied|ies) (the puck )?in|dump[- ]?in|zone entry/i,
+    exits:/\bexit(s|ed|ing)?\b|clear(ed|ing|s)? the zone|\bchip(ped|s)? out/i,
+    puck_support:/\bsupport(s|ed|ing)?\b|passing option|outlet/i,
+    rush_offense:/\b(odd[- ]man|rush(es|ing)?|counter[- ]?attack|breakaway|2[- ]on[- ]1|3[- ]on[- ]2)\b/i,
+    cycle_offense:/\bcycl(e|es|ed|ing)\b|low[- ]to[- ]high|below the (goal line|circles)|\bwall play|o[- ]?zone possession|offensive[- ]zone (possession|time|pressure)/i,
+    slot_creation:/\b(slot|net[- ]front|inside|middle|backdoor|cross[- ]crease|high[- ]danger)\b/i,
+    shot_selection:/\bshot(s)?\b|\bshoot(s|ing)?\b|\bscor(e|ed|es|ing)\b|\bgoal\b/i,
+    defensive_zone_coverage:/d[- ]?zone|defensive[- ]zone|\bcoverage\b|\bbox\b|collaps(e|es|ed|ing)/i,
+    slot_protection:/(protect|cover|defend|deny|denied|clog|clear)\w*[^.]{0,40}\b(slot|middle|net[- ]front|crease|inside)\b|\b(slot|crease|net[- ]front)\b[^.]{0,40}(protect|coverage|covered|defend)/i,
+    rush_defense:/\b(gap|backcheck(ing)?|back[- ]?pressure|retreat(s|ed|ing)?|odd[- ]man|tracking back)\b/i,
+    repeatable_strengths:/\b(consistent(ly)?|effective(ly)?|disciplined|strength|well[- ]executed|reliabl[ey]|repeated(ly)? (won|created|generated)|success(ful(ly)?)?)\b/i,
+    repeatable_problems:/\b(struggl\w*|too (passive|slow|often|many)|turnover(s)?|giveaway(s)?|breakdown(s)?|lapse(s)?|issue|problem|concern|failed to|unable to|mistake(s)?)\b/i,
+    opponent_adjustments:/\b(opponent|adjust(ed|s|ment|ments)?|counter(ed|s)?|exploit(ed|s|ing)?|respond(ed|s)?)\b/i,
+    next_game_adjustments:/\b(should|need(s)? to|must|emphasi[sz]e|focus on|look for|improve|next game|going forward|recommend(ed)?)\b/i
+  };
+  const sentences=v=>text(v).split(/\n+/).filter(line=>!/^\s*needs review:/i.test(line)).join(' ').split(/(?<=[.!?])\s+(?=[A-Z0-9"'(])/).map(s=>s.trim()).filter(s=>s.length>25);
+  function parsePlayerNote(note){
+    const raw=typeof note==='string'?note:text(note?.note);
+    const m=raw.match(/^(.+?)(?:\s+\(([^)]+)\))?\s+—\s+([\s\S]*)$/);if(!m)return null;
+    const name=m[1].trim(),body=m[3];if(!name||name.length>60)return null;
+    const out={player:name,position:text(m[2]).trim(),strengths:'',concerns:'',habits:'',coach_note:'',evidence_timestamps:[]};
+    if(!/Strengths:/.test(body)){out.habits=body.trim();return out;}
+    const field=label=>{const f=body.match(new RegExp(label+':\\s*([\\s\\S]*?)(?=\\s*\\|\\s*(?:Strengths|Concerns|Habits|Coach|Confidence):|$)'));const v=f?f[1].trim():'';return v==='—'?'':v;};
+    out.strengths=field('Strengths');out.concerns=field('Concerns');out.habits=field('Habits');out.coach_note=field('Coach').replace(/\s*\|?\s*Confidence:[\s\S]*$/,'').trim();
+    const ev=body.match(/\[evidence:\s*([^\]]+)\]/);
+    if(ev)out.evidence_timestamps=ev[1].split(',').map(x=>parseInt(x,10)).filter(n=>Number.isFinite(n)&&n>=0);
+    return out;
+  }
+  function documentFromPeriods(review={},segments=[]){
+    const periods=activeSegments(segments).filter(s=>['period','overtime'].includes(s.segment_type)&&s.status==='complete'&&hasAnalysis(s)).sort((a,b)=>Number(a.start_seconds)-Number(b.start_seconds));
+    const byPeriod=values=>values.filter(([,v])=>text(v).trim()).map(([label,v])=>`${label}: ${text(v).trim()}`).join('\n\n');
+    const team_systems=Object.fromEntries(systems.map(k=>[k,'']));
+    for(const [k,col] of Object.entries(directSystems))team_systems[k]=byPeriod(periods.map(s=>[s.label,s[col]]));
+    for(const [k,pattern] of Object.entries(systemPatterns)){
+      if(team_systems[k])continue;
+      const seen=new Set();
+      team_systems[k]=byPeriod(periods.map(s=>{
+        const picked=[];
+        for(const line of sentences([s.analysis_summary,s.offense_notes,s.defense_notes,s.transition_notes,s.forecheck_notes,s.breakout_notes,s.special_teams_notes].filter(Boolean).join('\n'))){
+          if(picked.length>=4)break;
+          const key=line.toLowerCase();if(seen.has(key)||!pattern.test(line))continue;
+          seen.add(key);picked.push(line);
+        }
+        return [s.label,picked.join(' ')];
+      }));
+    }
+    if(text(review.strengths).trim())team_systems.repeatable_strengths=text(review.strengths);
+    if(text(review.corrections).trim())team_systems.repeatable_problems=text(review.corrections);
+    const players=new Map();
+    for(const s of periods)for(const note of array(s.player_notes)){
+      const p=parsePlayerNote(note);if(!p)continue;
+      const key=p.player.toLowerCase();
+      const row=players.get(key)||{player:p.player,position:p.position,strengths:'',concerns:'',habits:'',coach_note:'',evidence_timestamps:[],rating:null};
+      if(!row.position)row.position=p.position;
+      for(const k of ['strengths','concerns','habits','coach_note'])if(p[k]&&!row[k].includes(p[k]))row[k]=[row[k],`${s.label}: ${p[k]}`].filter(Boolean).join('\n');
+      row.evidence_timestamps=[...new Set([...row.evidence_timestamps,...p.evidence_timestamps])].sort((a,b)=>a-b);
+      players.set(key,row);
+    }
+    return {version:1,summary:text(review.full_game_summary),team_systems,tactical_report:text(review.tactical_report),result:'',process:'',game_rating:null,units:[],players:[...players.values()],player_report:text(review.player_report)};
+  }
   function mergeDocuments(primary={},supplemental={}){
     const p=primary&&typeof primary==='object'?primary:{},s=supplemental&&typeof supplemental==='object'?supplemental:{};
     const pick=(a,b)=>text(a).trim()?text(a):text(b);
@@ -128,5 +194,5 @@
     const scores=[...unique.values()];
     return {games:scores.length,score:scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null};
   }
-  return {systems,periodErrors,documentFor,mergeDocuments,rating,baseline,activeSegments,hasAnalysis,protectedEvidence,reconcile};
+  return {systems,periodErrors,documentFor,documentFromPeriods,parsePlayerNote,mergeDocuments,rating,baseline,activeSegments,hasAnalysis,protectedEvidence,reconcile};
 });
