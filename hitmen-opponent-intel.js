@@ -26,6 +26,7 @@
   async function loadSelected(){
     if(!selected||!DB()||!ST().user||loading)return;
     loading=true;
+    if(E('hoiDeepScoutLink'))E('hoiDeepScoutLink').href='hitmen-opponent-scout.html?opponent='+encodeURIComponent(selected.name);
     try{
       const q=await Promise.all([
         DB().from('hitmen_opponents').select('id,opponent_name,ea_club_id,ea_club_name,ea_platform,lg_roster_updated_at,ea_updated_at').eq('id',selected.id).single(),
