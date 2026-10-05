@@ -57,3 +57,18 @@ test('saved structured period reports complete AI analysis without granting huma
  assert.equal(state.analysisComplete,true);assert.equal(state.recovered,true);assert.equal(state.approved,false);
  r.worker_result.period_reports.pop();assert.equal(model.reconcile(r,p).analysisComplete,false);
 });
+
+test('supplemental analysis fills missing structured detail without overwriting reviewed wording',()=>{
+ const reviewed={version:1,summary:'Human reviewed summary',team_systems:{offensive_structure:'Reviewed offense'},units:[],players:[{player:'Player One',strengths:'Reviewed strength',concerns:'',habits:'',coach_note:'',evidence_timestamps:[1815],rating:null}]};
+ const fresh={version:1,summary:'Fresh AI summary',team_systems:{offensive_structure:'AI offense',defensive_structure:'Detailed defense'},units:[{label:'Top Pair',type:'defense_pair',players:['LD','RD'],summary:'Pair detail',evidence_timestamps:[1900]}],players:[{player:'player one',strengths:'AI strength',concerns:'Needs cleaner exits',habits:'Activates often',coach_note:'Keep support underneath',evidence_timestamps:[1830],rating:{score:74,reason:'Structured synthesis'}}]};
+ const merged=model.mergeDocuments(reviewed,fresh);
+ assert.equal(merged.summary,'Human reviewed summary');
+ assert.equal(merged.team_systems.offensive_structure,'Reviewed offense');
+ assert.equal(merged.team_systems.defensive_structure,'Detailed defense');
+ assert.equal(merged.units.length,1);
+ assert.equal(merged.players.length,1);
+ assert.equal(merged.players[0].strengths,'Reviewed strength');
+ assert.equal(merged.players[0].concerns,'Needs cleaner exits');
+ assert.deepEqual(merged.players[0].evidence_timestamps,[1815,1830]);
+ assert.equal(merged.players[0].rating.score,74);
+});
