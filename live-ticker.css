@@ -1,0 +1,174 @@
+/* Wildman Hockey · site-wide live ticker (Calgary Hitmen + LGCHL league scores).
+   Premium broadcast standard: 90-95% neutral, smoked glass, physical depth, sharp corners.
+   No accent colours: no coloured borders/strips, team tints, glows, neon or gradients.
+   Colour comes only from crests. The single exception is --lt-live (one LIVE dot).
+   Token names follow broadcast-tokens.css (War Room); when that file is loaded its --bc-* values
+   win, otherwise the identical fallbacks below apply. Every rule is scoped to #live-ticker. */
+
+#live-ticker{
+  --lt-black:var(--bc-black,#070708);
+  --lt-charcoal:var(--bc-charcoal,#0D0E10);
+  --lt-graphite:var(--bc-graphite,#151619);
+  --lt-gunmetal:var(--bc-gunmetal,#1E2023);
+  --lt-steel:var(--bc-steel,#2A2C30);
+  --lt-offwhite:var(--bc-offwhite,#F2F3F4);
+  --lt-text:var(--bc-text,#E2E3E5);
+  --lt-soft:var(--bc-soft,#B4B7BC);
+  --lt-muted:var(--bc-muted,#8C9096);
+  --lt-dim:var(--bc-dim,#62666C);
+  --lt-hair:var(--bc-hair,rgba(255,255,255,.085));
+  --lt-hair-soft:var(--bc-hair-soft,rgba(255,255,255,.05));
+  --lt-hair-top:var(--bc-hair-top,rgba(255,255,255,.15));
+  --lt-glass:var(--bc-glass,rgba(13,14,16,.80));
+  --lt-glass-hi:var(--bc-glass-hi,rgba(255,255,255,.04));
+  --lt-blur:var(--bc-glass-blur,blur(14px) saturate(.6));
+  --lt-radius:var(--bc-radius,0);
+  --lt-radius-sm:var(--bc-radius-sm,2px);
+  --lt-live:var(--bc-live,#E0262F);
+  --lt-label:var(--bc-font-label,"Barlow Condensed","Arial Narrow",sans-serif);
+  --lt-body:var(--bc-font-body,Inter,system-ui,-apple-system,"Segoe UI",sans-serif);
+  --lt-track:.14em;
+  --lt-h:44px;
+
+  position:relative; z-index:60;
+  display:flex; align-items:stretch; width:100%; height:var(--lt-h);
+  margin:0; padding:0; box-sizing:border-box; overflow:hidden;
+  background:var(--lt-glass); color:var(--lt-text);
+  -webkit-backdrop-filter:var(--lt-blur); backdrop-filter:var(--lt-blur);
+  border-bottom:1px solid var(--lt-hair);
+  box-shadow:inset 0 1px 0 var(--lt-glass-hi),0 12px 24px -12px rgba(0,0,0,.85),0 2px 6px rgba(0,0,0,.45);
+  font:500 14px/1 var(--lt-body); font-variant-numeric:tabular-nums;
+  letter-spacing:0; text-transform:none; text-align:left; border-radius:var(--lt-radius);
+  -webkit-font-smoothing:antialiased;
+}
+#live-ticker *,#live-ticker *::before,#live-ticker *::after{box-sizing:border-box}
+html.lt-sticky #live-ticker{position:sticky; top:0}
+html.lt-sticky body .site-header{top:calc(44px + 12px)}
+
+/* Team block: raised charcoal plate */
+#live-ticker .lt-brand{
+  flex:0 0 auto; display:flex; align-items:center; gap:10px; padding:0 14px 0 12px;
+  background:var(--lt-charcoal); border-right:1px solid var(--lt-hair);
+  box-shadow:inset 0 1px 0 var(--lt-hair-top),6px 0 14px -8px rgba(0,0,0,.9);
+  position:relative; z-index:2; color:inherit; text-decoration:none;
+}
+#live-ticker a.lt-brand:hover .lt-team{color:#fff}
+#live-ticker .lt-brand-copy{display:flex; flex-direction:column; gap:3px}
+#live-ticker .lt-team{font:700 17px/1 var(--lt-label); text-transform:uppercase; letter-spacing:.06em; color:var(--lt-offwhite)}
+#live-ticker .lt-league{font:700 12px/1 var(--lt-label); color:var(--lt-muted); text-transform:uppercase; letter-spacing:var(--lt-track)}
+#live-ticker .lt-record{display:flex; align-items:center; gap:7px; padding-left:11px; border-left:1px solid var(--lt-hair); height:26px}
+#live-ticker .lt-rec{font:700 16px/1 var(--lt-body); color:var(--lt-offwhite)}
+#live-ticker .lt-streak{font:600 12px/1 var(--lt-body); color:var(--lt-muted); letter-spacing:.02em}
+
+/* Crests (or initials fallback) */
+#live-ticker .lt-badge{flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:var(--lt-radius)}
+#live-ticker .lt-badge img{width:22px; height:22px; object-fit:contain; display:block; margin:0; border:0; max-width:none; filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+#live-ticker .lt-badge-team,#live-ticker .lt-badge-team img{width:30px; height:30px}
+#live-ticker .lt-badge-text{background:var(--lt-gunmetal); border:1px solid var(--lt-hair); color:var(--lt-soft); font:700 12px/1 var(--lt-label); letter-spacing:.02em}
+
+/* Feature block: NEXT countdown or LIVE */
+#live-ticker .lt-feature{
+  flex:0 0 auto; display:flex; align-items:center; gap:10px; padding:0 14px 0 0; white-space:nowrap;
+  background:var(--lt-graphite); border-right:1px solid var(--lt-hair);
+  box-shadow:inset 0 1px 0 var(--lt-hair-soft),6px 0 14px -8px rgba(0,0,0,.9); position:relative; z-index:1;
+}
+#live-ticker .lt-flag{
+  align-self:stretch; display:inline-flex; align-items:center; gap:7px; padding:0 12px;
+  font:700 14px/1 var(--lt-label); text-transform:uppercase; letter-spacing:var(--lt-track);
+  background:var(--lt-gunmetal); color:var(--lt-offwhite); border-right:1px solid var(--lt-hair);
+}
+#live-ticker .lt-dot{width:7px; height:7px; border-radius:50%; background:var(--lt-live); display:inline-block; animation:lt-blink 1.6s steps(1,end) infinite}
+@keyframes lt-blink{50%{opacity:.3}}
+#live-ticker .lt-matchup,#live-ticker .lt-self{display:inline-flex; align-items:center; gap:6px}
+#live-ticker .lt-vs,#live-ticker .lt-at{font:700 13px/1 var(--lt-label); color:var(--lt-dim); text-transform:uppercase; letter-spacing:.06em}
+#live-ticker .lt-abbr{font:700 16px/1 var(--lt-label); letter-spacing:.05em; text-transform:uppercase; color:var(--lt-offwhite)}
+#live-ticker .lt-oppname{font:500 13px/1 var(--lt-body); color:var(--lt-muted); max-width:190px; overflow:hidden; text-overflow:ellipsis}
+#live-ticker .lt-when{font:500 13px/1 var(--lt-body); color:var(--lt-soft)}
+#live-ticker .lt-day{font:700 14px/1 var(--lt-label); text-transform:uppercase; letter-spacing:.1em; color:var(--lt-offwhite)}
+#live-ticker .lt-time{font:500 13px/1 var(--lt-body)}
+#live-ticker .lt-clock{
+  min-width:84px; text-align:center; padding:6px 9px; border-radius:var(--lt-radius-sm);
+  font:600 14px/1 var(--lt-body); letter-spacing:.04em; color:var(--lt-offwhite);
+  background:var(--lt-black); border:1px solid var(--lt-hair); box-shadow:inset 0 1px 2px rgba(0,0,0,.8);
+}
+
+/* Rail */
+#live-ticker .lt-rail{position:relative; flex:1 1 auto; min-width:0; overflow:hidden; display:flex; align-items:center; outline:none}
+#live-ticker .lt-rail:focus-visible{box-shadow:inset 0 0 0 1px var(--lt-soft)}
+#live-ticker .lt-track{display:flex; width:max-content; animation:lt-marquee var(--lt-duration,60s) linear infinite}
+#live-ticker .lt-rail:hover .lt-track,#live-ticker .lt-rail:focus-within .lt-track{animation-play-state:paused}
+@keyframes lt-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+#live-ticker .lt-seq{display:flex; align-items:center; gap:20px; padding:0 20px; white-space:nowrap}
+#live-ticker .lt-label{font:700 13px/1 var(--lt-label); text-transform:uppercase; letter-spacing:var(--lt-track); color:var(--lt-muted); padding-left:12px; border-left:1px solid var(--lt-hair)}
+#live-ticker .lt-item{display:inline-flex; align-items:center; gap:7px; color:var(--lt-text); text-decoration:none}
+#live-ticker a.lt-item:hover .lt-abbr,#live-ticker a.lt-item:focus-visible .lt-abbr{text-decoration:underline; text-underline-offset:3px}
+#live-ticker a.lt-item:focus-visible{outline:1px solid var(--lt-soft); outline-offset:3px}
+#live-ticker .lt-item .lt-abbr{font-size:15px}
+
+/* Results: bright + bold for the winner, dimmed for the loser. No colour coding. */
+#live-ticker .lt-res{font:700 14px/1 var(--lt-label); letter-spacing:.06em; min-width:12px}
+#live-ticker .lt-res-W .lt-res{color:var(--lt-offwhite)}
+#live-ticker .lt-res-L .lt-res,#live-ticker .lt-res-OTL .lt-res{color:var(--lt-dim)}
+#live-ticker .lt-score{font:600 15px/1 var(--lt-body)}
+#live-ticker .lt-hi{color:var(--lt-offwhite); font-weight:800}
+#live-ticker .lt-lo{color:var(--lt-dim); font-weight:500}
+#live-ticker .lt-dash{padding:0 2px; color:var(--lt-dim)}
+#live-ticker .lt-tag{font:700 12px/1 var(--lt-label); color:var(--lt-muted); letter-spacing:.1em; text-transform:uppercase}
+#live-ticker .lt-date,#live-ticker .lt-muted{font:500 13px/1 var(--lt-body); color:var(--lt-muted)}
+#live-ticker .lt-stat{gap:14px; font:500 13px/1 var(--lt-body); color:var(--lt-muted)}
+#live-ticker .lt-stat b{font-weight:700; color:var(--lt-offwhite); margin-left:3px}
+
+/* League section: hard separator plate, then compact two-team score bugs */
+#live-ticker .lt-section{
+  display:inline-flex; align-items:center; gap:10px; align-self:stretch; margin:0 4px; padding:0 14px;
+  height:var(--lt-h); background:var(--lt-charcoal); border-left:1px solid var(--lt-hair); border-right:1px solid var(--lt-hair);
+  box-shadow:inset 0 1px 0 var(--lt-hair-top);
+  font:700 15px/1 var(--lt-label); letter-spacing:.12em; color:var(--lt-offwhite); text-transform:uppercase;
+}
+#live-ticker .lt-section span{font-size:12px; color:var(--lt-muted); letter-spacing:var(--lt-track)}
+#live-ticker .lt-lg{gap:10px; padding:5px 9px; background:var(--lt-glass-hi); border:1px solid var(--lt-hair-soft); border-radius:var(--lt-radius)}
+#live-ticker .lt-side{display:inline-flex; align-items:center; gap:6px}
+#live-ticker .lt-side .lt-abbr{font-size:14px}
+#live-ticker .lt-side .lt-num{font:600 15px/1 var(--lt-body); min-width:9px; text-align:right}
+#live-ticker .lt-side.lt-lo .lt-abbr,#live-ticker .lt-side.lt-lo .lt-num{color:var(--lt-dim); font-weight:500}
+#live-ticker .lt-side.lt-lo img{opacity:.55}
+#live-ticker .lt-side.lt-hi .lt-num{color:var(--lt-offwhite); font-weight:800}
+#live-ticker .lt-sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap}
+
+@media (max-width:1100px){ #live-ticker .lt-oppname{display:none} }
+/* Mobile: two rows (team + feature, then rail) */
+@media (max-width:720px){
+  #live-ticker{--lt-h:auto; height:auto; flex-wrap:wrap}
+  html.lt-sticky body .site-header{top:12px}
+  html.lt-sticky #live-ticker{position:relative}
+  #live-ticker .lt-brand{height:44px; padding:0 10px; gap:8px; border-right:0}
+  #live-ticker .lt-league{display:none}
+  #live-ticker .lt-team{font-size:16px}
+  #live-ticker .lt-record{padding-left:8px}
+  #live-ticker .lt-rec{font-size:15px}
+  #live-ticker .lt-feature{flex:1 1 0; min-width:0; height:44px; gap:7px; padding-right:8px; border-right:0}
+  #live-ticker .lt-flag{padding:0 8px; font-size:13px}
+  #live-ticker .lt-when{display:none}
+  #live-ticker .lt-clock{min-width:0; margin-left:auto; padding:5px 7px; font-size:13px}
+  #live-ticker .lt-rail{flex:1 0 100%; height:38px; border-top:1px solid var(--lt-hair)}
+  #live-ticker .lt-seq{gap:16px; padding:0 12px}
+  #live-ticker .lt-section{height:38px}
+  #live-ticker .lt-brand-league{flex:1 0 100%}
+}
+@media (max-width:480px){
+  #live-ticker .lt-brand-copy,#live-ticker .lt-self{display:none}
+  #live-ticker .lt-brand-league .lt-brand-copy{display:flex}
+  #live-ticker .lt-brand{padding-right:6px}
+  #live-ticker .lt-feature{gap:6px}
+  #live-ticker .lt-clock{letter-spacing:0}
+}
+
+/* Reduced motion: no crawl, no blinking; the rail becomes a swipeable strip. */
+@media (prefers-reduced-motion:reduce){
+  #live-ticker .lt-track{animation:none !important; transform:none !important}
+  #live-ticker .lt-clone{display:none}
+  #live-ticker .lt-rail{overflow-x:auto; scrollbar-width:none}
+  #live-ticker .lt-rail::-webkit-scrollbar{display:none}
+  #live-ticker .lt-dot{animation:none !important}
+}
+@media print{#live-ticker{display:none}}
