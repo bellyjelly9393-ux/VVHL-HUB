@@ -228,6 +228,49 @@ def review_window(review):
     return start, end
 
 
+def refresh_saved_report(review, owner):
+    """Build a new structured game report from already-saved reviewed chunk evidence."""
+    stored = review.get('pending_worker_result') or review.get('worker_result') or {}
+    chunks = stored.get('chunks') or []
+    if not isinstance(chunks, list) or not chunks:
+        raise worker.Problem(409, 'No saved chunk evidence is available. Run a fresh Elite Scout pass instead.')
+    start, end = review_window(review)
+    metadata = {
+        'review_id': review['id'], 'game_id': review['id'],
+        'title': str(review.get('title') or '')[:200],
+        'vod_url': str(review.get('vod_url') or '')[:2000],
+        'players': str(review.get('scouting_context') or '')[:2000],
+        'game_format': str(review.get('game_format') or '6s')[:20],
+        'vod_offset_seconds': start, 'source_start_seconds': start,
+        'source_end_seconds': end, 'source_kind': 'saved_evidence',
+        'synthesis_only': True
+    }
+    result = dict(stored)
+    result.pop('game_rollup', None)
+    result['stage'] = 'writing_report'
+    result.pop('failure_code', None)
+    with worker.WRITE_LOCK, worker.connect() as db:
+        rows = db.execute('SELECT id,metadata FROM jobs WHERE owner=? ORDER BY created DESC', (owner,)).fetchall()
+        job_id = None
+        for row in rows:
+            try:
+                old = json.loads(row['metadata'])
+            except (TypeError, ValueError):
+                continue
+            if old.get('review_id') == review['id'] or old.get('game_id') == review['id']:
+                job_id = row['id']
+                break
+        if job_id:
+            db.execute('UPDATE jobs SET metadata=?,status=?,result=?,error=? WHERE id=?',
+                       (json.dumps(metadata), 'queued', json.dumps(result), '', job_id))
+        else:
+            job_id = str(uuid4())
+            db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',
+                       (job_id, owner, time.time(), 'queued', json.dumps(metadata), json.dumps(result), ''))
+        db.commit()
+    return worker.get_job(job_id, owner)
+
+
 def resolve(review, owner, create=False):
     """The caller supplies a review read through RLS, never unverified body fields."""
     with worker.WRITE_LOCK, worker.connect() as db:
