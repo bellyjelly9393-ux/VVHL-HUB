@@ -382,7 +382,8 @@
     ];
     otStarts.forEach((start,i)=>defs.push({segment_type:"overtime",segment_index:i+1,label:`Overtime ${i+1}`,start_seconds:start,end_seconds:otStarts[i+1]??vodEnd}));
 
-    const effectiveReview={...r,source_start_seconds:correctedStart,source_end_seconds:correctedEnd};
+    const effectiveDuration=correctedEnd!=null?Math.max(0,correctedEnd-correctedStart):(vodEnd!=null?Math.max(0,vodEnd-correctedStart):r.duration_seconds);
+    const effectiveReview={...r,source_start_seconds:correctedStart,source_end_seconds:correctedEnd,duration_seconds:effectiveDuration};
     const boundaryErrors=model.periodErrors(effectiveReview,defs);
     if(boundaryErrors.length)return setStatus(boundaryErrors.join(" "),"error");
 
