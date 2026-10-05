@@ -31,7 +31,11 @@
     var size=clampNum(payload.logoSize,32,160,56);
     var w=window.innerWidth||1280,h=window.innerHeight||720;
     var preset=payload.logoPreset||'ea';
-    var pos={ea:[22,22],'top-left':[38,34],'top-right':[w-38-size,34],'bottom-right':[w-38-size,h-34-size]}[preset]||[22,22];
+    // Video + side panel: the video is scaled to 80% and centred vertically, so map positions into it.
+    var panel=payload.feedLayout==='panel';
+    var vs=panel?0.8:1, vx=0, vy=panel?(h-w*0.45)/2:0, vw=w*vs;
+    if(panel&&preset==='ea')size=Math.round(size*vs);
+    var pos={ea:[vx+22*vs,vy+22*vs],'top-left':[38,34],'top-right':[vw-38-size,34],'bottom-right':[vw-38-size,h-34-size]}[preset]||[vx+22*vs,vy+22*vs];
     var x=pos[0]+clampNum(payload.logoX,-400,400,0);
     var y=pos[1]+clampNum(payload.logoY,-400,400,0);
     logoBug.style.width=size+'px';logoBug.style.height=size+'px';
@@ -83,6 +87,7 @@
     document.body.dataset.scene=scene;
     document.body.dataset.bug=['left','right','hidden'].indexOf(payload.bugPosition)>=0?payload.bugPosition:'right';
     document.body.dataset.scoreboard=payload.showScoreboard===false?'off':'on';
+    document.body.dataset.layout=payload.feedLayout==='panel'?'panel':'full';
     placeLogo(payload);
     var awayName=isPlaceholderName(payload.awayName)?(brand==='hitmen'?tickerOpponent:''):payload.awayName;
 
