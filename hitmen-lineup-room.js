@@ -103,7 +103,7 @@ function reset(){
  renderLines();renderDepth();renderAvailability();E('lineupAiAnswer').innerHTML='<div class="empty-state">Choose an opponent and build at least one complete line.</div>';E('savePregameReport').disabled=true;updateBattleLink();msg('New lineup draft ready.');
 }
 async function refreshLineups(){
- const r=await DB().from('lineups').select('*,lineup_slots(*)').eq('team_id',TEAM).eq('league','LGCHL').neq('lineup_type','bidding').order('updated_at',{ascending:false});
+ const r=await DB().from('lineups').select('*,lineup_slots(*)').eq('team_id',TEAM).eq('league','LGCHL').eq('lineup_type','game').order('updated_at',{ascending:false});
  if(r.error)throw r.error;S.lineups=r.data||[];renderSaved();
 }
 async function saveLineup(setActive=false){
