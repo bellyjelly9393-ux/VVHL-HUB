@@ -2,7 +2,17 @@
   'use strict';
   var SUPABASE_URL='https://lrgllzvwgvqagcpiyvfd.supabase.co';
   var SUPABASE_KEY='sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
-  var db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  // Public, read-only client with no persisted session (see obs-stage.js): always reads as anon
+  // and never re-broadcasts SIGNED_IN to the Broadcast Studio tab.
+  var db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
+    auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'wm-obs-overlay-public'}
+  });
+  var STATE_COLUMNS='channel,brand,scene,payload,updated_at';
+  var FAST_POLL_MS=5000;   // used while realtime is not connected
+  var SLOW_POLL_MS=30000;  // safety net while realtime is connected
+  var realtimeUp=false;
+  var pollTimer=null;
+  var lastRowKey='';
   var params=new URLSearchParams(location.search);
   var channel=params.get('channel')||'wildman-main';
   var forcedScene=params.get('scene')||'';
@@ -65,26 +75,36 @@
 
   async function refresh(){
     try{
-      var result=await db.from('obs_broadcast_state').select('*').eq('channel',channel).maybeSingle();
+      var result=await db.from('obs_broadcast_state').select(STATE_COLUMNS).eq('channel',channel).maybeSingle();
       if(result.error) throw result.error;
-      if(result.data) render(result.data);
-      else text('obsStatus','CHANNEL NOT FOUND');
+      if(!result.data){text('obsStatus','CHANNEL NOT FOUND');return;}
+      var key=String(result.data.updated_at||'')+'|'+String(result.data.scene||'');
+      if(key===lastRowKey){text('obsStatus','LIVE · '+channel.toUpperCase());return;}
+      lastRowKey=key;
+      render(result.data);
     }catch(err){
       text('obsStatus','RETRYING');
       console.warn('OBS state refresh failed',err);
     }
   }
+  function schedulePoll(){
+    clearTimeout(pollTimer);
+    pollTimer=setTimeout(async function(){await refresh();schedulePoll();},realtimeUp?SLOW_POLL_MS:FAST_POLL_MS);
+  }
 
   var realtime=db.channel('obs-state-'+channel)
     .on('postgres_changes',{event:'*',schema:'public',table:'obs_broadcast_state',filter:'channel=eq.'+channel},function(payload){
-      if(payload&&payload.new) render(payload.new);
+      if(payload&&payload.new&&payload.new.payload){lastRowKey=String(payload.new.updated_at||'')+'|'+String(payload.new.scene||'');render(payload.new);}
       else refresh();
     })
     .subscribe(function(status){
-      if(status==='SUBSCRIBED') text('obsStatus','LIVE · '+channel.toUpperCase());
+      var up=status==='SUBSCRIBED';
+      if(up){text('obsStatus','LIVE · '+channel.toUpperCase());if(!realtimeUp)refresh();}
+      realtimeUp=up;
+      schedulePoll();
     });
 
   window.addEventListener('beforeunload',function(){db.removeChannel(realtime);});
   refresh();
-  setInterval(refresh,5000);
+  schedulePoll();
 })();
