@@ -32,12 +32,15 @@
         DB().from('hitmen_opponent_roster_players').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',selected.name).eq('active',true).order('position'),
         DB().from('hitmen_opponent_player_stats').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',selected.name).order('source_updated_at',{ascending:false}),
         DB().from('hitmen_opponent_source_snapshots').select('id,source,source_label,fetched_at').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',selected.name).order('fetched_at',{ascending:false}).limit(8),
-        DB().from('hitmen_opponent_pregame_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',selected.name).order('created_at',{ascending:false}).limit(5)
+        DB().from('hitmen_opponent_pregame_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',selected.name).order('created_at',{ascending:false}).limit(5),
+        DB().from('hitmen_opponent_lg_games').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',selected.name).order('played_at',{ascending:true}),
+        DB().from('hitmen_opponent_ea_games').select('source_game_id,lg_game_id,played_at,result,goals_for,goals_against,team_stats,opponent_stats,player_stats,verified_official,verification_confidence,verification_basis').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',selected.name).eq('verified_official',true).order('played_at',{ascending:true})
       ]);
       const er=q.find(x=>x.error);if(er)throw er.error;
       renderRoster(q[1].data||[],q[2].data||[]);
       renderEa(q[0].data,q[3].data||[]);
       renderReports(q[4].data||[]);
+      renderSeasonGames(q[5].data||[],q[6].data||[]);
       const lg=q[0].data?.lg_roster_updated_at;
       setStatus((q[1].data||[]).length+' active players'+(lg?' · LG synced '+new Date(lg).toLocaleString():' · LG roster not synced yet'));
     }catch(e){console.error(e);setStatus(e.message||'Opponent intelligence could not load.')}
@@ -73,6 +76,36 @@
     }
     const last=o.ea_updated_at?new Date(o.ea_updated_at).toLocaleString():'never';
     box.innerHTML='<div class="hoi-ea-club-card"><div><strong>'+esc(o.ea_club_name||o.opponent_name)+'</strong><small>EA Club ID '+esc(o.ea_club_id)+' · '+esc(o.ea_platform||'common-gen5')+' · last sync '+esc(last)+' · '+snaps.filter(x=>x.source==='ea_nhl27').length+' saved snapshots</small></div><span class="status">LINKED</span></div>';
+  }
+
+  function eaPlayerSummary(ea){
+    const team=ea?.player_stats?.team;
+    if(!team||typeof team!=='object')return '';
+    const rows=Object.values(team).filter(p=>p&&String(p.position||'')!=='goalie').map(p=>({
+      name:p.playername||'Unknown',g:Number(p.skgoals||0),a:Number(p.skassists||0),
+      shots:Number(p.skshots||0),attempts:Number(p.skshotattempts||0),pos:p.position||''
+    })).sort((a,b)=>b.attempts-a.attempts||b.shots-a.shots);
+    return rows.slice(0,3).map(p=>esc(p.name)+' · '+p.attempts+' ATT / '+p.shots+' SOG · '+p.g+'G '+p.a+'A').join('<br>');
+  }
+
+  function renderSeasonGames(lgRows,eaRows){
+    const box=E('hoiSeasonGames');if(!box)return;
+    if(!lgRows.length){box.innerHTML='<div class="hoi-empty">No official LGCHL games have been indexed for this opponent yet.</div>';return}
+    const eaByLg=new Map(eaRows.filter(x=>x.lg_game_id!=null).map(x=>[String(x.lg_game_id),x]));
+    const matched=lgRows.filter(g=>eaByLg.has(String(g.lg_game_id))).length;
+    const totalW=lgRows.filter(g=>g.result==='W').length,totalL=lgRows.filter(g=>g.result==='L').length;
+    box.innerHTML='<div class="hoi-season-summary"><div><small>OFFICIAL GAMES</small><b>'+lgRows.length+'</b></div><div><small>RECORD</small><b>'+totalW+'-'+totalL+'</b></div><div><small>EA MATCHED</small><b>'+matched+'/'+lgRows.length+'</b></div></div>'+
+      '<div class="hoi-season-list">'+lgRows.map(g=>{
+        const ea=eaByLg.get(String(g.lg_game_id)),date=g.played_at?new Date(g.played_at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—';
+        const shots=ea?.team_stats?.shots??ea?.team_stats?.skshots??null;
+        const oppShots=ea?.opponent_stats?.shots??ea?.opponent_stats?.skshots??null;
+        const leaders=eaPlayerSummary(ea);
+        return '<article class="hoi-season-game '+(ea?'verified':'')+'"><div class="hoi-season-game-head"><div><strong>'+esc(g.result||'—')+' '+esc(g.goals_for??'—')+'-'+esc(g.goals_against??'—')+' vs '+esc(g.other_team_name||'Opponent')+'</strong><small>'+esc(date)+' · LG '+esc(g.lg_game_id)+'</small></div><span>'+(ea?'EA VERIFIED':'LG VERIFIED')+'</span></div>'+
+          '<div class="hoi-season-game-meta">'+(ea?'<b>EA '+esc(ea.source_game_id)+'</b> · ':'')+(shots!=null?'Shots '+esc(shots)+(oppShots!=null?'–'+esc(oppShots):'')+' · ':'')+'Source: official LG result'+(ea?' + reconciled EA match':'')+'</div>'+
+          (leaders?'<div class="hoi-season-game-leaders"><small>EA shot-attempt leaders</small>'+leaders+'</div>':'')+
+          (ea?'<details><summary>Verified EA game details</summary><pre>'+esc(JSON.stringify({matchId:ea.source_game_id,confidence:ea.verification_confidence,basis:ea.verification_basis,team_stats:ea.team_stats,opponent_stats:ea.opponent_stats},null,2))+'</pre></details>':'')+
+          '</article>';
+      }).join('')+'</div>';
   }
 
   function renderReports(rows){
