@@ -211,6 +211,18 @@
     setClockFromPayload(p);
     byId('obsRecord').value=p.record||'';
     byId('obsMessage').value=p.message||'';
+    byId('obsIntShotsHome').value=p.intShotsHome||'';
+    byId('obsIntShotsAway').value=p.intShotsAway||'';
+    byId('obsIntHitsHome').value=p.intHitsHome||'';
+    byId('obsIntHitsAway').value=p.intHitsAway||'';
+    byId('obsIntFaceoffsHome').value=p.intFaceoffsHome||'';
+    byId('obsIntFaceoffsAway').value=p.intFaceoffsAway||'';
+    byId('obsFinalShotsHome').value=p.finalShotsHome||'';
+    byId('obsFinalShotsAway').value=p.finalShotsAway||'';
+    byId('obsFinalPpHome').value=p.finalPpHome||'';
+    byId('obsFinalPpAway').value=p.finalPpAway||'';
+    byId('obsFinalSavesHome').value=p.finalSavesHome||'';
+    byId('obsFinalSavesAway').value=p.finalSavesAway||'';
     byId('obsPlayerName').value=p.playerName||'PLAYER';
     byId('obsPlayerNumber').value=p.playerNumber||'00';
     byId('obsPlayerRole').value=p.playerRole||'PLAYER';
@@ -254,6 +266,18 @@
       clockRate:clock.clockRate,
       record:val('obsRecord'),
       message:val('obsMessage'),
+      intShotsHome:val('obsIntShotsHome'),
+      intShotsAway:val('obsIntShotsAway'),
+      intHitsHome:val('obsIntHitsHome'),
+      intHitsAway:val('obsIntHitsAway'),
+      intFaceoffsHome:val('obsIntFaceoffsHome'),
+      intFaceoffsAway:val('obsIntFaceoffsAway'),
+      finalShotsHome:val('obsFinalShotsHome'),
+      finalShotsAway:val('obsFinalShotsAway'),
+      finalPpHome:val('obsFinalPpHome'),
+      finalPpAway:val('obsFinalPpAway'),
+      finalSavesHome:val('obsFinalSavesHome'),
+      finalSavesAway:val('obsFinalSavesAway'),
       playerName:val('obsPlayerName')||'PLAYER',
       playerNumber:val('obsPlayerNumber')||'00',
       playerRole:val('obsPlayerRole')||'PLAYER',
