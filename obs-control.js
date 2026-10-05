@@ -163,6 +163,33 @@
       button.classList.toggle('active',button.dataset.scene===currentScene);
     });
   }
+  function setValue(id,value){var node=byId(id);if(node)node.value=value;}
+  function applyScenePreset(scene){
+    // Keep the live game clean: EA owns score + clock, our layer adds only branding and the side panel.
+    if(scene==='game'){
+      setValue('obsFeedLayout','panel');
+      setValue('obsSidePanel','matchup');
+      setValue('obsBugPosition','hidden');
+      if(byId('obsShowScoreboard'))byId('obsShowScoreboard').checked=false;
+      setValue('obsLogoBug','auto');
+      setValue('obsLogoPreset','ea');
+      setValue('obsLogoSize','48');
+    }else if(scene==='player'){
+      setValue('obsFeedLayout','panel');
+      setValue('obsBugPosition','hidden');
+      if(byId('obsShowScoreboard'))byId('obsShowScoreboard').checked=false;
+      setValue('obsLogoBug','auto');
+      setValue('obsLogoPreset','ea');
+    }else{
+      // Break scenes use the full-screen Elite Media board. No gameplay bug or bottom bar needed.
+      setValue('obsFeedLayout','full');
+      setValue('obsBugPosition','hidden');
+      if(byId('obsShowScoreboard'))byId('obsShowScoreboard').checked=false;
+      setValue('obsLogoBug','off');
+    }
+    editCount++;
+    feedSummary();
+  }
   function fill(row){
     if(!row) return;
     var p=row.payload||{};
@@ -171,11 +198,11 @@
     byId('obsHomeName').value=p.homeName||config().name;
     // 'OPPONENT' was the old placeholder; blank lets the overlay use tonight's opponent.
     byId('obsAwayName').value=String(p.awayName||'').trim().toUpperCase()==='OPPONENT'?'':(p.awayName||'');
-    byId('obsBugPosition').value=['left','right','hidden'].includes(p.bugPosition)?p.bugPosition:'right';
-    byId('obsShowScoreboard').checked=p.showScoreboard!==false;
+    byId('obsBugPosition').value=['left','right','hidden'].includes(p.bugPosition)?p.bugPosition:'hidden';
+    byId('obsShowScoreboard').checked=p.showScoreboard===true;
     byId('obsLogoBug').value=['auto','on','off'].includes(p.logoBug)?p.logoBug:'auto';
     byId('obsLogoPreset').value=['ea','top-left','top-right','bottom-right'].includes(p.logoPreset)?p.logoPreset:'ea';
-    byId('obsLogoSize').value=Number.isFinite(Number(p.logoSize))&&p.logoSize!==''&&p.logoSize!=null?p.logoSize:56;
+    byId('obsLogoSize').value=Number.isFinite(Number(p.logoSize))&&p.logoSize!==''&&p.logoSize!=null?p.logoSize:48;
     byId('obsLogoX').value=Number(p.logoX)||0;
     byId('obsLogoY').value=Number(p.logoY)||0;
     byId('obsHomeScore').value=Number(p.homeScore||0);
@@ -209,7 +236,7 @@
       homeName:val('obsHomeName')||config().name,
       awayName:val('obsAwayName'),
       bugPosition:val('obsBugPosition')||'right',
-      feedLayout:val('obsFeedLayout')==='panel'?'panel':'full',
+      feedLayout:val('obsFeedLayout')==='full'?'full':'panel',
       sidePanel:val('obsSidePanel')||'brand',
       showScoreboard:Boolean(byId('obsShowScoreboard')?.checked),
       logoBug:val('obsLogoBug')||'auto',
@@ -296,7 +323,10 @@
       await loadState(true);
     });
     document.querySelectorAll('#obsSceneStrip [data-scene]').forEach(function(button){
-      button.addEventListener('click',function(){publish(button.dataset.scene);});
+      button.addEventListener('click',function(){
+        applyScenePreset(button.dataset.scene);
+        publish(button.dataset.scene);
+      });
     });
     document.querySelectorAll('[data-score][data-delta]').forEach(function(button){
       button.addEventListener('click',async function(){
@@ -388,7 +418,7 @@
       byId(id).addEventListener('change',function(){publish();});
     });
     byId('obsLogoReset').addEventListener('click',function(){
-      byId('obsLogoSize').value=56;byId('obsLogoX').value=0;byId('obsLogoY').value=0;editCount++;publish();
+      byId('obsLogoSize').value=48;byId('obsLogoX').value=0;byId('obsLogoY').value=0;editCount++;publish();
     });
     byId('obsStreamUrl').addEventListener('input',feedSummary);
     byId('obsStreamProvider').addEventListener('change',feedSummary);
