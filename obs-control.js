@@ -16,11 +16,70 @@
   var savedEditCount=0;
   var publishing=false;
   var publishQueued=false;
+  var clockState={running:false,baseSeconds:1200,startedAt:'',rate:5};
+  var clockUiTimer=null;
 
   function byId(id){return document.getElementById(id);}
   function val(id){return (byId(id)?.value||'').trim();}
   function clampInt(v,min,max,fallback){var n=parseInt(v,10);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;}
   function numberVal(id){var n=parseInt(byId(id)?.value||'0',10);return Number.isFinite(n)&&n>=0?n:0;}
+  function parseClock(value,fallback){
+    var raw=String(value||'').trim();
+    var parts=raw.split(':');
+    if(parts.length===2){
+      var m=parseInt(parts[0],10),s=parseInt(parts[1],10);
+      if(Number.isFinite(m)&&Number.isFinite(s)&&m>=0&&s>=0&&s<60)return m*60+s;
+    }
+    var n=parseInt(raw,10);
+    return Number.isFinite(n)&&n>=0?n:(fallback==null?1200:fallback);
+  }
+  function formatClock(seconds){
+    var total=Math.max(0,Math.round(Number(seconds)||0));
+    var m=Math.floor(total/60),s=total%60;
+    return String(m)+':'+String(s).padStart(2,'0');
+  }
+  function clockSecondsNow(){
+    var base=Math.max(0,Number(clockState.baseSeconds)||0);
+    if(!clockState.running||!clockState.startedAt)return base;
+    var start=Date.parse(clockState.startedAt);
+    if(!Number.isFinite(start))return base;
+    var elapsed=Math.max(0,(Date.now()-start)/1000);
+    return Math.max(0,base-elapsed*(Number(clockState.rate)||1));
+  }
+  function syncClockUi(){
+    var seconds=clockSecondsNow();
+    var display=byId('obsClockDisplay');
+    var status=byId('obsClockStatus');
+    if(display)display.textContent=formatClock(seconds);
+    if(status){
+      var active=clockState.running&&seconds>0;
+      status.textContent=active?'RUNNING · '+(Number(clockState.rate)||1)+'×':'PAUSED';
+      status.classList.toggle('running',active);
+    }
+    if(clockState.running&&seconds<=0){clockState.running=false;clockState.baseSeconds=0;clockState.startedAt='';}
+  }
+  function setClockFromPayload(payload){
+    var p=payload||{};
+    var fallback=parseClock(p.clock||'20:00',1200);
+    clockState.rate=[1,4,5,6].includes(Number(p.clockRate))?Number(p.clockRate):5;
+    clockState.baseSeconds=Number.isFinite(Number(p.clockBaseSeconds))?Math.max(0,Number(p.clockBaseSeconds)):fallback;
+    clockState.startedAt=String(p.clockStartedAt||'');
+    clockState.running=p.clockRunning===true&&!!clockState.startedAt;
+    if(byId('obsClockRate'))byId('obsClockRate').value=String(clockState.rate);
+    if(byId('obsClock'))byId('obsClock').value=formatClock(clockSecondsNow());
+    syncClockUi();
+  }
+  function clockSnapshot(){
+    var seconds=clockSecondsNow();
+    var active=clockState.running&&seconds>0;
+    return {
+      clock:formatClock(seconds),
+      clockRunning:active,
+      clockBaseSeconds:active?Math.max(0,Number(clockState.baseSeconds)||0):Math.max(0,seconds),
+      clockStartedAt:active?clockState.startedAt:'',
+      clockRate:Number(clockState.rate)||1
+    };
+  }
   function setStatus(message,isError){
     var status=byId('publishStatus');
     var pill=byId('stateUpdated');
@@ -122,7 +181,7 @@
     byId('obsHomeScore').value=Number(p.homeScore||0);
     byId('obsAwayScore').value=Number(p.awayScore||0);
     byId('obsPeriod').value=p.period||'1ST';
-    byId('obsClock').value=p.clock||'20:00';
+    setClockFromPayload(p);
     byId('obsRecord').value=p.record||'';
     byId('obsMessage').value=p.message||'';
     byId('obsPlayerName').value=p.playerName||'PLAYER';
@@ -144,6 +203,7 @@
   function collectPayload(){
     var streamUrl=val('obsStreamUrl');
     var selectedProvider=val('obsStreamProvider')||'auto';
+    var clock=clockSnapshot();
     return {
       event:val('obsEvent'),
       homeName:val('obsHomeName')||config().name,
@@ -160,7 +220,11 @@
       homeScore:numberVal('obsHomeScore'),
       awayScore:numberVal('obsAwayScore'),
       period:val('obsPeriod')||'1ST',
-      clock:val('obsClock')||'20:00',
+      clock:clock.clock,
+      clockRunning:clock.clockRunning,
+      clockBaseSeconds:clock.clockBaseSeconds,
+      clockStartedAt:clock.clockStartedAt,
+      clockRate:clock.clockRate,
       record:val('obsRecord'),
       message:val('obsMessage'),
       playerName:val('obsPlayerName')||'PLAYER',
@@ -244,6 +308,69 @@
         await publish();
       });
     });
+    byId('obsClockRate').addEventListener('change',function(){
+      var current=clockSecondsNow();
+      clockState.baseSeconds=current;
+      clockState.startedAt=clockState.running?new Date().toISOString():'';
+      clockState.rate=Number(byId('obsClockRate').value)||1;
+      editCount++;
+      syncClockUi();
+      publish();
+    });
+    byId('obsClockSet').addEventListener('click',function(){
+      clockState.running=false;
+      clockState.startedAt='';
+      clockState.baseSeconds=parseClock(val('obsClock'),clockState.baseSeconds);
+      editCount++;
+      byId('obsClock').value=formatClock(clockState.baseSeconds);
+      syncClockUi();
+      publish();
+    });
+    byId('obsClockStart').addEventListener('click',function(){
+      if(clockState.running)return;
+      clockState.baseSeconds=parseClock(val('obsClock'),clockState.baseSeconds);
+      clockState.rate=Number(byId('obsClockRate').value)||1;
+      clockState.startedAt=new Date().toISOString();
+      clockState.running=clockState.baseSeconds>0;
+      editCount++;
+      syncClockUi();
+      publish();
+    });
+    byId('obsClockPause').addEventListener('click',function(){
+      clockState.baseSeconds=clockSecondsNow();
+      clockState.running=false;
+      clockState.startedAt='';
+      byId('obsClock').value=formatClock(clockState.baseSeconds);
+      editCount++;
+      syncClockUi();
+      publish();
+    });
+    byId('obsClockMinus').addEventListener('click',function(){
+      clockState.baseSeconds=Math.max(0,clockSecondsNow()-5);
+      clockState.startedAt=clockState.running?new Date().toISOString():'';
+      byId('obsClock').value=formatClock(clockState.baseSeconds);
+      editCount++;
+      syncClockUi();
+      publish();
+    });
+    byId('obsClockPlus').addEventListener('click',function(){
+      clockState.baseSeconds=Math.max(0,clockSecondsNow()+5);
+      clockState.startedAt=clockState.running?new Date().toISOString():'';
+      byId('obsClock').value=formatClock(clockState.baseSeconds);
+      editCount++;
+      syncClockUi();
+      publish();
+    });
+    byId('obsClockReset').addEventListener('click',function(){
+      clockState.running=false;
+      clockState.startedAt='';
+      clockState.baseSeconds=1200;
+      byId('obsClock').value='20:00';
+      editCount++;
+      syncClockUi();
+      publish();
+    });
+    if(!clockUiTimer)clockUiTimer=setInterval(syncClockUi,250);
     byId('obsBugPosition').addEventListener('change',function(){publish();});
     byId('obsFeedLayout').addEventListener('change',function(){publish();});
     byId('obsSidePanel').addEventListener('change',function(){publish();});
