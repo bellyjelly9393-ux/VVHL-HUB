@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="wildman.css">
   <link rel="stylesheet" href="management.css">
   <link rel="stylesheet" href="network-v2.css">
-  <link rel="stylesheet" href="obs-control.css?v=20261005simple1">
+  <link rel="stylesheet" href="obs-control.css?v=20261005break1">
 </head>
 <body class="wildman-site management-protected obs-control-page">
 <header class="site-header">
@@ -197,7 +197,47 @@
             <div class="obs-actions"><button id="obsLogoReset" class="small-btn" type="button">Reset Logo</button></div>
           </div>
 
-          <label>Scene Message<input id="obsMessage" class="field" placeholder="Tonight's matchup / intermission note / final note"></label>
+
+          <details class="obs-break-stats">
+            <summary>Intermission / Final Stats</summary>
+            <p>These only show on the big Intermission and Final screens. Leave a value blank if you do not want it shown.</p>
+
+            <div class="eyebrow">INTERMISSION</div>
+            <div class="obs-break-stat-row">
+              <b>Shots</b>
+              <input id="obsIntShotsHome" class="field" placeholder="CGY">
+              <input id="obsIntShotsAway" class="field" placeholder="OPP">
+            </div>
+            <div class="obs-break-stat-row">
+              <b>Hits</b>
+              <input id="obsIntHitsHome" class="field" placeholder="CGY">
+              <input id="obsIntHitsAway" class="field" placeholder="OPP">
+            </div>
+            <div class="obs-break-stat-row">
+              <b>Faceoffs</b>
+              <input id="obsIntFaceoffsHome" class="field" placeholder="CGY">
+              <input id="obsIntFaceoffsAway" class="field" placeholder="OPP">
+            </div>
+
+            <div class="eyebrow obs-break-stat-final">FINAL</div>
+            <div class="obs-break-stat-row">
+              <b>Shots</b>
+              <input id="obsFinalShotsHome" class="field" placeholder="CGY">
+              <input id="obsFinalShotsAway" class="field" placeholder="OPP">
+            </div>
+            <div class="obs-break-stat-row">
+              <b>Power Play</b>
+              <input id="obsFinalPpHome" class="field" placeholder="1/2">
+              <input id="obsFinalPpAway" class="field" placeholder="1/2">
+            </div>
+            <div class="obs-break-stat-row">
+              <b>Saves</b>
+              <input id="obsFinalSavesHome" class="field" placeholder="CGY">
+              <input id="obsFinalSavesAway" class="field" placeholder="OPP">
+            </div>
+          </details>
+
+          <label>Break Headline<input id="obsMessage" class="field" placeholder="Optional: Period 2 Complete / Hitmen Take Game 3"></label>
 
           <div class="obs-player-editor">
             <div class="eyebrow">PLAYER LOWER THIRD</div>
@@ -274,6 +314,6 @@
 <script src="management-guard.js"></script>
 <script src="script.js"></script>
 <script src="obs-config.js?v=20261005b"></script>
-<script src="obs-control.js?v=20261005simple1"></script>
+<script src="obs-control.js?v=20261005break1"></script>
 </body>
 </html>
