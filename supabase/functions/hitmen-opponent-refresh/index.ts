@@ -83,6 +83,21 @@ async function reconcileOfficialGames(task: any, club: string, platform: string,
   const nameByLg = new Map(teams.map((t:any)=>[String(t.lg_team_id),t.name]));
   const clubByName = new Map(links.filter((x:any)=>/^\d+$/.test(String(x.ea_club_id||''))).map((x:any)=>[x.opponent_name,String(x.ea_club_id)]));
   clubByName.set('Calgary Hitmen',CALGARY_EA_CLUB);
+  const officialRows = games.map((g:any)=>{
+    const home = String(g.home_lg_team_id)===String(target.lg_team_id);
+    const otherLg = home ? g.away_lg_team_id : g.home_lg_team_id;
+    const otherName = nameByLg.get(String(otherLg)) || 'Unknown opponent';
+    const gf = Number(home ? g.home_score : g.away_score);
+    const ga = Number(home ? g.away_score : g.home_score);
+    return {
+      team_id:TEAM,season:SEASON,opponent_name:task.opponent_name,lg_game_id:g.lg_game_id,played_at:g.game_at,
+      other_team_name:otherName,result:gf>ga?'W':gf<ga?'L':'T',goals_for:gf,goals_against:ga,
+      team_stats:{source:'LGCHL official game index',side:home?'home':'away'},
+      other_team_stats:{source:'LGCHL official game index'},source_url:g.source_url,source_updated_at:asOf,updated_at:asOf
+    };
+  });
+  if (officialRows.length) await checked(db.from('hitmen_opponent_lg_games').upsert(officialRows,{onConflict:'team_id,season,opponent_name,lg_game_id'}));
+
   const matches = Array.isArray(privateMatches) ? privateMatches : [];
   const used = new Set<string>(), rows:any[] = [], unmatched:any[] = [];
 
