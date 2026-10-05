@@ -3,6 +3,7 @@
   const model = window.WildmanVODReview;
   let editingPeriod = false;
   let savingPeriod = false;
+  let manualFieldsReviewId = "";
   const $ = (id) => document.getElementById(id);
   const db = () => window.VVHLBackend?.db;
   const auth = () => window.VVHLBackend?.state || {};
@@ -142,11 +143,15 @@
     $("periodVodEnd").value=absoluteEnd!=null?fmtTime(absoluteEnd):"";
     const segs=reviewSegments();
     const p=(i)=>segs.find(s=>s.segment_type==="period"&&s.segment_index===i);
-    if(p(1)) $("period1Start").value=fmtTime(p(1).start_seconds);
-    if(p(2)) $("period2Start").value=fmtTime(p(2).start_seconds);
-    if(p(3)) $("period3Start").value=fmtTime(p(3).start_seconds);
     const ots=segs.filter(s=>s.segment_type==="overtime").map(s=>fmtTime(s.start_seconds));
-    $("periodOtStarts").value=ots.join(", ");
+    const switchedReview=manualFieldsReviewId!==r.id;
+    if(switchedReview||segs.length){
+      $("period1Start").value=p(1)?fmtTime(p(1).start_seconds):"";
+      $("period2Start").value=p(2)?fmtTime(p(2).start_seconds):"";
+      $("period3Start").value=p(3)?fmtTime(p(3).start_seconds):"";
+      $("periodOtStarts").value=ots.join(", ");
+      manualFieldsReviewId=r.id;
+    }
     $("gameSummary").value=r.full_game_summary||""; $("gamePatterns").value=r.recurring_patterns||""; $("gameStrengths").value=r.strengths||""; $("gameCorrections").value=r.corrections||"";
     if($("gameTactical")) $("gameTactical").value=r.tactical_report||"";
     if($("gamePlayers")) $("gamePlayers").value=r.player_report||"";
@@ -346,15 +351,41 @@
     const starts=[p1,p2,p3,...otStarts];
     if(starts.some((v,i)=>i&&v<=starts[i-1])) return setStatus("OT starts must come after Period 3 and remain in chronological order.","error");
     if(vodEnd!=null&&vodEnd<=starts[starts.length-1]) return setStatus("VOD end must be after the final segment start.","error");
+
+    if(state.segments.some(s=>s.review_id===state.selectedReviewId&&model.protectedEvidence(s)))return setStatus("Reopen and correct the affected period without rebuilding reviewed period windows. Saved evidence is protected.","error");
+
+    const sourceStart=Math.max(0,Number(r.source_start_seconds)||0);
+    const sourceEnd=r.source_end_seconds==null?null:Number(r.source_end_seconds);
+    const manualWindowTolerance=120;
+    const canCorrectReplayWindow=String(r.source_provider||"").toLowerCase()==="twitch"&&Boolean(r.vod_url)&&String(r.worker_status||"")==="needs_periods";
+    let correctedStart=sourceStart,correctedEnd=sourceEnd;
+
+    if(p1<sourceStart){
+      const delta=sourceStart-p1;
+      if(!canCorrectReplayWindow||delta>manualWindowTolerance){
+        return setStatus(`Period 1 starts ${Math.round(delta)}s before the saved game window. Update the recording source/game window first, or keep the correction within ${manualWindowTolerance}s.`,"error");
+      }
+      correctedStart=p1;
+    }
+    if(vodEnd!=null&&sourceEnd!=null&&vodEnd>sourceEnd){
+      const delta=vodEnd-sourceEnd;
+      if(!canCorrectReplayWindow||delta>manualWindowTolerance){
+        return setStatus(`VOD end is ${Math.round(delta)}s after the saved game window. Update the recording source/game window first, or keep the correction within ${manualWindowTolerance}s.`,"error");
+      }
+      correctedEnd=vodEnd;
+    }
+
     const defs=[
       {segment_type:"period",segment_index:1,label:"Period 1",start_seconds:p1,end_seconds:p2},
       {segment_type:"period",segment_index:2,label:"Period 2",start_seconds:p2,end_seconds:p3},
       {segment_type:"period",segment_index:3,label:"Period 3",start_seconds:p3,end_seconds:otStarts[0]??vodEnd}
     ];
     otStarts.forEach((start,i)=>defs.push({segment_type:"overtime",segment_index:i+1,label:`Overtime ${i+1}`,start_seconds:start,end_seconds:otStarts[i+1]??vodEnd}));
-    const boundaryErrors=model.periodErrors(r,defs);
+
+    const effectiveReview={...r,source_start_seconds:correctedStart,source_end_seconds:correctedEnd};
+    const boundaryErrors=model.periodErrors(effectiveReview,defs);
     if(boundaryErrors.length)return setStatus(boundaryErrors.join(" "),"error");
-    if(state.segments.some(s=>s.review_id===state.selectedReviewId&&model.protectedEvidence(s)))return setStatus("Reopen and correct the affected period without rebuilding reviewed period windows. Saved evidence is protected.","error");
+
     const payload=defs.map(d=>({...d,review_id:r.id,team_id:state.teamId,status:"queued"}));
     setStatus("Saving period boundaries…");
     const {error}=await db().from("vod_review_segments").upsert(payload,{onConflict:"review_id,segment_type,segment_index"}); if(error)return setStatus(error.message,"error");
@@ -362,14 +393,22 @@
       const {error}=await db().rpc('set_vod_segment_archive',{target_segment:ot.id,expected_updated_at:ot.updated_at,archive_segment:true});
       if(error)return setStatus(error.message,'error');
     }
-    const sourceStart=Math.max(0,Number(r.source_start_seconds)||0);
-    const reviewDuration=vodEnd!=null?Math.max(0,vodEnd-sourceStart):r.duration_seconds;
+
+    const reviewDuration=vodEnd!=null?Math.max(0,vodEnd-correctedStart):r.duration_seconds;
     const updateReview={duration_seconds:reviewDuration,status:"reviewing",overtime_count:otStarts.length,updated_at:new Date().toISOString()};
+    if(correctedStart!==sourceStart)updateReview.source_start_seconds=correctedStart;
+    if(correctedEnd!==sourceEnd)updateReview.source_end_seconds=correctedEnd;
 
     const {error:uerr}=await db().from("vod_review_sessions").update(updateReview).eq("id",r.id); if(uerr)return setStatus(uerr.message,"error");
-    await loadData(); const first=reviewSegments(r.id)[0]; state.selectedSegmentId=first?.id||"";renderAll(); setStatus(`Built ${defs.length} review segment${defs.length===1?"":"s"}.`,"success");
+    await loadData(); const first=reviewSegments(r.id)[0]; state.selectedSegmentId=first?.id||"";renderAll();
+    const earlier=sourceStart-correctedStart;
+    setStatus(
+      earlier>0
+        ?`Built ${defs.length} review segments and moved the game window ${Math.round(earlier)}s earlier to include the confirmed Period 1 start.`
+        :`Built ${defs.length} review segment${defs.length===1?"":"s"}.`,
+      "success"
+    );
   }
-
   async function addCustomSegment(){
     const r=currentReview(); if(!r)return; const existing=state.segments.filter(s=>s.review_id===r.id&&s.segment_type==="custom"); const idx=Math.max(0,...existing.map(s=>s.segment_index))+1;
     const sourceStart=Math.max(0,Number(r.source_start_seconds)||0);
