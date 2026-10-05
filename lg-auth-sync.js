@@ -1,12 +1,11 @@
 (() => {
-  const PROD = 'https://wildmanhockey-elitechelmedia.app';
   const E = id => document.getElementById(id);
   const PENDING_KEY = 'wildman-lg-auth-pending';
   const LAST_KEY = 'wildman-lg-auth-last';
 
-  function collector() {
+  function collector(target) {
     try {
-      const TARGET = 'https://wildmanhockey-elitechelmedia.app';
+      const TARGET = String(target || 'https://wildmanhockey-elitechelmedia.app').replace(/\/+$/,'');
       if (!/(^|\.)leaguegaming\.com$/i.test(location.hostname)) {
         alert('Open the LeagueGaming page you want to sync first.');
         return;
@@ -89,7 +88,7 @@
     }
   }
 
-  const bookmarklet = 'javascript:(' + collector.toString() + ')()';
+  const bookmarklet = 'javascript:(' + collector.toString() + ')(' + JSON.stringify(location.origin) + ')';
 
   function setMessage(text, bad = false) {
     const el = E('authSyncMessage');
