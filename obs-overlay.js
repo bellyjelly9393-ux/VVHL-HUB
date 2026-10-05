@@ -19,6 +19,27 @@
   // name blank or on the old 'OPPONENT' placeholder.
   var TICKER_REFRESH_MS=5*60*1000;
   var tickerOpponent='';
+  var logoBug=document.getElementById('logoBug');
+  function clampNum(v,min,max,fallback){var n=Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;}
+  // Logo bug: show = 'auto' (only while our scoreboard is hidden) | 'on' | 'off'.
+  // Presets are measured on the 1280x720 source; 'ea' covers the game's logo left of its score bug.
+  function placeLogo(payload){
+    if(!logoBug)return;
+    var mode=['auto','on','off'].indexOf(payload.logoBug)>=0?payload.logoBug:'auto';
+    var on=mode==='on'||(mode==='auto'&&payload.showScoreboard===false);
+    document.body.dataset.logo=on?'on':'off';
+    var size=clampNum(payload.logoSize,32,160,56);
+    var w=window.innerWidth||1280,h=window.innerHeight||720;
+    var preset=payload.logoPreset||'ea';
+    var pos={ea:[22,22],'top-left':[38,34],'top-right':[w-38-size,34],'bottom-right':[w-38-size,h-34-size]}[preset]||[22,22];
+    var x=pos[0]+clampNum(payload.logoX,-400,400,0);
+    var y=pos[1]+clampNum(payload.logoY,-400,400,0);
+    logoBug.style.width=size+'px';logoBug.style.height=size+'px';
+    logoBug.style.left=Math.round(x)+'px';logoBug.style.top=Math.round(y)+'px';
+    logoBug.style.padding=Math.round(size*.1)+'px';
+    logoBug.style.borderRadius=Math.round(size*.2)+'px';
+  }
+  window.addEventListener('resize',function(){if(lastRow)placeLogo(lastRow.payload||{});});
   function isPlaceholderName(name){var n=String(name||'').trim().toUpperCase();return !n||n==='OPPONENT';}
   async function loadTonightOpponent(){
     try{
@@ -62,6 +83,7 @@
     document.body.dataset.scene=scene;
     document.body.dataset.bug=['left','right','hidden'].indexOf(payload.bugPosition)>=0?payload.bugPosition:'right';
     document.body.dataset.scoreboard=payload.showScoreboard===false?'off':'on';
+    placeLogo(payload);
     var awayName=isPlaceholderName(payload.awayName)?(brand==='hitmen'?tickerOpponent:''):payload.awayName;
 
     var isHitmen=brand==='hitmen';

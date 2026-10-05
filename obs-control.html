@@ -130,6 +130,29 @@
             <label class="obs-audio-toggle"><input id="obsShowScoreboard" type="checkbox" checked> Show our bottom scoreboard</label>
           </div>
 
+          <div class="obs-player-editor obs-logo-editor">
+            <div class="eyebrow">ELITECHEL LOGO BUG</div>
+            <div class="obs-field-grid two">
+              <label>Logo Bug<select id="obsLogoBug" class="select-field">
+                <option value="auto">Auto: show when our scoreboard is hidden</option>
+                <option value="on">Always show</option>
+                <option value="off">Off</option>
+              </select></label>
+              <label>Position<select id="obsLogoPreset" class="select-field">
+                <option value="ea">Over the game logo (top left)</option>
+                <option value="top-left">Top left</option>
+                <option value="top-right">Top right</option>
+                <option value="bottom-right">Bottom right</option>
+              </select></label>
+            </div>
+            <div class="obs-field-grid three">
+              <label>Size (px)<input id="obsLogoSize" class="field" type="number" min="32" max="160" step="2" value="56"></label>
+              <label>Nudge X (px, + = right)<input id="obsLogoX" class="field" type="number" min="-400" max="400" step="2" value="0"></label>
+              <label>Nudge Y (px, + = down)<input id="obsLogoY" class="field" type="number" min="-400" max="400" step="2" value="0"></label>
+            </div>
+            <div class="obs-actions"><button id="obsLogoReset" class="small-btn" type="button">Reset size + nudge</button></div>
+          </div>
+
           <label>Scene Message<input id="obsMessage" class="field" placeholder="Tonight's matchup / intermission note / final note"></label>
 
           <div class="obs-player-editor">
@@ -207,6 +230,6 @@
 <script src="management-guard.js"></script>
 <script src="script.js"></script>
 <script src="obs-config.js?v=20261005a"></script>
-<script src="obs-control.js?v=20261005b"></script>
+<script src="obs-control.js?v=20261005c"></script>
 </body>
 </html>

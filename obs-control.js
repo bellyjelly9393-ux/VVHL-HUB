@@ -19,6 +19,7 @@
 
   function byId(id){return document.getElementById(id);}
   function val(id){return (byId(id)?.value||'').trim();}
+  function clampInt(v,min,max,fallback){var n=parseInt(v,10);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;}
   function numberVal(id){var n=parseInt(byId(id)?.value||'0',10);return Number.isFinite(n)&&n>=0?n:0;}
   function setStatus(message,isError){
     var status=byId('publishStatus');
@@ -101,6 +102,11 @@
     byId('obsAwayName').value=String(p.awayName||'').trim().toUpperCase()==='OPPONENT'?'':(p.awayName||'');
     byId('obsBugPosition').value=['left','right','hidden'].includes(p.bugPosition)?p.bugPosition:'right';
     byId('obsShowScoreboard').checked=p.showScoreboard!==false;
+    byId('obsLogoBug').value=['auto','on','off'].includes(p.logoBug)?p.logoBug:'auto';
+    byId('obsLogoPreset').value=['ea','top-left','top-right','bottom-right'].includes(p.logoPreset)?p.logoPreset:'ea';
+    byId('obsLogoSize').value=Number.isFinite(Number(p.logoSize))&&p.logoSize!==''&&p.logoSize!=null?p.logoSize:56;
+    byId('obsLogoX').value=Number(p.logoX)||0;
+    byId('obsLogoY').value=Number(p.logoY)||0;
     byId('obsHomeScore').value=Number(p.homeScore||0);
     byId('obsAwayScore').value=Number(p.awayScore||0);
     byId('obsPeriod').value=p.period||'1ST';
@@ -129,6 +135,11 @@
       awayName:val('obsAwayName'),
       bugPosition:val('obsBugPosition')||'right',
       showScoreboard:Boolean(byId('obsShowScoreboard')?.checked),
+      logoBug:val('obsLogoBug')||'auto',
+      logoPreset:val('obsLogoPreset')||'ea',
+      logoSize:clampInt(val('obsLogoSize'),32,160,56),
+      logoX:clampInt(val('obsLogoX'),-400,400,0),
+      logoY:clampInt(val('obsLogoY'),-400,400,0),
       homeScore:numberVal('obsHomeScore'),
       awayScore:numberVal('obsAwayScore'),
       period:val('obsPeriod')||'1ST',
@@ -218,6 +229,12 @@
     });
     byId('obsBugPosition').addEventListener('change',function(){publish();});
     byId('obsShowScoreboard').addEventListener('change',function(){publish();});
+    ['obsLogoBug','obsLogoPreset','obsLogoSize','obsLogoX','obsLogoY'].forEach(function(id){
+      byId(id).addEventListener('change',function(){publish();});
+    });
+    byId('obsLogoReset').addEventListener('click',function(){
+      byId('obsLogoSize').value=56;byId('obsLogoX').value=0;byId('obsLogoY').value=0;editCount++;publish();
+    });
     byId('obsStreamUrl').addEventListener('input',feedSummary);
     byId('obsStreamProvider').addEventListener('change',feedSummary);
     byId('obsStreamMuted').addEventListener('change',feedSummary);
