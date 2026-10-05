@@ -14,3 +14,22 @@
 .hoi-pregame-report{margin-top:10px;padding:14px;border:1px solid rgba(215,25,45,.15);border-radius:12px;background:rgba(215,25,45,.03)}.hoi-report-head{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:10px}.hoi-report-head small{color:#8e8285;font-size:8px}.hoi-report-body{display:grid;gap:3px}.hoi-report-body h3,.hoi-report-body h4{margin:12px 0 4px}.hoi-report-body p{margin:3px 0;color:#c5bbbd;line-height:1.55}.hoi-report-body .cite{color:#efd58c;font-weight:900}.hoi-report-body .bullet{display:grid;grid-template-columns:18px 1fr;gap:5px}.hoi-report-body .bullet p{margin:0}
 @media(max-width:1000px){.hoi-roster-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.hoi-source-actions{justify-content:flex-start}.hoi-roster-grid{grid-template-columns:1fr}.hoi-ea-picker{grid-template-columns:1fr}.hoi-player-stats{grid-template-columns:repeat(2,1fr)}}
+
+.hoi-heat,.hoi-line-scout{margin-top:14px;padding-top:13px;border-top:1px solid rgba(255,255,255,.07)}
+.hoi-heat-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:9px}
+.hoi-heat-head strong{font:900 14px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.03em}
+.hoi-heat-head small{display:block;margin-top:3px;color:#8f8386;font-size:8px;line-height:1.45}
+.hoi-heat-head>span{border:1px solid rgba(239,213,140,.25);border-radius:999px;padding:5px 7px;color:#efd58c;font-size:7px;font-weight:900;letter-spacing:.08em}
+.hoi-heat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.hoi-heat-cell{padding:9px;border:1px solid rgba(255,255,255,.06);border-radius:9px;background:rgba(255,255,255,.025)}
+.hoi-heat-cell>b{font:900 16px/1 "Barlow Condensed",sans-serif}
+.hoi-heat-cell>strong{display:block;margin-top:6px;font-size:9px}
+.hoi-heat-cell>small{display:block;margin-top:3px;color:#918588;font-size:7px;line-height:1.35}
+.hoi-heat-meter{height:4px;margin-top:7px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+.hoi-heat-meter i{display:block;height:100%;background:linear-gradient(90deg,rgba(215,25,45,.55),rgba(239,213,140,.9))}
+.hoi-heat-note{margin:8px 0 0;color:#94878a;font-size:8px;line-height:1.45}
+.hoi-line-scout{display:grid;gap:6px}
+.hoi-line-scout-row{display:grid;grid-template-columns:72px 1fr;gap:8px;padding:8px;border:1px solid rgba(255,255,255,.055);border-radius:9px;background:rgba(255,255,255,.018)}
+.hoi-line-scout-row>b{color:#efd58c;font-size:7px;letter-spacing:.08em}
+.hoi-line-scout-row p{margin:0;color:#c8bec0;font-size:9px;line-height:1.5}
+@media(max-width:650px){.hoi-heat-grid{grid-template-columns:repeat(2,1fr)}.hoi-line-scout-row{grid-template-columns:1fr}.hoi-heat-cell:last-child{grid-column:1/-1}}
