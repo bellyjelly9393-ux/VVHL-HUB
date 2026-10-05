@@ -83,16 +83,18 @@ def seed_replay_test_batch():
             rows = db.execute('SELECT id,metadata,status FROM jobs WHERE owner=? ORDER BY created DESC', (owner,)).fetchall()
             existing_id = None
             already_seeded = False
-            for row in rows:
-                try:
-                    old = json.loads(row['metadata'])
-                except (TypeError, ValueError):
-                    continue
-                if old.get('review_id') == review_id or old.get('game_id') == review_id:
-                    existing_id = row['id']
-                    if old.get('replay_test_seed_token') == token:
-                        already_seeded = True
-                    break
+            force_new_job = bool(item.get('force_new_job'))
+            if not force_new_job:
+                for row in rows:
+                    try:
+                        old = json.loads(row['metadata'])
+                    except (TypeError, ValueError):
+                        continue
+                    if old.get('review_id') == review_id or old.get('game_id') == review_id:
+                        existing_id = row['id']
+                        if old.get('replay_test_seed_token') == token:
+                            already_seeded = True
+                        break
             if already_seeded:
                 queued.append({'review_id': review_id, 'job_id': existing_id, 'status': 'already_seeded'})
                 continue
@@ -298,10 +300,18 @@ def resolve(review, owner, create=False):
     """The caller supplies a review read through RLS, never unverified body fields."""
     with worker.WRITE_LOCK, worker.connect() as db:
         rows = db.execute('SELECT id,metadata FROM jobs WHERE owner=? ORDER BY created DESC', (owner,)).fetchall()
-        for row in rows:
-            meta = json.loads(row['metadata'])
-            if (row['id'] == review.get('worker_job_id') or meta.get('review_id') == review['id'] or meta.get('game_id') == review['id']
-                    or (meta.get('media_queue_id') and meta['media_queue_id'] == review.get('media_queue_id'))):
+        preferred_id = str(review.get('worker_job_id') or '')
+        ordered_rows = ([row for row in rows if row['id'] == preferred_id] +
+                        [row for row in rows if row['id'] != preferred_id])
+        for row in ordered_rows:
+            try:
+                meta = json.loads(row['metadata'])
+            except (TypeError, ValueError):
+                continue
+            linked = (row['id'] == preferred_id or meta.get('review_id') == review['id']
+                      or meta.get('game_id') == review['id']
+                      or (meta.get('media_queue_id') and meta['media_queue_id'] == review.get('media_queue_id')))
+            if linked:
                 job = worker.get_job(row['id'], owner)
                 if job['status'] == 'expired':
                     continue
