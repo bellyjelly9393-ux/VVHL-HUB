@@ -151,8 +151,13 @@
             <div class="section-divider"></div>
             <div class="eyebrow">MANAGEMENT REVIEW</div><h3>Game Report</h3>
             <div id="gameReviewLayers"></div>
-            <details id="pendingAnalysisDraft" hidden><summary>New Analysis Draft · saved separately</summary><p>These suggestions do not replace approved reports. Reopen the affected period to edit your reviewed evidence.</p><p id="pendingAnalysisContent" style="white-space:pre-wrap"></p></details>
+            <details id="pendingAnalysisDraft" hidden><summary>New Analysis Draft · saved separately</summary><p data-pending-intro>These suggestions do not replace approved reports. Approve the required periods before they can supplement the final report.</p><p id="pendingAnalysisContent" style="white-space:pre-wrap"></p></details>
             <div class="vod-actions"><button id="publishVodReport" class="small-btn primary" type="button">Publish / Refresh Scouting Reports</button><span id="publishVodStatus" role="status"></span></div>
+            <div class="analysis-note">
+              <strong>Final management check:</strong>
+              <label><input id="reviewDoneCheck" type="checkbox"> I approve this VOD review as finished.</label>
+              <div class="vod-actions"><button id="fileCompletedVod" class="small-btn" type="button" disabled>✓ File Completed Review</button><span id="reviewDoneStatus" role="status"></span></div>
+            </div>
             <details id="gameReportEdits"><summary>Edit game report / Advanced Tools</summary>
             <div class="rollup-grid">
               <label class="wide">Full-game summary<textarea id="gameSummary" class="text-input" placeholder="Overall game identity and evidence-based read..."></textarea></label>
