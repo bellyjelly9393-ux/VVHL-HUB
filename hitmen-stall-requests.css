@@ -72,6 +72,7 @@
   .sr-form{grid-template-columns:1fr}
   .sr-form .sr-btn{width:100%}
   .sr-dl{grid-template-columns:1fr}
+  .sr-card .sr-actions .sr-btn{flex:1 1 140px}
   .sr-row,.sr-closed .sr-row{grid-template-columns:1fr}
   .sr-row .sr-reject-note{grid-template-columns:1fr 1fr}
   .sr-row .sr-reject-note .sr-input{grid-column:1/-1}
