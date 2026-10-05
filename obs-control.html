@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="wildman.css">
   <link rel="stylesheet" href="management.css">
   <link rel="stylesheet" href="network-v2.css">
-  <link rel="stylesheet" href="obs-control.css?v=20260930b">
+  <link rel="stylesheet" href="obs-control.css?v=20261005clock1">
 </head>
 <body class="wildman-site management-protected obs-control-page">
 <header class="site-header">
@@ -130,8 +130,33 @@
 
           <div class="obs-field-grid three">
             <label>Period<input id="obsPeriod" class="field" placeholder="1ST"></label>
-            <label>Clock<input id="obsClock" class="field" placeholder="20:00"></label>
+            <label>Clock Set<input id="obsClock" class="field" placeholder="20:00" inputmode="numeric"></label>
             <label>Record<input id="obsRecord" class="field" placeholder="2-1-0"></label>
+          </div>
+
+          <div class="obs-clock-panel">
+            <div class="obs-clock-readout">
+              <small>LIVE SCOREBOARD CLOCK</small>
+              <strong id="obsClockDisplay">20:00</strong>
+              <span id="obsClockStatus">PAUSED</span>
+            </div>
+            <label>Clock Speed
+              <select id="obsClockRate" class="select-field">
+                <option value="5">5× · EA 4-minute periods</option>
+                <option value="1">1× · Real-time countdown</option>
+                <option value="4">4×</option>
+                <option value="6">6×</option>
+              </select>
+            </label>
+            <div class="obs-clock-actions">
+              <button id="obsClockStart" class="small-btn primary" type="button">Start</button>
+              <button id="obsClockPause" class="small-btn" type="button">Pause</button>
+              <button id="obsClockSet" class="small-btn" type="button">Set Time</button>
+              <button id="obsClockMinus" class="small-btn" type="button">−5 sec</button>
+              <button id="obsClockPlus" class="small-btn" type="button">+5 sec</button>
+              <button id="obsClockReset" class="small-btn" type="button">Reset 20:00</button>
+            </div>
+            <p class="obs-clock-note">The overlay clock runs locally in OBS from one synced start timestamp, so it updates every second without writing to the database every second. Pause it on whistles/stoppages and tap ±5 seconds if the EA clock needs a quick correction.</p>
           </div>
 
           <div class="obs-field-grid two">
@@ -243,6 +268,6 @@
 <script src="management-guard.js"></script>
 <script src="script.js"></script>
 <script src="obs-config.js?v=20261005b"></script>
-<script src="obs-control.js?v=20261005d"></script>
+<script src="obs-control.js?v=20261005clock1"></script>
 </body>
 </html>
