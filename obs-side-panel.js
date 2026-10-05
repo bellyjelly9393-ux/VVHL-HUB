@@ -18,7 +18,7 @@
   function etDay(iso){try{return new Date(iso).toLocaleDateString('en-CA',{timeZone:'America/Toronto'});}catch(e){return '';}}
   function etTime(iso){try{return new Date(iso).toLocaleTimeString('en-US',{timeZone:'America/Toronto',hour:'numeric',minute:'2-digit'})+' ET';}catch(e){return '';}}
   function live(){return '<span class="sp-live"><i></i>LIVE</span>';}
-  function head(eyebrow){return '<header class="sp-head"><small>'+esc(eyebrow)+'</small>'+live()+'</header>';}
+  function head(eyebrow){return '<header class="sp-head"><small>'+esc(eyebrow)+'</small></header>';}
   function foot(){return '<footer class="sp-foot"><img src="'+SHIELD+'" alt=""><span>EliteChel Series Media</span></footer>';}
 
   function streamHandle(){
