@@ -269,9 +269,38 @@ window.VVHLBackend = {
   state: backendState,
   refresh: loadBackendState,
 };
-vvhlDb.auth.onAuthStateChange((event) =>
-  event === "PASSWORD_RECOVERY"
-    ? setTimeout(showPasswordRecovery, 0)
-    : setTimeout(loadBackendState, 0),
-);
-loadBackendState();
+// One backend load at a time; a request that arrives mid-load queues exactly one more.
+let vvhlLoadInFlight = null;
+let vvhlLoadQueued = false;
+function requestBackendReload() {
+  if (vvhlLoadInFlight) {
+    vvhlLoadQueued = true;
+    return vvhlLoadInFlight;
+  }
+  vvhlLoadInFlight = loadBackendState()
+    .catch((error) => console.warn("Could not load account state", error))
+    .finally(() => {
+      vvhlLoadInFlight = null;
+      if (vvhlLoadQueued) {
+        vvhlLoadQueued = false;
+        requestBackendReload();
+      }
+    });
+  return vvhlLoadInFlight;
+}
+vvhlDb.auth.onAuthStateChange((event, session) => {
+  if (event === "PASSWORD_RECOVERY") {
+    setTimeout(showPasswordRecovery, 0);
+    return;
+  }
+  // Supabase repeats SIGNED_IN on tab focus and whenever another client on this origin (another
+  // tab, an embedded page) starts up; TOKEN_REFRESHED fires hourly. None of these change who is
+  // signed in, so they do not re-run the account load (and its claim RPCs) or re-emit
+  // vvhl-auth-change. INITIAL_SESSION is covered by the direct load below.
+  const sameUser =
+    Boolean(session?.user?.id) && backendState.user?.id === session.user.id;
+  if (event === "INITIAL_SESSION") return;
+  if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && sameUser) return;
+  setTimeout(requestBackendReload, 0);
+});
+requestBackendReload();
