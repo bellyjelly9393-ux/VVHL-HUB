@@ -44,9 +44,9 @@ body.obs-preview .obs-safe-grid{display:block}
 .obs-brand-mark img,.obs-full-mark img{width:100%;height:100%;object-fit:cover}
 .obs-brand-mark span,.obs-full-mark span{display:none;color:#fff;font:900 33px/1 "Barlow Condensed",sans-serif}
 body[data-brand="hitmen"] .obs-brand-mark img,
-body[data-brand="hitmen"] .obs-full-mark img{display:none}
+body[data-brand="hitmen"] .obs-full-mark img{display:block}
 body[data-brand="hitmen"] .obs-brand-mark span,
-body[data-brand="hitmen"] .obs-full-mark span{display:block}
+body[data-brand="hitmen"] .obs-full-mark span{display:none}
 .obs-bug-copy{display:flex;flex-direction:column;line-height:1}
 .obs-bug-copy small{font:800 11px/1 Inter,sans-serif;letter-spacing:.15em;color:var(--accent-2)}
 .obs-bug-copy strong{margin-top:6px;font:900 22px/.95 "Barlow Condensed",sans-serif;letter-spacing:.03em}
@@ -273,3 +273,21 @@ body[data-logo="on"][data-scene="player"] .obs-logo-bug{display:flex}
 body[data-layout="panel"] .obs-scorebar{left:40vw;width:calc(80vw - 60px);grid-template-columns:150px minmax(200px,1fr) 34px minmax(200px,1fr)}
 body[data-layout="panel"][data-bug="right"] .obs-corner-bug{right:calc(20vw + 24px)}
 body[data-layout="panel"] .obs-lower-third{min-width:0;max-width:calc(80vw - 110px)}
+
+/* Break scenes: automatic previous result + next opponent. Gameplay stays clean and uses EA's own score/time. */
+.obs-break-grid{position:relative;z-index:2;display:none;grid-template-columns:1fr 1fr;gap:12px;width:min(920px,82vw);margin:8px auto 0}
+body[data-scene="starting"] .obs-break-grid,
+body[data-scene="intermission"] .obs-break-grid,
+body[data-scene="final"] .obs-break-grid{display:grid}
+.obs-break-card{display:grid;gap:4px;padding:13px 16px;border:1px solid rgba(var(--brand-rgb),.22);border-radius:10px;background:linear-gradient(145deg,rgba(17,18,22,.82),rgba(7,8,10,.9));text-align:left}
+.obs-break-card small{color:var(--accent-2);font-size:8px;font-weight:900;letter-spacing:.16em}
+.obs-break-card strong{font:900 19px/1 "Barlow Condensed",sans-serif;text-transform:uppercase}
+.obs-break-card b{font:900 29px/.9 "Barlow Condensed",sans-serif;color:#fff}
+.obs-break-card span{color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.05em}
+body[data-scene="intermission"] .obs-matchup,
+body[data-scene="final"] .obs-matchup{margin:30px auto 12px}
+body[data-scene="intermission"] .obs-full-card p,
+body[data-scene="final"] .obs-full-card p{margin:8px auto}
+body[data-brand="hitmen"] .obs-brand-mark img,
+body[data-brand="hitmen"] .obs-full-mark img{object-fit:contain;padding:2px}
+@media(max-width:760px){.obs-break-grid{grid-template-columns:1fr;width:88vw}.obs-break-card{padding:9px 12px}.obs-break-card b{font-size:23px}}
