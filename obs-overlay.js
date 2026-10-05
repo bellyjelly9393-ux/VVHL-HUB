@@ -20,7 +20,11 @@
   // name blank or on the old 'OPPONENT' placeholder.
   var TICKER_REFRESH_MS=5*60*1000;
   var tickerOpponent='';
+  var tickerData=null;
+  var standingsData=null;
   var logoBug=document.getElementById('logoBug');
+  var brandLogo=document.getElementById('brandLogo');
+  var fullBrandLogo=document.getElementById('fullBrandLogo');
   function clampNum(v,min,max,fallback){var n=Number(v);return Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;}
   // Logo bug: show = 'auto' (only while our scoreboard is hidden) | 'on' | 'off'.
   // Presets are measured on the 1280x720 source; 'ea' covers the game's logo left of its score bug.
@@ -46,15 +50,57 @@
   }
   window.addEventListener('resize',function(){if(lastRow)placeLogo(lastRow.payload||{});});
   function isPlaceholderName(name){var n=String(name||'').trim().toUpperCase();return !n||n==='OPPONENT';}
+  function etTime(iso){
+    try{return new Date(iso).toLocaleTimeString('en-US',{timeZone:'America/Toronto',hour:'numeric',minute:'2-digit'})+' ET';}
+    catch(e){return '';}
+  }
+  function teamRecord(id){
+    var teams=standingsData&&standingsData.teams||{};
+    var t=teams[String(id)]||{};
+    return t.record||'';
+  }
+  function renderBreakInfo(){
+    var lastMatch=document.getElementById('breakLastMatchup');
+    var lastScore=document.getElementById('breakLastScore');
+    var nextMatch=document.getElementById('breakNextMatchup');
+    var nextRecord=document.getElementById('breakNextRecord');
+    var nextTime=document.getElementById('breakNextTime');
+    if(!lastMatch||!tickerData)return;
+    var recent=(tickerData.recent||[])[0]||null;
+    var next=tickerData.live||tickerData.next||((tickerData.upcoming||[])[0]||null);
+    if(recent){
+      lastMatch.textContent='CALGARY '+(recent.result||'')+' · '+(recent.opponent&&recent.opponent.name||'Opponent').toUpperCase();
+      lastScore.textContent=String(recent.gf==null?'—':recent.gf)+' – '+String(recent.ga==null?'—':recent.ga);
+    }else{
+      lastMatch.textContent='NO PREVIOUS RESULT';
+      lastScore.textContent='';
+    }
+    if(next){
+      var opp=next.opponent||{};
+      nextMatch.textContent=(next.home?'VS ':'@ ')+(opp.name||'Opponent').toUpperCase();
+      var oppRec=teamRecord(opp.id);
+      var ourRec=tickerData.record&&tickerData.record.label||'';
+      nextRecord.textContent=(ourRec?'CGY '+ourRec:'')+(oppRec?' · '+(opp.abbr||'OPP')+' '+oppRec:'');
+      nextTime.textContent=next.state==='live'?'LIVE NOW':etTime(next.at);
+    }else{
+      nextMatch.textContent='SCHEDULE TBA';nextRecord.textContent='';nextTime.textContent='';
+    }
+  }
   async function loadTonightOpponent(){
     try{
-      var res=await fetch('/api/live-ticker',{headers:{accept:'application/json'}});
-      if(!res.ok)throw new Error('HTTP '+res.status);
-      var data=await res.json();
-      var game=data&&(data.live||data.next);
+      var rs=await Promise.all([
+        fetch('/api/live-ticker',{headers:{accept:'application/json'}}),
+        fetch('/api/lgchl-scores?view=standings',{headers:{accept:'application/json'}})
+      ]);
+      if(!rs[0].ok)throw new Error('HTTP '+rs[0].status);
+      tickerData=await rs[0].json();
+      standingsData=rs[1].ok?await rs[1].json():standingsData;
+      var game=tickerData&&(tickerData.live||tickerData.next);
       var soon=game&&game.at&&Math.abs(Date.parse(game.at)-Date.now())<12*3600e3;
-      var name=(data&&data.live&&data.live.opponent&&data.live.opponent.name)||(soon&&game.opponent&&game.opponent.name)||'';
-      if(name!==tickerOpponent){tickerOpponent=name;if(lastRow)render(lastRow);}
+      var name=(tickerData&&tickerData.live&&tickerData.live.opponent&&tickerData.live.opponent.name)||(soon&&game.opponent&&game.opponent.name)||'';
+      tickerOpponent=name;
+      renderBreakInfo();
+      if(lastRow)render(lastRow);
     }catch(err){console.warn('Tonight opponent lookup failed',err);}
   }
   var params=new URLSearchParams(location.search);
@@ -119,6 +165,8 @@
     var awayName=isPlaceholderName(payload.awayName)?(brand==='hitmen'?tickerOpponent:''):payload.awayName;
 
     var isHitmen=brand==='hitmen';
+    if(brandLogo)brandLogo.src=isHitmen?'assets/lgchl/s55/team412.png':'assets/wildman/logo.webp';
+    if(fullBrandLogo)fullBrandLogo.src=isHitmen?'assets/lgchl/s55/team412.png':'assets/wildman/logo.webp';
     text('bugEyebrow',isHitmen?'CALGARY HITMEN':'WILDMAN HOCKEY');
     text('bugTitle',isHitmen?'LGCHL SEASON 55':'ESPORTS NETWORK');
     text('brandLetter',isHitmen?'H':'W');
@@ -141,6 +189,7 @@
     text('sceneMessage',payload.message,isHitmen?'CALGARY HITMEN':'WILDMAN HOCKEY ESPORTS NETWORK');
     text('fullEvent',payload.event,'LIVE GAME');
     text('fullRecord',payload.record,'');
+    if(isHitmen)renderBreakInfo();
 
     text('playerNumber',payload.playerNumber,'00');
     text('playerRole',payload.playerRole,'PLAYER');
