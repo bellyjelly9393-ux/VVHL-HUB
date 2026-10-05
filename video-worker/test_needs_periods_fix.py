@@ -64,5 +64,52 @@ class NeedsPeriodsFix(unittest.TestCase):
             os.environ.pop('REPLAY_TEST_SEED', None)
             os.environ.pop('REPLAY_TEST_SEED_TOKEN', None)
 
+
+    def test_resolve_prefers_explicit_review_worker_job(self):
+        review_id = str(uuid4())
+        preferred = self.insert('ready_for_review', {'review_id': review_id}, {'stage': 'report_ready'})
+        newer_sibling = self.insert('failed', {'review_id': review_id, 'source_kind': 'twitch_replay'}, {'failure_code': 'old_failure'})
+        self.assertNotEqual(preferred, newer_sibling)
+        job = replay.resolve({'id': review_id, 'worker_job_id': preferred, 'media_queue_id': None}, 'owner')
+        self.assertEqual(job['id'], preferred)
+        self.assertEqual(job['status'], 'ready_for_review')
+
+    def test_force_new_seed_does_not_reuse_old_review_job(self):
+        owner = str(uuid4())
+        review_id = str(uuid4())
+        existing_id = str(uuid4())
+        with worker.connect() as db:
+            db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)', (
+                existing_id, owner, time.time(), 'ready_for_review',
+                json.dumps({'review_id': review_id, 'game_id': review_id}),
+                json.dumps({'stage': 'report_ready'}), ''
+            ))
+        os.environ['REPLAY_TEST_SEED_TOKEN'] = 'force-new-job-test-v1'
+        os.environ['REPLAY_TEST_SEED'] = json.dumps([{
+            'owner': owner,
+            'review_id': review_id,
+            'title': 'Forced clean replay',
+            'vod_url': 'https://www.twitch.tv/videos/123456',
+            'source_start_seconds': 1,
+            'source_end_seconds': 1440,
+            'game_format': '6s',
+            'force_new_job': True,
+            'periods': [
+                {'label': 'Period 1', 'start': 0, 'end': 432},
+                {'label': 'Period 2', 'start': 432, 'end': 816},
+                {'label': 'Period 3', 'start': 816, 'end': 1439},
+            ],
+        }])
+        try:
+            seeded = replay.seed_replay_test_batch()
+            self.assertEqual(len(seeded), 1)
+            self.assertNotEqual(seeded[0]['job_id'], existing_id)
+            job = worker.get_job(seeded[0]['job_id'], owner)
+            self.assertEqual(job['status'], 'retrieving')
+            self.assertEqual(job['metadata']['replay_phase'], 'analyze_periods')
+        finally:
+            os.environ.pop('REPLAY_TEST_SEED', None)
+            os.environ.pop('REPLAY_TEST_SEED_TOKEN', None)
+
 if __name__ == '__main__':
     unittest.main()
