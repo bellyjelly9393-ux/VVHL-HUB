@@ -72,7 +72,9 @@
   let countdownTimer=null;
   function renderScoreboard(){
     if(!$('hitmenBroadcast')) return;
-    const rec=seasonRecord(S.schedule);
+    // An official record (LG standings via the public feed) wins over the one counted from rows,
+    // because LG schedule rows carry no OT flag.
+    const rec=S.record||seasonRecord(S.schedule);
     const big=$('hitmenSbRecord');
     if(big){
       if(rec.gp){big.innerHTML=`<span>${rec.w}<small>W</small></span><i>&ndash;</i><span>${rec.l}<small>L</small></span><i>&ndash;</i><span>${rec.otl}<small>OTL</small></span>`;big.setAttribute('aria-label',`Season record ${rec.w} wins, ${rec.l} losses, ${rec.otl} overtime losses`);}
@@ -154,7 +156,8 @@
   }
   setInterval(()=>{ if(jumboKey && boardDayKey()!==jumboKey) renderJumbotron(); },60000);
 
-  function render(schedule){ S.schedule=Array.isArray(schedule)?schedule:[]; renderScoreboard(); renderJumbotron(); }
+  // opts.record (optional): {w,l,otl,gp,pts,gf,ga,diff,streak} from the official LG standings line.
+  function render(schedule,opts={}){ S.schedule=Array.isArray(schedule)?schedule:[]; S.record=opts.record||null; renderScoreboard(); renderJumbotron(); }
   window.HitmenBroadcast = { render, seasonRecord, teamAbbr, crestHtml };
 
   // Standalone pages (team locker): load the schedule once the page is unlocked for this account.
