@@ -95,8 +95,13 @@
     setNode('obbAwayCity',parts.city||'OPPONENT');
     setNode('obbAwayName',parts.nick||String(awayName||'TEAM').toUpperCase());
     setNode('obbAwayRecord',oppRecord);
-    setNode('obbHomeScore',payload.homeScore,0);
-    setNode('obbAwayScore',payload.awayScore,0);
+    var breakHomeScore=payload.homeScore,breakAwayScore=payload.awayScore;
+    if(scene==='final'&&Number(breakHomeScore||0)===0&&Number(breakAwayScore||0)===0&&tickerData&&tickerData.recent&&tickerData.recent[0]){
+      breakHomeScore=tickerData.recent[0].gf;
+      breakAwayScore=tickerData.recent[0].ga;
+    }
+    setNode('obbHomeScore',breakHomeScore,0);
+    setNode('obbAwayScore',breakAwayScore,0);
     setImg('obbAwayLogo',oppLogo);
 
     if(scene==='final'){
@@ -113,7 +118,7 @@
 
     var recent=(tickerData&&tickerData.recent&&tickerData.recent[0])||null;
     if(scene==='final'){
-      setNode('obbPrevScore',String(payload.homeScore==null?'—':payload.homeScore)+' - '+String(payload.awayScore==null?'—':payload.awayScore));
+      setNode('obbPrevScore',String(breakHomeScore==null?'—':breakHomeScore)+' - '+String(breakAwayScore==null?'—':breakAwayScore));
       setNode('obbPrevOpponent',String(awayName||'OPPONENT').toUpperCase());
       setImg('obbPrevAwayLogo',oppLogo);
       setNode('obbPrevMeta','FINAL');
@@ -240,7 +245,15 @@
     document.body.dataset.scoreboard=payload.showScoreboard===false?'off':'on';
     document.body.dataset.layout=payload.feedLayout==='panel'?'panel':'full';
     placeLogo(payload);
-    var awayName=isPlaceholderName(payload.awayName)?(brand==='hitmen'?tickerOpponent:''):payload.awayName;
+    var autoOpponent='';
+    if(brand==='hitmen'){
+      if(scene==='final'&&tickerData&&tickerData.recent&&tickerData.recent[0]&&tickerData.recent[0].opponent){
+        autoOpponent=tickerData.recent[0].opponent.name||'';
+      }else{
+        autoOpponent=tickerOpponent;
+      }
+    }
+    var awayName=isPlaceholderName(payload.awayName)?autoOpponent:payload.awayName;
 
     var isHitmen=brand==='hitmen';
     if(brandLogo)brandLogo.src=isHitmen?'assets/lgchl/s55/team412.png':'assets/wildman/logo.webp';
