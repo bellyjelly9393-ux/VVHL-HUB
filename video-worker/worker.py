@@ -1188,6 +1188,25 @@ def review_sequences(job_id, source, chunks, metadata, result,
 
 def process(job_id):
     job = get_job(job_id)
+    if job['metadata'].get('synthesis_only'):
+        metadata = dict(job['metadata'])
+        result = dict(job['result'])
+        chunks = result.get('chunks') or []
+        if not chunks:
+            raise Problem(409, 'Saved video evidence is missing. Run a fresh Elite Scout pass instead.')
+        if not ai_configured():
+            result['stage'] = 'writing_report'
+            update_metadata(job_id, metadata, 'awaiting_ai', result,
+                            'Saved evidence is ready. Connect the AI model, then retry the report refresh.')
+            return
+        result['stage'] = 'writing_report'
+        update_metadata(job_id, metadata, 'processing', result, '')
+        result['game_rollup'] = build_rollup(chunks)
+        result['stage'] = 'report_ready'
+        result.pop('failure_code', None)
+        metadata.pop('synthesis_only', None)
+        update_metadata(job_id, metadata, 'ready_for_review', result, '')
+        return
     if job['metadata'].get('streamed_replay'):
         return process_streamed_replay(job_id)
     directory = ROOT / job_id
@@ -1504,11 +1523,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, {'configured': False})
             raise Problem(405, 'Method not allowed')
         if path.startswith('/reviews/'):
-            from replay import read_review, resolve
+            from replay import read_review, resolve, refresh_saved_report
             parts = path.strip('/').split('/')
-            if len(parts) != 3 or (parts[2], self.command) not in [('analyze', 'POST'), ('job', 'GET')]:
+            allowed = [('analyze', 'POST'), ('job', 'GET'), ('refresh-report', 'POST')]
+            if len(parts) != 3 or (parts[2], self.command) not in allowed:
                 raise Problem(404, 'Not found')
             review = read_review(parts[1], self.headers.get('Authorization'))
+            if parts[2] == 'refresh-report':
+                job = refresh_saved_report(review, owner)
+                return self.reply(202, {'job': job})
             job = resolve(review, owner, create=self.command == 'POST')
             return self.reply(200, {'job': job})
         if path == '/jobs' and self.command == 'GET':
