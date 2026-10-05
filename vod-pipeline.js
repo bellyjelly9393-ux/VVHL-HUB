@@ -313,7 +313,7 @@
       if(review.worker_status==='needs_periods'){
         const periods=await periodsFor(review.id);
         if(periods.length<3)throw new Error('Automatic detection needs help. Mark P1, P2 and P3 below, press Build / Update Periods, then press Continue / Retry. The video stays uploaded.');
-        const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/periods`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({periods:workerPeriods(review,periods)})});
+        const job=await workerFetch(`/jobs/${encodeURIComponent(review.worker_job_id)}/periods`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({periods:workerPeriods(review,periods),source_start_seconds:sourceOffset(review),source_end_seconds:review.source_end_seconds==null?null:Number(review.source_end_seconds)})});
         await db().from('vod_review_sessions').update({worker_status:job.status,worker_updated_at:new Date().toISOString()}).eq('id',review.id);
         setStatus('Manual period correction accepted. Reusing the uploaded video now.','good');
         beginPoll(review.worker_job_id,review.id);
