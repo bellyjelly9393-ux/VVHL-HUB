@@ -59,6 +59,7 @@
   }
   function teamName(){ return allowedTeams().find(t=>t.id===state.teamId)?.name || "Team"; }
   function currentReview(){ return state.reviews.find(r=>r.id===state.selectedReviewId)||null; }
+  function currentPublication(){ return state.publications.find(p=>p.review_id===state.selectedReviewId&&p.active)||null; }
   function currentSegment(){ return state.segments.find(s=>s.id===state.selectedSegmentId)||null; }
   function reviewSegments(reviewId=state.selectedReviewId){ return state.segments.filter(s=>s.review_id===reviewId&&!s.archived_at).sort((a,b)=>a.start_seconds-b.start_seconds||a.segment_index-b.segment_index); }
   function reviewMarkers(reviewId=state.selectedReviewId){ return state.markers.filter(m=>m.review_id===reviewId).sort((a,b)=>a.timestamp_seconds-b.timestamp_seconds); }
@@ -558,13 +559,29 @@
     $("periodReviewContent").hidden=editingPeriod;
   }
   const scoreLabel=r=>r?`${r.score}/100 — ${r.reason||"Management review required"}`:"Not rated — insufficient reviewed evidence";
-  function reportDocument(){const r=currentReview();return r?.review_document?.version===1?r.review_document:model.documentFor(r||{});}
+  function workerDocument(review,result){
+    const rollup=result?.game_rollup||{};
+    return model.documentFor({...review,worker_result:result,full_game_summary:rollup.summary||"",tactical_report:rollup.tactical_report||"",player_report:rollup.player_report||""});
+  }
+  function reportDocument(){
+    const r=currentReview();if(!r)return model.documentFor({});
+    let doc=r.review_document?.version===1?r.review_document:model.documentFor(r);
+    doc=model.mergeDocuments(doc,model.documentFor(r));
+    const approved=model.periodErrors(r,reviewSegments(),{approved:true}).length===0;
+    if(approved&&r.pending_worker_result)doc=model.mergeDocuments(doc,workerDocument(r,r.pending_worker_result));
+    return doc;
+  }
   function renderGameLayers(){
     const doc=reportDocument(),problems=model.periodErrors(currentReview(),reviewSegments(),{approved:true});
     const pending=currentReview()?.pending_worker_result;
     const draft=document.getElementById('pendingAnalysisDraft');
     if(draft){
       draft.hidden=!pending;
+      const mergedIntoPreview=Boolean(pending)&&problems.length===0;
+      const summary=draft.querySelector('summary');
+      if(summary)summary.textContent=mergedIntoPreview?'New Analysis Draft · merged into report preview':'New Analysis Draft · saved separately';
+      const intro=draft.querySelector('[data-pending-intro]');
+      if(intro)intro.textContent=mergedIntoPreview?'Approved periods are protected. Missing structured fields below are supplemented from this draft and will be saved when you publish.':'These suggestions do not replace approved reports. Approve the required periods before they can supplement the final report.';
       document.getElementById('pendingAnalysisContent').textContent=pending?[
         pending.game_rollup?.summary,
         ...(pending.period_reports||[]).map(p=>`${p.label}: ${p.report?.summary||'No summary'}`)
@@ -575,6 +592,7 @@
     $("gameReviewLayers").innerHTML=`<p class="analysis-note">${problems.length?esc(problems.join(" ")):"All periods approved. Review the three report layers before publishing."}</p><details data-layer="team"><summary>Team Systems Report</summary>${section("Game overall",scoreLabel(doc.game_rating))}${section("Result",doc.result)}${section("Process",doc.process||doc.summary)}<div class="period-review-content">${model.systems.map(k=>section(k.replaceAll("_"," "),doc.team_systems?.[k])).join("")}</div>${doc.tactical_report?section("Tactical evidence",doc.tactical_report):""}</details><details data-layer="units"><summary>Line / D-pair Reports</summary>${doc.units.length?doc.units.map(u=>section(`${u.label} · ${u.players.join(" / ")}`,[u.summary,u.strengths,u.concerns,u.adjustments,scoreLabel(u.rating)].filter(Boolean).join("\n"))).join(""):section("Unit evidence","No verified line or defense-pair report yet. Lineup names alone do not establish chemistry.")}</details><details data-layer="players"><summary>Individual Player Reports</summary>${doc.players.length?doc.players.map(p=>section(p.player,[p.strengths,p.concerns,p.habits,p.coach_note,scoreLabel(p.rating)].filter(Boolean).join("\n"))+`<p class="evidence-links">${(p.evidence_timestamps||[]).map(t=>timestampLink(t,fmtTime(t))).join(" · ")}</p>`).join(""):section("Player evidence",doc.player_report)}</details>`;
     $("gameReviewLayers").querySelectorAll("details").forEach(d=>{d.open=openLayers.has(d.dataset.layer);});
     $("publishVodReport").disabled=problems.length>0;
+    renderReviewCompletion();
     let editor=$("structuredReportFields");
     if(!editor){editor=document.createElement("div");editor.id="structuredReportFields";editor.className="rollup-grid";$("gameReportEdits").append(editor);}
     const field=(path,label,value)=>`<label class="wide">${esc(label)}<textarea class="text-input" data-report-path="${esc(path)}">${esc(value||"")}</textarea></label>`;
@@ -598,6 +616,38 @@
     finally{$("publishVodReport").disabled=model.periodErrors(currentReview(),reviewSegments(),{approved:true}).length>0;}
   }
 
+  function renderReviewCompletion(){
+    const check=$("reviewDoneCheck"),button=$("fileCompletedVod"),status=$("reviewDoneStatus"),r=currentReview();
+    if(!check||!button||!status)return;
+    if(!r){check.checked=false;check.disabled=true;button.disabled=true;status.textContent="";return;}
+    const approved=model.periodErrors(r,reviewSegments(),{approved:true}).length===0;
+    const published=Boolean(currentPublication());
+    const ready=approved&&published;
+    check.disabled=!ready;
+    if(!ready)check.checked=false;
+    button.disabled=!ready||!check.checked;
+    status.textContent=!approved
+      ?"Approve every required period before filing this review."
+      :!published
+        ?"Publish the scouting report first. Filing is unlocked after a successful publication."
+        :"Published and protected. Check the box when management is finished with this review; filing removes it from the active library without deleting the evidence.";
+  }
+
+  async function fileCompletedReview(){
+    const r=currentReview();if(!r)return;
+    const problems=model.periodErrors(r,reviewSegments(),{approved:true});
+    if(problems.length)return setStatus(problems.join(" "),"error");
+    if(!currentPublication())return setStatus("Publish the approved scouting report before filing this review.","error");
+    if(!$("reviewDoneCheck")?.checked)return setStatus("Check the management approval box before filing the review.","error");
+    const button=$("fileCompletedVod");if(button)button.disabled=true;
+    const {error}=await db().from("vod_review_sessions").update({status:"archived",updated_at:new Date().toISOString()}).eq("id",r.id).eq("team_id",state.teamId);
+    if(error){renderReviewCompletion();return setStatus(error.message||"Could not file the completed review.","error");}
+    state.selectedReviewId="";state.selectedSegmentId="";
+    const url=new URL(location.href);url.searchParams.delete("review");history.replaceState(null,"",url);
+    await loadData();
+    setStatus("Review filed as complete. It has been removed from the active VOD library; approved evidence and published scouting reports are retained.","success");
+  }
+
   function bind(){
     $("vodTeam")?.addEventListener("change",e=>{state.teamId=e.target.value;state.selectedReviewId="";state.selectedSegmentId="";loadData();});
     $("refreshVod")?.addEventListener("click",loadData); $("createVod")?.addEventListener("click",createReview); $("batchCreateVod")?.addEventListener("click",createBatchReviews); $("buildSegments")?.addEventListener("click",buildSegments); $("addCustomSegment")?.addEventListener("click",addCustomSegment);
@@ -605,6 +655,8 @@
     $("approveSegment")?.addEventListener("click",()=>saveSegment("complete"));
     $("rejectSegment")?.addEventListener("click",()=>saveSegment("rejected"));
     $("publishVodReport")?.addEventListener("click",publishReport);
+    $("reviewDoneCheck")?.addEventListener("change",renderReviewCompletion);
+    $("fileCompletedVod")?.addEventListener("click",fileCompletedReview);
     $("saveSegment")?.addEventListener("click",saveSegment); $("addMarker")?.addEventListener("click",addMarker); $("openSegment")?.addEventListener("click",()=>currentSegment()&&openSegmentById(currentSegment().id)); $("copySegmentPacket")?.addEventListener("click",copySegmentPacket);
     $("buildRollup")?.addEventListener("click",buildRollup); $("saveRollup")?.addEventListener("click",saveRollup); $("archiveVod")?.addEventListener("click",archiveReview); $("deleteVod")?.addEventListener("click",deleteReview);
   }
