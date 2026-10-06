@@ -49,6 +49,22 @@
 <p id="scheduleBookmarkletMessage" class="control-message"></p>
 </div>
 </section>
+<section class="section-shell section-block" id="authenticatedSync">
+<div class="control-card">
+<div class="eyebrow">AUTHENTICATED LEAGUE SYNC · 403 FALLBACK</div>
+<h3>Wildman Auth Sync</h3>
+<p>Use this when LeagueGaming blocks a direct server refresh. Sign into Wildman below, open the full LeagueGaming page while you are signed into LG, then click the bookmark. The bridge strips forms and sensitive browser state and sends only the hockey page content needed for parsing. Your LG cookie, password and session token never leave LeagueGaming.</p>
+<section id="accountPanel" class="panel account-panel" style="margin-top:14px"></section>
+<div class="control-actions" style="margin-top:14px">
+<a id="lgAuthSyncBookmarklet" class="small-btn primary" href="#">Wildman Auth Sync</a>
+<button id="copyLgAuthSync" class="small-btn" type="button">Copy Auth Sync Bookmark</button>
+<a id="openLgRoster" class="small-btn" href="https://www.leaguegaming.com/forums/index.php?leaguegaming/league&action=league&page=roster&leagueid=39&seasonid=55" target="_blank" rel="noopener">Open LGCHL S55 Roster</a>
+</div>
+<p id="authSyncMessage" class="control-message"></p>
+<div id="authSyncStatus" class="empty-state">Waiting for an authenticated LeagueGaming capture…</div>
+<p class="control-message">Roster pages are applied immediately after validation. Weekly Lines and transaction pages are captured into a review-safe staging queue until their exact LG page structure has been verified, so Wildman does not invent trades or line changes from ambiguous text.</p>
+</div>
+</section>
 <section class="section-shell section-block">
 <div class="control-card">
 <div class="eyebrow">HOW TO USE IT</div>
@@ -59,6 +75,9 @@
 </section>
 </main>
 <footer><div class="section-shell footer-inner"><div><b>WILDMAN LG BROWSER BRIDGE</b><span>Public log text only · No LG credentials stored</span></div></div></footer>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<script src="backend.js"></script>
 <script src="lg-capture.js"></script>
+<script src="lg-auth-sync.js"></script>
 </body>
 </html>

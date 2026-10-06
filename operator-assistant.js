@@ -96,7 +96,7 @@
 
   function renderSources(){
     const root=$('operatorSources');if(!root)return;const rows=S.sources.filter(x=>x.event_id===S.eventId&&(x.series_id===S.seriesId||!x.series_id));
-    root.innerHTML=rows.length?rows.map(x=>{const game=S.games.find(g=>g.id===x.game_id);const state=x.last_error?'ERROR':x.last_success_at?'OK':'READY';return `<div class="operator-item ${x.last_error?'alert-warning':''}"><div><strong>${esc(x.source_type.replace('_',' ').toUpperCase())} · ${esc(x.provider||'source')} · ${esc(state)}</strong><small>${game?`Game ${game.series_game_number||'?'} · `:''}${esc(x.url)}</small><small>${x.last_checked_at?`Checked ${fmt(x.last_checked_at)}`:'Not checked yet'}${x.polling_enabled?' · AUTO-POLL':''}${x.last_error?` · ${esc(x.last_error)}`:''}</small></div><div class="operator-actions"><a class="small-btn" href="${esc(x.url)}" target="_blank" rel="noopener">Open</a><button class="small-btn" type="button" data-check-source="${x.id}">Check</button><button class="small-btn" type="button" data-remove-source="${x.id}">Remove</button></div></div>`;}).join(''):'<div class="empty-state">No sources attached yet. Add the LG and stream links when available.</div>';
+    root.innerHTML=rows.length?rows.map(x=>{const game=S.games.find(g=>g.id===x.game_id);const state=x.last_error?'ERROR':x.last_success_at?'OK':'READY';return `<div class="operator-item ${x.last_error?'alert-warning':''}"><div><strong>${esc(x.source_type.replace('_',' ').toUpperCase())} · ${esc(x.provider||'source')} · ${esc(state)}</strong><small>${game?`Game ${game.series_game_number||'?'} · `:''}${esc(x.url)}</small><small>${x.last_checked_at?`Checked ${fmt(x.last_checked_at)}`:'Not checked yet'}${x.polling_enabled?' · AUTO-POLL':''}${x.last_error?` · ${esc(x.last_error)}`:''}</small></div><div class="operator-actions"><a class="small-btn" href="${esc(x.url)}" target="_blank" rel="noopener">Open</a>${x.metadata?.auth_bridge_required?`<a class="small-btn primary" href="${esc(x.metadata.auth_bridge_url||'lg-capture.html?mode=authsync')}" target="_blank" rel="noopener">Auth Sync</a>`:''}<button class="small-btn" type="button" data-check-source="${x.id}">Check</button><button class="small-btn" type="button" data-remove-source="${x.id}">Remove</button></div></div>`;}).join(''):'<div class="empty-state">No sources attached yet. Add the LG and stream links when available.</div>';
     root.querySelectorAll('[data-check-source]').forEach(b=>b.onclick=()=>checkSource(S.sources.find(x=>x.id===b.dataset.checkSource),false));
     root.querySelectorAll('[data-remove-source]').forEach(b=>b.onclick=()=>removeSource(b.dataset.removeSource));
   }
@@ -111,8 +111,15 @@
     try{
       if(source.provider==='leaguegaming'){
         const res=await fetch(`/api/lg-public-stats?url=${encodeURIComponent(source.url)}`);let data={};try{data=await res.json();}catch{}
+        if(!res.ok&&(data.blocked||[401,403,409,429].includes(res.status))){
+          const bridge=`lg-capture.html?mode=authsync&source=game&lg=${encodeURIComponent(source.url)}&return=operator-assistant.html`;
+          const update={last_checked_at:checked,last_error:`LG blocks direct server checks (HTTP ${res.status}). Use Auth Sync.`,last_http_status:res.status,polling_enabled:false,metadata:{...(source.metadata||{}),auth_bridge_url:bridge,auth_bridge_required:true},updated_at:checked};
+          const saved=await db.from('tournament_automation_sources').update(update).eq('id',source.id);if(saved.error)throw saved.error;
+          if(!silent)msg('sourceMessage',`LG returned ${res.status}. Auto-poll paused for this source; use Auth Sync from the source card.`,true);
+          await loadData(true);return;
+        }
         if(!res.ok)throw new Error(data.error||`LG check returned ${res.status}`);
-        const update={last_checked_at:checked,last_success_at:checked,last_error:null,last_http_status:res.status,metadata:{...(source.metadata||{}),title:data.title||null,tableCount:data.tableCount??null,lastPageText:(data.pageText||'').slice(0,300)},updated_at:checked};
+        const update={last_checked_at:checked,last_success_at:checked,last_error:null,last_http_status:res.status,metadata:{...(source.metadata||{}),title:data.title||null,tableCount:data.tableCount??null,lastPageText:(data.pageText||'').slice(0,300),auth_bridge_required:false},updated_at:checked};
         const r=await db.from('tournament_automation_sources').update(update).eq('id',source.id);if(r.error)throw r.error;
         if(!silent)msg('sourceMessage',`LG source reachable · ${data.tableCount??0} tables detected.`);
       }else{

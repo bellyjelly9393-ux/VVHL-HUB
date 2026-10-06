@@ -196,15 +196,14 @@
     box.innerHTML='<div class="hoi-report-head"><div><strong>Latest pregame report</strong><small>'+esc(new Date(r.created_at).toLocaleString())+' · '+esc(r.model||'Claude')+(ev.approved===true?' · APPROVED':'')+'</small></div><div class="hoi-vod-actions"><a href="'+esc(reportUrl)+'">Full Report</a><a href="'+esc(vodUrl)+'">VOD Reference</a></div></div><div class="hoi-report-body">'+body+'</div>'+heatHtml+scoutHtml;
   }
 
-  async function syncLg(){
+  function syncLg(){
     if(!canWrite())return;
-    const b=E('hoiSyncLg');if(b)b.disabled=true;
-    try{
-      const r=await DB().rpc('hitmen_request_opponent_refresh',{p_reason:'management-roster-refresh'});
-      if(r.error)throw r.error;
-      setStatus(r.data?'Server refresh queued. LG rosters and stats use the scheduled importer; check Source status above.':'No future scheduled opponents remain in Season 55.');
-    }catch(e){setStatus('Could not queue roster refresh. '+e.message)}
-    finally{if(b)b.disabled=false;}
+    const bridge='lg-capture.html?mode=authsync&source=roster&return=hitmen-opponents.html';
+    const w=window.open(bridge,'wildmanLgAuthSync');
+    if(w){
+      setStatus('Authenticated LG Sync opened. Open the LGCHL S55 Roster there, then run the Wildman Auth Sync bookmark from your signed-in LG tab. This replaces the server request that was hitting 403.');
+      w.focus();
+    }else setStatus('Allow popups for Wildman once, then press Sync LG Rosters again.');
   }
 
   function clubCandidates(body){
@@ -339,6 +338,16 @@
   }
 
   window.addEventListener('hitmen-opponent-selected',e=>{selected=e.detail;loadSelected()});
+  window.addEventListener('storage',e=>{
+    if(e.key!=='wildman-lg-auth-last'||!e.newValue)return;
+    try{
+      const x=JSON.parse(e.newValue);
+      if(x.captureType==='roster'&&x.ok){
+        setStatus('Authenticated LG roster sync completed. Refreshing opponent personnel…');
+        loadSelected();
+      }
+    }catch{}
+  });
   window.addEventListener('vvhl-auth-change',()=>{bind();if(selected)loadSelected()});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
 })();
