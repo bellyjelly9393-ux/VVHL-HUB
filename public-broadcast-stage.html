@@ -7,13 +7,15 @@
 <meta name="theme-color" content="#050505">
 <title>Wildman Public Broadcast Stage</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="public-broadcast-stage.css?v=20261006a">
+<link rel="stylesheet" href="public-broadcast-stage.css?v=20261006-size1">
 </head>
 <body>
 <main id="publicBroadcastStage" class="public-broadcast-stage" aria-label="Live broadcast">
-  <iframe id="publicFeedLayer" class="public-broadcast-feed" title="Live game feed" allow="autoplay; fullscreen" allowfullscreen></iframe>
-  <iframe id="publicOverlayLayer" class="public-broadcast-overlay" title="Live broadcast graphics" allow="fullscreen" allowfullscreen></iframe>
+  <div id="publicBroadcastCanvas" class="public-broadcast-canvas">
+    <iframe id="publicFeedLayer" class="public-broadcast-feed" width="1280" height="720" title="Live game feed" allow="autoplay; fullscreen" allowfullscreen></iframe>
+    <iframe id="publicOverlayLayer" class="public-broadcast-overlay" width="1280" height="720" title="Live broadcast graphics" allow="fullscreen" allowfullscreen></iframe>
+  </div>
 </main>
-<script src="public-broadcast-stage.js?v=20261006a"></script>
+<script src="public-broadcast-stage.js?v=20261006-size1"></script>
 </body>
 </html>
