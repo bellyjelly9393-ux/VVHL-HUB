@@ -10,8 +10,22 @@ let busy=false,lastUser='';
 function viewer(){
  const s=ST(),pr=String(s.profile?.role||'').toLowerCase();
  const m=(s.memberships||[]).find(x=>x.team_id===TEAM&&x.active!==false);
- const role=pr==='admin'?'admin':String(m?.role||'').toLowerCase();
- return {user:s.user||null,role,member:pr==='admin'||!!m,mgmt:pr==='admin'||['owner','gm','agm','scout'].includes(role)};
+ const privileged=['admin','commissioner'].includes(pr);
+ const role=privileged?pr:String(m?.role||'').toLowerCase();
+ return {user:s.user||null,role,member:privileged||!!m,mgmt:privileged||['owner','gm','agm','scout'].includes(role)};
+}
+async function resolvedViewer(){
+ const v=viewer();
+ if(!v.user||!DB())return v;
+ try{
+  const r=await DB().rpc('hitmen_report_access');
+  if(!r.error&&r.data){
+   v.member=r.data.allowed===true;
+   v.mgmt=r.data.manage===true;
+   v.role=String(r.data.role||v.role||'').toLowerCase();
+  }else if(r.error)console.warn('Could not verify Hitmen report access',r.error);
+ }catch(e){console.warn('Could not verify Hitmen report access',e)}
+ return v;
 }
 function fmt(d){if(!d)return'';try{return new Date(d).toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch{return String(d)}}
 function showGate(title,msg){
@@ -120,10 +134,13 @@ function renderVod(report,game,vods,v){
  $('hrvVodSide').hidden=true;
 }
 async function load(){
- if(busy||!DB())return;const v=viewer();if(!v.user){showGate('Sign in required','Sign in with your Calgary Hitmen account to view the team scouting brief.');return}
- if(!v.member){showGate('Team access only','This page contains Calgary team scouting material and is not available outside the active team.');return}
- busy=true;$('hrvGate').hidden=false;$('hrvGate').innerHTML='<h2>Loading scouting brief…</h2><p>Pulling the approved report and attached film reference.</p>';
+ if(busy||!DB())return;
+ busy=true;
  try{
+  const v=await resolvedViewer();
+  if(!v.user){showGate('Sign in required','Sign in with your Calgary Hitmen account to view the team scouting brief.');return}
+  if(!v.member){showGate('Team access only','Your signed-in account does not currently have Calgary Hitmen team access.');return}
+  $('hrvGate').hidden=false;$('hrvGate').innerHTML='<h2>Loading scouting brief…</h2><p>Pulling the approved report and attached film reference.</p>';
   const report=await getReport(v),game=await getGame(report),vods=await getVods(report,game);
   $('hrvGate').hidden=true;$('hrvContent').hidden=false;
   if(view==='vod')renderVod(report,game,vods,v);else renderReport(report,game,vods,v);
