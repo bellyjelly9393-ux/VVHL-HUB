@@ -111,6 +111,26 @@
     status.textContent='Attached · '+provider.toUpperCase()+(byId('obsStreamMuted')?.checked?' · MUTED':' · AUDIO ON')+
       (provider==='twitch'?' · In OBS use the Feed Layer source under the Overlay source (Twitch pauses under graphics)':'');
   }
+  function fitPreviewCanvas(){
+    var frame=byId('obsPreviewFrame'),canvas=byId('obsPreviewCanvas');
+    if(!frame||!canvas)return;
+    var width=frame.clientWidth||0;
+    if(!width)return;
+    var scale=width/1280;
+    canvas.style.transform='scale('+scale+')';
+  }
+  function watchPreviewSize(){
+    fitPreviewCanvas();
+    if(window.ResizeObserver){
+      var frame=byId('obsPreviewFrame');
+      if(frame&&!frame.__obsResizeBound){
+        frame.__obsResizeBound=true;
+        new ResizeObserver(fitPreviewCanvas).observe(frame);
+      }
+    }else{
+      window.addEventListener('resize',fitPreviewCanvas);
+    }
+  }
   function updateSourceLinks(){
     var stage=stageUrl(),overlay=overlayUrl();
     byId('obsSourceUrl').value=stage;
@@ -494,6 +514,7 @@
       populateStreams();
       renderSceneButtons();
       wire();
+      watchPreviewSize();
       initialized=true;
       lastUserId=userId;
       updateSourceLinks();
