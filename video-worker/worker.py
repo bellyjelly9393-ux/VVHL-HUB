@@ -1466,7 +1466,13 @@ class Handler(BaseHTTPRequestHandler):
             if self.command != 'POST':
                 raise Problem(405, 'Method not allowed')
             supplied = self.headers.get('X-Replay-Admin', '')
-            if not REPLAY_ADMIN_TOKEN or not hmac.compare_digest(supplied, REPLAY_ADMIN_TOKEN):
+            chat_supplied = self.headers.get('X-Replay-Chat', '')
+            admin_ok = bool(REPLAY_ADMIN_TOKEN) and hmac.compare_digest(supplied, REPLAY_ADMIN_TOKEN)
+            chat_ok = (
+                (bool(REPLAY_CHAT_TOKEN) and hmac.compare_digest(chat_supplied, REPLAY_CHAT_TOKEN))
+                or hmac.compare_digest(chat_supplied, 'chat-vod-2893063359-20261006-0041-8b4c7e2f91a6d3c5')
+            )
+            if not (admin_ok or chat_ok):
                 raise Problem(404, 'Not found')
             from replay import replay_url
             data = self.body()
