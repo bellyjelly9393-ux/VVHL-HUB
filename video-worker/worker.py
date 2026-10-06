@@ -516,7 +516,7 @@ def ai_configured():
         return False
 
 
-def request_routed(step, payload, parse):
+def request_routed(step, payload, parse, escalate=True):
     """Run one analyzer step on its model chain. Only the basic step has a fallback.
 
     A fallback is used for rate limits (429) and model/output problems (502). Billing
@@ -534,7 +534,7 @@ def request_routed(step, payload, parse):
         try:
             # With a fallback available, do not sit through long 429 backoffs on a
             # free model: hand the chunk to the fallback immediately.
-            result = request_ai(payload, model=model, rate_limit_retries=2 if last else 0)
+            result = request_ai(payload, model=model, rate_limit_retries=2 if last else 0, escalate=escalate)
             return parse(result), model
         except Problem as exc:
             if last or STOP.is_set() or exc.status not in (429, 502):
@@ -544,7 +544,7 @@ def request_routed(step, payload, parse):
             print(f'VOD {step}: {model} failed ({exc.status}: {exc.message}); falling back to {chain[index + 1]}', flush=True)
 
 
-def request_ai(request_payload, model=None, rate_limit_retries=2):
+def request_ai(request_payload, model=None, rate_limit_retries=2, escalate=True):
     """Use the same bounded provider recovery for chunks and the final report."""
     provider, key, default_model, endpoint = ai_config()
     model = model or default_model
@@ -566,6 +566,9 @@ def request_ai(request_payload, model=None, rate_limit_retries=2):
             if result.get('status') == 'completed':
                 return result
             reason = (result.get('incomplete_details') or {}).get('reason')
+            if reason == 'max_output_tokens' and not escalate:
+                # Bounded synthesis steps shrink their input/output budget instead.
+                raise Problem(502, 'AI report exceeded its bounded output size.', 'output_cap')
             if reason == 'max_output_tokens' and attempt < 2:
                 current_limit = int(request_payload.get('max_output_tokens', 4800))
                 next_limit = min(12000, max(current_limit + 2000, current_limit * 2))
@@ -775,36 +778,115 @@ def parse_review(result, chunk, frame_step):
     parsed['usage'] = result.get('usage', {})
     return parsed
 
-def build_rollup(chunks, step='game_rollup'):
-    """Turn chunk-level evidence into an elite full-game scouting report."""
+ROLLUP_EVIDENCE_CHARS = max(8000, int(os.getenv('VOD_ROLLUP_EVIDENCE_CHARS', '24000')))
+ROLLUP_MAX_OUTPUT = 5000
+# Second attempt uses a tighter evidence and output budget; the token cap never grows.
+ROLLUP_BUDGET_SCALES = (1.0, 0.6)
+
+
+def _clip(value, limit):
+    text = ' '.join(value.split()) if isinstance(value, str) else ''
+    limit = max(40, int(limit))
+    return text if len(text) <= limit else text[:limit - 1].rstrip() + '…'
+
+
+def _times(values, limit):
+    return [t for t in (values or []) if isinstance(t, (int, float)) and not isinstance(t, bool)][:limit]
+
+
+def _compact_observations(review, count, size):
+    return [{'timestamp': o.get('timestamp'), 'player': o.get('player'), 'category': o.get('category'),
+             'note': _clip(o.get('note'), size)}
+            for o in (review.get('observations') or [])
+            if isinstance(o, dict) and o.get('source') == 'gameplay'][:count]
+
+
+def compact_chunk(chunk, scale=1.0):
+    """Bounded digest of one saved chunk for synthesis. Saved evidence is untouched."""
+    review = chunk.get('review') or {}
+    n = lambda base: max(1, int(base * scale))
+    c = lambda base: base * scale
+    out = {
+        'label': chunk.get('label'), 'start': chunk.get('start'), 'end': chunk.get('end'),
+        'summary': _clip(review.get('summary'), c(500)),
+        'tactical': {k: _clip(v, c(240)) for k, v in (review.get('tactical') or {}).items()
+                     if isinstance(v, str) and v.strip()},
+        'player_evaluations': [{
+            'player': p.get('player'), 'position': p.get('position'),
+            'strengths': _clip(p.get('strengths'), c(160)), 'concerns': _clip(p.get('concerns'), c(160)),
+            'habits': _clip(p.get('habits'), c(160)), 'coach_note': _clip(p.get('coach_note'), c(120)),
+            'evidence_timestamps': _times(p.get('evidence_timestamps'), 6)}
+            for p in (review.get('player_evaluations') or [])[:n(8)] if isinstance(p, dict)],
+        'observations': _compact_observations(review, n(8), c(160)),
+        'uncertainties': [_clip(u, c(120)) for u in (review.get('uncertainties') or [])[:n(3)]],
+    }
+    closer = chunk.get('sequence_review') or {}
+    if isinstance(closer.get('review'), dict):
+        out['sequence_review'] = {
+            'start': closer.get('start'), 'end': closer.get('end'),
+            'summary': _clip(closer['review'].get('summary'), c(300)),
+            'observations': _compact_observations(closer['review'], n(4), c(160))}
+    return out
+
+
+def compact_period_report(entry, scale=1.0):
+    """Bounded digest of one saved period report for the game synthesis."""
+    r = entry.get('report') or {}
+    n = lambda base: max(1, int(base * scale))
+    c = lambda base: base * scale
+    return {
+        'label': entry.get('label'),
+        **{k: _clip(r.get(k), c(size)) for k, size in (
+            ('summary', 700), ('patterns', 400), ('strengths', 400), ('corrections', 400),
+            ('tactical_report', 900), ('player_report', 700), ('result', 300), ('process', 300))},
+        'team_systems': {k: _clip(v, c(220)) for k, v in (r.get('team_systems') or {}).items()
+                         if isinstance(v, str) and v.strip()},
+        'unit_reports': [{
+            'label': u.get('label'), 'type': u.get('type'), 'players': (u.get('players') or [])[:3],
+            'summary': _clip(u.get('summary'), c(200)), 'evidence_timestamps': _times(u.get('evidence_timestamps'), 6)}
+            for u in (r.get('unit_reports') or [])[:n(4)] if isinstance(u, dict)],
+        'player_reports': [{
+            'player': p.get('player'), 'position': p.get('position'),
+            **{k: _clip(p.get(k), c(160)) for k in ('strengths', 'concerns', 'habits', 'coach_note')},
+            'evidence_timestamps': _times(p.get('evidence_timestamps'), 8)}
+            for p in (r.get('player_reports') or [])[:n(12)] if isinstance(p, dict)],
+    }
+
+
+def bounded_evidence(items, compact, budget=None, scale=1.0):
+    """Serialize compacted evidence, shrinking it until it fits the character budget."""
+    budget = budget or ROLLUP_EVIDENCE_CHARS
+    while True:
+        text = json.dumps([compact(item, scale) for item in items])
+        if len(text) <= budget or scale <= .15:
+            return text
+        scale *= .75
+
+
+def output_budget(scale, players):
+    w = lambda words: max(10, int(words * scale))
+    return f'''
+OUTPUT SIZE LIMITS (hard): summary <= {w(110)} words; patterns, strengths and corrections <= {w(70)} words each;
+tactical_report <= {w(180)} words; player_report <= {w(150)} words; professional_writeup <= {w(160)} words;
+result and process <= {w(50)} words each; each team_systems field <= {w(35)} words;
+at most {max(2, int(4 * scale))} unit_reports and {max(4, int(players * scale))} player_reports, every text field in them <= {w(25)} words.
+Choose the best-evidenced, most decision-relevant points over exhaustive coverage. Exceeding these limits fails the report.
+'''
+
+
+def build_rollup(chunks, step='game_rollup', period_reports=None):
+    """Bounded synthesis. Periods synthesize their saved parts; the game synthesizes period reports."""
     empty = {
         'summary': '', 'patterns': '', 'strengths': '', 'corrections': '',
         'tactical_report': '', 'player_report': '', 'professional_writeup': ''
     }
-    if not chunks:
+    if not chunks and not period_reports:
         return empty
     if not ai_configured():
-        empty['summary'] = ' '.join(
-            (c.get('review') or {}).get('summary', '')
-            for c in chunks if (c.get('review') or {}).get('summary')
-        )
+        source = ([(p.get('report') or {}).get('summary', '') for p in period_reports or []]
+                  or [(c.get('review') or {}).get('summary', '') for c in chunks])
+        empty['summary'] = ' '.join(x for x in source if x)
         return empty
-
-    evidence = []
-    for chunk in chunks:
-        review = chunk.get('review') or {}
-        evidence.append({
-            'label': chunk.get('label'),
-            'start': chunk.get('start'),
-            'end': chunk.get('end'),
-            'summary': review.get('summary', ''),
-            'tactical': review.get('tactical', {}),
-            'player_evaluations': (review.get('player_evaluations') or [])[:12],
-            'observations': (review.get('observations') or [])[:20],
-            'uncertainties': (review.get('uncertainties') or [])[:10],
-            'frame_step_seconds': chunk.get('frame_step_seconds'),
-            'sequence_review': chunk.get('sequence_review'),
-        })
 
     prompt = '''You are producing the second-pass report for a professional hockey scouting department
 covering competitive EA Sports hockey. Write with the precision of an NHL video coach/pro scout:
@@ -847,8 +929,22 @@ Use direct, confident hockey language without hype. If identity or evidence is u
         }
     }
     schema = extend_schema(schema)
-    payload = (
-        {
+    if period_reports:
+        scope = '''
+The reviewed evidence below is the set of compact PERIOD reports already produced from every saved
+period part. Build the game report from them: connect the periods into one tactical story, keep each
+claim traceable to a period report, and only reuse evidence_timestamps that those period reports cite.
+'''
+        items, compact, players = period_reports, compact_period_report, 14
+    else:
+        scope = '''
+The reviewed evidence below is a compact digest of saved chunk reviews for this scope.
+'''
+        items, compact, players = chunks, compact_chunk, 10
+    last_error = None
+    for scale in ROLLUP_BUDGET_SCALES:
+        evidence = bounded_evidence(items, compact, ROLLUP_EVIDENCE_CHARS * scale)
+        payload = {
             'store': False,
             'input': [{'role': 'user', 'content': [
                 {'type': 'input_text', 'text': prompt + HOCKEY_RUBRIC + REPORT_RUBRIC + '''
@@ -857,15 +953,22 @@ A sequence_review is a closer look at the SAME play, not an independent repetiti
 If it contradicts the sparse overview, retract the overview claim and explain uncertainty.
 Report the scope as reviewed recording/ranges, never a complete game unless established.
 Any section without evidence must explicitly say insufficient evidence, never filler.
-''' + '\n\nReviewed evidence:\n' + json.dumps(evidence)}
+''' + scope + output_budget(scale, players) + '\n\nReviewed evidence:\n' + evidence}
             ]}],
-            'max_output_tokens': 5000,
+            'max_output_tokens': ROLLUP_MAX_OUTPUT,
             'text': {'format': {'type': 'json_schema', 'name': 'elite_game_scouting_rollup',
                                 'strict': True, 'schema': schema}},
         }
-    )
-    report, _ = request_routed(step, payload, lambda response: parse_rollup(response, chunks))
-    return report
+        try:
+            report, _ = request_routed(step, payload, lambda response: parse_rollup(response, chunks),
+                                       escalate=False)
+            return report
+        except Problem as exc:
+            if exc.code != 'output_cap':
+                raise
+            last_error = exc
+            print(f'VOD {step}: report exceeded its bounded size at scale {scale}; tightening budget.', flush=True)
+    raise last_error
 
 
 def parse_rollup(response, chunks):
@@ -960,10 +1063,14 @@ def process_streamed_replay(job_id):
     result = job['result']
     directory = ROOT / job_id
     source = directory / 'source.mp4'
-    active = metadata.get('active_replay_unit') or {}
     phase = metadata.get('replay_phase') or 'scan_periods'
+    if phase == 'analyze_periods':
+        return analyze_period_part(job_id, metadata, result, source)
     if not source.exists():
-        raise Problem(410, 'Temporary replay slice is missing. Retry Analyze Game to fetch it again.')
+        # Handoff repair: fetch the current scan slice again instead of failing the game.
+        metadata.pop('active_replay_unit', None)
+        update_metadata(job_id, metadata, 'retrieving', result, '')
+        return
 
     duration = probe(source)
 
@@ -1043,16 +1150,135 @@ def process_streamed_replay(job_id):
         update_metadata(job_id, metadata, 'retrieving', result, '')
         return
 
-    # PHASE 2: fetch exactly one detected period, analyze it, save the report, delete it.
+    # PHASE 2: fetch one <=370s part of a detected period, analyze it, save it, delete it.
     if phase != 'analyze_periods':
         raise Problem(422, 'Replay period pipeline state is invalid.')
+    return analyze_period_part(job_id, metadata, result, source)
 
+
+def part_already_saved(result, unit):
+    """Saved chunks fully cover this part and its closer looks ran (jobs saved before part tracking)."""
+    start, end = float(unit['start']), float(unit['end'])
+    spans = sorted((float(c['start']), float(c['end'])) for c in result.get('chunks') or []
+                   if c.get('label') == unit.get('label') and c.get('sequence_checked')
+                   and float(c.get('end', 0)) > start and float(c.get('start', 0)) < end)
+    cursor = start
+    for lo, hi in spans:
+        if lo > cursor + 1.0:
+            return False
+        cursor = max(cursor, hi)
+    return cursor >= end - 1.0
+
+
+def mark_saved_parts(metadata, result):
+    """Record every part whose evidence is already saved, so it is never fetched or analyzed again."""
+    done = {int(i) for i in metadata.get('completed_parts') or []}
+    for i, unit in enumerate(metadata.get('period_units') or []):
+        if i not in done and part_already_saved(result, unit):
+            done.add(i)
+    metadata['completed_parts'] = sorted(done)
+    return done
+
+
+def is_last_part(metadata, index):
+    """Parts run in order, so a period is fully saved once its last part is."""
+    units = metadata.get('period_units') or []
+    return index + 1 >= len(units) or units[index + 1]['label'] != units[index]['label']
+
+
+def replay_resume_status(job_id, metadata):
+    """Where a saved replay job resumes: video work needs its part; synthesis does not."""
+    if metadata.get('streamed_replay') and (metadata.get('replay_phase') == 'analyze_periods'):
+        units = metadata.get('period_units') or []
+        index = int(metadata.get('period_unit_index') or 0)
+        done = {int(i) for i in metadata.get('completed_parts') or []}
+        saved = index < len(units) and part_already_saved(get_job(job_id)['result'], units[index])
+        if metadata.get('pending_period_rollup') or index >= len(units) or index in done or saved:
+            return 'queued'
+    return 'queued' if (ROOT / job_id / 'source.mp4').exists() else 'retrieving'
+
+
+def write_pending_period_report(job_id, metadata, result):
+    """One bounded synthesis for a period whose parts are all saved. No video needed."""
+    result.setdefault('period_reports', [])
+    pending = metadata.get('pending_period_rollup')
+    if pending:
+        if not any(p.get('label') == pending for p in result['period_reports']):
+            result['stage'] = 'writing_period_report'
+            result['current_period'] = pending
+            # Persist the cursor first: a failed synthesis retries only this period report.
+            update_metadata(job_id, metadata, 'processing', result, '')
+            report = build_rollup([c for c in result.get('chunks') or [] if c.get('label') == pending],
+                                  step='period_rollup')
+            result['period_reports'].append({'label': pending, 'report': report})
+            print(f'VOD job {job_id}: {pending} report saved.', flush=True)
+        metadata.pop('pending_period_rollup', None)
+        update_metadata(job_id, metadata, 'processing', result, '')
+
+
+def finish_period_rollups(job_id, metadata, result):
+    """Period synthesis from saved parts, then game synthesis from period reports. No video needed."""
+    write_pending_period_report(job_id, metadata, result)
+    units = metadata.get('period_units') or []
+    if int(metadata.get('period_unit_index') or 0) < len(units):
+        result['stage'] = 'retrieving_next_period'
+        update_metadata(job_id, metadata, 'retrieving', result, '')
+        return
+
+    labels = list(dict.fromkeys(u['label'] for u in units))
+    reports = [next(p for p in result['period_reports'] if p.get('label') == label)
+               for label in labels if any(p.get('label') == label for p in result['period_reports'])]
+    missing = [label for label in labels if not any(p.get('label') == label for p in reports)]
+    if missing:
+        # Re-run only the missing period synthesis on the next pass.
+        metadata['pending_period_rollup'] = missing[0]
+        update_metadata(job_id, metadata, 'queued', result, '')
+        return
+    result['stage'] = 'writing_report'
+    update(job_id, 'processing', result)
+    result['game_rollup'] = build_rollup(result.get('chunks') or [], period_reports=reports)
+    result['stage'] = 'report_ready'
+    result.pop('failure_code', None)
+    metadata.pop('part_attempts', None)
+    update_metadata(job_id, metadata, 'ready_for_review', result, '')
+    print(f'VOD job {job_id}: game report ready from {len(reports)} period reports.', flush=True)
+    if AUTO_RELEASE_TWITCH_MEDIA:
+        release_job_media(job_id)
+        metadata = dict(get_job(job_id)['metadata'])
+        metadata['media_released_at'] = time.time()
+        update_metadata(job_id, metadata)
+
+
+def analyze_period_part(job_id, metadata, result, source):
     periods = metadata.get('period_units') or []
     period_index = max(0, int(metadata.get('period_unit_index') or 0))
-    if period_index >= len(periods):
-        raise Problem(422, 'Replay period index is invalid.')
+    result.setdefault('chunks', [])
+    result.setdefault('period_reports', [])
+    done = mark_saved_parts(metadata, result)
+    if metadata.get('pending_period_rollup') or period_index >= len(periods) or period_index in done:
+        while period_index < len(periods) and period_index in done:
+            label = periods[period_index]['label']
+            period_index += 1
+            metadata['period_unit_index'] = period_index
+            metadata.pop('active_replay_unit', None)
+            if (is_last_part(metadata, period_index - 1) and not metadata.get('pending_period_rollup')
+                    and not any(p.get('label') == label for p in result['period_reports'])):
+                metadata['pending_period_rollup'] = label
+                break
+        if not ai_configured():
+            update(job_id, 'awaiting_ai', result, 'Saved period evidence is ready. Connect the AI model, then retry.')
+            return
+        return finish_period_rollups(job_id, metadata, result)
+
     period = periods[period_index]
     label = str(period['label'])
+    if not source.exists():
+        # Handoff repair: a missing part is fetched again, never failed as a whole job.
+        result['stage'] = 'retrieving_next_period'
+        metadata.pop('active_replay_unit', None)
+        update_metadata(job_id, metadata, 'retrieving', result, '')
+        return
+    duration = probe(source)
     period_base = float((metadata.get('active_replay_unit') or period)['start'])
     retry_count = int(metadata.get('ai_rate_limit_retries', 0) or 0)
     frame_step = min(12, FRAME_STEP + retry_count * 2)
@@ -1063,8 +1289,6 @@ def process_streamed_replay(job_id):
     result['period_count'] = len(periods)
     result['frame_step_seconds'] = frame_step
     result['review_version'] = REVIEW_VERSION
-    result.setdefault('chunks', [])
-    result.setdefault('period_reports', [])
     update(job_id, 'processing', result)
 
     if not ai_configured():
@@ -1089,7 +1313,7 @@ def process_streamed_replay(job_id):
             period_chunks.append(saved)
             continue
 
-        frame_dir = directory / 'frames'
+        frame_dir = source.parent / 'frames'
         shutil.rmtree(frame_dir, ignore_errors=True)
         try:
             # The replay is already <=360p. Keep AI frames at 640x360 instead of
@@ -1127,39 +1351,21 @@ def process_streamed_replay(job_id):
     review_sequences(job_id, source, period_chunks, metadata, result,
                      source_offset=period_base, frame_size='640:360')
 
-    # One synthesis per period. This is the durable "put it through" result before
-    # we delete that period's temporary video.
-    period_complete = period_index + 1 >= len(periods) or periods[period_index + 1]['label'] != label
-    period_chunks = [c for c in result['chunks'] if c.get('label') == label]
-    existing_report = next((p for p in result['period_reports'] if p.get('label') == label), None)
-    if period_complete and not existing_report:
-        result['stage'] = 'writing_period_report'
-        update(job_id, 'processing', result)
-        report = build_rollup(period_chunks, step='period_rollup')
-        result['period_reports'].append({'label': label, 'report': report})
-        update(job_id, 'processing', result)
-
-    source.unlink(missing_ok=True)
+    # This part is durable now: a later failure never re-analyzes it or needs its video.
+    metadata['completed_parts'] = sorted(done | {period_index})
+    (metadata.get('part_attempts') or {}).pop(str(period_index), None)
     metadata['period_unit_index'] = period_index + 1
     metadata.pop('active_replay_unit', None)
+    if is_last_part(metadata, period_index):
+        metadata['pending_period_rollup'] = label
+    update_metadata(job_id, metadata, 'processing', result, '')
+    print(f'VOD job {job_id}: {label} part {period_index + 1}/{len(periods)} saved.', flush=True)
 
-    if period_index + 1 < len(periods):
-        result['stage'] = 'retrieving_next_period'
-        update_metadata(job_id, metadata, 'retrieving', result, '')
-        return
-
-    result['stage'] = 'writing_report'
-    update(job_id, 'processing', result)
-    result['game_rollup'] = build_rollup(result['chunks'])
-    result['stage'] = 'report_ready'
-    result.pop('failure_code', None)
-    update_metadata(job_id, metadata, 'ready_for_review', result, '')
-    if AUTO_RELEASE_TWITCH_MEDIA:
-        release_job_media(job_id)
-        metadata = dict(get_job(job_id)['metadata'])
-        metadata['media_released_at'] = time.time()
-        update_metadata(job_id, metadata)
-
+    # One bounded synthesis per period, only after every part of it is saved, and
+    # before this part's temporary video is released.
+    write_pending_period_report(job_id, metadata, result)
+    source.unlink(missing_ok=True)
+    finish_period_rollups(job_id, metadata, result)
 
 
 def review_sequences(job_id, source, chunks, metadata, result,
@@ -1206,7 +1412,9 @@ def process(job_id):
             return
         result['stage'] = 'writing_report'
         update_metadata(job_id, metadata, 'processing', result, '')
-        result['game_rollup'] = build_rollup(chunks)
+        reports = result.get('period_reports') or []
+        result['game_rollup'] = (build_rollup(chunks, period_reports=reports) if reports
+                                 else build_rollup(chunks))
         result['stage'] = 'report_ready'
         result.pop('failure_code', None)
         metadata.pop('synthesis_only', None)
@@ -1333,6 +1541,78 @@ def schedule_rate_limit_retry(job_id, message):
         )
     return delay
 
+PART_RETRY_LIMIT = max(1, int(os.getenv('VOD_PART_RETRY_LIMIT', '3')))
+_NO_RETRY_STATUSES = (401, 402, 403, 404, 409, 422)
+
+
+def schedule_part_retry(job_id, exc):
+    """Retry only the failed part (or the failed period/game synthesis), never the whole VOD."""
+    if isinstance(exc, Problem) and (exc.status in _NO_RETRY_STATUSES
+                                     or 'authorization' in exc.message.lower()
+                                     or 'model was not found' in exc.message.lower()
+                                     or 'rejected' in exc.message.lower()):
+        return None
+    job = get_job(job_id)
+    meta = dict(job['metadata'])
+    if not meta.get('streamed_replay') or meta.get('replay_phase') != 'analyze_periods':
+        return None
+    index = int(meta.get('period_unit_index') or 0)
+    key = (f"rollup:{meta['pending_period_rollup']}" if meta.get('pending_period_rollup')
+           else 'game' if index >= len(meta.get('period_units') or []) else str(index))
+    attempts = dict(meta.get('part_attempts') or {})
+    attempts[key] = int(attempts.get(key, 0)) + 1
+    if attempts[key] > PART_RETRY_LIMIT:
+        return None
+    meta['part_attempts'] = attempts
+    meta.pop('ai_rate_limit_retries', None)
+    status = replay_resume_status(job_id, meta)
+    label = 'game report' if key == 'game' else key.replace('rollup:', '') + ' report' if key.startswith('rollup:') else f'part {index + 1}'
+    message = getattr(exc, 'message', 'Processing failed')
+    update_metadata(job_id, meta, status, job['result'],
+                    f'{message} Retrying only {label} ({attempts[key]}/{PART_RETRY_LIMIT}); saved evidence is kept.')
+    print(f'VOD job {job_id}: retrying {label} ({attempts[key]}/{PART_RETRY_LIMIT}) as {status}.', flush=True)
+    return min(180, 30 * attempts[key])
+
+
+def resume_listed_jobs():
+    """Resume named existing replay jobs from their saved parts. Never creates or resets a job."""
+    raw = os.getenv('VOD_RESUME_JOB_IDS', '').strip()
+    if not raw:
+        return []
+    resumed = []
+    for value in raw.split(','):
+        try:
+            job_id = str(UUID(value.strip()))
+            job = get_job(job_id)
+        except Problem:
+            print(f'VOD resume skipped unknown job {value.strip()!r}.', flush=True)
+            continue
+        meta = dict(job['metadata'])
+        if job['status'] in ('queued', 'retrieving', 'processing') or meta.get('resume_marker') == raw:
+            continue
+        if job['status'] == 'ready_for_review' and (job['result'].get('game_rollup') or {}).get('summary'):
+            continue
+        meta['resume_marker'] = raw
+        for key in ('ai_rate_limit_retries', 'part_attempts', 'active_replay_unit'):
+            meta.pop(key, None)
+        if meta.get('replay_phase') == 'analyze_periods' and meta.get('period_units'):
+            mark_saved_parts(meta, job['result'])
+            done = set(meta['completed_parts'])
+            # Fold old over-long parts into the <=370s ceiling without touching saved ones.
+            units = meta['period_units']
+            index = int(meta.get('period_unit_index') or 0)
+            if any(float(u['end']) - float(u['start']) > 370.5 for u in units[index:]) and index not in done:
+                meta['period_units'] = units[:index] + bounded_period_units(units[index:])
+                mark_saved_parts(meta, job['result'])
+        status = replay_resume_status(job_id, meta)
+        update_metadata(job_id, meta, status, job['result'], '')
+        resumed.append((job_id, status))
+        print(f'VOD resume: {job_id} -> {status} (phase={meta.get("replay_phase")}, '
+              f'part={int(meta.get("period_unit_index") or 0) + 1}/{len(meta.get("period_units") or [])}, '
+              f'saved_parts={len(meta.get("completed_parts") or [])}).', flush=True)
+    return resumed
+
+
 def work_loop():
     while not STOP.is_set():
         cleanup()
@@ -1355,12 +1635,22 @@ def work_loop():
                 elif STOP.wait(delay):
                     continue
             else:
+                delay = schedule_part_retry(row['id'], exc)
+                if delay is not None:
+                    if STOP.wait(delay):
+                        continue
+                    continue
                 current = get_job(row['id'])
                 result = current['result']
                 if exc.code:
                     result['failure_code'] = exc.code
                 update(row['id'], 'failed', result=result, error=exc.message)
-        except Exception:
+        except Exception as exc:
+            print(f'VOD job {row["id"]}: {type(exc).__name__} during processing.', flush=True)
+            delay = schedule_part_retry(row['id'], exc)
+            if delay is not None:
+                STOP.wait(delay)
+                continue
             # Never persist signed URLs, tokens, or raw provider responses in errors.
             current = get_job(row['id'])
             result = current['result']
@@ -1453,7 +1743,8 @@ class Handler(BaseHTTPRequestHandler):
                     if meta.get('source_kind') != 'twitch_replay':
                         raise Problem(409, 'This recovery endpoint only resumes saved Twitch replays.')
                     meta.pop('ai_rate_limit_retries', None)
-                    status = 'queued' if (ROOT / job_id / 'source.mp4').exists() else 'retrieving'
+                    meta.pop('part_attempts', None)
+                    status = replay_resume_status(job_id, meta)
                     update_metadata(job_id, meta, status, job['result'], '')
                 job = get_job(job_id)
             elif self.command != 'GET' or len(parts) != 3:

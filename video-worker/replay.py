@@ -334,10 +334,13 @@ def resolve(review, owner, create=False):
                     isinstance(rollup.get(k), str) and rollup[k].strip() for k in (
                         'summary', 'patterns', 'strengths', 'corrections',
                         'tactical_report', 'player_report', 'professional_writeup'))
-                if create and (job['status'] in ('failed', 'awaiting_ai') or incomplete_report) and (worker.ROOT / row['id'] / 'source.mp4').exists():
-                    # Analyze Game resumes saved chunk evidence and retries the report.
+                resumable = (worker.ROOT / row['id'] / 'source.mp4').exists() or (
+                    meta.get('streamed_replay') and worker.replay_resume_status(row['id'], meta) == 'queued')
+                if create and (job['status'] in ('failed', 'awaiting_ai') or incomplete_report) and resumable:
+                    # Analyze Game resumes saved part evidence and retries only what is missing.
                     # It must not just redisplay the same failed job indefinitely.
                     meta.pop('ai_rate_limit_retries', None)
+                    meta.pop('part_attempts', None)
                     db.execute("UPDATE jobs SET metadata=?,status='queued',error='' WHERE id=?", (json.dumps(meta), row['id']))
                     db.commit()
                     job = worker.get_job(row['id'], owner)
@@ -435,13 +438,19 @@ def retrieve(job_id):
         elif phase == 'analyze_periods':
             units = metadata.get('period_units') or []
             old_index = max(0, int(metadata.get('period_unit_index') or 0))
-            if any(float(u['end']) - float(u['start']) > 600 for u in units):
-                completed = units[:old_index]
-                units = completed + worker.bounded_period_units(units[old_index:])
+            # Hard ceiling: a part is never longer than 370 seconds.
+            if any(float(u['end']) - float(u['start']) > 370.5 for u in units[old_index:]):
+                units = units[:old_index] + worker.bounded_period_units(units[old_index:])
                 metadata['period_units'] = units
+            result = dict(job.get('result') or {})
+            worker.mark_saved_parts(metadata, result)
             unit_index = max(0, int(metadata.get('period_unit_index') or 0))
-            if unit_index >= len(units):
-                raise worker.Problem(409, 'Replay period analysis is already complete.')
+            if (metadata.get('pending_period_rollup') or unit_index >= len(units)
+                    or unit_index in set(metadata['completed_parts'])):
+                # Saved parts and period/game synthesis never need the video again.
+                metadata.pop('active_replay_unit', None)
+                worker.update_metadata(job_id, metadata, 'queued', result, '')
+                return
             unit = units[unit_index]
             metadata['active_replay_unit'] = {
                 'kind': 'period', 'label': str(unit['label']),
