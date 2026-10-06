@@ -84,6 +84,9 @@
   "functions": {
     "api/chelscout-deepthink.js": {
       "maxDuration": 120
+    },
+    "api/hitmen-recap-writer.js": {
+      "maxDuration": 120
     }
   }
 }

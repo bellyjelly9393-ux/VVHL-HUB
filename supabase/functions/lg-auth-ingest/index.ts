@@ -2,8 +2,9 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const TEAM_ID = "b0bcbdda-da9d-419d-8f61-b34937966d49";
-const ALLOWED_TYPES = new Set(["roster","weekly_lines","transactions","game","schedule","stats","unknown"]);
+const ALLOWED_TYPES = new Set(["roster","weekly_lines","transactions","game","box_score","schedule","stats","unknown"]);
 const MANAGER_ROLES = new Set(["owner","gm","agm"]);
+const CALGARY_TEAM_ID = TEAM_ID;
 const LG_HOST = /(^|\.)leaguegaming\.com$/i;
 const MAX_BODY_CHARS = 2_000_000;
 
@@ -64,16 +65,26 @@ function safeUrl(raw: string) {
   return u.toString();
 }
 
-function inferType(source: URL, supplied: string, text: string) {
-  if (ALLOWED_TYPES.has(supplied) && supplied !== "unknown") return supplied;
+const PAGE_TYPES: Record<string,string> = {
+  roster: "roster",
+  game: "game",
+  league_game_edit_log: "box_score",
+  team_page_schedule: "schedule",
+  team_page: "schedule",
+  schedule: "schedule",
+  player_stats: "stats",
+  player_stats_advanced: "stats",
+  standings: "stats",
+};
+
+function inferType(source: URL, supplied: string, title: string) {
   const page = String(source.searchParams.get("page") || "").toLowerCase();
-  const hay = (page + " " + text.slice(0, 5000)).toLowerCase();
-  if (/roster/.test(hay)) return "roster";
+  if (PAGE_TYPES[page]) return PAGE_TYPES[page];
+  if (ALLOWED_TYPES.has(supplied) && supplied !== "unknown" && supplied !== "roster") return supplied;
+  // Only the page id and title are trusted here, never body text (site navigation mentions every page type).
+  const hay = (page + " " + title).toLowerCase();
   if (/weekly\s*lines|weekly_lines|lineup/.test(hay)) return "weekly_lines";
   if (/transaction|trade/.test(hay)) return "transactions";
-  if (/page=game|\bteam stats\b|\buser stats\b/.test(hay)) return "game";
-  if (/schedule|calendar|team_page/.test(hay)) return "schedule";
-  if (/stats|memberstats/.test(hay)) return "stats";
   return "unknown";
 }
 
@@ -119,6 +130,59 @@ function parseRosters(html: string) {
   return [...new Map(players.map(p => [p.team + "|" + p.uid, p])).values()];
 }
 
+
+// ---- LG Public Log (page=league_game_edit_log) box scores ----
+const LG_STAT_KEYS = new Set(["points","goals","assists","toi","puckpos","hits","pim","plusminus","pass_att","pass_com","deflections","interceptions","pk_clear","shots","shot_att","bs","giveaway","takeaway","gwg","ppg","shg","fow","fol","pendrawn","class","ecu","sog","savep","ga","sa","gaa","pchk","dsv","brks","bap","psp","gso_p"]);
+const int = (v: unknown) => { const m = String(v ?? "").match(/-?\d+/); return m ? Number(m[0]) : null; };
+const pimMinutes = (v: unknown) => { const t = String(v ?? "").trim(); return t.includes(":") ? int(t.split(":")[0]) : int(t); };
+
+export function parsePublicLog(raw: string) {
+  const text = String(raw || "").replace(/\r/g, "").trim();
+  const lines = text.split(/\n+/).map(x => x.trim()).filter(Boolean);
+  const lower = lines.map(x => x.toLowerCase());
+  const userStart = lower.findIndex(x => x === "user stats");
+  const teamStart = lower.findIndex(x => x === "team stats");
+  const periodStart = lower.findIndex((x, i) => i > teamStart && x === "period stats");
+  if (teamStart < 0) throw new Error("This is not a LeagueGaming Public Log (Team Stats section missing).");
+  const teamEnd = periodStart > teamStart ? periodStart : lines.length;
+  const teamLines = lines.slice(teamStart + 1, teamEnd).slice(0, 400);
+  const scores: number[] = [];
+  for (let i = 0; i < teamLines.length - 1; i++) {
+    if (teamLines[i].toLowerCase() === "goals" && /^-?\d+$/.test(teamLines[i + 1])) scores.push(Number(teamLines[i + 1]));
+  }
+  if (scores.length < 2) for (const m of teamLines.join(" ").matchAll(/\bgoals\s+(-?\d+)\b/gi)) scores.push(Number(m[1]));
+  if (scores.length < 2) throw new Error("Public Log found, but both team goal totals were not readable.");
+
+  const players: any[] = [];
+  if (userStart >= 0 && teamStart > userStart) {
+    const seg = lines.slice(userStart + 1, teamStart);
+    let current: any = null;
+    for (let i = 0; i < seg.length; i++) {
+      const line = seg[i], key = line.toLowerCase(), next = (seg[i + 1] || "").toLowerCase();
+      if (["user","stat","save index"].includes(key) || /^save #?\d+$/i.test(line)) continue;
+      if (!LG_STAT_KEYS.has(key) && next === "points") { current = { gamertag: line.slice(0, 100), raw: {} }; players.push(current); continue; }
+      if (current && LG_STAT_KEYS.has(key) && i + 1 < seg.length) { current.raw[key] = seg[i + 1].slice(0, 40); i++; }
+    }
+  }
+  const mapped = players.slice(0, 40).map(p => {
+    const s = p.raw;
+    const shotsAgainst = int(s.sa), goalsAgainst = int(s.ga);
+    return {
+      gamertag: p.gamertag, raw: s,
+      goals: int(s.goals), assists: int(s.assists), points: int(s.points), plus_minus: int(s.plusminus),
+      shots: int(s.shots ?? s.sog), hits: int(s.hits), pim: pimMinutes(s.pim),
+      takeaways: int(s.takeaway), giveaways: int(s.giveaway), interceptions: int(s.interceptions), blocked_shots: int(s.bs),
+      faceoff_wins: int(s.fow), faceoff_losses: int(s.fol), pass_attempts: int(s.pass_att), pass_completions: int(s.pass_com),
+      ppg: int(s.ppg), shg: int(s.shg), gwg: int(s.gwg),
+      shots_against: shotsAgainst, goals_against: goalsAgainst,
+      saves: shotsAgainst != null && goalsAgainst != null ? shotsAgainst - goalsAgainst : null,
+    };
+  });
+  const periodLines = periodStart > 0 ? lines.slice(periodStart + 1, periodStart + 200) : [];
+  const saved = [...text.matchAll(/20\d{2}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}/g)].at(-1)?.[0] || null;
+  return { scores: scores.slice(0, 2), players: mapped, teamLines, periodLines, saved };
+}
+
 async function sha256(value: string) {
   const data = new TextEncoder().encode(value);
   const hash = await crypto.subtle.digest("SHA-256", data);
@@ -147,8 +211,8 @@ Deno.serve(async (req: Request) => {
   ]);
   const profileRole = String(profile?.role || "").toLowerCase();
   const allowed = profileRole === "admin" || profileRole === "commissioner" ||
-    (memberships || []).some((m: any) => MANAGER_ROLES.has(String(m.role || "").toLowerCase()));
-  if (!allowed) return json(req, { error: "Owner, GM, AGM, Commissioner or Admin access is required." }, 403);
+    (memberships || []).some((m: any) => m.team_id === CALGARY_TEAM_ID && MANAGER_ROLES.has(String(m.role || "").toLowerCase()));
+  if (!allowed) return json(req, { error: "Calgary Owner, GM, AGM, Commissioner or Admin access is required." }, 403);
 
   let body: any;
   try { body = await req.json(); } catch { return json(req, { error: "Invalid capture payload." }, 400); }
@@ -162,8 +226,8 @@ Deno.serve(async (req: Request) => {
   const source = new URL(sourceUrl);
   const safeHtml = sanitizeHtml(body?.html || "");
   const safeText = String(body?.text || clean(safeHtml)).slice(0, 400_000);
-  const captureType = inferType(source, String(body?.captureType || "unknown"), safeText);
   const sourceTitle = String(body?.sourceTitle || "LeagueGaming").slice(0, 300);
+  const captureType = inferType(source, String(body?.captureType || "unknown"), sourceTitle);
   const capturedAtRaw = String(body?.capturedAt || "");
   const capturedAt = Number.isFinite(Date.parse(capturedAtRaw)) ? new Date(capturedAtRaw).toISOString() : new Date().toISOString();
   const leagueId = Number(source.searchParams.get("leagueid") || body?.leagueId || 39);
@@ -175,15 +239,19 @@ Deno.serve(async (req: Request) => {
   const payload = { html: safeHtml, text: safeText, tables, league_id: leagueId, season };
   let snapshotId: string;
   const inserted = await admin.from("lg_auth_snapshots").insert({
-    captured_by: userId, capture_type: captureType, league, season,
+    captured_by: userId,
+    // Public Logs are stored under the existing 'game' snapshot type; parsed.kind records the box score.
+    capture_type: captureType === "box_score" ? "game" : captureType, league, season,
     source_url: sourceUrl, source_title: sourceTitle, captured_at: capturedAt,
     source_hash: digest, payload, parse_status: "captured",
   }).select("id").single();
 
   if (inserted.error) {
     if (inserted.error.code === "23505") {
-      const { data: old } = await admin.from("lg_auth_snapshots").select("id,parse_status,parsed,created_at").eq("source_hash", digest).maybeSingle();
-      return json(req, { ok: true, duplicate: true, captureType, snapshot: old });
+      const { data: old } = await admin.from("lg_auth_snapshots").select("id,parse_status,parse_error,parsed,created_at").eq("source_hash", digest).maybeSingle();
+      // An identical capture that failed before still fails; report the original reason instead of "ok".
+      if (old?.parse_status === "error") return json(req, { error: old.parse_error || "This exact capture failed before.", captureType, duplicate: true }, 422);
+      return json(req, { ok: true, duplicate: true, captureType, parsed: old?.parsed, snapshot: old });
     }
     return json(req, { error: "Could not store LG capture.", detail: inserted.error.message }, 500);
   }
@@ -206,6 +274,20 @@ Deno.serve(async (req: Request) => {
       await admin.from("lg_auth_snapshots").update({ parse_status: "parsed", parsed }).eq("id", snapshotId);
       return json(req, { ok: true, captureType, snapshotId, league, season, parsed,
         note: "Authenticated roster applied. Roster moves are candidates for review, not automatically labeled as official trades." });
+    }
+
+    if (captureType === "box_score") {
+      const gameId = Number(source.searchParams.get("gameid") || 0);
+      if (!Number.isSafeInteger(gameId) || gameId <= 0) throw new Error("Public Log URL has no LG game id.");
+      const log = parsePublicLog(safeText);
+      const { data: applied, error } = await admin.rpc("lg_apply_box_score", {
+        p_snapshot_id: snapshotId, p_lg_game_id: gameId, p_scores: log.scores, p_players: log.players,
+        p_team_stats: log.teamLines, p_period_stats: log.periodLines, p_saved_at: log.saved, p_captured_at: capturedAt,
+      });
+      if (error) throw error;
+      await admin.from("lg_auth_snapshots").update({ parse_status: "parsed", parsed: { kind: "box_score", ...applied } }).eq("id", snapshotId);
+      return json(req, { ok: true, captureType, snapshotId, league, season, parsed: applied,
+        note: "Box score verified against the official LGCHL final and saved." });
     }
 
     const parsed = {
