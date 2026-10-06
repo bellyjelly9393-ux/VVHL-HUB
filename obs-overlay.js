@@ -1,5 +1,6 @@
 (function(){
   'use strict';
+  var SCENES=window.WM_OBS_SCENES||null;
   var SUPABASE_URL='https://lrgllzvwgvqagcpiyvfd.supabase.co';
   var SUPABASE_KEY='sb_publishable_9GD6JhLzUGgoPNtahx7eQQ_JDARGIaP';
   // Public, read-only client with no persisted session (see obs-stage.js): always reads as anon
@@ -225,13 +226,16 @@
     if(!lastRow)return;
     text('scoreClock',liveClock(lastRow.payload||{}),'20:00');
   }
-  function sceneLabel(scene){
-    return {
-      starting:'STARTING SOON',
-      intermission:'INTERMISSION',
-      final:'FINAL',
-      brb:'BE RIGHT BACK'
-    }[scene]||'LIVE';
+  function sceneLabel(scene,payload){
+    var item=SCENES&&SCENES.infer?SCENES.infer(scene,payload||{}):null;
+    if(item){
+      if(item.id==='starting')return 'STARTING SOON';
+      if(item.id==='intermission')return 'INTERMISSION';
+      if(item.id==='final')return 'FINAL';
+      if(item.id==='brb')return 'BE RIGHT BACK';
+      if(item.id==='player')return 'PLAYER SPOTLIGHT';
+    }
+    return 'LIVE';
   }
   function render(row){
     if(!row) return;
@@ -239,10 +243,16 @@
     var payload=row.payload||{};
     var brand=row.brand==='hitmen'?'hitmen':'wildman';
     var scene=forcedScene||row.scene||'game';
+    var scenePreset=SCENES&&SCENES.infer?SCENES.infer(scene,payload):null;
     document.body.dataset.brand=brand;
     document.body.dataset.scene=scene;
-    document.body.dataset.bug=['left','right','hidden'].indexOf(payload.bugPosition)>=0?payload.bugPosition:'right';
-    document.body.dataset.scoreboard=payload.showScoreboard===false?'off':'on';
+    document.body.dataset.preset=scenePreset?scenePreset.id:scene;
+    document.body.dataset.bug=['left','right','hidden'].indexOf(payload.bugPosition)>=0?payload.bugPosition:'hidden';
+    // Gameplay and Player ID always rely on EA's in-game score bug. Our small bottom
+    // scorebar is reserved as an optional non-game graphic; Intermission/Final use
+    // the dedicated full break scoreboard below, not this bar.
+    var allowSmallScorebar=scene!=='game'&&scene!=='player';
+    document.body.dataset.scoreboard=allowSmallScorebar&&payload.showScoreboard===true?'on':'off';
     document.body.dataset.layout=payload.feedLayout==='panel'?'panel':'full';
     placeLogo(payload);
     var autoOpponent='';
@@ -272,7 +282,7 @@
     text('awayScore',payload.awayScore,0);
 
     text('fullEyebrow',isHitmen?'CALGARY HITMEN · LGCHL SEASON 55':'WILDMAN HOCKEY ESPORTS NETWORK');
-    text('sceneTitle',sceneLabel(scene));
+    text('sceneTitle',sceneLabel(scene,payload));
     text('fullHomeName',payload.homeName,isHitmen?'CALGARY HITMEN':'WILDMAN HOCKEY');
     text('fullHomeScore',payload.homeScore,0);
     text('fullAwayName',awayName,'');
