@@ -99,7 +99,7 @@
       <div class="broadcast-channel-switcher">
         <label for="broadcastChannelSelect"><span>WATCH CHANNEL</span>
           <select id="broadcastChannelSelect" class="select-field">
-            ${sources.map(s=>`<option value="${esc(s._key)}" ${S.selectedBroadcastKey===s._key?'selected':''}>${esc(channelFamily(s.channel_key)==='hitmen'?'Calgary Hitmen Live':'Wildman Live')} · ${esc(s.broadcast_title)}</option>`).join('')}
+            ${sources.map(s=>`<option value="${esc(s._key)}" ${S.selectedBroadcastKey===s._key?'selected':''}>${esc(channelFamily(s.channel_key)==='hitmen'?'Calgary Hitmen Live · Elite Media OBS':'Wildman Live · '+s.broadcast_title)}</option>`).join('')}
           </select>
         </label>
         <a class="small-btn broadcast-channel-open" href="live-channel.html?source=${encodeURIComponent(selected.id)}">Open Selected Channel →</a>
@@ -108,7 +108,7 @@
         ${sources.map(s=>`<div class="broadcast-channel-card ${S.selectedBroadcastKey===s._key?'active':''}">
           <button type="button" data-channel-key="${esc(s._key)}">
             <span class="broadcast-channel-live">${channelFamily(s.channel_key)==='hitmen'?'HITMEN CHANNEL':'WILDMAN CHANNEL'}</span>
-            <strong>${esc(s.broadcast_title)}</strong>
+            <strong>${esc(channelFamily(s.channel_key)==='hitmen'?'Calgary Hitmen Live · Elite Media OBS':s.broadcast_title)}</strong>
             <small>${esc(s.channel_group||event(s.event_id)?.name||'Wildman Network')} · ${esc(String(s.stream_provider||'stream').toUpperCase())}</small>
           </button>
           <a href="live-channel.html?source=${encodeURIComponent(s.id)}">OPEN CHANNEL →</a>
