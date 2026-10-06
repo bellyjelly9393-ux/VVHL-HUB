@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="wildman.css">
   <link rel="stylesheet" href="management.css">
   <link rel="stylesheet" href="network-v2.css">
-  <link rel="stylesheet" href="obs-control.css?v=20261006scenes1">
+  <link rel="stylesheet" href="obs-control.css?v=20261006-size1">
 </head>
 <body class="wildman-site management-protected obs-control-page">
 <header class="site-header">
@@ -252,8 +252,10 @@
             <div><div class="eyebrow">2 · LIVE PREVIEW</div><h2>OBS Output</h2></div>
             <span class="status-pill">16:9 · 1280×720 · 48 FPS</span>
           </div>
-          <div class="obs-preview-frame">
-            <iframe id="obsPreview" title="OBS combined stage preview" src="obs-stage.html?channel=wildman-main&preview=1"></iframe>
+          <div class="obs-preview-frame" id="obsPreviewFrame">
+            <div class="obs-preview-canvas" id="obsPreviewCanvas">
+              <iframe id="obsPreview" width="1280" height="720" title="OBS combined stage preview" src="obs-stage.html?channel=wildman-main&preview=1"></iframe>
+            </div>
           </div>
           <p class="obs-preview-note">This is the combined stage: attached gameplay feed underneath, broadcast graphics above it. Preview audio is muted here to prevent echo.</p>
         </article>
@@ -308,6 +310,6 @@
 <script src="script.js"></script>
 <script src="obs-config.js?v=20261005b"></script>
 <script src="obs-scenes.js?v=20261006scenes1"></script>
-<script src="obs-control.js?v=20261006scenes1"></script>
+<script src="obs-control.js?v=20261006-size1"></script>
 </body>
 </html>
