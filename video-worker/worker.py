@@ -27,6 +27,7 @@ STORAGE_HEADROOM = int(os.getenv('STORAGE_HEADROOM_MB', '64')) * 1024**2
 MAX_ACTIVE_JOBS = max(1, int(os.getenv('MAX_ACTIVE_JOBS', '8')))
 AUTO_RELEASE_TWITCH_MEDIA = os.getenv('AUTO_RELEASE_TWITCH_MEDIA', '1').strip().lower() not in ('0', 'false', 'no', 'off')
 REPLAY_ADMIN_TOKEN = os.getenv('REPLAY_ADMIN_TOKEN', '').strip()
+REPLAY_CHAT_TOKEN = os.getenv('REPLAY_CHAT_TOKEN', '').strip()
 RETENTION = int(os.getenv('MEDIA_RETENTION_HOURS', '24')) * 3600
 ORIGINS = {x.strip() for x in os.getenv('ALLOWED_ORIGINS', '').split(',') if x.strip()}
 ORIGINS.update({
@@ -1429,7 +1430,10 @@ class Handler(BaseHTTPRequestHandler):
             # Operational recovery uses the existing service-only admin credential.
             # Never return metadata, which can contain deployment/test harness values.
             supplied = self.headers.get('X-Replay-Admin', '')
-            if not REPLAY_ADMIN_TOKEN or not hmac.compare_digest(supplied, REPLAY_ADMIN_TOKEN):
+            chat_supplied = self.headers.get('X-Replay-Chat', '')
+            admin_ok = bool(REPLAY_ADMIN_TOKEN) and hmac.compare_digest(supplied, REPLAY_ADMIN_TOKEN)
+            chat_ok = bool(REPLAY_CHAT_TOKEN) and hmac.compare_digest(chat_supplied, REPLAY_CHAT_TOKEN)
+            if not (admin_ok or chat_ok):
                 raise Problem(404, 'Not found')
             parts = path.strip('/').split('/')
             if len(parts) not in (3, 4):
