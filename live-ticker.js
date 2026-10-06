@@ -30,7 +30,8 @@
     href: ds.href || '',
     poll: 60000,
     leaguePoll: 300000,
-    pxPerSecond: 60,
+    // Readable crawl speed: slower on phones, where each item crosses the screen sooner.
+    pxPerSecond: Number(ds.speed) > 0 ? Number(ds.speed) : null,
   };
   const CACHE_KEY = 'wm-live-ticker:v4';
   const LEAGUE_ORDER = ['WHL', 'OHL', 'QMJHL']; // Calgary's league first
@@ -276,8 +277,11 @@
   function sizeMarquee() {
     const seq = root?.querySelector('.lt-seq'); const track = root?.querySelector('.lt-track');
     if (!seq || !track) return;
-    track.style.setProperty('--lt-duration', `${Math.max(20, Math.round(seq.scrollWidth / cfg.pxPerSecond))}s`);
+    const speed = cfg.pxPerSecond || (window.innerWidth < 700 ? 30 : 42);
+    track.style.setProperty('--lt-duration', `${Math.max(30, Math.round(seq.scrollWidth / speed))}s`);
   }
+  let resizeTimer;
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(sizeMarquee, 250); });
 
   function tick() {
     if (!root) return;
