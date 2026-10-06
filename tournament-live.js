@@ -30,6 +30,9 @@
   function twitchChannel(raw){try{const u=new URL(raw);return u.pathname.split('/').filter(Boolean).pop()||'';}catch{return String(raw||'').split('/').filter(Boolean).pop()||'';}}
   function youtubeId(raw){try{const u=new URL(raw);if(u.hostname.includes('youtu.be'))return u.pathname.slice(1);if(u.searchParams.get('v'))return u.searchParams.get('v');const parts=u.pathname.split('/').filter(Boolean);const i=parts.findIndex(x=>x==='embed'||x==='live');return i>=0?parts[i+1]||'':'';}catch{return '';}}
   function streamEmbed(g){
+    if(g?._kind==='source'&&channelFamily(g.channel_key)==='hitmen'){
+      return '<iframe src="public-broadcast-stage.html?channel=hitmen-main" allow="autoplay; fullscreen" allowfullscreen title="Calgary Hitmen EliteChel broadcast"></iframe>';
+    }
     if(!g?.stream_url)return '';
     const p=String(g.stream_provider||'').toLowerCase();
     if(p==='twitch'){const ch=twitchChannel(g.stream_url);return ch?`<iframe src="https://player.twitch.tv/?channel=${encodeURIComponent(ch)}&parent=${encodeURIComponent(location.hostname)}&autoplay=false" allowfullscreen title="${esc(g.broadcast_title||'Twitch broadcast')}"></iframe>`:'';}
@@ -130,15 +133,16 @@
 
   function featuredCopy(g){
     if(g._kind==='source'){
+      const hitmen=channelFamily(g.channel_key)==='hitmen';
       return {
         key:g._key,
-        title:g.broadcast_title||'Wildman Club Live',
-        subtitle:(g.channel_group||event(g.event_id)?.name||'Wildman Esports')+' · Live '+String(g.stream_provider||'stream').toUpperCase()+' broadcast',
+        title:hitmen?'Calgary Hitmen Live':(g.broadcast_title||'Wildman Club Live'),
+        subtitle:hitmen?'EliteChel broadcast output · live scenes from Hitmen Broadcast Studio':(g.channel_group||event(g.event_id)?.name||'Wildman Esports')+' · Live '+String(g.stream_provider||'stream').toUpperCase()+' broadcast',
         status:'LIVE NOW',
-        detail:'Public club stream',
-        provider:String(g.stream_provider||'stream').toUpperCase(),
-        primaryHref:g.stream_url,
-        primaryLabel:'Open on Twitch'
+        detail:hitmen?'OBS-controlled Hitmen broadcast':'Public club stream',
+        provider:hitmen?'ELITE MEDIA OBS':String(g.stream_provider||'stream').toUpperCase(),
+        primaryHref:hitmen?'live-channel.html?channel=hitmen':g.stream_url,
+        primaryLabel:hitmen?'Open Hitmen Live':'Open on Twitch'
       };
     }
     const h=team(g.home_team_id)?.name||'TBD',a=team(g.away_team_id)?.name||'TBD';
@@ -191,7 +195,7 @@
     root.querySelector('[data-feature-detail]')?.replaceChildren(document.createTextNode(copy.detail));
     root.querySelector('[data-feature-provider]')?.replaceChildren(document.createTextNode(copy.provider));
     const primary=root.querySelector('[data-feature-primary]');
-    if(primary){primary.href=copy.primaryHref;primary.textContent=copy.primaryLabel;if(g._kind==='source'){primary.target='_blank';primary.rel='noopener';}else{primary.removeAttribute('target');primary.removeAttribute('rel');}}
+    if(primary){primary.href=copy.primaryHref;primary.textContent=copy.primaryLabel;if(g._kind==='source'&&channelFamily(g.channel_key)!=='hitmen'){primary.target='_blank';primary.rel='noopener';}else{primary.removeAttribute('target');primary.removeAttribute('rel');}}
   }
 
   function renderBoard(){
