@@ -92,7 +92,7 @@
             <div class="obs-actions">
               <button id="attachStreamFeed" class="small-btn primary" type="button">Attach / Update Feed</button>
               <button id="clearStreamFeed" class="small-btn" type="button">Clear Feed</button>
-              <a id="openCombinedStage" class="small-btn" href="#" target="_blank" rel="noopener">Open Combined Stage</a>
+              <a id="openCombinedStage" class="small-btn" href="#" target="_blank" rel="noopener">Open Combined Preview</a>
             </div>
             <span id="streamFeedStatus" class="obs-feed-status">No feed attached yet.</span>
           </div>
@@ -266,29 +266,29 @@
       <article class="obs-source-card">
         <div>
           <div class="eyebrow">3 · OBS BROWSER SOURCE</div>
-          <h2>Combined Broadcast Stage</h2>
-          <p>Add this once in OBS at <b>1280 × 720</b>. This matches the stable 720p broadcast profile and carries the attached stream plus your live graphics together.</p>
+          <h2>OBS Browser Sources</h2>
+          <p>For Twitch, use the two clearly labeled Browser Sources below at <b>1280 × 720</b>: Gameplay Only on the bottom and Graphics Only on the top. The Combined Preview is just for checking the finished look in a browser.</p>
         </div>
         <div class="obs-source-row">
           <input id="obsSourceUrl" class="field" readonly>
-          <button id="copyObsUrl" class="small-btn primary" type="button">Copy URL</button>
-          <a id="openObsUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Stage</a>
+          <button id="copyObsUrl" class="small-btn primary" type="button">Copy Combined URL</button>
+          <a id="openObsUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Combined Preview</a>
         </div>
         <div class="obs-overlay-only">
-          <small>FEED LAYER · USE FOR TWITCH (BOTTOM SOURCE)</small>
+          <small>GAMEPLAY ONLY · BOTTOM SOURCE</small>
           <div class="obs-source-row">
             <input id="obsFeedLayerUrl" class="field" readonly>
-            <button id="copyFeedLayerUrl" class="small-btn" type="button">Copy Feed URL</button>
-            <a id="openFeedLayerUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Feed</a>
+            <button id="copyFeedLayerUrl" class="small-btn" type="button">Copy Gameplay URL</button>
+            <a id="openFeedLayerUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Gameplay Only</a>
           </div>
-          <p class="obs-preview-note">Twitch pauses its player when anything sits on top of it, so for a Twitch feed add two Browser Sources at 1280 × 720: this Feed Layer at the bottom and the Overlay Only source above it. Both follow every Studio control.</p>
+          <p class="obs-preview-note">This source is the live gameplay picture only. Add it as the <b>bottom</b> Browser Source in OBS. It will not show Elite Media graphics by itself.</p>
         </div>
         <div class="obs-overlay-only">
-          <small>OVERLAY ONLY · TOP SOURCE</small>
+          <small>GRAPHICS ONLY · TOP SOURCE</small>
           <div class="obs-source-row">
             <input id="obsOverlayOnlyUrl" class="field" readonly>
-            <button id="copyOverlayUrl" class="small-btn" type="button">Copy Overlay URL</button>
-            <a id="openOverlayUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Overlay</a>
+            <button id="copyOverlayUrl" class="small-btn" type="button">Copy Graphics URL</button>
+            <a id="openOverlayUrl" class="small-btn" href="#" target="_blank" rel="noopener">Open Graphics Only</a>
           </div>
         </div>
         <div class="obs-setup-grid">
