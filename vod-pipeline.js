@@ -303,6 +303,15 @@
   async function checkSelected(){
     try{
       const review=await currentReview(); if(!review)throw new Error('Select a VOD review first.');
+      // A published review is durable state. Do not let an old successful worker job
+      // trigger another ingest or make the UI wait on evidence that is already saved.
+      // Failed/expired attempts still flow through checkJob so management sees the
+      // recovery warning while the published report remains protected.
+      const durable=await durableState(review.id);
+      if(durable?.published&&!['failed','expired'].includes(durable.rawStatus)){
+        showDurable(durable);
+        return;
+      }
       await checkJob(review.worker_job_id,review.id,true);
     }catch(e){setStatus(e.message||'Could not check pipeline.','bad');}
   }
