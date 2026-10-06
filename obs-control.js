@@ -2,12 +2,14 @@
   'use strict';
   var PRODUCTION_ORIGIN='https://wildmanhockey-elitechelmedia.app';
   var OBS_CFG=window.WM_OBS_CONFIG||{defaultFeedFor:function(){return '';}};
+  var SCENES=window.WM_OBS_SCENES||null;
   var TEAM_CONFIG={
     '5f36117c-7a51-4514-bf70-d4c672b41e48':{name:'Wildman Hockey',brand:'wildman',channel:'wildman-main'},
     'b0bcbdda-da9d-419d-8f61-b34937966d49':{name:'Calgary Hitmen',brand:'hitmen',channel:'hitmen-main'}
   };
   var currentTeamId='';
   var currentScene='game';
+  var currentPresetId='game-matchup';
   var initialized=false;
   var stateRef=null;
   var lastUserId='';
@@ -158,42 +160,57 @@
     byId('homeScoreDisplay').textContent=numberVal('obsHomeScore');
     byId('awayScoreDisplay').textContent=numberVal('obsAwayScore');
   }
+  function renderSceneButtons(){
+    var strip=byId('obsSceneStrip');
+    if(!strip)return;
+    var list=SCENES&&Array.isArray(SCENES.all)?SCENES.all:[];
+    if(!list.length){
+      strip.innerHTML='<button type="button" data-preset="game-matchup" data-scene="game"><b>Gameplay</b><small>Matchup Panel</small></button>';
+      return;
+    }
+    strip.innerHTML=list.map(function(item){
+      return '<button type="button" data-preset="'+item.id+'" data-scene="'+item.scene+'">'+
+        '<b>'+item.label+'</b><small>'+item.sublabel+'</small></button>';
+    }).join('');
+  }
   function setSceneButtons(){
-    document.querySelectorAll('#obsSceneStrip [data-scene]').forEach(function(button){
-      button.classList.toggle('active',button.dataset.scene===currentScene);
+    document.querySelectorAll('#obsSceneStrip [data-preset]').forEach(function(button){
+      button.classList.toggle('active',button.dataset.preset===currentPresetId);
     });
   }
   function setValue(id,value){var node=byId(id);if(node)node.value=value;}
-  function applyScenePreset(scene){
-    // Keep the live game clean: EA owns score + clock, our layer adds only branding and the side panel.
-    if(scene==='game'){
-      setValue('obsFeedLayout','panel');
-      setValue('obsSidePanel','matchup');
-      setValue('obsBugPosition','hidden');
-      if(byId('obsShowScoreboard'))byId('obsShowScoreboard').checked=false;
-      setValue('obsLogoBug','auto');
-      setValue('obsLogoPreset','ea');
-      setValue('obsLogoSize','48');
-    }else if(scene==='player'){
-      setValue('obsFeedLayout','panel');
-      setValue('obsBugPosition','hidden');
-      if(byId('obsShowScoreboard'))byId('obsShowScoreboard').checked=false;
-      setValue('obsLogoBug','auto');
-      setValue('obsLogoPreset','ea');
-    }else{
-      // Break scenes use the full-screen Elite Media board. No gameplay bug or bottom bar needed.
-      setValue('obsFeedLayout','full');
-      setValue('obsBugPosition','hidden');
-      if(byId('obsShowScoreboard'))byId('obsShowScoreboard').checked=false;
-      setValue('obsLogoBug','off');
+  function setChecked(id,value){var node=byId(id);if(node)node.checked=Boolean(value);}
+  function applyScenePreset(presetId){
+    var definition=SCENES&&SCENES.get?SCENES.get(presetId):null;
+    if(!definition){
+      definition={id:'game-matchup',scene:'game',preset:{
+        feedLayout:'panel',sidePanel:'matchup',bugPosition:'hidden',
+        showScoreboard:false,logoBug:'auto',logoPreset:'ea',logoSize:48,streamMuted:false
+      }};
     }
+    var preset=definition.preset||{};
+    currentPresetId=definition.id;
+    currentScene=definition.scene||'game';
+
+    if(preset.feedLayout!==undefined)setValue('obsFeedLayout',preset.feedLayout);
+    if(preset.sidePanel!==undefined)setValue('obsSidePanel',preset.sidePanel);
+    if(preset.bugPosition!==undefined)setValue('obsBugPosition',preset.bugPosition);
+    if(preset.showScoreboard!==undefined)setChecked('obsShowScoreboard',preset.showScoreboard);
+    if(preset.logoBug!==undefined)setValue('obsLogoBug',preset.logoBug);
+    if(preset.logoPreset!==undefined)setValue('obsLogoPreset',preset.logoPreset);
+    if(preset.logoSize!==undefined)setValue('obsLogoSize',preset.logoSize);
+    if(preset.streamMuted!==undefined)setChecked('obsStreamMuted',preset.streamMuted);
+
     editCount++;
+    setSceneButtons();
     feedSummary();
   }
   function fill(row){
     if(!row) return;
     var p=row.payload||{};
     currentScene=row.scene||'game';
+    var savedPreset=SCENES&&SCENES.infer?SCENES.infer(currentScene,p):null;
+    currentPresetId=savedPreset?savedPreset.id:'game-matchup';
     byId('obsEvent').value=p.event||'';
     byId('obsHomeName').value=p.homeName||config().name;
     // 'OPPONENT' was the old placeholder; blank lets the overlay use tonight's opponent.
@@ -244,16 +261,17 @@
     var selectedProvider=val('obsStreamProvider')||'auto';
     var clock=clockSnapshot();
     return {
+      presetId:currentPresetId,
       event:val('obsEvent'),
       homeName:val('obsHomeName')||config().name,
       awayName:val('obsAwayName'),
-      bugPosition:val('obsBugPosition')||'right',
+      bugPosition:val('obsBugPosition')||'hidden',
       feedLayout:val('obsFeedLayout')==='full'?'full':'panel',
       sidePanel:val('obsSidePanel')||'brand',
       showScoreboard:Boolean(byId('obsShowScoreboard')?.checked),
       logoBug:val('obsLogoBug')||'auto',
       logoPreset:val('obsLogoPreset')||'ea',
-      logoSize:clampInt(val('obsLogoSize'),32,160,56),
+      logoSize:clampInt(val('obsLogoSize'),32,160,48),
       logoX:clampInt(val('obsLogoX'),-400,400,0),
       logoY:clampInt(val('obsLogoY'),-400,400,0),
       homeScore:numberVal('obsHomeScore'),
@@ -346,10 +364,10 @@
       updateSourceLinks();
       await loadState(true);
     });
-    document.querySelectorAll('#obsSceneStrip [data-scene]').forEach(function(button){
-      button.addEventListener('click',function(){
-        applyScenePreset(button.dataset.scene);
-        publish(button.dataset.scene);
+    document.querySelectorAll('#obsSceneStrip [data-preset]').forEach(function(button){
+      button.addEventListener('click',async function(){
+        applyScenePreset(button.dataset.preset);
+        await publish(currentScene);
       });
     });
     document.querySelectorAll('[data-score][data-delta]').forEach(function(button){
@@ -474,6 +492,7 @@
       if(!populateTeams(stateRef)){showNoTeam();return;}
       byId('obsTeamSelect').disabled=false;
       populateStreams();
+      renderSceneButtons();
       wire();
       initialized=true;
       lastUserId=userId;
