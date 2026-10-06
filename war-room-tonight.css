@@ -273,3 +273,15 @@
 .wr-heat em{display:block;height:100%;background:linear-gradient(90deg,rgba(215,25,45,.62),rgba(232,202,121,.92))}
 .wr-heat small{color:#998d90;font-size:7px}
 @media(max-width:650px){.wr-heat{grid-template-columns:repeat(5,minmax(46px,1fr));overflow-x:auto}}
+
+/* real rink heat map (EA 16-zone) in Across from us */
+.wr-rink{margin:2px 0 10px}
+.wr-rink-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin:7px 0}
+.wr-rink-ctl label{display:grid;gap:3px;font:700 10px/1 "Barlow Condensed",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#998d90;flex:1;min-width:140px}
+.wr-rink-ctl select{background:#141214;color:#f2f3f4;border:1px solid rgba(255,255,255,.14);padding:6px;font:inherit;letter-spacing:0;text-transform:none;font-size:12px}
+.wr-rink-tog{display:flex}
+.wr-rink-tog button{background:rgba(255,255,255,.03);color:#b4b7bc;border:1px solid rgba(255,255,255,.14);padding:7px 10px;font:800 11px/1 "Barlow Condensed",sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.wr-rink-tog button[aria-pressed="true"]{background:rgba(215,25,45,.28);color:#fff;border-color:rgba(215,25,45,.7)}
+.wr-rink-map{max-width:420px;margin:0 auto}
+.wr-rink-map .wm-ice-zone-svg{display:block;width:100%;height:auto}
+.wr-rink-sum{margin:6px 0 0;font-size:11px;color:#998d90;text-align:center}
