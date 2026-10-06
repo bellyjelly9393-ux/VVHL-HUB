@@ -63,6 +63,7 @@ function parseReport(row){
     six:lu.calgary||null,opp,jobs,hasJobs:!!jobsSec,
     threats:points(threatSec),plan:points(planSec),
     attackSource:Array.isArray(ev.attack_source_heatmap)?ev.attack_source_heatmap:[],
+    deepHeat:Array.isArray(ev.deep_heatmap_top_zones)?ev.deep_heatmap_top_zones:[],
     spatialHeatNote:clean(ev.spatial_heatmap_note||''),
     // for the Lineup Lab matchup model (names only; no new text is shown)
     threatText:clean((threatSec?.lines||[]).join(' ')),warnings:Array.isArray(ev.identity_warnings)?ev.identity_warnings:[],
@@ -206,21 +207,23 @@ function jobsHTML(D,g,ps){
 }
 const acrossLinks=(D,g,hasReport)=>{
   if(!g)return'';
-  const q='game='+encodeURIComponent(g.id);
+  const q='game='+encodeURIComponent(g.id),opp='opponent='+encodeURIComponent(g.name);
   return '<nav class="wr-links" aria-label="Opponent tools">'+
-    (hasReport?'<a href="hitmen-scouting-report.html?'+q+'">Full report →</a>':'')+
+    (hasReport?'<a href="hitmen-scouting-report.html?'+q+'">Full report →</a><a href="hitmen-opponent-scout.html?'+opp+'">Deep scout + rink heat →</a>':'')+
     '<a href="hitmen-vod-report.html?'+q+'">VOD reference →</a></nav>';
 };
 function acrossHTML(D,g){
   const r=g.report;
   const head=`<div class="wr-across-hd">${crest(g.lg,44,g.abbr)}<div><span class="wr-k">Across from us · GM ${g.gm} · ${esc(g.time)} ET</span><h3>${esc(g.short)}</h3></div></div>`;
   if(!r) return head+`<div class="wr-empty-row">${D.v.mgmt?'No scouting report for this game yet.':'Scouting posts here once management approves tonight\'s report.'}</div>`+acrossLinks(D,g,false);
+  const deepMax=Math.max(1,...(r.deepHeat||[]).map(z=>Number(z.shots||0)));
   return head+
    (r.opp.length?`<span class="wr-k wr-sub">Projected six</span><dl class="wr-opp">${r.opp.map(o=>`<div><dt>${o.pos}</dt><dd>${esc(o.name)}${o.note?`<small>${esc(o.note)}</small>`:''}</dd></div>`).join('')}</dl>`:'')+
    (r.threats.length?`<span class="wr-k wr-sub">Key threats</span><ul class="wr-threats">${r.threats.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'')+
    (r.plan.length?`<span class="wr-k wr-sub">Game plan</span><ol class="wr-plan">${r.plan.map(t=>`<li>${esc(t)}</li>`).join('')}</ol>`:'')+
-   (r.attackSource.length?`<span class="wr-k wr-sub">Scoring-source heat</span><div class="wr-heat">${r.attackSource.map(z=>`<div><b>${esc(z.pos||'—')}</b><i><em style="width:${Math.max(2,Math.min(100,Number(z.goal_share||0)))}%"></em></i><small>${esc(Number(z.goal_share||0).toFixed(1))}% goals</small></div>`).join('')}</div>`:'')+
-   `<p class="wr-note">${r.approved?'Approved':'Draft · not approved'}. Heat = scoring share by listed position, not rink shot location. Condensed from the report evidence; nothing added.</p>`+acrossLinks(D,g,true);
+   (r.attackSource.length?`<span class="wr-k wr-sub">Scoring-source heat · LG</span><div class="wr-heat">${r.attackSource.map(z=>`<div><b>${esc(z.pos||'—')}</b><i><em style="width:${Math.max(2,Math.min(100,Number(z.goal_share||0)))}%"></em></i><small>${esc(Number(z.goal_share||0).toFixed(1))}% goals</small></div>`).join('')}</div>`:'')+
+   (r.deepHeat.length?`<span class="wr-k wr-sub">Rink heat preview · EA profile</span><div class="wr-heat">${r.deepHeat.map(z=>`<div><b>Z${esc(z.zone||'—')}</b><i><em style="width:${Math.max(2,Math.min(100,100*Number(z.shots||0)/deepMax))}%"></em></i><small>${esc(z.name||'Zone')} · ${esc(z.shots||0)} shots</small></div>`).join('')}</div>`:'')+
+   `<p class="wr-note">${r.approved?'Approved':'Draft · not approved'}. LG heat shows scoring share by listed position. Rink-zone preview uses the saved EA club profile and is supporting tendency evidence, not LG-only shot coordinates.</p>`+acrossLinks(D,g,true);
 }
 function raceHTML(D){
   const div=D.cgy?.division; const rows=div?D.standings.filter(t=>t.division===div).sort((a,b)=>(a.division_rank||99)-(b.division_rank||99)):[];
