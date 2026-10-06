@@ -109,6 +109,36 @@
     return [1,2,3].every(index=>periods.some(p=>Number(p.segment_index)===index&&String(p.analysis_summary||'').trim()));
   }
   const sourceOffset=review=>Math.max(0,Number(review?.source_start_seconds)||0);
+  const isOvertimeLabel=value=>/over|\bot\b/i.test(String(value||''));
+  async function linkedFinalOvertime(review){
+    if(!review?.schedule_game_id)return null;
+    const {data,error}=await db().from('hitmen_schedule_games').select('status,overtime').eq('id',review.schedule_game_id).maybeSingle();
+    if(error)throw error;
+    if(!data||data.status!=='final')return null;
+    return data.overtime===true;
+  }
+  function normalizeDetectedPeriods(periods,noOvertime){
+    const tagged=(periods||[]).map(p=>({...p,_overtime:isOvertimeLabel(p?.label)}));
+    if(!noOvertime)return tagged;
+    const regular=tagged.filter(p=>!p._overtime);
+    if(regular.length<3)return tagged;
+    const third=regular[2];
+    const mergedEnd=Math.max(Number(third.end)||0,...tagged.filter(p=>p._overtime&&Number(p.start)>=Number(third.start)).map(p=>Number(p.end)||0));
+    if(mergedEnd>Number(third.end||0))third.end=mergedEnd;
+    return regular;
+  }
+  function normalizePeriodReports(reports,noOvertime){
+    if(!noOvertime)return reports||[];
+    const list=reports||[],third=list.filter(p=>p?.label==='Period 3'),ots=list.filter(p=>isOvertimeLabel(p?.label));
+    if(!ots.length)return list;
+    const merged=[...third,...ots],base=third[0]||ots[0]||{};
+    const report={...(base.report||{})};
+    for(const key of ['summary','player_report','tactical_report']){
+      const parts=merged.map(p=>String(p?.report?.[key]||'').trim()).filter(Boolean);
+      if(parts.length)report[key]=[...new Set(parts)].join('\n\n');
+    }
+    return [...list.filter(p=>p?.label!=='Period 3'&&!isOvertimeLabel(p?.label)),{...base,label:'Period 3',report}];
+  }
   const workerPeriods=(review,periods)=>{
     const offset=sourceOffset(review);
     return periods.map(p=>({label:p.label,start:Math.max(0,p.start-offset),end:Math.max(0,p.end-offset)}));
@@ -381,11 +411,13 @@
     const {data:existing,error:existingError}=await db().from('vod_review_segments').select('id').eq('review_id',reviewId).limit(1);
     if(existingError)throw existingError;
     if(existing?.length)return false;
-    const {data:review,error:rerr}=await db().from('vod_review_sessions').select('team_id,source_start_seconds').eq('id',reviewId).maybeSingle();
+    const {data:review,error:rerr}=await db().from('vod_review_sessions').select('team_id,source_start_seconds,schedule_game_id').eq('id',reviewId).maybeSingle();
     if(rerr)throw rerr;if(!review?.team_id)return false;
+    const linkedOt=await linkedFinalOvertime(review),noOvertime=linkedOt===false;
+    const detected=normalizeDetectedPeriods(periods,noOvertime);
     const offset=sourceOffset(review);
-    let otIndex=0;
-    const payload=periods.map((p,i)=>{const ot=/over|\bot\b/i.test(p.label||'');return {review_id:reviewId,team_id:review.team_id,segment_type:ot?'overtime':'period',segment_index:ot?++otIndex:i+1,label:p.label||`Period ${i+1}`,start_seconds:Math.round(offset+Number(p.start)),end_seconds:Math.round(offset+Number(p.end)),status:'queued',confidence:'preliminary'};});
+    let otIndex=0,periodIndex=0;
+    const payload=detected.map(p=>{const ot=!noOvertime&&Boolean(p._overtime);const index=ot?++otIndex:++periodIndex;return {review_id:reviewId,team_id:review.team_id,segment_type:ot?'overtime':'period',segment_index:index,label:ot?(p.label||`Overtime ${index}`):(p.label||`Period ${index}`),start_seconds:Math.round(offset+Number(p.start)),end_seconds:Math.round(offset+Number(p.end)),status:'queued',confidence:'preliminary'};});
     const boundReview=await db().from('vod_review_sessions').select('*').eq('id',reviewId).single();
     if(boundReview.error)throw boundReview.error;
     const problems=window.WildmanVODReview.periodErrors(boundReview.data,payload);
@@ -463,11 +495,16 @@
     return `${job.id}:${text.length}:${hash>>>0}`;
   }
   async function ingest(job,reviewId){
-    const chunks=job?.result?.chunks||[];
-    const periodReports=job?.result?.period_reports||[];
+    let chunks=job?.result?.chunks||[];
+    let periodReports=job?.result?.period_reports||[];
     if(!chunks.length&&!periodReports.length)throw new Error('The worker finished without importable period evidence. Keep this review private and retry the worker before approving.');
     const {data:review,error:reviewError}=await db().from('vod_review_sessions').select('*').eq('id',reviewId).maybeSingle();
     if(reviewError)throw reviewError;if(!review?.team_id)throw new Error('VOD review team is missing.');
+    const linkedOt=await linkedFinalOvertime(review),noOvertime=linkedOt===false;
+    if(noOvertime){
+      chunks=chunks.map(c=>isOvertimeLabel(c?.label)?{...c,label:'Period 3'}:c);
+      periodReports=normalizePeriodReports(periodReports,true);
+    }
     const offset=sourceOffset(review);
     let {data:segments,error}=await db().from('vod_review_segments').select('*').eq('review_id',reviewId).order('start_seconds');
     if(error)throw error;
