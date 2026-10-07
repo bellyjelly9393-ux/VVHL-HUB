@@ -80,9 +80,35 @@
   }
 
   const add=(o,k)=>Number(o?.[k]||0);
+  const pimMinutes=v=>{
+    if(v==null||v==='')return 0;
+    const s=String(v);
+    if(s.includes(':')){const [m,sec]=s.split(':').map(Number);return (Number(m)||0)+((Number(sec)||0)/60);}
+    return Number(v)||0;
+  };
+
+  function officialAggregate(){
+    if(!lgSeason)return null;
+    const s=lgSeason.stats||{},games=Number(lgSeason.games_played||s.gp||s.ggp||0);
+    const goalie=String(locker?.position||lgSeason.position||'').toUpperCase()==='G';
+    const t={games,goals:0,assists:0,points:0,plus_minus:0,shots:0,hits:0,takeaways:0,giveaways:0,pim:0,blocks:0,faceoff_pct:0,passing_pct:0,foN:0,passN:0,saves:0,shots_faced:0,goals_against:0,save_pct:0};
+    if(goalie){
+      t.shots_faced=Number(s.sog||0);t.goals_against=Number(s.ga||0);t.saves=Math.max(0,t.shots_faced-t.goals_against);
+      t.save_pct=s.savep!=null?Number(s.savep)*100:(t.shots_faced?(t.saves/t.shots_faced)*100:0);
+      return t;
+    }
+    t.goals=Number(s.goals||0);t.assists=Number(s.assists||0);t.points=Number(s.points??(t.goals+t.assists));
+    t.plus_minus=Number(s.plusminus||0);t.shots=Number(s.shots||0);t.hits=Number(s.hits||0);
+    t.takeaways=Number(s.takeaway||0);t.giveaways=Number(s.giveaway||0);t.blocks=Number(s.bs||0);t.pim=pimMinutes(s.pim);
+    if(s.fop!=null){t.faceoff_pct=Number(s.fop);t.foN=1}
+    if(s.passp!=null){t.passing_pct=Number(s.passp);t.passN=1}
+    return t;
+  }
 
   function aggregate(){
-    const statReports=reports.filter(r=>!r.ai_review_id);
+    const official=officialAggregate();
+    if(official)return official;
+    const statReports=reports.filter(r=>!r.ai_review_id&&String(r.evidence?.stat_status||'')!=='pending_box_score');
     const t={games:statReports.length,goals:0,assists:0,points:0,plus_minus:0,shots:0,hits:0,takeaways:0,giveaways:0,pim:0,blocks:0,faceoff_pct:0,passing_pct:0,foN:0,passN:0,saves:0,shots_faced:0,goals_against:0,save_pct:0};
     statReports.forEach(r=>{
       const s=r.stats||{};
@@ -168,7 +194,7 @@
   function renderWeeklyPerformance(){
     const box=E('weeklyPerformanceChart');
     if(!box)return;
-    const games=reports.filter(r=>!r.ai_review_id).slice(0,5).reverse();
+    const games=reports.filter(r=>!r.ai_review_id&&String(r.evidence?.stat_status||'')!=='pending_box_score').slice(0,5).reverse();
     if(!games.length){
       box.innerHTML='<div class="weekly-chart-empty">GAME DATA WILL POPULATE HERE</div>';
       return;
@@ -185,6 +211,9 @@
 
   function reportStatLine(r){
     const s=r.stats||{};
+    if(String(r.evidence?.stat_status||'')==='pending_box_score'&&!Object.keys(s).length){
+      return '<div class="player-report-statline player-report-pending"><span><small>OFFICIAL GAME STATS</small><b>PENDING</b></span><em>Result and participation are linked. The verified LG Public Log will fill this game automatically.</em></div>';
+    }
     const pos=String(r.position_played||locker?.position||'').toUpperCase();
     const goalie=pos==='G'||s.shots_faced!=null||s.saves!=null;
     const items=goalie
@@ -193,6 +222,20 @@
     if(!goalie&&s.passing_pct!=null)items.push(['PASS',Number(s.passing_pct).toFixed(1)+'%']);
     if(!goalie&&s.faceoff_pct!=null)items.push(['FO',Number(s.faceoff_pct).toFixed(1)+'%']);
     return '<div class="player-report-statline">'+items.map(([k,v])=>'<span><small>'+esc(k)+'</small><b>'+esc(v)+'</b></span>').join('')+'</div>';
+  }
+
+  function renderNightSummary(){
+    const box=E('playerNightSummary');if(!box)return;
+    const rows=reports.filter(r=>!r.ai_review_id&&r.evidence?.night_key&&r.evidence?.night_totals);
+    if(!rows.length){box.innerHTML='';return}
+    const key=rows[0].evidence.night_key,s=rows[0].evidence.night_totals||{};
+    const goalie=String(locker?.position||'').toUpperCase()==='G';
+    const items=goalie
+      ?[['REC',s.record||'—'],['GP',s.games??rows.length],['SV',s.saves??0],['SA',s.shots_faced??0],['GA',s.goals_against??0],['SV%',s.save_pct_derived!=null?Number(s.save_pct_derived).toFixed(1)+'%':'—']]
+      :[['REC',s.record||'—'],['GP',s.games??rows.length],['G',s.goals??0],['A',s.assists??0],['PTS',s.points??0],['+/-',s.plus_minus??0],['S',s.shots??0],['HIT',s.hits??0],['TA',s.takeaways??0],['GV',s.giveaways??0],['BLK',s.blocked_shots??0],['PIM',s.pim??0]];
+    const gameRows=rows.slice().sort((a,b)=>new Date(a.game_date)-new Date(b.game_date));
+    const label=new Date(key+'T12:00:00').toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'});
+    box.innerHTML='<article class="night-summary-card"><div class="night-summary-head"><div><small>'+esc(label.toUpperCase())+' · THREE-GAME SET</small><h3>LAST NIGHT TOTALS</h3></div><b>'+esc(s.record||'2-0-1')+'</b></div><div class="night-summary-games">'+gameRows.map(r=>'<span>'+esc(r.result||'GAME')+' · '+esc(r.opponent_name||'Opponent')+'</span>').join('')+'</div><div class="player-report-statline">'+items.map(([k,v])=>'<span><small>'+esc(k)+'</small><b>'+esc(v)+'</b></span>').join('')+'</div><p>Night totals are confirmed from the current LG season snapshot against the first three official Season 55 game lines. Individual game box stats are still waiting on the LG Public Logs; VOD scouting will attach separately when reviewed.</p></article>';
   }
 
   function renderReports(){
@@ -310,12 +353,16 @@
 
     H('profileScoutingTab',scoutingSummaryHtml());
     const vodReviewed=reports.filter(r=>r.coach_summary||r.tactical_notes||r.strengths||r.improvements||String(r.evidence?.vod_status||'').toLowerCase()==='complete').length;
-    T('profileVodSummary',vodReviewed
+    const pendingBoxes=reports.filter(r=>!r.ai_review_id&&String(r.evidence?.stat_status||'')==='pending_box_score').length;
+    let vodText=vodReviewed
       ?vodReviewed+' VOD-reviewed game'+(vodReviewed===1?'':'s')+' currently feed this player profile.'
-      :reports.length?reports.length+' game stat line'+(reports.length===1?' is':'s are')+' loaded. VOD scouting is pending.':'Game review evidence will populate here as VOD reports are attached.');
+      :reports.length?'Game results and stat history are loaded. VOD scouting is pending.':'Game review evidence will populate here as VOD reports are attached.';
+    if(pendingBoxes)vodText+=' '+pendingBoxes+' Oct 5 game box'+(pendingBoxes===1?' is':'es are')+' linked and waiting on the official LG Public Logs.';
+    T('profileVodSummary',vodText);
 
     renderDashboardScouting();
     renderWeeklyPerformance();
+    renderNightSummary();
     renderReports();
     renderWeekly();
     renderLineReports();
@@ -342,17 +389,20 @@
         H('stallScoutingNotes','<div class="locker-empty">Your Discord login worked, but this account is not mapped to a Season 55 locker yet. Management can fix the Discord-to-roster link without creating a new account.</div>');
         return;
       }
-      const [gr,wr,lr]=await Promise.all([
+      const [gr,wr,lr,sr]=await Promise.all([
         DB().from('team_player_game_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('locker_id',locker.id).order('game_date',{ascending:false}),
         DB().from('team_player_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('locker_id',locker.id).order('week',{ascending:false}),
-        DB().from('team_line_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).order('week',{ascending:false})
+        DB().from('team_line_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).order('week',{ascending:false}),
+        DB().from('lg_player_season_stats').select('games_played,stats,fetched_at,position').eq('season',SEASON).eq('league_code','LGCHL').ilike('gamertag',locker.gamertag).order('fetched_at',{ascending:false}).limit(1).maybeSingle()
       ]);
       if(gr.error)throw gr.error;
       if(wr.error)throw wr.error;
       if(lr.error)throw lr.error;
+      if(sr.error)console.warn('LG season stat snapshot unavailable',sr.error);
       reports=(gr.data||[]).filter(r=>!r.ai_review_id||r.evidence?.verification==='approved');
       weekly=wr.data||[];
       lineReports=(lr.data||[]).filter(r=>(r.player_locker_ids||[]).includes(locker.id));
+      lgSeason=sr.data||null;
       await render();
     }catch(e){
       console.error(e);
