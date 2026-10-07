@@ -620,6 +620,67 @@ def request_routed(step, payload, parse, escalate=True):
             print(f'VOD {step}: {model} failed ({exc.status}: {exc.message}); falling back to {chain[index + 1]}', flush=True)
 
 
+# Models written "gemini/<name>" go straight to Google's Gemini API with GEMINI_API_KEY
+# (pay-as-you-go, no OpenRouter credits). Everything else uses the configured provider.
+GEMINI_PREFIX = 'gemini/'
+GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+
+
+def _gemini_schema(node):
+    """Gemini wants anyOf for nullable types, not a type list."""
+    if isinstance(node, list):
+        return [_gemini_schema(v) for v in node]
+    if not isinstance(node, dict):
+        return node
+    out = {k: _gemini_schema(v) for k, v in node.items()}
+    if isinstance(out.get('type'), list):
+        kinds = out.pop('type')
+        out['anyOf'] = [{'type': kind} for kind in kinds]
+    return out
+
+
+def gemini_request(model, payload):
+    """Turn an OpenAI Responses-style request into a Gemini chat-completions request."""
+    messages = []
+    if payload.get('instructions'):
+        messages.append({'role': 'system', 'content': payload['instructions']})
+    for item in payload.get('input') or []:
+        parts = []
+        for part in item.get('content') or []:
+            if part.get('type') == 'input_text':
+                parts.append({'type': 'text', 'text': part['text']})
+            elif part.get('type') == 'input_image':
+                parts.append({'type': 'image_url', 'image_url': {'url': part['image_url']}})
+        messages.append({'role': item.get('role', 'user'), 'content': parts})
+    body = {'model': model[len(GEMINI_PREFIX):], 'messages': messages,
+            'max_tokens': int(payload.get('max_output_tokens') or 4800)}
+    fmt = (payload.get('text') or {}).get('format') or {}
+    if fmt.get('type') == 'json_schema':
+        body['response_format'] = {'type': 'json_schema', 'json_schema': {
+            'name': fmt.get('name', 'report'), 'strict': True, 'schema': _gemini_schema(fmt.get('schema') or {})}}
+    # Thinking tokens count against the output cap and can cut an answer off, so keep them small.
+    effort = os.getenv('GEMINI_REASONING_EFFORT', 'low').strip().lower()
+    if effort and effort != 'off':
+        body['reasoning_effort'] = effort
+    return body
+
+
+def gemini_response(data):
+    """Turn a Gemini chat-completions response into the Responses shape the worker parses."""
+    choice = (data.get('choices') or [{}])[0]
+    text = (choice.get('message') or {}).get('content') or ''
+    finish = choice.get('finish_reason')
+    usage = data.get('usage') or {}
+    out = {'output': [{'content': [{'type': 'output_text', 'text': text}]}],
+           'usage': {'input_tokens': usage.get('prompt_tokens'), 'output_tokens': usage.get('completion_tokens')}}
+    if finish in ('stop', None) and text:
+        out['status'] = 'completed'
+    else:
+        out['status'] = 'incomplete'
+        out['incomplete_details'] = {'reason': 'max_output_tokens' if finish == 'length' else str(finish or 'empty')}
+    return out
+
+
 def request_ai(request_payload, model=None, rate_limit_retries=2, escalate=True):
     """Use the same bounded provider recovery for chunks and the final report."""
     provider, key, default_model, endpoint = ai_config()
@@ -635,6 +696,13 @@ def request_ai(request_payload, model=None, rate_limit_retries=2, escalate=True)
     profile = gm_profile()
     if profile:
         request_payload['instructions'] = profile['instructions'] + '\n\nFor video analysis, the attached frames and reviewed observations are the evidence packet. Cite their recording timestamps instead of unavailable database E IDs. Return only the requested JSON schema; all findings remain provisional. Do not infer missing roster or season context.'
+    direct = model.startswith(GEMINI_PREFIX)
+    if direct:
+        gemini_key = os.getenv('GEMINI_API_KEY', '').strip()
+        if not gemini_key:
+            raise Problem(503, f'{model} needs GEMINI_API_KEY set on the worker.', 'model_unavailable')
+        provider, endpoint, key = 'Gemini', GEMINI_ENDPOINT, gemini_key
+        request_payload = gemini_request(model, request_payload)
     result = None
     for attempt in range(3):
         try:
@@ -644,6 +712,8 @@ def request_ai(request_payload, model=None, rate_limit_retries=2, escalate=True)
                 {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
                 request_payload
             )
+            if direct:
+                result = gemini_response(result)
             ai_usage_record(result, truncated=result.get('status') != 'completed', model=model)
             if result.get('status') == 'completed':
                 return result
@@ -693,6 +763,11 @@ def request_ai(request_payload, model=None, rate_limit_retries=2, escalate=True)
                     raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
                 continue
             if exc.code == 400:
+                try:
+                    detail = exc.read().decode('utf-8', 'ignore')[:300].replace('\n', ' ')
+                except Exception:
+                    detail = ''
+                print(f'VOD AI request rejected by {provider} (HTTP 400): {detail}', flush=True)
                 raise Problem(502, 'AI review request was rejected by the configured model (HTTP 400).')
             raise Problem(502, f'AI review request failed with HTTP {exc.code}.')
         except (urllib.error.URLError, TimeoutError) as exc:
