@@ -110,7 +110,7 @@
     if (hitmenAllowed && !hitmenPage && nav && !navAlreadyHasHitmen && !document.querySelector("[data-hitmen-nav-link]")) {
       const link = document.createElement("a");
       link.href = "/hitmen";
-      link.textContent = "Hitmen War Room";
+      link.textContent = "Hitmen Home";
       link.dataset.hitmenNavLink = "1";
       nav.appendChild(link);
     }

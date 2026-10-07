@@ -13,3 +13,13 @@ body.hitmen-game-center-page{margin:0;background:#050506;color:#f5f0f2;font-fami
 @media(max-width:1180px){.gc-top-grid{grid-template-columns:1fr 1fr}.gc-top-grid .gc-card:last-child{grid-column:1/-1}.gc-main-grid{grid-template-columns:1fr}.gc-bottom-grid{grid-template-columns:1fr 1fr}.gc-bottom-grid .gc-card:last-child{grid-column:1/-1}}
 @media(max-width:820px){.gc-app{--side:0px}.gc-sidebar{display:none}.gc-content{margin-left:0}.gc-topbar{padding:0 8px}.gc-top-tabs a{padding:0 9px;font-size:7px}.gc-top-profile{display:none}.gc-main{padding:8px}.gc-hero{grid-template-columns:1fr;padding:20px}.gc-record-card{justify-self:start}.gc-top-grid,.gc-bottom-grid{grid-template-columns:1fr}.gc-top-grid .gc-card:last-child,.gc-bottom-grid .gc-card:last-child{grid-column:auto}.gc-schedule-row{grid-template-columns:70px 1fr 80px}.gc-schedule-row a{display:none}}
 @media(max-width:520px){.gc-hero{min-height:250px}.gc-hero h1{font-size:58px}.gc-record-card strong{font-size:40px}.gc-schedule-row{grid-template-columns:62px 1fr}.gc-schedule-row span{display:none}}
+
+
+/* Team Home lineup panel */
+.gc-lineup-shell{margin-top:10px}
+.gc-lineup-shell .wr-panel{border-radius:11px}
+.gc-lineup-shell .wr-home-intro{margin:-2px 0 12px;color:#968d90;font-size:9px;line-height:1.5}
+.gc-lineup-shell .wr-home-matchup{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:13px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+.gc-lineup-shell .wr-home-matchup b{display:block;margin-top:5px;font:900 20px/1 "Barlow Condensed",sans-serif;letter-spacing:.035em}
+.gc-schedule-status{justify-self:end;color:#8d8386!important;font-size:7px!important;font-style:normal;font-weight:800;letter-spacing:.08em}
+@media(max-width:820px){.gc-lineup-shell .wr-six-bd{display:block}.gc-lineup-shell .wr-rink-host{max-width:none}.gc-lineup-shell .wr-roll{margin-top:10px}.gc-lineup-shell .wr-home-matchup{align-items:flex-start;flex-direction:column}.gc-schedule-status{display:none}}

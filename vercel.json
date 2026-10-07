@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/hitmen-hub",
-      "destination": "/hitmen-hub.html"
+      "destination": "/hitmen-game-center.html"
     },
     {
       "source": "/academy-trainees",
@@ -18,7 +18,7 @@
     },
     {
       "source": "/calgary",
-      "destination": "/hitmen-workspace.html"
+      "destination": "/hitmen-game-center.html"
     },
     {
       "source": "/war-room",
@@ -34,7 +34,7 @@
     },
     {
       "source": "/hitmen",
-      "destination": "/hitmen-workspace.html"
+      "destination": "/hitmen-game-center.html"
     },
     {
       "source": "/vod-lab",

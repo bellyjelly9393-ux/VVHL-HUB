@@ -101,7 +101,11 @@ async function load(){
     if(rr.error) errors.push(rr.error.message||String(rr.error));
     const reps=(rr.data||[]).slice().sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
     games.forEach(g=>{const mine=reps.filter(r=>r.scheduled_game_id===g.id&&(v.mgmt||r.evidence_summary?.approved===true));
-      const pick=mine.find(r=>r.evidence_summary?.lineups?.calgary)||mine[0];g.report=pick?parseReport(pick):null});
+      const pick=mine.find(r=>r.evidence_summary?.lineups?.calgary)||mine[0];
+      const approved=mine.find(r=>r.evidence_summary?.approved===true&&r.evidence_summary?.lineups?.calgary)||
+        mine.find(r=>r.evidence_summary?.approved===true);
+      g.report=pick?parseReport(pick):null;
+      g.approvedReport=approved?parseReport(approved):null;});
   }
   const current=lockers.filter(l=>l.roster_class!=='historical'); // archived past players never feed a jersey or TV
   // LG shows capital I and lower-case l the same ("I Richy 19 I" vs our "l Richy 19 l"); fold them, but only on a unique hit.
@@ -131,8 +135,34 @@ function lastMeeting(D,g){
   return `Last: ${w?'W':(prev.overtime?'OTL':'L')} ${prev.calgary_score}–${prev.opponent_score}`;
 }
 const dayLabel=D=>D.day?etDay(new Date(D.games[0].at)):'';
-const tabsGames=D=>D.games.map(g=>({gm:g.gm,abbr:g.abbr,time:g.time,home:g.home,kit:g.kit,g}));
+const tabsGames=(D,games=D.games)=>games.map(g=>({gm:g.gm,abbr:g.abbr,time:g.time,home:g.home,kit:g.kit,g}));
 const initialGm=D=>{const q=+new URLSearchParams(location.search).get('gm');return D.games.some(g=>g.gm===q)?q:1};
+
+/* ---------- Player-safe Hitmen Home: opponent + approved posted six only ---------- */
+function mountHomeTonight(host,D){
+  const games=D.games.map(g=>Object.assign({},g,{report:g.approvedReport||null}));
+  if(!games.length){
+    host.innerHTML='<section class="wr-panel wr-six"><div class="wr-six-hd"><div><span class="wr-k">Tonight</span><h3>Posted lineups</h3></div></div><div class="wr-empty-row">No game is scheduled for the current game day. The next approved lineup will appear here before puck drop.</div></section>';
+    return;
+  }
+  host.innerHTML=`<section class="wr-panel wr-six" aria-label="Tonight's approved lineups">
+    <div class="wr-six-hd"><div><span class="wr-k">Team board · ${esc(dayLabel(D))}</span><h3>Tonight's lineups</h3></div><span class="wr-chip">Player-safe</span></div>
+    <p class="wr-home-intro">Switch games to see who Calgary is playing and the approved six management has posted for that matchup.</p>
+    <div id="wrHomeTabs" class="wr-tabs-slot"></div>
+    <div class="wr-six-bd"><div class="wr-rink-host"><div id="wrHomeRink"></div></div><ol class="wr-roll" id="wrHomeRoll"></ol></div>
+    <div id="wrHomeMatchup" class="wr-home-matchup"></div>
+    <p class="wr-note">Only the approved posted lineup is shown here. Scouting reports, matchup analysis, lineup editing and management notes remain inside the War Room.</p>
+  </section>`;
+  WRRink.tabs($('wrHomeTabs'),$('wrHomeRink'),{
+    games:tabsGames(D,games),active:initialGm(D),size:'sm',rink:{scale:3.85,jersey:72,small:true},
+    playersFor:t=>sixFor(D,t.g),
+    empty:(el,t)=>{el.removeAttribute('style');el.removeAttribute('data-w');el.className='wr-rink-empty';el.parentElement.style.height='';el.innerHTML='<div><b>Lineup not posted yet</b><span>Management has not approved a lineup for this game.</span></div>';},
+    onChange:t=>{const g=t.g,ps=sixFor(D,g);
+      $('wrHomeRoll').innerHTML=ps.length?ps.map(x=>`<li class="${x.me?'me':''}"><span>${x.pos}</span><b>${esc(x.locker?.gamertag||x.name)}</b><i>${esc(x.no||'–')}</i></li>`).join(''):'';
+      $('wrHomeMatchup').innerHTML=`<div><span class="wr-k">GM ${g.gm} · ${g.home?'HOME':'AWAY'} · ${esc(g.time)} ET</span><b>CALGARY ${g.home?'VS':'@'} ${esc(g.name)}</b></div><span class="wr-chip">${g.report?'LINEUP POSTED':'WAITING FOR LINEUP'}</span>`;
+    }
+  });
+}
 
 /* ---------- War Room (landing f + lineup c) ---------- */
 function mountWarRoom(host,D){
@@ -323,7 +353,7 @@ function mountStall(host,D){
 }
 
 /* ---------- boot ---------- */
-const MOUNTS=[['wrTonight',mountWarRoom],['wrLockerTVs',mountLockerTVs],['wrStallTonight',mountStall],['labSix',mountLabSix]];
+const MOUNTS=[['wrTonight',mountWarRoom],['wrHomeTonight',mountHomeTonight],['wrLockerTVs',mountLockerTVs],['wrStallTonight',mountStall],['labSix',mountLabSix]];
 async function run(){
   const hosts=MOUNTS.filter(([id])=>$(id)); if(!hosts.length||!window.WRRink) return;
   if(!viewer().user) return;

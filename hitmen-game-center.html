@@ -5,14 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#060607">
-<title>Hitmen Game Center | Calgary Hitmen</title>
+<title>Hitmen Home | Calgary Hitmen</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="hub.css">
 <link rel="stylesheet" href="wildman.css">
-<link rel="stylesheet" href="hitmen-game-center.css?v=20260928-results2">
+<link rel="stylesheet" href="broadcast-tokens.css?v=20261004-brand">
+<link rel="stylesheet" href="war-room-tonight.css?v=20261006-teamhome">
+<link rel="stylesheet" href="hitmen-game-center.css?v=20261006-teamhome">
 </head>
 <body class="wildman-site hitmen-game-center-page">
 
@@ -28,14 +30,14 @@
       <strong>CALGARY<br>HITMEN</strong>
     </a>
     <nav class="gc-side-nav">
-      <a class="active" href="hitmen-game-center.html"><span>⌂</span><b>Game Center</b></a>
+      <a class="active" href="hitmen-game-center.html"><span>⌂</span><b>Home</b></a>
       <a href="hitmen-team-locker.html"><span>◎</span><b>Roster</b></a>
       <a id="gcMyStallSide" href="hitmen-player-locker.html"><span>▣</span><b>My Stall</b></a>
       <a href="#schedule"><span>□</span><b>Schedule</b></a>
       <a href="#results"><span>▥</span><b>Results</b></a>
       <a href="#streams"><span>▷</span><b>Streams</b></a>
-      <a href="#intel"><span>⌁</span><b>Scouting</b></a>
       <a href="hitmen-player-locker.html#weekly"><span>↗</span><b>Development</b></a>
+      <a id="gcWarRoomSide" href="hitmen-workspace.html" hidden><span>⌁</span><b>War Room</b></a>
     </nav>
     <div class="gc-side-footer">
       <div class="gc-side-mark">H</div>
@@ -47,13 +49,13 @@
   <div class="gc-content">
     <header class="gc-topbar">
       <nav class="gc-top-tabs">
-        <a class="active" href="hitmen-game-center.html">GAME CENTER</a>
+        <a class="active" href="hitmen-game-center.html">HOME</a>
         <a href="hitmen-team-locker.html">ROSTER</a>
         <a id="gcMyStallTop" href="hitmen-player-locker.html">MY STALL</a>
         <a href="#schedule">SCHEDULE</a>
         <a href="#results">RESULTS</a>
         <a href="#streams">STREAMS</a>
-        <a href="#intel">SCOUTING</a>
+        <a id="gcWarRoomTop" href="hitmen-workspace.html" hidden>WAR ROOM</a>
       </nav>
       <div class="gc-top-profile">
         <span id="gcTopPlayer">HITMEN</span>
@@ -65,8 +67,8 @@
       <section class="gc-hero">
         <div class="gc-hero-copy">
           <div class="gc-kicker"><span></span>CALGARY HITMEN · LGCHL SEASON 55</div>
-          <h1>GAME<br><em>CENTER</em></h1>
-          <p>Your team home for tonight's matchups, schedule, results, streams, scouting and your personal locker.</p>
+          <h1>TEAM<br><em>HOME</em></h1>
+          <p>Tonight's opponents and posted lineups, the schedule, recent scores, streams and your personal locker. Management scouting stays in the War Room.</p>
           <div class="gc-hero-actions">
             <a id="gcMyStallHero" class="gc-primary" href="hitmen-player-locker.html">OPEN MY STALL</a>
             <a class="gc-secondary" href="hitmen-team-locker.html">TEAM LOCKER</a>
@@ -96,15 +98,12 @@
         </article>
       </section>
 
+      <section id="wrHomeTonight" class="wr-scope gc-lineup-shell" aria-label="Tonight's posted lineups"></section>
+
       <section id="schedule" class="gc-grid gc-main-grid">
         <article class="gc-card gc-wide">
           <div class="gc-card-head"><div><small>SEASON 55</small><h2>UPCOMING SCHEDULE</h2></div><span id="gcScheduleCount">0 UPCOMING</span></div>
           <div id="gcSchedule" class="gc-schedule"><div class="gc-empty">Loading schedule…</div></div>
-        </article>
-
-        <article id="intel" class="gc-card">
-          <div class="gc-card-head"><div><small>NEXT OPPONENT</small><h2>SCOUTING INTEL</h2></div></div>
-          <div id="gcIntel" class="gc-intel"><div class="gc-empty">Scouting intel will appear here.</div></div>
         </article>
       </section>
 
@@ -125,11 +124,12 @@
             <a id="gcMyStallTool" href="hitmen-player-locker.html"><b>My Stall</b><span>Jersey, stats, reports & development →</span></a>
             <a href="hitmen-team-locker.html"><b>Team Locker</b><span>Roster and player stalls →</span></a>
             <a href="hitmen-player-locker.html#weekly"><b>Development</b><span>Weekly feedback and player growth →</span></a>
+            <a id="gcWarRoomTool" href="hitmen-workspace.html" hidden><b>War Room</b><span>Management scouting, lineup lab, opponent intel & VOD →</span></a>
           </div>
         </article>
       </section>
 
-      <p id="gcStatus" class="gc-status">Loading Hitmen Game Center…</p>
+      <p id="gcStatus" class="gc-status">Loading Hitmen Home…</p>
     </main>
   </div>
 </div>
@@ -137,6 +137,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
 <script src="backend.js?v=20260927-gamecenter"></script>
 <script src="script.js"></script>
-<script src="hitmen-game-center.js?v=20260928-results2"></script>
+<script src="war-room-rink.js?v=20261004-lab"></script>
+<script src="war-room-tonight.js?v=20261006-teamhome"></script>
+<script src="hitmen-game-center.js?v=20261006-teamhome"></script>
 </body>
 </html>
