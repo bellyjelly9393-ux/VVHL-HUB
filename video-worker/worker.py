@@ -516,7 +516,10 @@ def ai_config():
     provider = os.getenv('AI_PROVIDER', 'openrouter' if os.getenv('OPENROUTER_API_KEY') else 'openai').strip().lower()
     if provider == 'openrouter':
         return ('OpenRouter', os.getenv('OPENROUTER_API_KEY', ''),
-                gm_profile().get('model') or os.getenv('OPENROUTER_MODEL', ''), 'https://openrouter.ai/api/v1/responses')
+                # A model set on the worker (OPENROUTER_MODEL) wins over the GM profile's model,
+                # which is Opus. The profile still supplies the scouting instructions.
+                os.getenv('OPENROUTER_MODEL', '').strip() or gm_profile().get('model') or '',
+                'https://openrouter.ai/api/v1/responses')
     if provider == 'openai':
         return ('OpenAI', os.getenv('OPENAI_API_KEY', ''),
                 os.getenv('OPENAI_MODEL', ''), 'https://api.openai.com/v1/responses')
