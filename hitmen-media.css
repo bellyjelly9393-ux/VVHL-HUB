@@ -40,3 +40,33 @@ body.hitmen-media-page{
 .hm-pipeline-note{margin:15px 0 0;color:#897d81;font-size:10px}.hm-switch{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:30px!important;border:1px solid rgba(241,38,112,.18);border-radius:20px;background:linear-gradient(120deg,rgba(241,38,112,.05),rgba(70,150,210,.035)),#08080a}.hm-switch h2{margin:4px 0;font:900 clamp(35px,5vw,58px)/.9 "Barlow Condensed",sans-serif}.hm-switch p{max-width:700px;color:#93898c}
 @media(max-width:900px){.hm-hero{min-height:560px}.hm-hero-copy{width:76%;min-height:560px}.hm-media-grid,.hm-scope-grid{grid-template-columns:1fr}.hm-pipeline{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:680px){.hm-hero{min-height:600px;border-radius:18px;background-position:58% 45%}.hm-hero-copy{width:100%;min-height:600px;padding:36px 20px;background:linear-gradient(90deg,rgba(3,3,4,.96),rgba(3,3,4,.72) 65%,rgba(3,3,4,.28))}.hm-crest{width:78px;height:70px}.hm-crest span{font-size:42px}.hm-hero h1{font-size:clamp(62px,19vw,92px)}.hm-hero-badge{right:16px;bottom:15px;min-width:160px;padding:12px}.hm-hero-badge strong{font-size:32px}.hm-pipeline{grid-template-columns:repeat(2,1fr)}.hm-switch{align-items:flex-start;flex-direction:column;padding:22px!important}}
+
+
+/* Hitmen Media Room */
+.hm-room{position:relative}
+.hm-room-lead{margin-bottom:14px}
+.hm-room-night{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:14px;padding:24px;border:1px solid rgba(241,38,112,.28);border-radius:18px;background:radial-gradient(circle at 88% 10%,rgba(241,38,112,.14),transparent 35%),linear-gradient(145deg,#121014,#070708)}
+.hm-room-night .hm-room-kicker{color:#ff6699;font-size:9px;font-weight:900;letter-spacing:.13em}
+.hm-room-night h3{margin:7px 0 9px;font:900 clamp(34px,4vw,58px)/.88 "Barlow Condensed",sans-serif;text-transform:uppercase}
+.hm-room-night p{margin:0;max-width:760px;color:#b7aaae;font-size:13px;line-height:1.58}
+.hm-room-record{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-self:start}
+.hm-room-record>div{padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(5,5,7,.7);text-align:center}
+.hm-room-record small{display:block;color:#887c80;font-size:7px;font-weight:900;letter-spacing:.1em}
+.hm-room-record b{display:block;margin-top:4px;font:900 32px/1 "Barlow Condensed",sans-serif;color:#f5e9ed}
+.hm-room-games{display:flex;flex-wrap:wrap;gap:7px;margin-top:13px}
+.hm-room-games span{padding:6px 9px;border:1px solid rgba(255,255,255,.07);border-radius:9px;background:#09090b;color:#a79b9f;font-size:8px;font-weight:800}
+.hm-room-leaders{display:grid;gap:7px;margin-top:12px}
+.hm-room-leader{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:9px 10px;border:1px solid rgba(241,38,112,.12);border-radius:9px;background:rgba(241,38,112,.035)}
+.hm-room-leader b{font-size:10px}.hm-room-leader span{color:#e5c7d1;font-size:9px;font-weight:800}
+.hm-room-updates{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.hm-room-card{padding:18px;border:1px solid rgba(241,38,112,.18);border-radius:15px;background:linear-gradient(145deg,#111014,#080709)}
+.hm-room-card header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hm-room-card small{color:#d95d88;font-size:7px;font-weight:900;letter-spacing:.1em}
+.hm-room-card .hm-room-result{font:900 18px/1 "Barlow Condensed",sans-serif;color:#f0e4e8}
+.hm-room-card .hm-room-result.is-win{color:#ff6c9f}
+.hm-room-card h3{margin:10px 0 7px;font:900 23px/1 "Barlow Condensed",sans-serif;text-transform:uppercase}
+.hm-room-card p{margin:0;color:#988d91;font-size:10px;line-height:1.55}
+.hm-room-card footer{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;padding:0;background:none}
+.hm-room-card footer span{padding:4px 6px;border:1px solid rgba(255,255,255,.06);border-radius:7px;color:#807579;font-size:7px;font-weight:800}
+@media(max-width:900px){.hm-room-night{grid-template-columns:1fr}.hm-room-updates{grid-template-columns:1fr 1fr}}
+@media(max-width:620px){.hm-room-night{padding:18px}.hm-room-updates{grid-template-columns:1fr}.hm-room-record{grid-template-columns:1fr 1fr}}
