@@ -195,11 +195,28 @@ def update_metadata(job_id, metadata, status=None, result=None, error=''):
                        (json.dumps(metadata), status, json.dumps(result), error, job_id))
 
 
-def http_json(url, headers, payload=None):
+HTTP_TOTAL_DEADLINE = max(30, int(os.getenv('VOD_HTTP_DEADLINE_SECONDS', '360')))
+
+
+def http_json(url, headers, payload=None, deadline=None):
+    """JSON request with a per-read timeout AND a hard total deadline.
+
+    Some providers send keep-alive whitespace while a request is stuck upstream,
+    which resets the socket timeout forever; the total deadline ends that wait.
+    """
     req = urllib.request.Request(url, headers=headers,
         data=None if payload is None else json.dumps(payload).encode())
+    stop_at = time.monotonic() + (deadline or HTTP_TOTAL_DEADLINE)
     with urllib.request.urlopen(req, timeout=120) as response:
-        return json.load(response)
+        body = bytearray()
+        while True:
+            if time.monotonic() > stop_at:
+                raise TimeoutError('request exceeded its total deadline')
+            chunk = response.read(65536)
+            if not chunk:
+                break
+            body.extend(chunk)
+    return json.loads(body.decode('utf-8'))
 
 
 def authenticate(header):
@@ -613,7 +630,8 @@ def request_ai(request_payload, model=None, rate_limit_retries=2, escalate=True)
             if exc.code == 400:
                 raise Problem(502, 'AI review request was rejected by the configured model (HTTP 400).')
             raise Problem(502, f'AI review request failed with HTTP {exc.code}.')
-        except (urllib.error.URLError, TimeoutError):
+        except (urllib.error.URLError, TimeoutError) as exc:
+            print(f'VOD AI request {type(exc).__name__}: {exc}; attempt {attempt + 1}/3.', flush=True)
             if attempt < 2:
                 if STOP.wait(10 * (attempt + 1)):
                     raise Problem(503, 'AI review stopped during deployment. It will resume automatically.')
@@ -1631,6 +1649,7 @@ def work_loop():
             if exc.status == 429 and ('rate limit' in exc.message.lower() or 'http 429' in exc.message.lower()):
                 delay = schedule_rate_limit_retry(row['id'], exc.message)
                 if delay is None:
+                    print(f'VOD job {row["id"]} failed: {exc.message} (rate-limit retries exhausted)', flush=True)
                     update(row['id'], 'failed', error=exc.message + ' Automatic retry limit reached.')
                 elif STOP.wait(delay):
                     continue
@@ -1644,6 +1663,7 @@ def work_loop():
                 result = current['result']
                 if exc.code:
                     result['failure_code'] = exc.code
+                print(f'VOD job {row["id"]} failed: {exc.status} {exc.message}', flush=True)
                 update(row['id'], 'failed', result=result, error=exc.message)
         except Exception as exc:
             print(f'VOD job {row["id"]}: {type(exc).__name__} during processing.', flush=True)
@@ -1655,6 +1675,7 @@ def work_loop():
             current = get_job(row['id'])
             result = current['result']
             result['failure_code'] = 'worker_error'
+            print(f'VOD job {row["id"]} failed: worker_error', flush=True)
             update(row['id'], 'failed', result=result, error='Processing or AI request failed. Check worker configuration and retry.')
 
 
