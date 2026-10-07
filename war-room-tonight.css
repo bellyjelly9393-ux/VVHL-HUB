@@ -282,6 +282,6 @@
 .wr-rink-tog{display:flex}
 .wr-rink-tog button{background:rgba(255,255,255,.03);color:#b4b7bc;border:1px solid rgba(255,255,255,.14);padding:7px 10px;font:800 11px/1 "Barlow Condensed",sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
 .wr-rink-tog button[aria-pressed="true"]{background:rgba(215,25,45,.28);color:#fff;border-color:rgba(215,25,45,.7)}
-.wr-rink-map{max-width:420px;margin:0 auto}
+.wr-rink-map{margin:0 auto}
 .wr-rink-map .wm-ice-zone-svg{display:block;width:100%;height:auto}
 .wr-rink-sum{margin:6px 0 0;font-size:11px;color:#998d90;text-align:center}
