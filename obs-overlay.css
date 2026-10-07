@@ -402,13 +402,12 @@ body[data-brand="hitmen"][data-scene="intermission"] .obb-main:before,
 body[data-brand="hitmen"][data-scene="final"] .obb-main:before{
   content:"";
   position:absolute;
-  left:3.5%;
-  right:3.5%;
-  bottom:4%;
-  height:38%;
-  border-radius:12px;
-  background:linear-gradient(180deg,rgba(4,5,8,.15),rgba(4,5,8,.9) 20%,rgba(4,5,8,.98));
-  box-shadow:0 -24px 50px rgba(0,0,0,.42);
+  left:0;
+  right:0;
+  bottom:0;
+  height:46%;
+  background:linear-gradient(180deg,rgba(3,4,7,0),rgba(3,4,7,.86) 17%,rgba(3,4,7,.98) 34%,#030407 100%);
+  box-shadow:0 -30px 70px rgba(0,0,0,.48);
 }
 body[data-brand="hitmen"][data-scene="intermission"] .obb-main:after,
 body[data-brand="hitmen"][data-scene="final"] .obb-main:after,
