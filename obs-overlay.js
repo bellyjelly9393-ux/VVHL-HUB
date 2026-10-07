@@ -226,6 +226,19 @@
     if(!lastRow)return;
     text('scoreClock',liveClock(lastRow.payload||{}),'20:00');
   }
+  function updateHitmenStartCountdown(){
+    var node=document.getElementById('hitmenStartCountdown');
+    if(!node||!lastRow)return;
+    var scene=forcedScene||lastRow.scene||'game';
+    var brand=lastRow.brand==='hitmen'?'hitmen':'wildman';
+    if(scene!=='starting'||brand!=='hitmen')return;
+    var started=Date.parse(lastRow.updated_at||'');
+    if(!Number.isFinite(started))started=Date.now();
+    var elapsed=Math.max(0,Math.floor((Date.now()-started)/1000));
+    var remaining=Math.max(0,600-elapsed);
+    var m=Math.floor(remaining/60),s=remaining%60;
+    node.textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  }
   function sceneLabel(scene,payload){
     var item=SCENES&&SCENES.infer?SCENES.infer(scene,payload||{}):null;
     if(item){
@@ -239,7 +252,7 @@
   }
   function render(row){
     if(!row) return;
-    lastRow=row;
+    lastRow=row;\n    updateHitmenStartCountdown();
     var payload=row.payload||{};
     var brand=row.brand==='hitmen'?'hitmen':'wildman';
     var scene=forcedScene||row.scene||'game';
@@ -336,6 +349,6 @@
   window.addEventListener('beforeunload',function(){db.removeChannel(realtime);});
   refresh();
   schedulePoll();
-  clockTimer=setInterval(updateLiveClock,250);
+  clockTimer=setInterval(updateLiveClock,250);\n  setInterval(updateHitmenStartCountdown,1000);
   if(channel==='hitmen-main'){loadTonightOpponent();setInterval(loadTonightOpponent,TICKER_REFRESH_MS);}
 })();
