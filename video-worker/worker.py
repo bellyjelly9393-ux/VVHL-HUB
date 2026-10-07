@@ -1712,6 +1712,24 @@ def schedule_part_retry(job_id, exc):
     return min(180, 30 * attempts[key])
 
 
+def confirm_overtime_jobs():
+    """Games that really went to overtime (VOD_CONFIRM_OVERTIME_JOB_IDS) keep it instead of having it dropped."""
+    for value in os.getenv('VOD_CONFIRM_OVERTIME_JOB_IDS', '').split(','):
+        value = value.strip()
+        if not value:
+            continue
+        try:
+            job = get_job(value)
+        except Problem:
+            print(f'VOD overtime confirmation skipped unknown job {value!r}.', flush=True)
+            continue
+        meta = dict(job['metadata'])
+        if not meta.get('overtime_confirmed'):
+            meta['overtime_confirmed'] = True
+            update_metadata(job['id'], meta)
+            print(f'VOD: overtime confirmed for job {job["id"][:8]}.', flush=True)
+
+
 def resume_listed_jobs():
     """Resume named existing replay jobs from their saved parts. Never creates or resets a job."""
     raw = os.getenv('VOD_RESUME_JOB_IDS', '').strip()

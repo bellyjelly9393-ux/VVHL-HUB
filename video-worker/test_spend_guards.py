@@ -235,6 +235,30 @@ class ReginaLikeJob(unittest.TestCase):
         self.assertEqual(len(worker.get_job(job_id)['metadata']['period_units']), 3)
 
 
+class ConfirmedOvertime(unittest.TestCase):
+    def test_a_game_with_real_overtime_keeps_it_and_the_others_do_not(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(worker, 'ROOT', Path(tmp)):
+            worker.initialize()
+            ids = []
+            for _ in range(2):
+                meta, result, _ = regina_like()
+                job_id = str(uuid4())
+                with worker.connect() as db:
+                    db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',
+                               (job_id, 'o', 0, 'failed', json.dumps(meta), json.dumps(result), ''))
+                ids.append(job_id)
+            with patch.dict(os.environ, {'VOD_CONFIRM_OVERTIME_JOB_IDS': f'{ids[1]}, not-a-job'}):
+                worker.confirm_overtime_jobs()
+                worker.confirm_overtime_jobs()  # idempotent
+            first, second = (worker.get_job(i) for i in ids)
+            self.assertNotIn('overtime_confirmed', first['metadata'])
+            self.assertTrue(second['metadata']['overtime_confirmed'])
+            self.assertEqual(second['status'], 'failed')  # confirming never starts work
+            kept = dict(second['metadata'])
+            self.assertFalse(worker.prune_unconfirmed_overtime(kept))
+            self.assertTrue(worker.prune_unconfirmed_overtime(dict(first['metadata'])))
+
+
 class RetryButton(unittest.TestCase):
     def test_retry_resumes_a_streamed_replay_that_has_no_video_on_disk(self):
         with tempfile.TemporaryDirectory() as tmp, patch.object(worker, 'ROOT', Path(tmp)):

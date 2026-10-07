@@ -38,6 +38,7 @@ class Handler(worker.Handler):
 
 def main():
     worker.initialize()
+    worker.confirm_overtime_jobs()
     worker.resume_listed_jobs()
     seeded = replay.seed_replay_test_batch()
     replay.start_seed_status_monitor(seeded)
