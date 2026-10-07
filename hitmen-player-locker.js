@@ -226,9 +226,11 @@
 
   function renderNightSummary(){
     const box=E('playerNightSummary');if(!box)return;
-    const rows=reports.filter(r=>!r.ai_review_id&&r.evidence?.night_key&&r.evidence?.night_totals);
-    if(!rows.length){box.innerHTML='';return}
-    const key=rows[0].evidence.night_key,s=rows[0].evidence.night_totals||{};
+    const allRows=reports.filter(r=>!r.ai_review_id&&r.evidence?.night_key&&r.evidence?.night_totals);
+    if(!allRows.length){box.innerHTML='';return}
+    const key=allRows[0].evidence.night_key;
+    const rows=allRows.filter(r=>r.evidence?.night_key===key);
+    const s=rows[0].evidence.night_totals||{};
     const goalie=String(locker?.position||'').toUpperCase()==='G';
     const items=goalie
       ?[['REC',s.record||'—'],['GP',s.games??rows.length],['SV',s.saves??0],['SA',s.shots_faced??0],['GA',s.goals_against??0],['SV%',s.save_pct_derived!=null?Number(s.save_pct_derived).toFixed(1)+'%':'—']]
@@ -357,7 +359,7 @@
     let vodText=vodReviewed
       ?vodReviewed+' VOD-reviewed game'+(vodReviewed===1?'':'s')+' currently feed this player profile.'
       :reports.length?'Game results and stat history are loaded. VOD scouting is pending.':'Game review evidence will populate here as VOD reports are attached.';
-    if(pendingBoxes)vodText+=' '+pendingBoxes+' Oct 5 game box'+(pendingBoxes===1?' is':'es are')+' linked and waiting on the official LG Public Logs.';
+    if(pendingBoxes)vodText+=' '+pendingBoxes+' recent game box'+(pendingBoxes===1?' is':'es are')+' linked and waiting on the official LG Public Logs.';
     T('profileVodSummary',vodText);
 
     renderDashboardScouting();
@@ -389,11 +391,13 @@
         H('stallScoutingNotes','<div class="locker-empty">Your Discord login worked, but this account is not mapped to a Season 55 locker yet. Management can fix the Discord-to-roster link without creating a new account.</div>');
         return;
       }
+      let seasonStatQuery=DB().from('lg_player_season_stats').select('games_played,stats,fetched_at,position,lg_user_id,gamertag').eq('season',SEASON).eq('league_code','LGCHL');
+      seasonStatQuery=locker.lg_user_id?seasonStatQuery.eq('lg_user_id',locker.lg_user_id):seasonStatQuery.ilike('gamertag',locker.gamertag);
       const [gr,wr,lr,sr]=await Promise.all([
         DB().from('team_player_game_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('locker_id',locker.id).order('game_date',{ascending:false}),
         DB().from('team_player_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('locker_id',locker.id).order('week',{ascending:false}),
         DB().from('team_line_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).order('week',{ascending:false}),
-        DB().from('lg_player_season_stats').select('games_played,stats,fetched_at,position').eq('season',SEASON).eq('league_code','LGCHL').ilike('gamertag',locker.gamertag).order('fetched_at',{ascending:false}).limit(1).maybeSingle()
+        seasonStatQuery.order('fetched_at',{ascending:false}).limit(1).maybeSingle()
       ]);
       if(gr.error)throw gr.error;
       if(wr.error)throw wr.error;
