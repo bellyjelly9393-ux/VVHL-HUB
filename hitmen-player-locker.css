@@ -1608,3 +1608,19 @@
 .player-report-statline small{display:block;color:#786d70;font-size:6px;font-weight:900;letter-spacing:.08em}
 .player-report-statline b{display:block;margin-top:2px;color:#e5cc85;font:900 15px/1 "Barlow Condensed",sans-serif}
 @media(max-width:700px){.player-report-statline span{min-width:48px;flex:1 1 48px}}
+
+
+/* Oct 5 game-night restore */
+.player-night-summary{margin:0 0 10px}
+.night-summary-card{padding:14px;border:1px solid rgba(241,38,112,.18);border-radius:11px;background:linear-gradient(135deg,rgba(54,10,26,.32),rgba(10,10,13,.96));box-shadow:inset 0 1px rgba(255,255,255,.035)}
+.night-summary-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.night-summary-head small{display:block;color:#d95a87;font-size:7px;font-weight:900;letter-spacing:.12em}
+.night-summary-head h3{margin:4px 0 0;font:900 24px/1 "Barlow Condensed",sans-serif;letter-spacing:.035em}
+.night-summary-head>b{font:900 26px/1 "Barlow Condensed",sans-serif;color:#f0e8eb}
+.night-summary-games{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.night-summary-games span{padding:5px 7px;border:1px solid rgba(255,255,255,.06);border-radius:7px;background:#09090b;color:#aaa0a3;font-size:7px;font-weight:800}
+.night-summary-card>p{margin:9px 0 0;color:#7f7578;font-size:8px;line-height:1.5}
+.player-report-pending{align-items:center}
+.player-report-pending span{min-width:145px!important}
+.player-report-pending em{flex:1 1 220px;color:#81777a;font-size:8px;font-style:normal;line-height:1.45}
+.player-report-pending b{color:#d9a8b9!important;font-size:13px!important}
