@@ -38,6 +38,7 @@ class Handler(worker.Handler):
 
 def main():
     worker.initialize()
+    worker.resume_listed_jobs()
     seeded = replay.seed_replay_test_batch()
     replay.start_seed_status_monitor(seeded)
     threading.Thread(target=worker.work_loop, daemon=True, name='wildman-vod-review').start()
