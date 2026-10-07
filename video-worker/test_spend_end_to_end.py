@@ -27,6 +27,8 @@ def make_video(path, seconds):
 
 
 class EndToEndSpend(unittest.TestCase):
+    env = ENV
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = patch.object(worker, 'ROOT', Path(self.tmp.name))
@@ -66,7 +68,7 @@ class EndToEndSpend(unittest.TestCase):
         folder = worker.ROOT / job_id
         folder.mkdir()
         worker._CTX.job_id = job_id
-        with patch.dict(os.environ, ENV), patch.object(worker, 'gm_profile', return_value=None), \
+        with patch.dict(os.environ, self.env), patch.object(worker, 'gm_profile', return_value={}), \
                 patch.object(worker, 'AI_CHUNK_PAUSE', 0), patch.object(worker, 'AUTO_RELEASE_TWITCH_MEDIA', False), \
                 patch.object(worker, 'http_json', side_effect=self.ai(cut_off_first_chunk)):
             make_video(folder / 'source.mp4', 240)
@@ -100,6 +102,34 @@ class EndToEndSpend(unittest.TestCase):
         self.assertEqual(job['status'], 'ready_for_review')
         self.assertEqual(used, 12)
         self.assertTrue(all(tokens <= 5000 for _, tokens in self.calls))
+
+
+class EndToEndGemini(EndToEndSpend):
+    """The same two-period game, every step on Gemini direct (cheap tier and reports)."""
+    env = {'OPENROUTER_API_KEY': 'or-key', 'AI_PROVIDER': 'openrouter', 'GEMINI_API_KEY': 'g-key',
+           'VOD_MODEL_BASIC': 'gemini/gemini-test-flash', 'VOD_MODEL_DEEP': 'gemini/gemini-test-pro'}
+
+    def ai(self, cut_off_first_chunk=False):
+        state = {'cut': cut_off_first_chunk}
+        def reply(payload, finish='stop'):
+            return {'choices': [{'message': {'content': json.dumps(payload)}, 'finish_reason': finish}],
+                    'usage': {'prompt_tokens': 900, 'completion_tokens': 200}}
+        def fake(url, headers, body):
+            assert url == worker.GEMINI_ENDPOINT, url
+            assert headers['Authorization'] == 'Bearer g-key'
+            name = body['response_format']['json_schema']['name']
+            text = body['messages'][-1]['content'][0]['text']
+            self.calls.append((name, body['max_tokens']))
+            if name == 'elite_hockey_review':
+                if state['cut']:
+                    state['cut'] = False
+                    return {'choices': [{'message': {'content': '{"summary": "cut'}, 'finish_reason': 'length'}]}
+                chunk = json.loads(re.search(r'Context: (\{.*\})\n', text).group(1))['chunk']
+                return reply({'summary': 'S', 'tactical': {}, 'uncertainties': [], 'player_evaluations': [],
+                              'observations': [{'timestamp': chunk['start'] + 5, 'source': 'gameplay', 'category': 'offense',
+                                                'impact': 'negative', 'note': 'n', 'player': None}]})
+            return reply(ROLLUP)
+        return fake
 
 
 if __name__ == '__main__':

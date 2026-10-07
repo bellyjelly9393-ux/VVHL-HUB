@@ -130,6 +130,19 @@ class ExpensiveModelBlock(unittest.TestCase):
         self.assertIn('VOD_MODEL_DEEP', blocked.exception.message)
         send.assert_not_called()
 
+    def test_model_set_on_the_worker_beats_the_gm_profile_model(self):
+        profile = {'provider': 'openrouter', 'model': 'anthropic/claude-opus-5.5', 'instructions': 'GM rules.'}
+        env = {k: v for k, v in os.environ.items() if not k.startswith('VOD_')}
+        env.update({'OPENROUTER_API_KEY': 'k', 'AI_PROVIDER': 'openrouter',
+                    'OPENROUTER_MODEL': 'anthropic/claude-sonnet-5.5'})
+        with patch.dict(os.environ, env, clear=True), patch.object(worker, 'gm_profile', return_value=profile):
+            self.assertEqual(worker.ai_config()[2], 'anthropic/claude-sonnet-5.5')
+            self.assertEqual(worker.step_models('game_rollup'), ['anthropic/claude-sonnet-5.5'])
+            self.assertEqual(worker.step_models('overview')[0], 'anthropic/claude-sonnet-5.5')
+        env.pop('OPENROUTER_MODEL')
+        with patch.dict(os.environ, env, clear=True), patch.object(worker, 'gm_profile', return_value=profile):
+            self.assertEqual(worker.ai_config()[2], 'anthropic/claude-opus-5.5')  # old default, still blocked at request time
+
     def test_sonnet_and_flash_run_and_opus_can_be_allowed_on_purpose(self):
         env = {'OPENROUTER_API_KEY': 'k', 'AI_PROVIDER': 'openrouter', 'VOD_MODEL_BASIC': 'google/gemini-3.8-flash',
                'VOD_MODEL_DEEP': 'anthropic/claude-sonnet-5.5'}
