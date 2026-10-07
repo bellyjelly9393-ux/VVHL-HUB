@@ -335,3 +335,114 @@ body[data-scene="final"] .obs-full-card{display:none!important}
 body[data-brand="hitmen"][data-scene="intermission"],
 body[data-brand="hitmen"][data-scene="final"]{background:#070a0e}
 @media(max-width:900px){.obs-break-board{grid-template-columns:1fr 225px}.obb-main{padding:28px 24px}.obb-title-wrap{margin:60px 0 20px}.obb-title-wrap h1{font-size:66px}.obb-score-card{grid-template-columns:1fr 160px 1fr}.obb-team-side{padding:16px}.obb-team-side img{width:66px;height:66px}.obb-team-side strong{font-size:28px}.obb-score b{font-size:58px}.obb-rail{padding:18px 12px}}
+
+
+/* Hitmen generated scene art package · 2026-10-06 */
+:root{
+  --hitmen-starting-art:url("https://d2ol7oe51mr4n9.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/49e84eea-6faf-49d9-afd0-29da69c8cf4c.png");
+  --hitmen-intermission-art:url("https://d2ol7oe51mr4n9.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/7f840ff3-f04e-4fb1-baea-477ae46d1813.png");
+  --hitmen-final-art:url("https://d2ol7oe51mr4n9.cloudfront.net/user_3Ic50OgPEnsF6yLkPdMjvCnPfo2/c91e8661-cf6c-423e-ad7e-2547349a5f08.png");
+}
+body[data-brand="hitmen"][data-scene="starting"] .obs-root,
+body[data-brand="hitmen"][data-scene="intermission"] .obs-root,
+body[data-brand="hitmen"][data-scene="final"] .obs-root{
+  background-position:center;
+  background-repeat:no-repeat;
+  background-size:cover;
+  background-color:#050507;
+}
+body[data-brand="hitmen"][data-scene="starting"] .obs-root{background-image:var(--hitmen-starting-art)}
+body[data-brand="hitmen"][data-scene="intermission"] .obs-root{background-image:var(--hitmen-intermission-art)}
+body[data-brand="hitmen"][data-scene="final"] .obs-root{background-image:var(--hitmen-final-art)}
+
+/* Starting Soon uses the approved full-screen artwork. */
+body[data-brand="hitmen"][data-scene="starting"] .obs-full-card,
+body[data-brand="hitmen"][data-scene="starting"] .obs-break-grid,
+body[data-brand="hitmen"][data-scene="starting"] .obs-corner-bug,
+body[data-brand="hitmen"][data-scene="starting"] .obs-scorebar,
+body[data-brand="hitmen"][data-scene="starting"] .obs-logo-bug{display:none!important}
+.hitmen-start-countdown{display:none}
+body[data-brand="hitmen"][data-scene="starting"] .hitmen-start-countdown{
+  position:absolute;
+  z-index:8;
+  left:50%;
+  bottom:7.2%;
+  transform:translateX(-50%);
+  display:grid;
+  place-items:center;
+  min-width:206px;
+  height:64px;
+  padding:0 26px;
+  border:1px solid rgba(255,59,79,.8);
+  border-radius:5px;
+  background:linear-gradient(180deg,rgba(14,15,19,.98),rgba(4,5,7,.98));
+  box-shadow:0 0 0 3px rgba(190,30,61,.18),0 0 32px rgba(255,30,60,.34);
+  color:#f4f5f7;
+  font:900 46px/1 "Barlow Condensed",sans-serif;
+  letter-spacing:.06em;
+  text-shadow:0 3px 0 #6f747c,0 0 18px rgba(255,48,71,.3)
+}
+
+/* Intermission / Final keep the new artwork while the live score + stats remain dynamic. */
+body[data-brand="hitmen"][data-scene="intermission"] .obs-break-board,
+body[data-brand="hitmen"][data-scene="final"] .obs-break-board{
+  display:block;
+  background:transparent;
+  overflow:visible;
+}
+body[data-brand="hitmen"][data-scene="intermission"] .obb-main,
+body[data-brand="hitmen"][data-scene="final"] .obb-main{
+  position:absolute;
+  inset:0;
+  padding:0;
+  background:transparent;
+  overflow:visible;
+}
+body[data-brand="hitmen"][data-scene="intermission"] .obb-main:before,
+body[data-brand="hitmen"][data-scene="final"] .obb-main:before{
+  content:"";
+  position:absolute;
+  left:3.5%;
+  right:3.5%;
+  bottom:4%;
+  height:38%;
+  border-radius:12px;
+  background:linear-gradient(180deg,rgba(4,5,8,.15),rgba(4,5,8,.9) 20%,rgba(4,5,8,.98));
+  box-shadow:0 -24px 50px rgba(0,0,0,.42);
+}
+body[data-brand="hitmen"][data-scene="intermission"] .obb-main:after,
+body[data-brand="hitmen"][data-scene="final"] .obb-main:after,
+body[data-brand="hitmen"][data-scene="intermission"] .obb-watermark,
+body[data-brand="hitmen"][data-scene="final"] .obb-watermark,
+body[data-brand="hitmen"][data-scene="intermission"] .obb-topline,
+body[data-brand="hitmen"][data-scene="final"] .obb-topline,
+body[data-brand="hitmen"][data-scene="intermission"] .obb-title-wrap,
+body[data-brand="hitmen"][data-scene="final"] .obb-title-wrap,
+body[data-brand="hitmen"][data-scene="intermission"] .obb-rail,
+body[data-brand="hitmen"][data-scene="final"] .obb-rail{display:none!important}
+body[data-brand="hitmen"][data-scene="intermission"] .obb-score-card,
+body[data-brand="hitmen"][data-scene="final"] .obb-score-card{
+  position:absolute;
+  left:5%;
+  right:5%;
+  bottom:6%;
+  z-index:5;
+  grid-template-columns:1fr 220px 1fr;
+  border:1px solid rgba(255,55,75,.74);
+  background:linear-gradient(90deg,rgba(9,10,13,.97),rgba(3,4,7,.99),rgba(9,10,13,.97));
+  box-shadow:0 18px 50px rgba(0,0,0,.68),0 0 32px rgba(190,30,61,.16)
+}
+body[data-brand="hitmen"][data-scene="intermission"] .obb-team-side,
+body[data-brand="hitmen"][data-scene="final"] .obb-team-side{min-height:100px;padding:14px 20px}
+body[data-brand="hitmen"][data-scene="intermission"] .obb-team-side img,
+body[data-brand="hitmen"][data-scene="final"] .obb-team-side img{width:72px;height:72px}
+body[data-brand="hitmen"][data-scene="intermission"] .obb-team-side strong,
+body[data-brand="hitmen"][data-scene="final"] .obb-team-side strong{font-size:30px}
+body[data-brand="hitmen"][data-scene="intermission"] .obb-score b,
+body[data-brand="hitmen"][data-scene="final"] .obb-score b{font-size:68px}
+body[data-brand="hitmen"][data-scene="intermission"] .obb-stats>div,
+body[data-brand="hitmen"][data-scene="final"] .obb-stats>div{padding:11px 18px}
+body[data-brand="hitmen"][data-scene="intermission"] .obb-stats b,
+body[data-brand="hitmen"][data-scene="final"] .obb-stats b{font-size:24px}
+body[data-brand="hitmen"][data-scene="intermission"] .obs-logo-bug,
+body[data-brand="hitmen"][data-scene="final"] .obs-logo-bug{display:none!important}
