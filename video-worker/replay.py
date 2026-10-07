@@ -326,6 +326,7 @@ def resolve(review, owner, create=False):
                         'source_start_seconds': start,
                         'source_end_seconds': end,
                     })
+                    meta.pop('part_attempts', None)
                     db.execute("UPDATE jobs SET metadata=?,status='retrieving',error='' WHERE id=?", (json.dumps(meta), row['id']))
                     db.commit()
                     job = worker.get_job(row['id'], owner)
@@ -443,7 +444,8 @@ def retrieve(job_id):
                 units = units[:old_index] + worker.bounded_period_units(units[old_index:])
                 metadata['period_units'] = units
             result = dict(job.get('result') or {})
-            worker.mark_saved_parts(metadata, result)
+            worker.mark_saved_parts(metadata, result)  # also drops unconfirmed overtime
+            units = metadata.get('period_units') or []
             unit_index = max(0, int(metadata.get('period_unit_index') or 0))
             if (metadata.get('pending_period_rollup') or unit_index >= len(units)
                     or unit_index in set(metadata['completed_parts'])):
