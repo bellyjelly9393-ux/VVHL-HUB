@@ -117,6 +117,43 @@ class RequestBudgets(unittest.TestCase):
         self.assertIsNone(worker.schedule_part_retry(job_id, worker.Problem(502, 'cut', 'output_cap')))
 
 
+class ExpensiveModelBlock(unittest.TestCase):
+    def test_default_gm_profile_model_is_blocked_not_silently_used(self):
+        profile = {'provider': 'openrouter', 'model': 'anthropic/claude-opus-5.5', 'instructions': 'GM rules.'}
+        env = {k: v for k, v in os.environ.items() if not k.startswith('VOD_') and k not in ('OPENAI_API_KEY', 'OPENAI_MODEL')}
+        env.update({'OPENROUTER_API_KEY': 'k', 'AI_PROVIDER': 'openrouter'})
+        with patch.dict(os.environ, env, clear=True), patch.object(worker, 'gm_profile', return_value=profile), \
+                patch.object(worker, 'ai_budget_gate'), patch.object(worker, 'http_json') as send:
+            with self.assertRaises(worker.Problem) as blocked:
+                worker.analyze([], {'start': 0, 'end': 120}, {})
+        self.assertEqual(blocked.exception.code, 'model_blocked')
+        self.assertIn('VOD_MODEL_DEEP', blocked.exception.message)
+        send.assert_not_called()
+
+    def test_sonnet_and_flash_run_and_opus_can_be_allowed_on_purpose(self):
+        env = {'OPENROUTER_API_KEY': 'k', 'AI_PROVIDER': 'openrouter', 'VOD_MODEL_BASIC': 'google/gemini-3.8-flash',
+               'VOD_MODEL_DEEP': 'anthropic/claude-sonnet-5.5'}
+        with patch.dict(os.environ, env), patch.object(worker, 'gm_profile', return_value={}), \
+                patch.object(worker, 'ai_budget_gate'), patch.object(worker, 'http_json', return_value=review_json()) as send:
+            worker.analyze([], {'start': 0, 'end': 120}, {})
+            self.assertEqual(send.call_args.args[2]['model'], 'google/gemini-3.8-flash')
+        with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'k', 'AI_PROVIDER': 'openrouter',
+                                     'VOD_MODEL_BASIC': 'anthropic/claude-opus-5.5'}), \
+                patch.object(worker, 'gm_profile', return_value={}), patch.object(worker, 'ALLOW_BLOCKED_MODEL', True), \
+                patch.object(worker, 'ai_budget_gate'), patch.object(worker, 'http_json', return_value=review_json()):
+            self.assertEqual(worker.analyze([], {'start': 0, 'end': 120}, {})['summary'], 'S')
+
+    def test_a_blocked_model_is_not_retried(self):
+        job_id = str(uuid4())
+        meta = {'streamed_replay': True, 'replay_phase': 'analyze_periods', 'period_unit_index': 0,
+                'period_units': [{'label': 'Period 1', 'start': 0, 'end': 300}]}
+        with tempfile.TemporaryDirectory() as tmp, patch.object(worker, 'ROOT', Path(tmp)):
+            worker.initialize()
+            with worker.connect() as db:
+                db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)', (job_id, 'o', 0, 'processing', json.dumps(meta), '{}', ''))
+            self.assertIsNone(worker.schedule_part_retry(job_id, worker.Problem(503, 'blocked', 'model_blocked')))
+
+
 class CloserLooks(unittest.TestCase):
     def chunks(self, count, concern_at=()):
         return [{'label': 'Period 1', 'start': i * 120, 'end': i * 120 + 120,

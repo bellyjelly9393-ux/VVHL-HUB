@@ -205,6 +205,10 @@ AI_JOB_BUDGET = max(0, int(os.getenv('VOD_MAX_AI_REQUESTS_PER_JOB', '120')))
 AI_DAY_BUDGET = max(0, int(os.getenv('VOD_MAX_AI_REQUESTS_PER_DAY', '360')))
 SEQUENCE_REVIEW_EVERY = max(0, int(os.getenv('VOD_SEQUENCE_REVIEW_EVERY_CHUNKS', '3')))
 ALLOW_UNCONFIRMED_OVERTIME = os.getenv('VOD_ALLOW_UNCONFIRMED_OVERTIME', '') == '1'
+# Video review was meant to run on Sonnet / Gemini Flash / free models. With no model set,
+# the worker falls back to the GM profile model, which is Opus: block that silent default.
+BLOCKED_MODEL = re.compile(r'opus', re.I)
+ALLOW_BLOCKED_MODEL = os.getenv('VOD_ALLOW_OPUS', '') == '1'
 _CTX = threading.local()
 
 
@@ -228,7 +232,7 @@ def ai_budget_gate():
         print(f'VOD AI budget check skipped: {type(exc).__name__}', flush=True)
 
 
-def ai_usage_record(result, truncated=False):
+def ai_usage_record(result, truncated=False, model=''):
     usage = result.get('usage') if isinstance(result, dict) else None
     if not isinstance(usage, dict):
         return
@@ -241,7 +245,7 @@ def ai_usage_record(result, truncated=False):
                        'truncated=truncated+? WHERE job_id=? AND day=?',
                        (tokens_in, tokens_out, 1 if truncated else 0, job_id, time.strftime('%Y-%m-%d', time.gmtime())))
         cost = usage.get('cost')
-        print(f'VOD AI usage: job={job_id[:8]} in={tokens_in} out={tokens_out}'
+        print(f'VOD AI usage: job={job_id[:8]} model={model} in={tokens_in} out={tokens_out}'
               + (f' cost={cost}' if cost is not None else '') + (' CUT-OFF' if truncated else ''), flush=True)
     except (sqlite3.Error, TypeError, ValueError):
         pass
@@ -619,6 +623,10 @@ def request_ai(request_payload, model=None, rate_limit_retries=2, escalate=True)
     model = model or default_model
     if not key or not model:
         raise Problem(503, 'AI connection is not configured.')
+    if BLOCKED_MODEL.search(model) and not ALLOW_BLOCKED_MODEL:
+        raise Problem(503, f'{model} is blocked for video analysis because it is very expensive. '
+                           'Set VOD_MODEL_DEEP / VOD_MODEL_BASIC / VOD_MODEL_FALLBACK to Sonnet, '
+                           'Gemini Flash or a free model (or VOD_ALLOW_OPUS=1 to allow it).', 'model_blocked')
     request_payload = dict(request_payload)
     request_payload['model'] = model
     profile = gm_profile()
@@ -633,7 +641,7 @@ def request_ai(request_payload, model=None, rate_limit_retries=2, escalate=True)
                 {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
                 request_payload
             )
-            ai_usage_record(result, truncated=result.get('status') != 'completed')
+            ai_usage_record(result, truncated=result.get('status') != 'completed', model=model)
             if result.get('status') == 'completed':
                 return result
             reason = (result.get('incomplete_details') or {}).get('reason')
@@ -1684,7 +1692,7 @@ _NO_RETRY_STATUSES = (401, 402, 403, 404, 409, 422)
 
 def schedule_part_retry(job_id, exc):
     """Retry only the failed part (or the failed period/game synthesis), never the whole VOD."""
-    if isinstance(exc, Problem) and (exc.status in _NO_RETRY_STATUSES
+    if isinstance(exc, Problem) and (exc.status in _NO_RETRY_STATUSES or exc.code in ('model_blocked', 'ai_budget')
                                      or 'authorization' in exc.message.lower()
                                      or 'model was not found' in exc.message.lower()
                                      or 'rejected' in exc.message.lower()):
