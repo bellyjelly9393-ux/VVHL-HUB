@@ -94,3 +94,9 @@ test('approved period notes fill blank report layers when the worker rollup is m
  const pending=periods();pending[0].status='needs_review';pending[0].offense_notes='Unapproved';
  assert.equal(model.documentFromPeriods({},pending).team_systems.offensive_structure,'');
 });
+
+test('a failed run with no saved evidence does not blame the recording',()=>{
+ const state=model.reconcile({...review,id:'game',worker_status:'failed'},[]);
+ assert.equal(state.rawFailure,true);assert.doesNotMatch(state.next,/^Recording retrieval failed/);
+ assert.match(state.next,/Saved parts are kept/);
+});
