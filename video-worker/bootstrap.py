@@ -1,4 +1,5 @@
 """Starts the existing VOD worker plus automatic live-stream ingestion."""
+import json
 import os
 import threading
 from http.server import ThreadingHTTPServer
@@ -38,6 +39,11 @@ class Handler(worker.Handler):
 
 def main():
     worker.initialize()
+    try:  # which model each step will use (model names only, never keys)
+        print('VOD model routing:', json.dumps(worker.model_routing()), flush=True)
+    except Exception as exc:
+        print(f'VOD model routing unavailable: {type(exc).__name__}', flush=True)
+    worker.confirm_overtime_jobs()
     worker.resume_listed_jobs()
     seeded = replay.seed_replay_test_batch()
     replay.start_seed_status_monitor(seeded)
