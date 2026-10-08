@@ -81,6 +81,11 @@
   }
 
 
+  function gameNightKey(r){
+    if(!r.game_date)return r.evidence?.night_key||'';
+    return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(r.game_date));
+  }
+
   function hasGameStats(r){
     const s=r.stats||{};
     return ['goals','assists','shots','saves','goals_against'].some(k=>s[k]!=null);
@@ -91,7 +96,7 @@
     const groups=new Map();
     input.forEach(r=>{
       const key=r.schedule_game_id||r.stats?.lg_game_id||
-        (r.game_date&&r.opponent_name?r.game_date+'|'+r.opponent_name:r.id);
+        (r.game_date&&r.opponent_name?gameNightKey(r)+'|'+r.opponent_name:r.id);
       if(!groups.has(key))groups.set(key,[]);
       groups.get(key).push(r);
     });
@@ -273,8 +278,8 @@
     const box=E('playerNightSummary');if(!box)return;
     const allRows=reports.filter(r=>r.game_date);
     if(!allRows.length){box.innerHTML='';return}
-    const key=String(allRows[0].game_date).slice(0,10);
-    const rows=allRows.filter(r=>String(r.game_date).slice(0,10)===key);
+    const key=gameNightKey(allRows[0]);
+    const rows=allRows.filter(r=>gameNightKey(r)===key);
     const complete=rows.every(hasGameStats);
     const s={...(rows[0].evidence?.night_totals||{})};
     s.record=nightRecord(rows)||s.record||'—';
