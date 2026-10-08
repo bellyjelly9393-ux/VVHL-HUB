@@ -1,0 +1,89 @@
+/* Hitmen scouting presentation only. Existing authentication and team-scoped data stay authoritative. */
+body.hm-research {
+  --hr-bg:#101214; --hr-panel:#1b1e22; --hr-line:#363b42; --hr-text:#f3f1ed;
+  --hr-muted:#b5bbc3; --hr-red:#b62739;
+  background:linear-gradient(180deg,rgba(13,15,18,.8),#101214 600px),url("assets/broadcast/arena-tunnel.webp") center top/cover no-repeat fixed;
+  color:var(--hr-text); font-family:Inter,"Segoe UI",Arial,sans-serif; font-size:16px; line-height:1.55;
+}
+body.hm-research [hidden] { display:none!important; }
+body.hm-research .section-shell { width:min(1480px,calc(100% - 48px)); max-width:1480px; }
+body.hm-research .hitmen-tool-header { background:#121518!important; border-bottom:1px solid #41454b!important; padding:16px 24px; gap:24px; box-shadow:0 8px 28px #0005; }
+.hm-research .brand { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.hm-research .hr-crest { width:52px; height:52px; object-fit:contain; filter:drop-shadow(0 3px 4px #0009); }
+.hm-research .brand-copy { font-size:12px; letter-spacing:.09em; color:#c1c5cb; }
+.hm-research .brand-copy b { font-size:21px; letter-spacing:.035em; color:var(--hr-text); }
+body.hm-research .main-nav { gap:6px; }
+body.hm-research .main-nav a { font-size:13px; padding:10px 12px; letter-spacing:.015em; color:#c9cdd2; }
+body.hm-research .main-nav a.active-nav { color:#fff; background:#25292f; border-bottom:3px solid var(--hr-red); border-radius:4px 4px 0 0; }
+body.hm-research .management-login-shell { padding:20px 24px; margin-top:20px; border:1px solid var(--hr-line); background:#16191de8; border-radius:8px; }
+body.hm-research .management-login-shell h2 { font-size:24px; line-height:1.2; }
+body.hm-research.management-authorized .management-login-shell { padding:12px 20px; }
+body.hm-research.management-authorized .management-login-shell .section-heading { margin-bottom:10px; }
+body.hm-research .hm-tool-hero { position:relative; margin-top:24px; padding:32px; border:1px solid #454951; border-top:3px solid var(--hr-red); border-radius:8px; background:linear-gradient(105deg,#20242af5,#16191de8),url("assets/broadcast/arena-tunnel.webp") center/cover; box-shadow:inset 0 1px 0 #ffffff0d,0 18px 40px #0005; }
+body.hm-research .hm-tool-hero h1 { font:800 clamp(32px,4vw,56px)/1.08 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.035em; text-transform:none; margin:12px 0; }
+body.hm-research .hm-tool-hero h1 span { color:var(--hr-text); }
+body.hm-research .hm-tool-hero p { font-size:16px; color:var(--hr-muted); max-width:760px; }
+body.hm-research .eyebrow { color:#c7cbd1; font-size:11px; letter-spacing:.12em; }
+body.hm-research .hm-tool-tabs a { font-size:12px; padding:10px 14px; color:#e5e7eb; border-color:#464b53; background:#252a30; border-radius:5px; }
+body.hm-research .hoi-layout { display:grid; grid-template-columns:280px minmax(0,1fr); gap:24px; align-items:start; margin-top:24px; }
+.hm-research .hoi-main,.hm-research .hoi-sidebar { min-width:0; }
+.hm-research .hoi-main { gap:24px; }
+.hm-research #hoiDetail { order:-1; }
+body.hm-research .hoi-panel { padding:24px; border:1px solid var(--hr-line); border-radius:8px; background:linear-gradient(145deg,#22262b,#191c20); box-shadow:inset 0 1px 0 #ffffff08,0 10px 24px #0004; }
+body.hm-research .hoi-panel h2 { font:750 26px/1.2 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.025em; text-transform:none; }
+body.hm-research .hoi-panel h3 { font:700 20px/1.3 Inter,"Segoe UI",Arial,sans-serif; text-transform:none; }
+.hm-research .hoi-panel-head { gap:16px; flex-wrap:wrap; }
+.hm-research .hoi-panel-head > div { min-width:0; }
+body.hm-research .hoi-muted,body.hm-research .hoi-empty,body.hm-research .hm-save-note { font-size:14px; color:var(--hr-muted); line-height:1.6; }
+body.hm-research .hoi-kpis,body.hm-research .hoi-rollup { gap:1px; background:var(--hr-line); border:1px solid var(--hr-line); border-radius:6px; overflow:hidden; margin-top:24px; }
+body.hm-research .hoi-kpis > div,body.hm-research .hoi-rollup > div { padding:16px; border:0; border-radius:0; background:#191d22; }
+body.hm-research .hoi-kpis small,body.hm-research .hoi-rollup small { font-size:11px; color:var(--hr-muted); letter-spacing:.035em; }
+body.hm-research .hoi-kpis strong,body.hm-research .hoi-rollup strong { font-size:30px; color:var(--hr-text); font-variant-numeric:tabular-nums; }
+.hm-research .hr-search-label { display:block; font-size:13px; margin:14px 0 6px; color:var(--hr-muted); }
+body.hm-research :is(.hoi-input,.hoi-form textarea,.hoi-form select,.hoi-stat-form input,.hoi-stat-form textarea,.hoi-game-edit input,.hoi-game-edit select,.hoi-game-edit textarea) { font:inherit; font-size:15px; color:var(--hr-text); background:#101317; border:1px solid #4b515a; border-radius:5px; padding:12px; min-height:44px; box-sizing:border-box; max-width:100%; }
+body.hm-research textarea { line-height:1.6; }
+body.hm-research .hoi-form label,body.hm-research .hoi-game-edit label { font-size:12px; color:#c3c8ce; letter-spacing:.025em; }
+body.hm-research .hoi-filter-row button { font-size:12px; padding:9px 12px; min-height:40px; border-radius:5px; border-color:#454b53; color:#cdd2d8; background:#171a1f; }
+body.hm-research .hoi-filter-row button.active { background:#343a43; color:#fff; border-color:#747d8a; }
+body.hm-research .hoi-opp { padding:14px 12px; border:1px solid #353b43; border-radius:5px; background:#181c21; }
+body.hm-research .hoi-opp.active { border-color:#c74251; background:#32252b; box-shadow:inset 3px 0 var(--hr-red); }
+body.hm-research .hoi-opp strong { font-size:15px; }
+body.hm-research .hoi-opp small { font-size:12px; color:var(--hr-muted); }
+body.hm-research .hoi-opp b { font-size:22px; color:#eceef0; }
+.hm-research .hr-file-nav { display:flex; gap:8px; flex-wrap:wrap; padding:18px 0; border-bottom:1px solid var(--hr-line); }
+.hm-research .hr-file-nav a { color:#e0e3e7; font-size:13px; text-decoration:none; padding:10px 14px; background:#2b3037; border:1px solid #424953; border-radius:5px; }
+.hm-research :is(.hoi-subsection,.hoi-detail-grid,.hr-schedule) { scroll-margin-top:110px; }
+body.hm-research .hoi-subsection { border-top-color:var(--hr-line); margin-top:28px; padding-top:24px; }
+body.hm-research :is(.hoi-player-card,.hoi-stat,.hoi-season-game,.hoi-meeting,.hoi-vod,.hoi-week,.hoi-heat,.hoi-pregame-report) { background:#14181d; border-color:#363d46; border-radius:6px; }
+body.hm-research :is(.hoi-player-card strong,.hoi-vod strong) { font-size:15px; }
+body.hm-research :is(.hoi-player-card small,.hoi-player-card p,.hoi-vod small,.hoi-stat small,.hoi-player-stats small,.hoi-game-row small,.hoi-week-head,.hoi-meeting summary,.hoi-season-game small) { font-size:12px; color:#b9c1cb; }
+body.hm-research .hoi-stat b { font-size:24px; }
+body.hm-research .hoi-game-row { font-size:14px; grid-template-columns:100px minmax(110px,1fr) 65px 65px auto; gap:10px; padding:14px 10px; }
+body.hm-research :is(.hoi-game-row button,.hoi-vod a,.hoi-vod button,.hoi-vod select) { font-size:13px; min-height:40px; }
+body.hm-research .hm-save { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 16px; font-size:13px; text-decoration:none; border-radius:5px; background:linear-gradient(#9b2837,#7f202d); border:1px solid #c15360; box-shadow:inset 0 1px #ffffff18,0 3px 8px #0004; }
+body.hm-research :is(button,a,input,select,textarea,summary):focus-visible { outline:2px solid #f1d6a5; outline-offset:3px; }
+body.hm-research :is(button,.hm-save):disabled { opacity:.5; cursor:not-allowed; }
+body.hm-research .hr-file-nav a:hover,body.hm-research .hm-tool-tabs a:hover { background:#3b424c; }
+body.hm-research .hoi-roster-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+body.hm-research .hoi-detail-grid { grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:24px; }
+body.hm-research .hoi-source-actions { flex-wrap:wrap; }
+body.hm-research footer { margin-top:40px; background:#101317; border-top:1px solid var(--hr-line); }
+@media(max-width:1100px) {
+ body.hm-research .hoi-layout { grid-template-columns:240px minmax(0,1fr); gap:16px; }
+ body.hm-research .hoi-panel { padding:18px; }
+ body.hm-research .hoi-detail-grid,body.hm-research .hoi-roster-grid,body.hm-research .hoi-season-list { grid-template-columns:1fr; }
+ body.hm-research .hoi-game-row { grid-template-columns:90px minmax(100px,1fr) auto; }
+}
+@media(max-width:800px) {
+ body.hm-research .section-shell { width:calc(100% - 24px); }
+ body.hm-research .hoi-layout { grid-template-columns:1fr; }
+ body.hm-research .hoi-sidebar { position:static; }
+ body.hm-research .hoi-opponents { max-height:300px; }
+ body.hm-research .hm-tool-hero { padding:24px 20px; }
+ body.hm-research .hoi-kpis,body.hm-research .hoi-rollup { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ body.hm-research .hoi-zone-grid { grid-template-columns:1fr; }
+ body.hm-research .hoi-form,body.hm-research .hoi-stat-form,body.hm-research .hoi-game-edit { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ body.hm-research .hoi-meeting summary,body.hm-research .hoi-vod { grid-template-columns:1fr; gap:10px; }
+ body.hm-research .hitmen-tool-header { padding:12px; }
+}
+@media(prefers-reduced-motion:reduce) { body.hm-research * { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
