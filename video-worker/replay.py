@@ -253,6 +253,86 @@ def review_window(review):
     return start, end
 
 
+def norm_id(value):
+    try:
+        return str(UUID(str(value).strip()))
+    except (TypeError, ValueError, AttributeError):
+        return str(value or '')
+
+
+def linked_job_id(db, review):
+    """The review's job whoever created it: its recorded worker job, else the newest job naming the review."""
+    preferred = norm_id(review.get('worker_job_id')) if review.get('worker_job_id') else ''
+    if preferred and db.execute('SELECT 1 FROM jobs WHERE id=?', (preferred,)).fetchone():
+        return preferred
+    review_id = norm_id(review['id'])
+    queue_id = review.get('media_queue_id')
+    for row in db.execute('SELECT id,metadata FROM jobs ORDER BY created DESC').fetchall():
+        try:
+            meta = json.loads(row['metadata'])
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(meta, dict):
+            continue
+        if (review_id in (norm_id(meta.get('review_id')), norm_id(meta.get('game_id')))
+                or (queue_id and meta.get('media_queue_id') == queue_id)):
+            return row['id']
+    return None
+
+
+def insert_review_job(db, review, owner, status='needs_periods'):
+    url = replay_url(review.get('vod_url'))
+    active = db.execute("SELECT count(*) FROM jobs WHERE status IN ('retrieving','awaiting_upload','uploading','queued','processing','awaiting_ai')").fetchone()[0]
+    if active >= worker.MAX_ACTIVE_JOBS:
+        raise worker.Problem(429, f'Video queue is full ({worker.MAX_ACTIVE_JOBS} active jobs). Let the oldest games finish first.', 'queue_full')
+    start, end = review_window(review)
+    review_id = norm_id(review['id'])
+    metadata = {
+        'review_id': review_id, 'game_id': review_id, 'title': str(review.get('title') or '')[:200],
+        'vod_url': url, 'players': str(review.get('scouting_context') or '')[:2000],
+        'game_format': str(review.get('game_format') or '6s')[:20],
+        'vod_offset_seconds': start, 'source_start_seconds': start, 'source_end_seconds': end,
+        'periods': [], 'source_kind': 'twitch_replay'
+    }
+    job_id = str(uuid4())
+    db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)', (job_id, owner, time.time(), status, json.dumps(metadata), '{}', ''))
+    return job_id
+
+
+def resume_metadata(job_id, meta):
+    meta = dict(meta)
+    meta.pop('ai_rate_limit_retries', None)
+    meta.pop('part_attempts', None)
+    return worker.start_run(job_id, meta)
+
+
+def request_periods(review, owner, spec):
+    """PUT /reviews/<id>/periods: record hand-set periods for the review's job (made only if it has none).
+    The work loop applies them between steps; an unchanged request changes nothing."""
+    with worker.WRITE_LOCK:
+        with worker.connect() as db:
+            job_id = linked_job_id(db, review)
+            if job_id is None:
+                job_id = insert_review_job(db, review, owner)
+        job = worker.get_job(job_id)
+        try:
+            vod_url = replay_url(review.get('vod_url'))
+        except worker.Problem:
+            vod_url = replay_url(job['metadata'].get('vod_url'))
+        spec = dict(spec, vod_url=vod_url)
+        unchanged = (job['metadata'].get('period_spec_hash') == spec['hash']
+                     and job['metadata'].get('vod_url') == vod_url)
+        with worker.connect() as db:
+            if unchanged:
+                db.execute('DELETE FROM period_requests WHERE job_id=?', (job_id,))
+            else:
+                db.execute('INSERT OR REPLACE INTO period_requests VALUES (?,?,?)', (job_id, json.dumps(spec), time.time()))
+        if unchanged and job['status'] in ('failed', 'awaiting_ai', 'expired'):
+            meta = resume_metadata(job_id, job['metadata'])
+            worker.update_metadata(job_id, meta, worker.replay_resume_status(job_id, meta), job['result'], '')
+    return worker.with_pending_periods(worker.get_job(job_id))
+
+
 def refresh_saved_report(review, owner):
     """Build a new structured game report from already-saved reviewed chunk evidence."""
     stored = review.get('pending_worker_result') or review.get('worker_result') or {}
@@ -260,8 +340,9 @@ def refresh_saved_report(review, owner):
     if not isinstance(chunks, list) or not chunks:
         raise worker.Problem(409, 'No saved chunk evidence is available. Run a fresh Elite Scout pass instead.')
     start, end = review_window(review)
+    review_id = norm_id(review['id'])
     metadata = {
-        'review_id': review['id'], 'game_id': review['id'],
+        'review_id': review_id, 'game_id': review_id,
         'title': str(review.get('title') or '')[:200],
         'vod_url': str(review.get('vod_url') or '')[:2000],
         'players': str(review.get('scouting_context') or '')[:2000],
@@ -274,99 +355,57 @@ def refresh_saved_report(review, owner):
     result.pop('game_rollup', None)
     result['stage'] = 'writing_report'
     result.pop('failure_code', None)
-    with worker.WRITE_LOCK, worker.connect() as db:
-        rows = db.execute('SELECT id,metadata FROM jobs WHERE owner=? ORDER BY created DESC', (owner,)).fetchall()
-        job_id = None
-        for row in rows:
-            try:
-                old = json.loads(row['metadata'])
-            except (TypeError, ValueError):
-                continue
-            if old.get('review_id') == review['id'] or old.get('game_id') == review['id']:
-                job_id = row['id']
-                break
-        if job_id:
-            db.execute('UPDATE jobs SET metadata=?,status=?,result=?,error=? WHERE id=?',
-                       (json.dumps(metadata), 'queued', json.dumps(result), '', job_id))
-        else:
-            job_id = str(uuid4())
-            db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',
-                       (job_id, owner, time.time(), 'queued', json.dumps(metadata), json.dumps(result), ''))
-        db.commit()
-    return worker.get_job(job_id, owner)
+    with worker.WRITE_LOCK:
+        with worker.connect() as db:
+            job_id = linked_job_id(db, review)
+            if job_id is None:
+                job_id = str(uuid4())
+                db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',
+                           (job_id, owner, time.time(), 'queued', json.dumps(metadata), json.dumps(result), ''))
+                job_id, created = None, job_id
+        if job_id is None:
+            return worker.get_job(created)
+        job = worker.get_job(job_id)
+        if job['status'] in worker.ACTIVE_STATUSES:
+            raise worker.Problem(409, 'This game is being analyzed. Wait for it to finish before refreshing the report.', 'job_running')
+        # Merge: the job keeps its own window, link and period state.
+        merged = dict(job['metadata'])
+        merged.update({k: v for k, v in metadata.items()
+                       if k not in ('vod_url', 'vod_offset_seconds', 'source_start_seconds', 'source_end_seconds')})
+        worker.start_run(job_id, merged)
+        worker.update_metadata(job_id, merged, 'queued', result, '')
+    return worker.get_job(job_id)
 
 
 def resolve(review, owner, create=False):
-    """The caller supplies a review read through RLS, never unverified body fields."""
-    with worker.WRITE_LOCK, worker.connect() as db:
-        rows = db.execute('SELECT id,metadata FROM jobs WHERE owner=? ORDER BY created DESC', (owner,)).fetchall()
-        preferred_id = str(review.get('worker_job_id') or '')
-        ordered_rows = ([row for row in rows if row['id'] == preferred_id] +
-                        [row for row in rows if row['id'] != preferred_id])
-        for row in ordered_rows:
-            try:
-                meta = json.loads(row['metadata'])
-            except (TypeError, ValueError):
-                continue
-            linked = (row['id'] == preferred_id or meta.get('review_id') == review['id']
-                      or meta.get('game_id') == review['id']
-                      or (meta.get('media_queue_id') and meta['media_queue_id'] == review.get('media_queue_id')))
-            if linked:
-                job = worker.get_job(row['id'], owner)
-                if job['status'] == 'expired':
-                    continue
-                # A failed download can be retried with Analyze after the saved link is corrected.
-                if create and job['status'] == 'failed' and meta.get('source_kind') == 'twitch_replay' and not (worker.ROOT / row['id'] / 'source.mp4').exists():
-                    start, end = review_window(review)
-                    meta.update({
-                        'vod_url': replay_url(review.get('vod_url')),
-                        'players': str(review.get('scouting_context') or '')[:2000],
-                        'game_format': str(review.get('game_format') or '6s')[:20],
-                        'vod_offset_seconds': start,
-                        'source_start_seconds': start,
-                        'source_end_seconds': end,
-                    })
-                    meta.pop('part_attempts', None)
-                    db.execute("UPDATE jobs SET metadata=?,status='retrieving',error='' WHERE id=?", (json.dumps(meta), row['id']))
-                    db.commit()
-                    job = worker.get_job(row['id'], owner)
-                rollup = job['result'].get('game_rollup') or {}
-                incomplete_report = job['status'] == 'ready_for_review' and not all(
-                    isinstance(rollup.get(k), str) and rollup[k].strip() for k in (
-                        'summary', 'patterns', 'strengths', 'corrections',
-                        'tactical_report', 'player_report', 'professional_writeup'))
-                resumable = (worker.ROOT / row['id'] / 'source.mp4').exists() or (
-                    meta.get('streamed_replay') and worker.replay_resume_status(row['id'], meta) == 'queued')
-                if create and (job['status'] in ('failed', 'awaiting_ai') or incomplete_report) and resumable:
-                    # Analyze Game resumes saved part evidence and retries only what is missing.
-                    # It must not just redisplay the same failed job indefinitely.
-                    meta.pop('ai_rate_limit_retries', None)
-                    meta.pop('part_attempts', None)
-                    db.execute("UPDATE jobs SET metadata=?,status='queued',error='' WHERE id=?", (json.dumps(meta), row['id']))
-                    db.commit()
-                    job = worker.get_job(row['id'], owner)
-                return job
-        capture = review.get('_capture') or {}
-        if capture.get('status') in ('armed', 'queued', 'capturing', 'captured', 'processing'):
-            return {'id': None, 'status': capture['status'], 'waiting_for_capture': True}
-        if not create:
-            return None
-        url = replay_url(review.get('vod_url'))
-        active = db.execute("SELECT count(*) FROM jobs WHERE status IN ('retrieving','awaiting_upload','uploading','queued','processing','awaiting_ai')").fetchone()[0]
-        if active >= worker.MAX_ACTIVE_JOBS:
-            raise worker.Problem(429, f'Video queue is full ({worker.MAX_ACTIVE_JOBS} active jobs). Let the oldest games finish first.', 'queue_full')
-        job_id = str(uuid4())
-        start, end = review_window(review)
-        metadata = {
-            'review_id': review['id'], 'game_id': review['id'], 'title': review.get('title', ''),
-            'vod_url': url, 'players': str(review.get('scouting_context') or '')[:2000],
-            'game_format': str(review.get('game_format') or '6s')[:20],
-            'vod_offset_seconds': start, 'source_start_seconds': start, 'source_end_seconds': end,
-            'periods': [], 'source_kind': 'twitch_replay'
-        }
-        db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)', (job_id, owner, time.time(), 'retrieving', json.dumps(metadata), '{}', ''))
-        db.commit()
-        return worker.get_job(job_id, owner)
+    """The caller supplies a review read through RLS, never unverified body fields.
+
+    Finds the review's job whoever owns it (expired jobs included). Analyze (create=True)
+    resumes a failed job with saved work, but never creates a job: periods come first."""
+    with worker.WRITE_LOCK:
+        with worker.connect() as db:
+            job_id = linked_job_id(db, review)
+        if job_id:
+            job = worker.get_job(job_id)
+            meta = job['metadata']
+            rollup = job['result'].get('game_rollup') or {}
+            incomplete_report = job['status'] == 'ready_for_review' and not all(
+                isinstance(rollup.get(k), str) and rollup[k].strip() for k in (
+                    'summary', 'patterns', 'strengths', 'corrections',
+                    'tactical_report', 'player_report', 'professional_writeup'))
+            resumable = (worker.ROOT / job_id / 'source.mp4').exists() or (
+                meta.get('streamed_replay') and worker.replay_resume_status(job_id, meta) == 'queued')
+            if create and (job['status'] in ('failed', 'awaiting_ai') or incomplete_report) and resumable:
+                # Analyze Game resumes saved part evidence and retries only what is missing.
+                worker.update_metadata(job_id, resume_metadata(job_id, meta), 'queued')
+                job = worker.get_job(job_id)
+            return job
+    capture = review.get('_capture') or {}
+    if capture.get('status') in ('armed', 'queued', 'capturing', 'captured', 'processing'):
+        return {'id': None, 'status': capture['status'], 'waiting_for_capture': True}
+    if not create:
+        return None
+    raise worker.Problem(422, 'Enter the period start times before analyzing.', 'periods_required')
 
 
 def split_download_unit(metadata):

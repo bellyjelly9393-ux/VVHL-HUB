@@ -1,7 +1,6 @@
 """Starts the existing VOD worker plus automatic live-stream ingestion."""
 import json
 import os
-import threading
 from http.server import ThreadingHTTPServer
 from urllib.parse import urlsplit
 
@@ -29,6 +28,7 @@ class Handler(worker.Handler):
                 'autoReleaseTwitchMedia': worker.AUTO_RELEASE_TWITCH_MEDIA,
                 'replayAdminEnabled': bool(worker.REPLAY_ADMIN_TOKEN),
                 'storage': worker.storage_status(),
+                'workLoop': worker.loop_health(),
                 'liveIngestion': live_pipeline.configured(),
                 'liveProvider': 'twitch' if live_pipeline.configured() else None,
                 'replayRetrieval': 'twitch',
@@ -48,7 +48,7 @@ def main():
     worker.resume_listed_jobs()
     seeded = replay.seed_replay_test_batch()
     replay.start_seed_status_monitor(seeded)
-    threading.Thread(target=worker.work_loop, daemon=True, name='wildman-vod-review').start()
+    worker.start_work_loop()
     live_pipeline.start()
     ThreadingHTTPServer(('0.0.0.0', int(os.getenv('PORT', '8080'))), Handler).serve_forever()
 
