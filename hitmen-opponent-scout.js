@@ -84,7 +84,7 @@
   }
   function renderTeam(){
     const current=players.filter(p=>p.current&&p.position!=='G'&&p.ea),rows=sumPlayers(current),pr=profile(rows);
-    E('hsTeamHeat').innerHTML=pr?.model.totalShots?window.WildmanShotZones.renderSvg(rows,{metric:'shots',fill:'#d7192d'}):'<div class="hs-empty">No current EA zone data yet.</div>';
+    E('hsTeamHeat').innerHTML=pr?.model.totalShots?window.WildmanShotZones.renderSvg(rows,{metric:'shots',fill:'#d7192d',palette:'broadcast'}):'<div class="hs-empty">No current EA zone data yet.</div>';
     const topScorers=[...players].filter(p=>p.current&&p.lg).sort((a,b)=>Number(b.lg.points||0)-Number(a.lg.points||0)).slice(0,3);
     const items=[];
     if(pr?.ranked?.length){
@@ -107,7 +107,7 @@
     if(p.position==='G'){E('hsPlayerHeat').innerHTML='<div class="hs-empty">Goalies do not use the skater shooting-zone map.</div>';E('hsZoneBreakdown').innerHTML='';return}
     const rows=zoneRows(p.ea?.raw_stats||{}),pr=profile(rows);
     if(!pr?.model.totalShots){E('hsPlayerHeat').innerHTML='<div class="hs-empty">No EA shooting-location totals stored for this player yet.</div>';E('hsZoneBreakdown').innerHTML='';return}
-    E('hsPlayerHeat').innerHTML=window.WildmanShotZones.renderSvg(rows,{metric,fill:'#d7192d'});
+    E('hsPlayerHeat').innerHTML=window.WildmanShotZones.renderSvg(rows,{metric,fill:'#d7192d',palette:'broadcast'});
     const max=Math.max(1,...pr.ranked.map(z=>z.shots));
     E('hsZoneBreakdown').innerHTML=pr.ranked.slice(0,6).map(z=>'<div class="hs-zone-row"><b>'+esc(z.name)+'</b><span>'+z.shots+' shots · '+z.goals+' goals · '+z.efficiency.toFixed(1)+'% · '+z.shotShare.toFixed(1)+'% share</span><div class="hs-zone-bar"><i style="width:'+Math.max(2,100*z.shots/max)+'%"></i></div></div>').join('');
   }

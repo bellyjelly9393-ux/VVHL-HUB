@@ -87,6 +87,14 @@
 /* Across from us */
 .wr-scope .wr-across-hd{display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--bc-hair)}
 .wr-scope .wr-across-hd h3{margin-top:4px;font:900 28px/.95 var(--wr-display);text-transform:uppercase;color:var(--bc-offwhite)}
+/* Across from us: broadcast matchup chyron (red rule + slanted tag); red stays the one live/team accent */
+.wr-scope .wr-across{border-top:2px solid var(--team-wordmark,#D7192D)}
+.wr-scope .wr-across-hd{position:relative;border-bottom:2px solid rgba(255,255,255,.12)}
+.wr-scope .wr-across-hd::after{content:"";position:absolute;left:0;bottom:-2px;width:72px;height:2px;background:var(--team-wordmark,#D7192D)}
+.wr-scope .wr-across-hd .wr-k{display:inline-block;padding:4px 12px 3px 8px;background:var(--team-wordmark,#D7192D);color:#fff;clip-path:polygon(0 0,100% 0,calc(100% - 8px) 100%,0 100%)}
+.wr-scope .wr-across-hd h3{margin-top:8px;font-style:italic;font-size:32px}
+.wr-scope .wr-across .wr-sub{display:flex;align-items:center;gap:8px}
+.wr-scope .wr-across .wr-sub::before{content:"";width:3px;height:11px;background:var(--team-wordmark,#D7192D)}
 .wr-scope .wr-sub{margin:14px 0 6px}
 .wr-scope .wr-opp div{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;padding:6px 0;border-bottom:1px solid var(--bc-hair-soft)}
 .wr-scope .wr-opp dt{font:800 11px/1.3 var(--wr-label);letter-spacing:.16em;color:var(--bc-muted)}
@@ -266,10 +274,10 @@
 .wr-scope .wr-links a:hover,.wr-scope .wr-links a:focus-visible{color:var(--bc-offwhite,#F2F3F4);border-bottom-color:rgba(255,255,255,.4)}
 .wr-scope .wr-tabs-slot{margin-bottom:10px}
 
-.wr-heat{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:7px 0 10px}
-.wr-heat>div{padding:7px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025)}
-.wr-heat b{display:block;font:900 13px/1 "Barlow Condensed",sans-serif}
-.wr-heat i{display:block;height:3px;margin:5px 0;background:rgba(255,255,255,.06);overflow:hidden}
-.wr-heat em{display:block;height:100%;background:linear-gradient(90deg,rgba(215,25,45,.62),rgba(232,202,121,.92))}
-.wr-heat small{color:#998d90;font-size:7px}
+.wr-heat{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;margin:7px 0 10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.1)}
+.wr-heat>div{padding:9px 8px 8px;background:linear-gradient(180deg,rgba(255,255,255,.04),transparent),#060607}
+.wr-heat b{display:block;font:900 20px/1 "Big Shoulders Display","Barlow Condensed",sans-serif;font-variant-numeric:tabular-nums;color:#F2F3F4}
+.wr-heat i{display:block;height:4px;margin:7px 0 6px;background:rgba(255,255,255,.07);overflow:hidden}
+.wr-heat em{display:block;height:100%;background:linear-gradient(90deg,rgb(92,22,30),rgb(200,18,34) 45%,rgb(255,64,48) 75%,rgb(255,190,80));background-size:max(100%,140px) 100%;box-shadow:0 0 8px rgba(255,64,48,.45)}
+.wr-heat small{display:block;font:600 10px/1.25 "Barlow Condensed",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#9A9EA4}
 @media(max-width:650px){.wr-heat{grid-template-columns:repeat(5,minmax(46px,1fr));overflow-x:auto}}

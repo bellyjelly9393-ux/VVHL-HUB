@@ -56,7 +56,38 @@
   }
   function polygonPoints(points){return points.map(p=>p.join(',')).join(' ')}
   function heatOpacity(value,max){return max>0?Math.max(.08,Math.min(.92,.1+.82*(value/max))):.05}
+  // Broadcast heat ramp (opt-in via options.palette==='broadcast'): cold steel -> ember -> red -> hot amber.
+  const RAMP=[[0,[34,38,44]],[.25,[92,22,30]],[.55,[200,18,34]],[.8,[255,64,48]],[1,[255,190,80]]];
+  function rampColor(t){
+    t=Math.max(0,Math.min(1,t));
+    for(let i=1;i<RAMP.length;i++){
+      const [t1,c1]=RAMP[i],[t0,c0]=RAMP[i-1];
+      if(t<=t1){const k=(t-t0)/((t1-t0)||1);return 'rgb('+c0.map((v,j)=>Math.round(v+(c1[j]-v)*k)).join(',')+')';}
+    }
+    return 'rgb(255,190,80)';
+  }
+  let broadcastSeq=0;
+  function renderBroadcastSvg(rows,metric){
+    const data=sumRows(rows),values=data.zones.map(z=>Number(z[metric]||0)),max=Math.max(1,...values),top=Math.max(...values);
+    const id='wmz'+(++broadcastSeq);
+    const center=pts=>[pts.reduce((n,p)=>n+p[0],0)/pts.length,pts.reduce((n,p)=>n+p[1],0)/pts.length];
+    const paths=data.zones.map(z=>{
+      const meta=byId[z.id],value=Number(z[metric]||0),t=value/max,hot=value>0&&value===top;
+      const label=`${meta.name}: ${z.shots} shots, ${z.goals} goals, ${z.efficiency.toFixed(1)}% conversion, ${z.shotShare.toFixed(1)}% shot share`;
+      const [cx,cy]=center(meta.points);
+      return `<g class="wm-zone${hot?' wm-zone-hot':''}" data-zone="${z.id}"><polygon points="${polygonPoints(meta.points)}" fill="${value?rampColor(t):'#15171b'}" fill-opacity="${value?(.55+.4*t).toFixed(3):'.55'}" stroke="${hot?'#fff':'rgba(255,255,255,.22)'}" stroke-width="${hot?'.8':'.45'}"${hot?` filter="url(#${id}g)"`:''}><title>${label}</title></polygon>`+
+        (value?`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-family="Barlow Condensed,Impact,sans-serif" font-size="${hot?4.6:3.6}" font-weight="900" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width=".5" paint-order="stroke">${Math.round(value)}</text>`:'')+`</g>`;
+    }).join('');
+    return `<svg class="wm-ice-zone-svg wm-ice-zone-broadcast" viewBox="0 0 90 92" role="img" aria-label="EA 16-zone shooting heat map">`+
+      `<defs><linearGradient id="${id}i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b1e23"/><stop offset="1" stop-color="#0b0c0e"/></linearGradient>`+
+      `<filter id="${id}g" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`+
+      `<rect x="0" y="0" width="90" height="92" fill="url(#${id}i)" stroke="rgba(255,255,255,.22)" stroke-width=".7"/>`+
+      `<line x1="0" y1="12" x2="90" y2="12" stroke="#e0262f" stroke-opacity=".75" stroke-width=".7"/><line x1="0" y1="78" x2="90" y2="78" stroke="#3d7bff" stroke-opacity=".7" stroke-width="1.2"/>`+
+      `<path d="M38 12 Q38 20 45 20 Q52 20 52 12" fill="rgba(80,150,255,.18)" stroke="rgba(120,170,255,.75)" stroke-width=".6"/>`+
+      `${paths}</svg>`;
+  }
   function renderSvg(rows=[],options={}){
+    if(options.palette==='broadcast')return renderBroadcastSvg(rows,options.metric==='goals'?'goals':options.metric==='efficiency'?'efficiency':'shots');
     const metric=options.metric==='goals'?'goals':options.metric==='efficiency'?'efficiency':'shots';
     const data=sumRows(rows),max=Math.max(1,...data.zones.map(z=>Number(z[metric]||0)));
     const fill=options.fill||'#d7192d';
