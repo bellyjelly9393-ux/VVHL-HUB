@@ -626,6 +626,17 @@ GEMINI_PREFIX = 'gemini/'
 GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
 
 
+def gemini_api_key():
+    """GEMINI_API_KEY, tolerating a different capitalisation of the name (e.g. Gemini_api_key)."""
+    exact = os.getenv('GEMINI_API_KEY', '').strip()
+    if exact:
+        return exact
+    for name, value in os.environ.items():
+        if name.upper() == 'GEMINI_API_KEY' and value.strip():
+            return value.strip()
+    return ''
+
+
 def _gemini_schema(node):
     """Gemini wants anyOf for nullable types, not a type list."""
     if isinstance(node, list):
@@ -698,7 +709,7 @@ def request_ai(request_payload, model=None, rate_limit_retries=2, escalate=True)
         request_payload['instructions'] = profile['instructions'] + '\n\nFor video analysis, the attached frames and reviewed observations are the evidence packet. Cite their recording timestamps instead of unavailable database E IDs. Return only the requested JSON schema; all findings remain provisional. Do not infer missing roster or season context.'
     direct = model.startswith(GEMINI_PREFIX)
     if direct:
-        gemini_key = os.getenv('GEMINI_API_KEY', '').strip()
+        gemini_key = gemini_api_key()
         if not gemini_key:
             raise Problem(503, f'{model} needs GEMINI_API_KEY set on the worker.', 'model_unavailable')
         provider, endpoint, key = 'Gemini', GEMINI_ENDPOINT, gemini_key

@@ -100,6 +100,14 @@ class GeminiDirect(unittest.TestCase):
         self.assertEqual((result.status, result.code), (503, 'model_unavailable'))
         self.assertEqual(self.sent, [])
 
+    def test_the_key_works_under_a_different_capitalisation_of_its_name(self):
+        env = {k: v for k, v in ENV.items() if k != 'GEMINI_API_KEY'}
+        self.run_analyze([gemini_reply()], env={**env, 'Gemini_api_key': 'mixed-case-key'})
+        self.assertEqual(self.sent[0][1]['Authorization'], 'Bearer mixed-case-key')
+        self.sent.clear()
+        self.run_analyze([gemini_reply()], env={**ENV, 'Gemini_api_key': 'other'})
+        self.assertEqual(self.sent[0][1]['Authorization'], 'Bearer g-key')  # exact name wins
+
     def test_other_models_still_use_the_configured_provider(self):
         result = self.run_analyze([{'status': 'completed', 'output': [{'content': [
             {'type': 'output_text', 'text': json.dumps(REVIEW)}]}]}],
