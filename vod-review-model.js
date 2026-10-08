@@ -137,7 +137,8 @@
       row.evidence_timestamps=[...new Set([...row.evidence_timestamps,...p.evidence_timestamps])].sort((a,b)=>a-b);
       players.set(key,row);
     }
-    return {version:1,summary:text(review.full_game_summary),team_systems,tactical_report:text(review.tactical_report),result:'',process:'',game_rating:null,units:[],players:[...players.values()],player_report:text(review.player_report)};
+    const summary=text(review.full_game_summary).trim()||byPeriod(periods.map(s=>[s.label,s.analysis_summary]));
+    return {version:1,summary,team_systems,tactical_report:text(review.tactical_report),result:'',process:'',game_rating:null,units:[],players:[...players.values()],player_report:text(review.player_report)};
   }
   function mergeDocuments(primary={},supplemental={}){
     const p=primary&&typeof primary==='object'?primary:{},s=supplemental&&typeof supplemental==='object'?supplemental:{};

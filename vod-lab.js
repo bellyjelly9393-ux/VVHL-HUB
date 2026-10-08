@@ -604,7 +604,11 @@
   function editedDocument(){
     const doc=JSON.parse(JSON.stringify(reportDocument()));
     document.querySelectorAll('[data-report-path]').forEach(el=>{const keys=el.dataset.reportPath.split('.');let target=doc;for(const key of keys.slice(0,-1))target=target[key];target[keys.at(-1)]=el.value.trim();});
-    doc.summary=$("gameSummary").value.trim();doc.tactical_report=$("gameTactical").value.trim();doc.player_report=$("gamePlayers").value.trim();
+    // A blank box keeps the approved report's own text instead of wiping it (publishing requires a summary).
+    const keep=(box,current)=>(box?.value||"").trim()||String(current||"").trim();
+    doc.summary=keep($("gameSummary"),doc.summary);
+    doc.tactical_report=keep($("gameTactical"),doc.tactical_report);
+    doc.player_report=keep($("gamePlayers"),doc.player_report);
     return doc;
   }
   async function publishReport(){

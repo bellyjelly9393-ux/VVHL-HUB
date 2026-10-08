@@ -95,6 +95,14 @@ test('approved period notes fill blank report layers when the worker rollup is m
  assert.equal(model.documentFromPeriods({},pending).team_systems.offensive_structure,'');
 });
 
+test('approved periods give the report a summary when the game summary is blank (publishing requires one)',()=>{
+  const p=periods();
+  const doc=model.documentFromPeriods({full_game_summary:''},p);
+  assert.match(doc.summary,/^Period 1: /);
+  assert.equal(model.documentFromPeriods({full_game_summary:'Manager summary'},p).summary,'Manager summary');
+  assert.equal(model.documentFromPeriods({},[]).summary,'');
+});
+
 test('a failed run with no saved evidence does not blame the recording',()=>{
  const state=model.reconcile({...review,id:'game',worker_status:'failed'},[]);
  assert.equal(state.rawFailure,true);assert.doesNotMatch(state.next,/^Recording retrieval failed/);
