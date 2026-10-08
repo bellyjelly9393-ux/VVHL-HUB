@@ -61,6 +61,11 @@ class RestartPeriods(unittest.TestCase):
         self.assertEqual(self.restart({self.job_id: PLAN}), [])
         self.assertEqual(worker.get_job(self.job_id)['status'], 'ready_for_review')
 
+    def test_a_job_the_site_made_that_is_waiting_in_the_queue_can_be_restarted_too(self):
+        worker.update(self.job_id, 'retrieving')
+        self.assertEqual(self.restart({self.job_id: PLAN}), [self.job_id])
+        self.assertEqual(worker.get_job(self.job_id)['metadata']['period_units'][-1]['end'], 1550)
+
     def test_bad_input_changes_nothing(self):
         bad = {'start': 2070, 'end': 3620, 'periods': [['Period 1', 0, 900], ['Period 2', 800, 1550]]}
         self.assertEqual(self.restart({self.job_id: bad}), [])

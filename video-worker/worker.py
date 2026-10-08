@@ -1885,7 +1885,7 @@ def restart_job_periods():
             continue
         meta = dict(job['metadata'])
         marker = json.dumps(spec, sort_keys=True)
-        if meta.get('restart_marker') == marker or job['status'] in ('queued', 'retrieving', 'processing'):
+        if meta.get('restart_marker') == marker:
             continue
         for key in ('active_replay_unit', 'scan_units', 'scan_unit_index', 'scan_current_period', 'completed_parts',
                     'part_attempts', 'ai_rate_limit_retries', 'pending_period_rollup', 'resume_marker'):
