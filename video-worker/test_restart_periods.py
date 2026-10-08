@@ -95,6 +95,11 @@ class RestartPeriods(unittest.TestCase):
             with self.assertRaises(worker.Problem):
                 worker.get_job(new_id)
 
+    def test_a_restart_can_attach_a_lineup_to_saved_analysis(self):
+        lineup = 'Calgary lineup: LW l Setty l, C l Richy 19 l, RW RipTopRight, LD imona_plain, RD BxbbyBxnds, G XxPASTRNAK88'
+        self.restart({self.job_id: {**PLAN, 'players': lineup}})
+        self.assertEqual(worker.get_job(self.job_id)['metadata']['players'], lineup)
+
     def test_an_overtime_period_is_kept_when_given(self):
         plan = {**PLAN, 'periods': PLAN['periods'] + [['Overtime 1', 1550, 1700]], 'end': 3770}
         self.restart({self.job_id: plan})

@@ -20,6 +20,12 @@ class LineupReports(unittest.TestCase):
                          [('line', ['offtheyrk', 'thenny32', 'geocustom']), ('defense_pair', ['WhyKayWins', 'matt_0_5'])])
         self.assertEqual(lineup_roster('Oct 6 stream, Game 1: THREE regulation periods plus one real overtime.'), [])
 
+    def test_gamertags_with_spaces_and_a_trailing_sentence(self):
+        wed = 'Calgary lineup: LW l Setty l, C l Richy 19 l, RW RipTopRight, LD imona_plain, RD BxbbyBxnds, G XxPASTRNAK88'
+        self.assertEqual([n for _, n in lineup_roster(wed)],
+                         ['l Setty l', 'l Richy 19 l', 'RipTopRight', 'imona_plain', 'BxbbyBxnds', 'XxPASTRNAK88'])
+        self.assertEqual(lineup_roster(LINEUP + '. Analyze all three regulation periods, keep timestamps.')[-1], ('G', 'Kudolken'))
+
     def rollup(self, lineup):
         sent = []
         chunk = {'label': 'Period 1', 'start': 0, 'end': 120, 'review': {'summary': 's', 'observations': [
