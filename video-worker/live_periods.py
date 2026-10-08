@@ -47,16 +47,18 @@ def parse_clock(text):
     return candidates[0] if candidates else None
 
 
-def infer_period_ranges(reads, duration, initial_period=1, confirm_reads=2, interval=REPLAY_INTERVAL):
+def infer_period_ranges(reads, duration, initial_period=1, confirm_reads=2, interval=REPLAY_INTERVAL, confirmed=True):
+    """With confirmed=False (start of a replay) nothing is Period 1 until a period or game
+    clock is read confirm_reads times: lobby footage before puck drop is not carried as P1."""
     try:
         duration = float(duration)
     except (TypeError, ValueError):
-        return {'ranges': [], 'current_period': initial_period or 1, 'boundaries': []}
+        return {'ranges': [], 'current_period': initial_period or 1, 'boundaries': [], 'confirmed': confirmed}
     if duration <= 0:
-        return {'ranges': [], 'current_period': initial_period or 1, 'boundaries': []}
+        return {'ranges': [], 'current_period': initial_period or 1, 'boundaries': [], 'confirmed': confirmed}
 
-    current = max(1, int(initial_period or 1))
-    boundaries = [{'period': current, 'at': 0.0, 'reason': 'carry'}]
+    current = max(1, int(initial_period or 1)) if confirmed else 0
+    boundaries = [{'period': current, 'at': 0.0, 'reason': 'carry'}] if confirmed else []
     candidate = None
     streak = 0
     candidate_at = None
@@ -67,8 +69,10 @@ def infer_period_ranges(reads, duration, initial_period=1, confirm_reads=2, inte
         observed = item.get('period')
         clock = item.get('clock_seconds')
         reason = 'period_ocr'
+        if current == 0 and observed is None and clock is not None:
+            observed, reason = 1, 'game_clock'
         if (observed is None and previous_clock is not None and clock is not None
-                and current < 8 and previous_clock <= 6 * 60 and clock >= 14 * 60
+                and 1 <= current < 8 and previous_clock <= 6 * 60 and clock >= 14 * 60
                 and clock - previous_clock >= 8 * 60):
             observed = current + 1
             reason = 'clock_reset'
@@ -127,10 +131,10 @@ def infer_period_ranges(reads, duration, initial_period=1, confirm_reads=2, inte
         period = int(item['period'])
         label = f'Period {period}' if period <= 3 else ('Overtime' if period == 4 else f'Overtime {period - 3}')
         ranges.append({'label': label, 'period': period, 'start': round(start, 1), 'end': round(end, 1)})
-    return {'ranges': ranges, 'current_period': current, 'boundaries': clean}
+    return {'ranges': ranges, 'current_period': max(1, current), 'boundaries': clean, 'confirmed': current >= 1}
 
 
-def scan_recording_periods(source, duration, initial_period=1, interval=REPLAY_INTERVAL):
+def scan_recording_periods(source, duration, initial_period=1, interval=REPLAY_INTERVAL, confirmed=True):
     """Replay-specific local scoreboard scan.
 
     Use a wide top scoreboard band first. If that OCR cannot read a period/clock,
@@ -192,14 +196,16 @@ def scan_recording_periods(source, duration, initial_period=1, interval=REPLAY_I
                 'ocr': raw[:320],
             })
 
-        inferred = infer_period_ranges(reads, duration, initial_period, CONFIRM_READS, interval)
+        inferred = infer_period_ranges(reads, duration, initial_period, CONFIRM_READS, interval, confirmed)
         inferred['reads'] = reads[-40:]
         inferred['interval_seconds'] = interval
         return inferred
     except Exception:
         label = f'Period {int(initial_period or 1)}'
         return {
-            'ranges': [{'label': label, 'period': int(initial_period or 1), 'start': 0.0, 'end': round(float(duration), 1)}],
+            'ranges': [{'label': label, 'period': int(initial_period or 1), 'start': 0.0, 'end': round(float(duration), 1)}]
+            if confirmed else [],
+            'confirmed': confirmed,
             'current_period': int(initial_period or 1),
             'boundaries': [],
             'reads': reads[-20:],

@@ -76,10 +76,12 @@ class RestartPeriods(unittest.TestCase):
 
     def test_a_game_with_no_job_gets_one_linked_to_its_review_and_runs_on_the_periods(self):
         new_id = str(uuid4())
-        create = {'review_id': 'rev-2', 'title': 'Game 2', 'vod_url': 'https://www.twitch.tv/videos/9', 'players': 'lineup'}
+        review_id = str(uuid4())
+        create = {'review_id': review_id.upper(), 'title': 'Game 2', 'vod_url': 'https://www.twitch.tv/videos/9', 'players': 'lineup'}
         self.assertEqual(self.restart({new_id: {**PLAN, 'create': create}}), [new_id])
         job = worker.get_job(new_id)
-        self.assertEqual((job['status'], job['metadata']['review_id'], job['metadata']['game_id']), ('retrieving', 'rev-2', 'rev-2'))
+        self.assertEqual((job['status'], job['metadata']['review_id'], job['metadata']['game_id']),
+                         ('retrieving', review_id, review_id))  # normalised, so the review finds it
         self.assertEqual(job['metadata']['vod_url'], 'https://www.twitch.tv/videos/9')
         self.assertEqual(job['metadata']['replay_phase'], 'analyze_periods')
         self.assertEqual(len(job['metadata']['periods']), 3)

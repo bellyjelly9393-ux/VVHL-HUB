@@ -22,6 +22,11 @@ class ReplayTests(unittest.TestCase):
         worker.initialize()
         self.review = {'id': str(uuid4()), 'vod_url': 'https://www.twitch.tv/videos/12345', 'title': 'Game'}
 
+    def make(self, review=None):
+        with worker.connect() as db:
+            job_id = replay.insert_review_job(db, review or self.review, 'owner', 'retrieving')
+        return worker.get_job(job_id)
+
     def tearDown(self):
         self.token_path.stop()
         self.root.stop()
@@ -41,17 +46,20 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(replay.replay_url('https://twitch.tv/videos/123?t=10'), 'https://www.twitch.tv/videos/123')
 
     def test_double_click_creates_only_one_persistent_job(self):
+        spec = worker.parse_period_spec({'source_start_seconds': 0, 'source_end_seconds': 1800, 'periods': [
+            {'label': f'Period {n}', 'start': (n - 1) * 600, 'end': n * 600} for n in (1, 2, 3)]})
         with ThreadPoolExecutor(2) as pool:
-            jobs = list(pool.map(lambda _: replay.resolve(self.review, 'owner', True), range(2)))
+            jobs = list(pool.map(lambda _: replay.request_periods(self.review, 'owner', spec), range(2)))
         self.assertEqual(jobs[0]['id'], jobs[1]['id'])
         worker.initialize()
         self.assertEqual(replay.resolve(self.review, 'owner')['id'], jobs[0]['id'])
-        self.assertIsNone(replay.resolve(self.review, 'other-owner'))
+        # Supabase RLS already proved access to the review, so any manager sees its one job.
+        self.assertEqual(replay.resolve(self.review, 'other-owner')['id'], jobs[0]['id'])
 
     def test_review_window_and_context_are_saved_in_job_metadata(self):
         review = dict(self.review, source_start_seconds=600, source_end_seconds=1500,
                       game_format='6s', scouting_context='Calgary lineup')
-        job = replay.resolve(review, 'owner', True)
+        job = self.make(review)
         meta = job['metadata']
         self.assertEqual(meta['source_start_seconds'], 600)
         self.assertEqual(meta['source_end_seconds'], 1500)
@@ -62,10 +70,10 @@ class ReplayTests(unittest.TestCase):
     def test_rejects_invalid_review_window(self):
         review = dict(self.review, source_start_seconds=900, source_end_seconds=300)
         with self.assertRaises(worker.Problem):
-            replay.resolve(review, 'owner', True)
+            self.make(review)
 
     def test_saved_capture_reused_without_replay_link(self):
-        job = replay.resolve(self.review, 'owner', True)
+        job = self.make()
         review = dict(self.review, id=str(uuid4()), vod_url='https://twitch.tv/channel', worker_job_id=job['id'])
         self.assertEqual(replay.resolve(review, 'owner', True)['id'], job['id'])
 
@@ -75,15 +83,16 @@ class ReplayTests(unittest.TestCase):
         with worker.connect() as db:
             self.assertEqual(db.execute('select count(*) from jobs').fetchone()[0], 0)
 
-    def test_failed_retrieval_retries_same_job(self):
-        job = replay.resolve(self.review, 'owner', True)
+    def test_analyze_without_periods_returns_the_failed_job_without_rewriting_its_window(self):
+        job = self.make(dict(self.review, source_start_seconds=100, source_end_seconds=1900))
         worker.update(job['id'], 'failed', error='not available')
-        retried = replay.resolve(self.review, 'owner', True)
-        self.assertEqual(retried['id'], job['id'])
-        self.assertEqual(retried['status'], 'retrieving')
+        again = replay.resolve(dict(self.review, source_start_seconds=5, source_end_seconds=50), 'owner', True)
+        self.assertEqual((again['id'], again['status']), (job['id'], 'failed'))
+        self.assertEqual(again['metadata']['source_start_seconds'], 100)
+        self.assertEqual(again['metadata']['source_end_seconds'], 1900)
 
     def test_analyze_resumes_failed_saved_recording_without_reupload(self):
-        job = replay.resolve(self.review, 'owner', True)
+        job = self.make()
         folder = worker.ROOT / job['id']
         folder.mkdir()
         (folder / 'source.mp4').write_bytes(b'saved recording')
@@ -97,7 +106,7 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(resumed['error'], '')
 
     def test_analyze_repairs_legacy_ready_job_with_missing_report(self):
-        job = replay.resolve(self.review, 'owner', True)
+        job = self.make()
         folder = worker.ROOT / job['id']
         folder.mkdir()
         (folder / 'source.mp4').write_bytes(b'saved recording')
@@ -114,7 +123,7 @@ class ReplayTests(unittest.TestCase):
             self.assertEqual(error.exception.status, 404)
 
     def test_download_failure_never_queues_partial_media(self):
-        job = replay.resolve(self.review, 'owner', True)
+        job = self.make()
         class FailedProcess:
             returncode = 1
             def poll(self): return 1
@@ -131,7 +140,7 @@ class ReplayTests(unittest.TestCase):
         executable.write_text('#!' + sys.executable + '\nimport json,shutil,sys\nopen(' + repr(str(args_file)) + ', "w").write(json.dumps(sys.argv))\nshutil.copyfile(' + repr(str(fixture)) + ', sys.argv[sys.argv.index("-o")+1])\n')
         executable.chmod(0o755)
         review = dict(self.review, source_start_seconds=120, source_end_seconds=240)
-        job = replay.resolve(review, 'owner', True)
+        job = self.make(review)
         with patch.dict(os.environ, {'PATH': str(worker.ROOT) + os.pathsep + os.environ['PATH']}):
             replay.retrieve(job['id'])
         argv = json.loads(args_file.read_text())
@@ -143,7 +152,7 @@ class ReplayTests(unittest.TestCase):
         self.assertFalse((worker.ROOT / job['id'] / 'replay.ts').exists())
 
     def test_storage_guard_does_not_double_count_partial_download(self):
-        job = replay.resolve(dict(self.review, source_start_seconds=0, source_end_seconds=30), 'owner', True)
+        job = self.make(dict(self.review, source_start_seconds=0, source_end_seconds=30))
         folder = worker.ROOT / job['id']
         folder.mkdir(exist_ok=True)
         partial = folder / 'replay.ts'

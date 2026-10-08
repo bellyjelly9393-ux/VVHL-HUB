@@ -241,7 +241,7 @@ class ReginaLikeJob(unittest.TestCase):
         job_id, count = self.job(pending_rollup='Overtime 2')
         self.assertGreater(count, 5)
         calls = []
-        def rollup(chunks, step='game_rollup', period_reports=None):
+        def rollup(chunks, step='game_rollup', period_reports=None, lineup=''):
             calls.append((step, [c['label'] for c in chunks], [p['label'] for p in period_reports or []]))
             return {'summary': 'Game'}
         with patch.object(worker, 'ai_configured', return_value=True), \

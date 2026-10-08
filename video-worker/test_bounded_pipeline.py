@@ -136,7 +136,7 @@ class PartPipelineTests(unittest.TestCase):
                  chunk('Period 1', 365, 485), chunk('Period 1', 480, 600)]
         job_id = self.job('queued', {'period_unit_index': 1, 'completed_parts': [0]}, {'chunks': saved})
         calls = []
-        def rollup(chunks, step='game_rollup', period_reports=None):
+        def rollup(chunks, step='game_rollup', period_reports=None, lineup=''):
             calls.append((step, len(chunks)))
             raise worker.Problem(502, 'AI output was incomplete.')
         with patch.object(worker, 'ai_configured', return_value=True), \
@@ -166,7 +166,7 @@ class PartPipelineTests(unittest.TestCase):
         with patch.object(worker, 'ai_configured', return_value=True), \
                 patch.object(worker, 'AUTO_RELEASE_TWITCH_MEDIA', False), \
                 patch.object(worker, 'build_rollup',
-                             side_effect=lambda c, step='game_rollup', period_reports=None:
+                             side_effect=lambda c, step='game_rollup', period_reports=None, lineup='':
                              seen.append(period_reports) or {'summary': 'Game'}):
             worker.process(job_id)
         self.assertEqual([p['label'] for p in seen[0]], ['Period 1', 'Period 2'])
