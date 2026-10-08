@@ -71,7 +71,7 @@
             <summary>Multi-game night from one Twitch VOD</summary>
             <div class="section-divider"></div>
             <div class="eyebrow">SMART VOD INTAKE</div><h3>Queue the Whole Night</h3>
-            <p class="section-note">Paste one Twitch replay and list each game's start/end window. Each game becomes its own review. Railway processes the clips sequentially and releases successful Twitch media after the report is saved.</p>
+            <p class="section-note">Paste one Twitch replay and list each game's start/end window. Each game becomes its own review. Then open each game, enter its period times and press Analyze Game.</p>
             <div class="vod-form">
               <label class="wide">Twitch replay URL<input id="batchVodUrl" class="field" type="url" placeholder="https://www.twitch.tv/videos/..."></label>
               <label>Game date<input id="batchVodDate" class="field" type="datetime-local"></label>
@@ -80,7 +80,7 @@
               <label class="wide">Game windows<textarea id="batchVodWindows" class="text-input mono" rows="7" placeholder="Game 1 | 0:01 | 24:00 | Opponent A&#10;Game 2 | 45:00 | 1:17:15 | Opponent B&#10;Game 3 | 1:34:28 | 1:56:24 | Opponent C"></textarea></label>
               <label class="wide">Lineup / scouting context<textarea id="batchVodPlayers" class="text-input" placeholder="Calgary: LW ..., C ..., RW ..., LD ..., RD ..., G ...&#10;Optional context shared by every game in this batch"></textarea></label>
             </div>
-            <div class="vod-actions"><button id="batchCreateVod" class="small-btn primary" type="button">Create + Queue Games</button><span id="batchVodStatus" class="copy-feedback"></span></div>
+            <div class="vod-actions"><button id="batchCreateVod" class="small-btn primary" type="button">Create Games</button><span id="batchVodStatus" class="copy-feedback"></span></div>
             <div class="analysis-note"><strong>Line format:</strong> Title | Start | End | Opponent. The opponent field is optional. Up to eight games can be queued in one batch.</div>
           </details>
           </details>
@@ -90,26 +90,27 @@
         </section>
 
         <section class="vod-panel">
-          <div id="vodEmpty" class="vod-empty"><strong>Select or create a VOD review.</strong><br>Then press Analyze Game to retrieve its recording and detect periods.</div>
+          <div id="vodEmpty" class="vod-empty"><strong>Select or create a VOD review.</strong><br>Enter its period times, then press Analyze Game.</div>
           <div id="vodDetail" hidden>
             <div class="vod-detail-head">
               <div><div class="eyebrow" id="vodDetailTeam">TEAM VOD</div><h2 id="vodDetailTitle">Game VOD</h2><p id="vodDetailMeta"></p><a id="vodOpenLink" class="video-link" href="#" target="_blank" rel="noopener">OPEN FULL VOD ↗</a></div>
               <details><summary>Advanced Tools</summary><div class="vod-actions"><button id="archiveVod" class="small-btn" type="button">Archive</button><button id="deleteVod" class="small-btn" type="button">Delete</button></div></details>
             </div>
 
-            <details id="manualPeriodBuilder">
-              <summary>Manual period times (optional fallback)</summary>
+            <details id="manualPeriodBuilder" open>
+              <summary>Step 1 · Period times</summary>
               <div class="section-divider"></div>
-              <div class="eyebrow">MANUAL FALLBACK</div><h3>Period Boundaries</h3>
-              <p class="section-note">Only use this if automatic period detection asks for help. Enter where each period actually starts in the recorded game.</p>
+              <div class="eyebrow">STEP 1</div><h3>Period Times</h3>
+              <p class="section-note">Use the times shown on the full Twitch VOD (the intermission logo marks each break). Save them, then press <strong>Analyze Game</strong>. Only these periods are analyzed.</p>
               <div class="segment-builder">
-                <label>P1 start<input id="period1Start" class="field mono" value="0:00"></label>
-                <label>P2 start<input id="period2Start" class="field mono" placeholder="28:40"></label>
-                <label>P3 start<input id="period3Start" class="field mono" placeholder="57:15"></label>
-                <label>VOD end<input id="periodVodEnd" class="field mono" placeholder="1:27:05"></label>
-                <label class="wide">OT starts, comma separated<input id="periodOtStarts" class="field mono" placeholder="1:20:10, 1:31:42"></label>
+                <label>Period 1 starts<input id="period1Start" class="field mono" placeholder="34:30"></label>
+                <label>Period 2 starts<input id="period2Start" class="field mono" placeholder="44:35"></label>
+                <label>Period 3 starts<input id="period3Start" class="field mono" placeholder="52:25"></label>
+                <label>Game ends<input id="periodVodEnd" class="field mono" placeholder="1:00:20"></label>
+                <label class="wide">Overtime starts (only if the game went to OT; comma separated)<input id="periodOtStarts" class="field mono" placeholder="1:31:40"></label>
+                <label class="wide">Skip (lag-outs or restarts that should not be analyzed; comma separated)<input id="periodSkips" class="field mono" placeholder="1:49:38-1:56:10"></label>
               </div>
-              <div class="vod-actions"><button id="buildSegments" class="small-btn primary" type="button">Build / Update Periods</button><button id="addCustomSegment" class="small-btn" type="button">Add Custom Segment</button></div>
+              <div class="vod-actions"><button id="buildSegments" class="small-btn primary" type="button">Save Period Times</button><span id="periodTimesStatus" class="copy-feedback" role="status"></span><details><summary>Advanced Tools</summary><button id="addCustomSegment" class="small-btn" type="button">Add Custom Segment</button></details></div>
             </details>
             <div id="segmentList" class="segment-list"></div>
             <details id="archivedPeriods" hidden><summary>Archived Periods</summary><div id="archivedPeriodList"></div></details>
@@ -182,9 +183,9 @@
 <script src="backend.js"></script>
 <script src="management-guard.js"></script>
 <script src="script.js?v=20261003-durable"></script>
-<script src="vod-review-model.js?v=20261008-publish-summary"></script>
-<script src="vod-lab.js?v=20261008-publish-summary"></script>
-<script src="vod-pipeline.js?v=20261005-report-refresh"></script>
+<script src="vod-review-model.js?v=20261008-period-times"></script>
+<script src="vod-lab.js?v=20261008-period-times"></script>
+<script src="vod-pipeline.js?v=20261008-period-times"></script>
 <script src="vod-pipeline-polish.js?v=20261003-durable"></script>
 </body>
 </html>

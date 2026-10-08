@@ -6,10 +6,11 @@ const assert=require('node:assert/strict');
 const root=__dirname;
 const fixture=()=>{
   const rows={vod_review_sessions:[{id:'game',team_id:'team',title:'Hitmen vs Test Opponent',opponent_label:'Test Opponent',game_date:'2026-10-01T20:00:00Z',vod_url:'https://www.twitch.tv/videos/123',source_start_seconds:1800,source_end_seconds:3260,duration_seconds:1460,status:'reviewing',worker_status:'ready_for_review',full_game_summary:'Reviewed synthetic game evidence',updated_at:'2026-10-01T21:00:00Z',worker_result:{chunks:[],game_rollup:{}}}],vod_review_segments:[1800,2200,2600].map((start,i)=>({id:'p'+(i+1),review_id:'game',team_id:'team',segment_type:'period',segment_index:i+1,label:'Period '+(i+1),start_seconds:start,end_seconds:i===2?3260:start+400,status:'needs_review',analysis_summary:'Synthetic period evidence',updated_at:'2026-10-01T21:00:00Z'})),vod_review_markers:[]};
-  rows.vod_game_publications=[];window.testRows=rows;window.published=[];window.workerJob=null;window.workerCalls=[];
+  rows.vod_game_publications=[];window.testRows=rows;window.published=[];window.workerJob=null;window.workerCalls=[];window.rpcCalls=[];
   function query(table){let filters=[],payload=null;const q={select(){return q},eq(k,v){filters.push(r=>r[k]===v);return q},neq(k,v){filters.push(r=>r[k]!==v);return q},is(k,v){filters.push(r=>r[k]==v);return q},in(k,v){filters.push(r=>v.includes(r[k]));return q},order(){return q},limit(){return q},update(v){payload=v;return q},then(resolve){let data=(rows[table]||[]).filter(r=>filters.every(f=>f(r)));if(payload)data.forEach(r=>Object.assign(r,payload));return Promise.resolve({data:JSON.parse(JSON.stringify(data)),error:null}).then(resolve)},maybeSingle(){return q.then(r=>({...r,data:r.data[0]||null}))}};return q;}
   window.VVHLBackend={db:{from:query,auth:{getSession:async()=>({data:{session:{access_token:'fixture'}}})},rpc:async(name,args)=>{
-    const r=rows.vod_review_sessions[0];
+    const r=rows.vod_review_sessions[0];window.rpcCalls.push({name,args});
+    if(name==='set_vod_period_windows'){Object.assign(r,{source_start_seconds:args.window_start,source_end_seconds:args.window_end,skip_ranges:args.skip_ranges});return {data:{added:0,archived:0,kept:args.periods.length}};}
     if(name==='publish_vod_review'){
       window.published.push({name,args});r.review_document=args.report;r.status='complete';
       rows.vod_game_publications=[{review_id:r.id,team_id:r.team_id,active:true,report:args.report}];
@@ -33,10 +34,11 @@ const fixture=()=>{
   await page.route('**/*',async route=>{
    const u=new URL(route.request().url()),name=u.pathname.slice(1);
    if(u.hostname==='wildman-video-worker-production.up.railway.app'){
-    await page.evaluate(({path,method})=>window.workerCalls.push({path,method}),{path:u.pathname,method:route.request().method()});
+    await page.evaluate(({path,method,body})=>window.workerCalls.push({path,method,body}),{path:u.pathname,method:route.request().method(),body:route.request().postData()});
     let data={};
     if(u.pathname==='/health')data={status:'ok',aiConfigured:true};
     else if(u.pathname.endsWith('/reanalyze')){data={id:'job',status:'queued',result:{}};await page.evaluate(j=>window.workerJob=j,data);}
+    else if(u.pathname.endsWith('/analyze')){data={job:{id:'job',status:'retrieving',result:{}}};await page.evaluate(j=>window.workerJob=j,data.job);}
     else if(u.pathname.endsWith('/job'))data=await page.evaluate(()=>({job:window.workerJob}));
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
    }
@@ -79,7 +81,7 @@ const fixture=()=>{
   assert.equal(await page.locator('#segmentEditorWrap').isVisible(),false);
   await page.locator('#vodPipelineAdvanced summary').first().click();
   await page.locator('#vodCheckPipeline').click();
-  await page.waitForFunction(()=>document.getElementById('vodPipelineStatus').textContent.includes('published'));
+  await page.waitForFunction(()=>document.getElementById('vodPipelineStatus').textContent.toLowerCase().includes('published'));
   // A stale worker failure must not invalidate downstream evidence.
   await page.evaluate(()=>{window.workerJob={id:'job',status:'failed',error:'Old retrieval failed',result:{}};window.testRows.vod_review_sessions[0].worker_status='failed';});
   await page.locator('#vodCheckPipeline').click();
@@ -117,11 +119,28 @@ const fixture=()=>{
   await page.locator('#rejectSegment').click();
   await page.waitForFunction(()=>window.testRows.vod_review_segments[1].status==='rejected');
   await page.waitForFunction(()=>document.getElementById('publishVodReport').disabled);
+  // Step 1 period times (with a lag-out skip) are saved in one step, and Analyze sends exactly those periods.
+  if(!await page.locator('#manualPeriodBuilder').evaluate(d=>d.open))await page.locator('#manualPeriodBuilder > summary').click();
+  await page.locator('#period1Start').fill('30:00');await page.locator('#period2Start').fill('36:40');await page.locator('#period3Start').fill('43:20');
+  await page.locator('#periodVodEnd').fill('54:20');await page.locator('#periodOtStarts').fill('');await page.locator('#periodSkips').fill('50:00-51:00');
+  await page.locator('#buildSegments').click();
+  await page.waitForFunction(()=>window.rpcCalls.some(c=>c.name==='set_vod_period_windows'));
+  const saved=await page.evaluate(()=>window.rpcCalls.find(c=>c.name==='set_vod_period_windows').args);
+  assert.deepEqual([saved.window_start,saved.window_end],[1800,3260]);
+  assert.deepEqual(saved.periods.map(p=>[p.label,p.start_seconds,p.end_seconds]),[['Period 1',1800,2200],['Period 2',2200,2600],['Period 3',2600,3260]]);
+  assert.deepEqual(saved.skip_ranges,[{start:3000,end:3060}]);
+  await page.evaluate(()=>window.testRows.vod_review_sessions[0].worker_status='needs_periods');
+  await page.locator('#vodRetryPipeline').click();
+  await page.waitForFunction(()=>window.workerCalls.some(c=>c.path.endsWith('/analyze')));
+  const sent=JSON.parse(await page.evaluate(()=>window.workerCalls.find(c=>c.path.endsWith('/analyze')).body));
+  assert.deepEqual(sent.periods,[{label:'Period 1',start:0,end:400},{label:'Period 2',start:400,end:800},{label:'Period 3',start:800,end:1200},{label:'Period 3',start:1260,end:1460}]);
+  assert.equal(sent.overtime_confirmed,false);
+  await page.waitForFunction(()=>window.testRows.vod_review_sessions[0].worker_job_id==='job');
   await page.screenshot({path:'/tmp/wildman-vod-review-desktop.png',fullPage:true});
   await page.setViewportSize({width:390,height:844});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true,'Mobile must not overflow');
   await page.screenshot({path:'/tmp/wildman-vod-review-mobile.png',fullPage:true});
   assert.deepEqual(errors,[]);
-  console.log('PASS: recovered stages, no redundant rerun, preserved reviewed evidence, approval/publish/reopen/archive/restore, collapsed reports, desktop/mobile');
+  console.log('PASS: period times + skip saved and sent to analysis, recovered stages, no redundant rerun, preserved reviewed evidence, approval/publish/reopen/archive/restore, collapsed reports, desktop/mobile');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

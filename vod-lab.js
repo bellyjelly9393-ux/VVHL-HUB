@@ -4,6 +4,8 @@
   let editingPeriod = false;
   let savingPeriod = false;
   let manualFieldsReviewId = "";
+  let periodFieldsDirty = false;
+  let reloadQueued = false;
   const $ = (id) => document.getElementById(id);
   const db = () => window.VVHLBackend?.db;
   const auth = () => window.VVHLBackend?.state || {};
@@ -78,7 +80,11 @@
   }
 
   async function loadData(){
-    if(state.loading||editingPeriod||!db()||!hasAccess()||!state.teamId) return;
+    // A refresh asked for while another is running (e.g. right after an approval) runs next,
+    // instead of being dropped and leaving stale rows on screen.
+    if(state.loading||editingPeriod){reloadQueued=true;return;}
+    if(!db()||!hasAccess()||!state.teamId) return;
+    reloadQueued=false;
     state.loading=true; setStatus(`Loading ${teamName()} VOD reviews…`);
     try{
       const [r,s,m,p]=await Promise.all([
@@ -104,7 +110,7 @@
       console.error(error);
       const schema=String(error?.message||"").toLowerCase().includes("vod_review")||String(error?.code||"").startsWith("PGRST");
       setStatus(schema?"Segmented VOD database is not available yet. The interface is deployed safely, but reviews cannot be saved until the schema finishes deploying.":(error.message||"Unable to load VOD reviews."),"error");
-    }finally{state.loading=false;}
+    }finally{state.loading=false;if(reloadQueued&&!editingPeriod)setTimeout(loadData,0);}
   }
 
   function renderKpis(){
@@ -136,23 +142,23 @@
     $("vodDetailMeta").textContent=`${r.opponent_label||"Opponent not labeled"} · ${r.game_date?new Date(r.game_date).toLocaleString():"No date"} · ${r.duration_seconds!=null?fmtTime(r.duration_seconds):"length not set"} · ${sourceWindow}`;
     const link=$("vodOpenLink"); link.href=r.vod_url?timestampUrl(r.vod_url,sourceStart):"#"; link.style.display=r.vod_url?"inline-flex":"none";
     const manualBuilder=$("manualPeriodBuilder");
-    if(manualBuilder){
-      const hasWorker=Boolean(r.worker_job_id);
-      manualBuilder.hidden=false;
-    }
-    const absoluteEnd=sourceEnd!=null?sourceEnd:(r.duration_seconds!=null?sourceStart+Number(r.duration_seconds):null);
-    $("periodVodEnd").value=absoluteEnd!=null?fmtTime(absoluteEnd):"";
     const segs=reviewSegments();
     const p=(i)=>segs.find(s=>s.segment_type==="period"&&s.segment_index===i);
     const ots=segs.filter(s=>s.segment_type==="overtime").map(s=>fmtTime(s.start_seconds));
     const switchedReview=manualFieldsReviewId!==r.id;
-    if(switchedReview||segs.length){
+    // Never overwrite times the manager is typing; refill only on a new game or after a save.
+    if(switchedReview||!periodFieldsDirty){
+      const absoluteEnd=sourceEnd!=null?sourceEnd:(r.duration_seconds!=null?sourceStart+Number(r.duration_seconds):null);
       $("period1Start").value=p(1)?fmtTime(p(1).start_seconds):"";
       $("period2Start").value=p(2)?fmtTime(p(2).start_seconds):"";
       $("period3Start").value=p(3)?fmtTime(p(3).start_seconds):"";
+      $("periodVodEnd").value=p(1)&&absoluteEnd!=null?fmtTime(absoluteEnd):"";
       $("periodOtStarts").value=ots.join(", ");
-      manualFieldsReviewId=r.id;
+      if($("periodSkips"))$("periodSkips").value=(Array.isArray(r.skip_ranges)?r.skip_ranges:[]).map(s=>`${fmtTime(s.start)}-${fmtTime(s.end)}`).join(", ");
+      if(switchedReview&&$("periodTimesStatus"))$("periodTimesStatus").textContent="";
+      manualFieldsReviewId=r.id;periodFieldsDirty=false;
     }
+    if(manualBuilder&&switchedReview)manualBuilder.open=!(p(1)&&p(2)&&p(3));
     $("gameSummary").value=r.full_game_summary||""; $("gamePatterns").value=r.recurring_patterns||""; $("gameStrengths").value=r.strengths||""; $("gameCorrections").value=r.corrections||"";
     if($("gameTactical")) $("gameTactical").value=r.tactical_report||"";
     if($("gamePlayers")) $("gamePlayers").value=r.player_report||"";
@@ -277,7 +283,7 @@
     await loadData();
     setStatus(
       intakeMode==="scout"&&provider==="twitch"
-        ?"Scout review created. Starting Twitch retrieval and scouting analysis now…"
+        ?"Scout review created. Step 1: enter the period times below and save them. Step 2: press Analyze Game."
         :intakeMode==="scout"
           ?"Scout review created. Analyze Game will retrieve the recording and run scouting intelligence."
           :intakeMode==="media"
@@ -285,8 +291,9 @@
             :"Archive source saved. No analysis job will run unless you later change it to Scout.",
       "success"
     );
-    if(intakeMode==="scout"&&provider==="twitch"){
-      setTimeout(()=>document.getElementById("vodAnalyzeGame")?.click(),350);
+    if(intakeMode==="scout"){
+      // Analysis starts only after the period times are entered; nothing is guessed from the scoreboard.
+      const builder=$("manualPeriodBuilder");if(builder){builder.open=true;setTimeout(()=>builder.scrollIntoView({behavior:"smooth",block:"start"}),200);}
     }
   }
 
@@ -338,78 +345,23 @@
     state.selectedSegmentId="";
     $("batchVodUrl").value=url;
     await loadData();
-    if(status)status.textContent=`Created ${ids.length} games. Sending them to the video queue…`;
-    window.dispatchEvent(new CustomEvent("vvhl-vod-batch-created",{detail:{reviewIds:ids}}));
+    if(status)status.textContent=`Created ${ids.length} games. Open each game, enter its period times, then press Analyze Game.`;
   }
 
   async function buildSegments(){
     const r=currentReview(); if(!r)return;
-    const p1=parseTime($("period1Start").value),p2=parseTime($("period2Start").value),p3=parseTime($("period3Start").value),vodEnd=parseTime($("periodVodEnd").value);
-    if([p1,p2,p3].some(v=>v==null)) return setStatus("Enter valid start timestamps for Periods 1, 2 and 3.","error");
-    if(!(p1<p2&&p2<p3)) return setStatus("Period starts must be in order: P1 < P2 < P3.","error");
-    const otStarts=$("periodOtStarts").value.split(",").map(v=>v.trim()).filter(Boolean).map(parseTime);
-    if(otStarts.some(v=>v==null)) return setStatus("One of the OT timestamps is invalid.","error");
-    const starts=[p1,p2,p3,...otStarts];
-    if(starts.some((v,i)=>i&&v<=starts[i-1])) return setStatus("OT starts must come after Period 3 and remain in chronological order.","error");
-    if(vodEnd!=null&&vodEnd<=starts[starts.length-1]) return setStatus("VOD end must be after the final segment start.","error");
-
-    if(state.segments.some(s=>s.review_id===state.selectedReviewId&&model.protectedEvidence(s)))return setStatus("Reopen and correct the affected period without rebuilding reviewed period windows. Saved evidence is protected.","error");
-
-    const sourceStart=Math.max(0,Number(r.source_start_seconds)||0);
-    const sourceEnd=r.source_end_seconds==null?null:Number(r.source_end_seconds);
-    const manualWindowTolerance=120;
-    const canCorrectReplayWindow=String(r.source_provider||"").toLowerCase()==="twitch"&&Boolean(r.vod_url)&&String(r.worker_status||"")==="needs_periods";
-    let correctedStart=sourceStart,correctedEnd=sourceEnd;
-
-    if(p1<sourceStart){
-      const delta=sourceStart-p1;
-      if(!canCorrectReplayWindow||delta>manualWindowTolerance){
-        return setStatus(`Period 1 starts ${Math.round(delta)}s before the saved game window. Update the recording source/game window first, or keep the correction within ${manualWindowTolerance}s.`,"error");
-      }
-      correctedStart=p1;
-    }
-    if(vodEnd!=null&&sourceEnd!=null&&vodEnd>sourceEnd){
-      const delta=vodEnd-sourceEnd;
-      if(!canCorrectReplayWindow||delta>manualWindowTolerance){
-        return setStatus(`VOD end is ${Math.round(delta)}s after the saved game window. Update the recording source/game window first, or keep the correction within ${manualWindowTolerance}s.`,"error");
-      }
-      correctedEnd=vodEnd;
-    }
-
-    const defs=[
-      {segment_type:"period",segment_index:1,label:"Period 1",start_seconds:p1,end_seconds:p2},
-      {segment_type:"period",segment_index:2,label:"Period 2",start_seconds:p2,end_seconds:p3},
-      {segment_type:"period",segment_index:3,label:"Period 3",start_seconds:p3,end_seconds:otStarts[0]??vodEnd}
-    ];
-    otStarts.forEach((start,i)=>defs.push({segment_type:"overtime",segment_index:i+1,label:`Overtime ${i+1}`,start_seconds:start,end_seconds:otStarts[i+1]??vodEnd}));
-
-    const effectiveDuration=correctedEnd!=null?Math.max(0,correctedEnd-correctedStart):(vodEnd!=null?Math.max(0,vodEnd-correctedStart):r.duration_seconds);
-    const effectiveReview={...r,source_start_seconds:correctedStart,source_end_seconds:correctedEnd,duration_seconds:effectiveDuration};
-    const boundaryErrors=model.periodErrors(effectiveReview,defs);
-    if(boundaryErrors.length)return setStatus(boundaryErrors.join(" "),"error");
-
-    const payload=defs.map(d=>({...d,review_id:r.id,team_id:state.teamId,status:"queued"}));
-    setStatus("Saving period boundaries…");
-    const {error}=await db().from("vod_review_segments").upsert(payload,{onConflict:"review_id,segment_type,segment_index"}); if(error)return setStatus(error.message,"error");
-    for(const ot of reviewSegments().filter(s=>s.segment_type==='overtime'&&s.segment_index>otStarts.length)){
-      const {error}=await db().rpc('set_vod_segment_archive',{target_segment:ot.id,expected_updated_at:ot.updated_at,archive_segment:true});
-      if(error)return setStatus(error.message,'error');
-    }
-
-    const reviewDuration=vodEnd!=null?Math.max(0,vodEnd-correctedStart):r.duration_seconds;
-    const updateReview={duration_seconds:reviewDuration,status:"reviewing",overtime_count:otStarts.length,updated_at:new Date().toISOString()};
-    if(correctedStart!==sourceStart)updateReview.source_start_seconds=correctedStart;
-    if(correctedEnd!==sourceEnd)updateReview.source_end_seconds=correctedEnd;
-
-    const {error:uerr}=await db().from("vod_review_sessions").update(updateReview).eq("id",r.id); if(uerr)return setStatus(uerr.message,"error");
-    await loadData(); const first=reviewSegments(r.id)[0]; state.selectedSegmentId=first?.id||"";renderAll();
-    const earlier=sourceStart-correctedStart;
-    setStatus(
-      earlier>0
-        ?`Built ${defs.length} review segments and moved the game window ${Math.round(earlier)}s earlier to include the confirmed Period 1 start.`
-        :`Built ${defs.length} review segment${defs.length===1?"":"s"}.`,
-      "success"
-    );
+    const note=$("periodTimesStatus"),say=(text,tone)=>{if(note)note.textContent=text;setStatus(text,tone);};
+    const plan=model.planPeriods({p1:$("period1Start").value,p2:$("period2Start").value,p3:$("period3Start").value,overtimes:$("periodOtStarts").value,end:$("periodVodEnd").value,skips:$("periodSkips")?.value||""});
+    if(plan.errors.length)return say(plan.errors.join(" "),"error");
+    say("Saving period times…","");
+    // One database step: keeps periods whose times did not change (and their approval), archives
+    // changed ones as history, adds new ones and sets the game window to Period 1 → game end.
+    const {data,error}=await db().rpc("set_vod_period_windows",{target_review:r.id,expected_updated_at:r.updated_at,window_start:plan.window.start,window_end:plan.window.end,periods:plan.segments,skip_ranges:plan.skips});
+    if(error)return say(error.message||"Period times were not saved.","error");
+    periodFieldsDirty=false;
+    await loadData(); state.selectedSegmentId="";renderAll();
+    const changed=Number(data?.added||0)+Number(data?.archived||0);
+    say(changed?"Period times saved. Press Analyze Game to analyze exactly these periods.":"Period times saved (no change).","success");
   }
   async function addCustomSegment(){
     const r=currentReview(); if(!r)return; const existing=state.segments.filter(s=>s.review_id===r.id&&s.segment_type==="custom"); const idx=Math.max(0,...existing.map(s=>s.segment_index))+1;
@@ -482,13 +434,15 @@
     const s=currentSegment(); if(!s)return; const start=parseTime($("segmentStart").value),end=parseTime($("segmentEnd").value);
     if(start==null||(end!=null&&end<start))return setStatus("Segment timestamps are invalid.","error");
     const playerNotes=$("segmentPlayers").value.split("\n").map(x=>x.trim()).filter(Boolean); const tags=$("segmentTags").value.split(",").map(x=>x.trim()).filter(Boolean);
-    const payload={start_seconds:start,end_seconds:end,status:decision,confidence:$("segmentConfidence").value,analysis_summary:$("segmentSummary").value.trim()||null,forecheck_notes:$("segmentForecheck").value.trim()||null,breakout_notes:$("segmentBreakout").value.trim()||null,offense_notes:$("segmentOffense").value.trim()||null,defense_notes:$("segmentDefense").value.trim()||null,transition_notes:$("segmentTransition").value.trim()||null,special_teams_notes:$("segmentSpecial").value.trim()||null,player_notes:playerNotes,tags,analyzed_by:auth().user?.id||null,updated_at:new Date().toISOString()};
+    const payload={start_seconds:start,end_seconds:end,status:decision,confidence:$("segmentConfidence").value,analysis_summary:$("segmentSummary").value.trim()||null,forecheck_notes:$("segmentForecheck").value.trim()||null,breakout_notes:$("segmentBreakout").value.trim()||null,offense_notes:$("segmentOffense").value.trim()||null,defense_notes:$("segmentDefense").value.trim()||null,transition_notes:$("segmentTransition").value.trim()||null,special_teams_notes:$("segmentSpecial").value.trim()||null,player_notes:playerNotes,tags,updated_at:new Date().toISOString()};
+    // Only an approval records the approver; saving or rejecting must not lock the period against new analysis.
+    if(decision==="complete")payload.analyzed_by=auth().user?.id||null;
     savingPeriod=true;
     try{
       const {data,error}=await db().from("vod_review_segments").update(payload).eq("id",s.id).eq("updated_at",s.updated_at).select("id");
       if(error)throw error;if(!data?.length)throw new Error("This period changed elsewhere. Refresh before saving.");
       editingPeriod=false;await loadData();state.selectedSegmentId=s.id;renderAll();
-      setStatus(decision==="complete"?`${s.label} approved.`:decision==="needs_review"?`${s.label} saved for review.`:`${s.label} rejected. Use Advanced Tools to re-run analysis.`,"success");
+      setStatus(decision==="complete"?`${s.label} approved.`:decision==="needs_review"?`${s.label} saved for review.`:`${s.label} rejected. Fix the period times if needed, then press Analyze Game to re-run it.`,"success");
     }catch(error){setStatus(error.message,"error");}finally{savingPeriod=false;}
   }
 
@@ -522,8 +476,11 @@
   }
   async function saveRollup(){
     const r=currentReview(); if(!r)return; const segs=reviewSegments(); const allDone=segs.length>0&&segs.every(s=>s.status==="complete");
-    const document=editedDocument();
-    const payload={review_document:document,full_game_summary:$("gameSummary").value.trim()||null,recurring_patterns:$("gamePatterns").value.trim()||null,strengths:$("gameStrengths").value.trim()||null,corrections:$("gameCorrections").value.trim()||null,tactical_report:$("gameTactical")?.value.trim()||null,player_report:$("gamePlayers")?.value.trim()||null,professional_writeup:$("gameProfessional")?.value.trim()||null,status:"reviewing",updated_at:new Date().toISOString()};
+    // A blank box keeps the saved text; the structured report is stored only once every period is approved,
+    // so an early draft never outranks the next analysis.
+    const keep=(id,current)=>($(id)?.value||"").trim()||current||null;
+    const payload={full_game_summary:keep("gameSummary",r.full_game_summary),recurring_patterns:keep("gamePatterns",r.recurring_patterns),strengths:keep("gameStrengths",r.strengths),corrections:keep("gameCorrections",r.corrections),tactical_report:keep("gameTactical",r.tactical_report),player_report:keep("gamePlayers",r.player_report),professional_writeup:keep("gameProfessional",r.professional_writeup),status:"reviewing",updated_at:new Date().toISOString()};
+    if(allDone&&!model.periodErrors(r,segs,{approved:true}).length)payload.review_document=editedDocument();
     const {error}=await db().from("vod_review_sessions").update(payload).eq("id",r.id); if(error)return setStatus(error.message,"error"); await loadData(); state.selectedReviewId=r.id;renderAll();setStatus("Game report draft saved. Publish after approving every period.","success");
   }
   async function archiveReview(){const r=currentReview();if(!r)return;const {error}=await db().from("vod_review_sessions").update({status:"archived",updated_at:new Date().toISOString()}).eq("id",r.id);if(error)return setStatus(error.message,"error");state.selectedReviewId="";state.selectedSegmentId="";await loadData();setStatus("VOD review archived.","success");}
@@ -657,7 +614,8 @@
 
   function bind(){
     $("vodTeam")?.addEventListener("change",e=>{state.teamId=e.target.value;state.selectedReviewId="";state.selectedSegmentId="";loadData();});
-    $("refreshVod")?.addEventListener("click",loadData); $("createVod")?.addEventListener("click",createReview); $("batchCreateVod")?.addEventListener("click",createBatchReviews); $("buildSegments")?.addEventListener("click",buildSegments); $("addCustomSegment")?.addEventListener("click",addCustomSegment);
+    $("refreshVod")?.addEventListener("click",loadData); $("createVod")?.addEventListener("click",createReview); $("batchCreateVod")?.addEventListener("click",createBatchReviews); $("buildSegments")?.addEventListener("click",buildSegments);
+    for(const id of ["period1Start","period2Start","period3Start","periodVodEnd","periodOtStarts","periodSkips"])$(id)?.addEventListener("input",()=>{periodFieldsDirty=true;}); $("addCustomSegment")?.addEventListener("click",addCustomSegment);
     $("editSegment")?.addEventListener("click",()=>{editingPeriod=!editingPeriod;if(!editingPeriod)renderSegmentEditor();else renderPeriodContent(currentSegment());});
     $("approveSegment")?.addEventListener("click",()=>saveSegment("complete"));
     $("rejectSegment")?.addEventListener("click",()=>saveSegment("rejected"));

@@ -39,7 +39,7 @@
   async function load(){
     if(busy||!db())return;const gameId=selectedGameId();if(!gameId)return;busy=true;
     try{
-      const {data:r,error}=await db().from('vod_review_sessions').select('*').eq('esports_game_id',gameId).maybeSingle();
+      const {data:r,error}=await db().from('vod_review_sessions').select('*').eq('esports_game_id',gameId).order('updated_at',{ascending:false}).limit(1).maybeSingle();
       if(error)throw error;current=r||null;segments=[];markers=[];
       if(current){
         const [s,m]=await Promise.all([
@@ -60,7 +60,7 @@
       root.innerHTML='<div class="empty-state">No linked VOD review yet. Kickoff Classic finals will create one automatically; for a pre-final rehearsal you can still create the review manually in VOD Lab.</div>';
       if(btn)btn.disabled=true;if(link)link.href='vod-lab.html?team=wildman-hockey';return;
     }
-    const periods=segments.filter(s=>['period','overtime'].includes(s.segment_type));
+    const periods=segments.filter(s=>!s.archived_at&&['period','overtime'].includes(s.segment_type));
     const completed=periods.filter(s=>s.status==='complete').length;
     const analyzed=periods.filter(s=>s.analysis_summary||s.offense_notes||s.defense_notes||s.transition_notes||s.special_teams_notes).length;
     const hasEvidence=Boolean(current.professional_writeup||current.player_report||current.tactical_report||current.full_game_summary||current.recurring_patterns||current.strengths||current.corrections||analyzed);
