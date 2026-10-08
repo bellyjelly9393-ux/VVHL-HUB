@@ -111,7 +111,7 @@
         merged[k]=notes.join('\n\n')||null;
       });
       merged.evidence.unit_reports=[...new Map(rows.flatMap(r=>r.evidence?.unit_reports||[])
-        .map(u=>[JSON.stringify(u),u])).values()];
+        .map(u=>[JSON.stringify([u.label,u.summary,u.strengths,u.concerns,u.adjustments]),u])).values()];
       if(hasGameStats(merged))merged.evidence.stat_status='imported';
       return merged;
     });
