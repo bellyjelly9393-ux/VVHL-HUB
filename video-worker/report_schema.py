@@ -45,12 +45,13 @@ Never inflate a grade because of the final score, points or an isolated highligh
 Existing closer looks and replayed footage are the same play, not additional evidence.
 '''
 
-LINEUP_SLOT = re.compile(r'(?:^|[\s,;:(])(LW|RW|LD|RD|C|G)\s*[:=-]?\s+([A-Za-z0-9_][A-Za-z0-9_.-]*)')
+# A gamertag may contain spaces ('l Setty l'); it ends at a comma, semicolon, line break or sentence stop.
+LINEUP_SLOT = re.compile(r'(?:^|[\s,;:(])(LW|RW|LD|RD|C|G)\s*[:=-]?\s+((?:[^,;\n.]|\.(?=\S)){1,24}?)\s*(?=[,;\n]|\.(?:\s|$)|$)')
 
 
 def lineup_roster(text):
     """[(position, gamertag)] from lineup text such as 'LW a, C b, RW c, LD d, RD e, G f'."""
-    return [(m.group(1), m.group(2).rstrip('.-')) for m in LINEUP_SLOT.finditer(str(text or ''))]
+    return [(m.group(1), m.group(2).strip().rstrip('.-')) for m in LINEUP_SLOT.finditer(str(text or '')) if m.group(2).strip()]
 
 
 def lineup_units(roster):

@@ -1990,6 +1990,8 @@ def apply_period_spec(job_id, spec, marker=None):
         'period_spec_hash': spec.get('hash') or period_spec_hash(start, end, periods, overtime)})
     if marker:
         meta['restart_marker'] = marker
+    if str(spec.get('players') or '').strip():
+        meta['players'] = str(spec['players'])[:2000]  # e.g. a lineup added after the video was analyzed
     start_run(job_id, meta)
     result = {'stage': 'period_boundaries_locked', 'period_note': 'Period times were set by hand before AI review.',
               'detected_periods': periods, 'period_detection': 'manual', 'review_version': REVIEW_VERSION}
@@ -2098,7 +2100,7 @@ def restart_job_periods():
             continue
         with WRITE_LOCK:
             apply_period_spec(job_id, {'source_start_seconds': start, 'source_end_seconds': end,
-                                       'periods': periods}, marker=marker)
+                                       'periods': periods, 'players': spec.get('players')}, marker=marker)
         restarted.append(job_id)
     return restarted
 
