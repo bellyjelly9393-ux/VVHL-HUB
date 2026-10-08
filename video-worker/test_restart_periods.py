@@ -69,6 +69,25 @@ class RestartPeriods(unittest.TestCase):
             self.assertEqual(worker.restart_job_periods(), [])
         self.assertEqual(worker.get_job(self.job_id)['status'], 'ready_for_review')
 
+    def test_a_game_with_no_job_gets_one_linked_to_its_review_and_runs_on_the_periods(self):
+        new_id = str(uuid4())
+        create = {'review_id': 'rev-2', 'title': 'Game 2', 'vod_url': 'https://www.twitch.tv/videos/9', 'players': 'lineup'}
+        self.assertEqual(self.restart({new_id: {**PLAN, 'create': create}}), [new_id])
+        job = worker.get_job(new_id)
+        self.assertEqual((job['status'], job['metadata']['review_id'], job['metadata']['game_id']), ('retrieving', 'rev-2', 'rev-2'))
+        self.assertEqual(job['metadata']['vod_url'], 'https://www.twitch.tv/videos/9')
+        self.assertEqual(job['metadata']['replay_phase'], 'analyze_periods')
+        self.assertEqual(len(job['metadata']['periods']), 3)
+        with worker.connect() as db:
+            self.assertEqual(db.execute('SELECT owner FROM jobs WHERE id=?', (new_id,)).fetchone()['owner'], 'o')
+
+    def test_no_job_and_no_usable_create_data_creates_nothing(self):
+        for create in (None, {'review_id': 'r'}, {'review_id': 'r', 'vod_url': 'http://x/1'}):
+            new_id = str(uuid4())
+            self.assertEqual(self.restart({new_id: {**PLAN, 'create': create}}), [])
+            with self.assertRaises(worker.Problem):
+                worker.get_job(new_id)
+
     def test_an_overtime_period_is_kept_when_given(self):
         plan = {**PLAN, 'periods': PLAN['periods'] + [['Overtime 1', 1550, 1700]], 'end': 3770}
         self.restart({self.job_id: plan})
