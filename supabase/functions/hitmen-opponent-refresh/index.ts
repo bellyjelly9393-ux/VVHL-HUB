@@ -80,8 +80,8 @@ async function reconcileOfficialGames(task: any, club: string, platform: string,
     .eq('season',SEASON).eq('status','final')
     .or('home_lg_team_id.eq.'+target.lg_team_id+',away_lg_team_id.eq.'+target.lg_team_id)
     .order('game_at'));
-  const nameByLg = new Map(teams.map((t:any)=>[String(t.lg_team_id),t.name]));
-  const clubByName = new Map(links.filter((x:any)=>/^\d+$/.test(String(x.ea_club_id||''))).map((x:any)=>[x.opponent_name,String(x.ea_club_id)]));
+  const nameByLg = new Map<string, string>(teams.map((t:any): [string, string]=>[String(t.lg_team_id),t.name]));
+  const clubByName = new Map<string, string>(links.filter((x:any)=>/^\d+$/.test(String(x.ea_club_id||''))).map((x:any): [string, string]=>[x.opponent_name,String(x.ea_club_id)]));
   clubByName.set('Calgary Hitmen',CALGARY_EA_CLUB);
   const officialRows = games.map((g:any)=>{
     const home = String(g.home_lg_team_id)===String(target.lg_team_id);
