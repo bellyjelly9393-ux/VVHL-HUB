@@ -1827,6 +1827,29 @@ def confirm_overtime_jobs():
             print(f'VOD: overtime confirmed for job {job["id"][:8]}.', flush=True)
 
 
+def create_restart_job(job_id, info):
+    """A game with no worker job yet (VOD_RESTART_PERIODS entry with "create"): make its job under the
+    account that owns the existing jobs, linked to the review. Returns None without usable `create` data."""
+    if not isinstance(info, dict) or not str(info.get('review_id') or '') or not str(info.get('vod_url') or ''):
+        return None
+    if urlsplit(str(info['vod_url'])).scheme != 'https':
+        return None
+    with WRITE_LOCK, connect() as db:
+        owners = db.execute('SELECT owner,count(*) n FROM jobs GROUP BY owner ORDER BY n DESC').fetchall()
+        owner = str(info.get('owner') or (owners[0]['owner'] if owners else ''))
+        if not owner:
+            return None
+        review_id = str(info['review_id'])[:80]
+        meta = {'review_id': review_id, 'game_id': review_id, 'title': str(info.get('title') or '')[:200],
+                'vod_url': str(info['vod_url'])[:2000], 'players': str(info.get('players') or '')[:2000],
+                'game_format': str(info.get('game_format') or '6s')[:20], 'source_kind': 'twitch_replay',
+                'periods': []}
+        db.execute('INSERT INTO jobs VALUES (?,?,?,?,?,?,?)',
+                   (job_id, owner, time.time(), 'ready_for_review', json.dumps(meta), '{}', ''))
+    print(f'VOD restart: created job {job_id} for review {review_id[:8]}.', flush=True)
+    return get_job(job_id)
+
+
 def restart_job_periods():
     """Re-run one existing job on corrected period boundaries (VOD_RESTART_PERIODS, JSON).
 
@@ -1846,12 +1869,17 @@ def restart_job_periods():
     for value, spec in plan.items():
         try:
             job_id = str(UUID(value.strip()))
-            job = get_job(job_id)
             start, end = float(spec['start']), float(spec['end'])
             periods = [{'label': str(p[0])[:80], 'start': float(p[1]), 'end': float(p[2])} for p in spec['periods']]
             if not 0 <= start < end <= 86400 or not periods:
                 raise ValueError()
             segments(periods, end - start)
+            try:
+                job = get_job(job_id)
+            except Problem:
+                job = create_restart_job(job_id, spec.get('create'))
+                if job is None:
+                    raise
         except (Problem, KeyError, IndexError, TypeError, ValueError):
             print(f'VOD restart skipped job {str(value)[:36]!r}: unknown job or invalid periods.', flush=True)
             continue
