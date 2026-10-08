@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/hitmen-hub",
-      "destination": "/hitmen-game-center.html"
+      "destination": "/hitmen-workspace.html"
     },
     {
       "source": "/academy-trainees",
@@ -18,7 +18,7 @@
     },
     {
       "source": "/calgary",
-      "destination": "/hitmen-game-center.html"
+      "destination": "/hitmen-workspace.html"
     },
     {
       "source": "/war-room",
@@ -34,7 +34,7 @@
     },
     {
       "source": "/hitmen",
-      "destination": "/hitmen-game-center.html"
+      "destination": "/hitmen-workspace.html"
     },
     {
       "source": "/vod-lab",
@@ -88,5 +88,17 @@
     "api/hitmen-recap-writer.js": {
       "maxDuration": 120
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/hitmen-game-center.html",
+      "destination": "/hitmen-workspace.html",
+      "permanent": false
+    },
+    {
+      "source": "/hitmen-hub.html",
+      "destination": "/hitmen-workspace.html",
+      "permanent": false
+    }
+  ]
 }
