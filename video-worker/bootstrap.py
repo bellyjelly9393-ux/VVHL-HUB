@@ -43,6 +43,7 @@ def main():
         print('VOD model routing:', json.dumps(worker.model_routing()), flush=True)
     except Exception as exc:
         print(f'VOD model routing unavailable: {type(exc).__name__}', flush=True)
+    worker.restart_job_periods()
     worker.confirm_overtime_jobs()
     worker.resume_listed_jobs()
     seeded = replay.seed_replay_test_batch()

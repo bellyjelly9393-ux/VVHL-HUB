@@ -1827,6 +1827,55 @@ def confirm_overtime_jobs():
             print(f'VOD: overtime confirmed for job {job["id"][:8]}.', flush=True)
 
 
+def restart_job_periods():
+    """Re-run one existing job on corrected period boundaries (VOD_RESTART_PERIODS, JSON).
+
+    {"<job id>": {"start": 2070, "end": 3620, "periods": [["Period 1", 0, 605], ...]}}
+    start/end are VOD seconds; period times are seconds from `start`. The old evidence came
+    from the wrong footage, so it is discarded. Each job is restarted once per setting."""
+    raw = os.getenv('VOD_RESTART_PERIODS', '').strip()
+    if not raw:
+        return []
+    try:
+        plan = json.loads(raw)
+        assert isinstance(plan, dict)
+    except (ValueError, AssertionError):
+        print('VOD restart skipped: VOD_RESTART_PERIODS is not a JSON object.', flush=True)
+        return []
+    restarted = []
+    for value, spec in plan.items():
+        try:
+            job_id = str(UUID(value.strip()))
+            job = get_job(job_id)
+            start, end = float(spec['start']), float(spec['end'])
+            periods = [{'label': str(p[0])[:80], 'start': float(p[1]), 'end': float(p[2])} for p in spec['periods']]
+            if not 0 <= start < end <= 86400 or not periods:
+                raise ValueError()
+            segments(periods, end - start)
+        except (Problem, KeyError, IndexError, TypeError, ValueError):
+            print(f'VOD restart skipped job {str(value)[:36]!r}: unknown job or invalid periods.', flush=True)
+            continue
+        meta = dict(job['metadata'])
+        marker = json.dumps(spec, sort_keys=True)
+        if meta.get('restart_marker') == marker or job['status'] in ('queued', 'retrieving', 'processing'):
+            continue
+        for key in ('active_replay_unit', 'scan_units', 'scan_unit_index', 'scan_current_period', 'completed_parts',
+                    'part_attempts', 'ai_rate_limit_retries', 'pending_period_rollup', 'resume_marker'):
+            meta.pop(key, None)
+        meta.update({
+            'restart_marker': marker, 'vod_offset_seconds': start, 'source_start_seconds': start,
+            'source_end_seconds': end, 'periods': periods, 'period_units': bounded_period_units(periods),
+            'period_unit_index': 0, 'period_source': 'manual', 'streamed_replay': True,
+            'replay_phase': 'analyze_periods',
+            'overtime_confirmed': any(p['label'].startswith('Overtime') for p in periods)})
+        result = {'stage': 'period_boundaries_locked', 'period_note': 'Period times were set by hand before AI review.',
+                  'detected_periods': periods}
+        update_metadata(job_id, meta, 'retrieving', result, '')
+        restarted.append(job_id)
+        print(f'VOD restart: {job_id} on {len(periods)} hand-set periods, {len(meta["period_units"])} parts.', flush=True)
+    return restarted
+
+
 def resume_listed_jobs():
     """Resume named existing replay jobs from their saved parts. Never creates or resets a job."""
     raw = os.getenv('VOD_RESUME_JOB_IDS', '').strip()
