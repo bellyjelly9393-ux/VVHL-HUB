@@ -9,7 +9,82 @@
   const array=v=>Array.isArray(v)?v:[];
   const activeSegments=segments=>array(segments).filter(s=>!s.archived_at);
   const hasAnalysis=s=>Boolean(text(s?.analysis_summary).trim());
-  const protectedEvidence=s=>Boolean(s?.analyzed_by||s?.status==='complete');
+  // Only an APPROVED period is protected from new analysis. Opening, editing or rejecting a
+  // period must never block the next import (that left write-ups blank).
+  const protectedEvidence=s=>s?.status==='complete';
+  function clock(value){
+    const t=String(value??'').trim();if(!t)return null;
+    if(/^\d+$/.test(t))return Number(t);
+    const parts=t.split(':');if(parts.length<2||parts.length>3||parts.some(p=>!/^\d+$/.test(p)))return null;
+    const n=parts.map(Number);if(n.slice(1).some(v=>v>59))return null;
+    return n.length===2?n[0]*60+n[1]:n[0]*3600+n[1]*60+n[2];
+  }
+  const periodLabel=label=>{
+    const t=text(label).trim(),ot=t.match(/^(?:overtime|ot)\s*(\d*)$/i);
+    return ot?`Overtime ${ot[1]||1}`:t;
+  };
+  // Hand-entered period times -> DB period rows, the game window and skipped (lag-out) sections.
+  function planPeriods({p1,p2,p3,overtimes='',end,skips=''}={}){
+    const errors=[],starts=[clock(p1),clock(p2),clock(p3)],gameEnd=clock(end);
+    ['Period 1','Period 2','Period 3'].forEach((l,i)=>{if(starts[i]==null)errors.push(`Enter when ${l} starts (like 34:30 or 1:02:15).`);});
+    if(gameEnd==null)errors.push('Enter when the game ends.');
+    const otTexts=String(overtimes||'').split(',').map(x=>x.trim()).filter(Boolean),ots=otTexts.map(clock);
+    if(ots.some(v=>v==null))errors.push('One of the overtime start times is not a valid time.');
+    const skipList=[];
+    for(const part of String(skips||'').split(',').map(x=>x.trim()).filter(Boolean)){
+      const m=part.split(/\s*(?:-|–|to)\s*/i),a=clock(m[0]),b=clock(m[1]);
+      if(m.length!==2||a==null||b==null||b<=a)errors.push(`Skipped section "${part}" must look like 1:49:38-1:56:10.`);
+      else skipList.push({start:a,end:b});
+    }
+    if(errors.length)return {errors,segments:[],window:null,skips:[]};
+    const all=[...starts,...ots];
+    if(all.some((v,i)=>i&&v<=all[i-1]))errors.push('Period starts must be in order: Period 1, Period 2, Period 3, then any overtime.');
+    if(gameEnd<=all[all.length-1])errors.push('The game end must be after the last period starts.');
+    skipList.sort((a,b)=>a.start-b.start);
+    skipList.forEach((s,i)=>{
+      if(s.start<starts[0]||s.end>gameEnd)errors.push('A skipped section must be inside the game.');
+      if(i&&s.start<skipList[i-1].end)errors.push('Skipped sections overlap.');
+    });
+    const segments=[
+      {segment_type:'period',segment_index:1,label:'Period 1',start_seconds:starts[0],end_seconds:starts[1]},
+      {segment_type:'period',segment_index:2,label:'Period 2',start_seconds:starts[1],end_seconds:starts[2]},
+      {segment_type:'period',segment_index:3,label:'Period 3',start_seconds:starts[2],end_seconds:ots[0]??gameEnd},
+      ...ots.map((s,i)=>({segment_type:'overtime',segment_index:i+1,label:`Overtime ${i+1}`,start_seconds:s,end_seconds:ots[i+1]??gameEnd}))
+    ];
+    for(const s of skipList){
+      const inside=segments.find(p=>s.start>=p.start_seconds&&s.end<=p.end_seconds);
+      if(!inside)errors.push('A skipped section must sit inside one period (not across a period change).');
+      else if(s.start===inside.start_seconds&&s.end===inside.end_seconds)errors.push(`A skipped section cannot cover all of ${inside.label}.`);
+    }
+    return {errors,segments:errors.length?[]:segments,window:{start:starts[0],end:gameEnd},skips:skipList};
+  }
+  // What the worker analyzes: each active period minus skipped sections, relative to the game start.
+  function workerPeriods(review={},segments=[]){
+    const offset=Number(review.source_start_seconds)||0;
+    const skips=array(review.skip_ranges).map(s=>({start:Number(s.start),end:Number(s.end)})).filter(s=>s.end>s.start).sort((a,b)=>a.start-b.start);
+    const out=[];
+    for(const p of activeSegments(segments).filter(s=>['period','overtime'].includes(s.segment_type)&&s.end_seconds!=null).sort((a,b)=>a.start_seconds-b.start_seconds)){
+      let cursor=Number(p.start_seconds);const stop=Number(p.end_seconds);
+      for(const s of skips){
+        if(s.end<=cursor||s.start>=stop)continue;
+        if(s.start>cursor)out.push({label:periodLabel(p.label),start:cursor-offset,end:s.start-offset});
+        cursor=Math.max(cursor,s.end);
+      }
+      if(stop>cursor)out.push({label:periodLabel(p.label),start:cursor-offset,end:stop-offset});
+    }
+    return out;
+  }
+  // Which period a saved analysis chunk belongs to: by where it sits in the game, then by label.
+  function segmentForChunk(chunk,segments=[],offset=0){
+    const periods=activeSegments(segments).filter(s=>['period','overtime'].includes(s.segment_type));
+    const start=Number(chunk?.start),end=Number(chunk?.end);
+    if(Number.isFinite(start)&&Number.isFinite(end)){
+      const mid=offset+(start+end)/2,hit=periods.find(s=>mid>=Number(s.start_seconds)&&mid<Number(s.end_seconds));
+      if(hit)return hit;
+    }
+    const label=periodLabel(chunk?.label);
+    return periods.find(s=>periodLabel(s.label)===label)||null;
+  }
   function reconcile(review={},segments=[],publication=null,job=null){
     const active=activeSegments(segments),periods=active.filter(s=>['period','overtime'].includes(s.segment_type));
     const bounds=periodErrors(review,periods),validPeriods=periods.filter(s=>s.end_seconds!=null&&Number(s.end_seconds)>Number(s.start_seconds)&&Number(s.start_seconds)>=Number(review.source_start_seconds||0)&&(review.source_end_seconds==null||Number(s.end_seconds)<=Number(review.source_end_seconds)));
@@ -32,7 +107,7 @@
         {name:approved?'Human Approved':'Human Review',label:'5 · Verify',done:approved},
         {name:published?'Published':writeup?'Write-Up Saved':'Write-Up',label:'6 · Publish',done:published}
       ],
-      next:refreshing?'Fresh VOD analysis is running. The current published report stays live until the new reviewed evidence is ready.':published?'Published scouting reports are current. Re-publish only after reviewed evidence changes.':approved?'All required periods are approved. Publish / Refresh Scouting Reports when ready.':analysisComplete?'Saved analysis is complete. Review and approve the remaining periods.':evidence.length?'Saved period evidence is preserved. Finish the remaining periods before publishing.':rawFailure?'Recording retrieval failed. Retry to continue analysis.':'Analyze the game to detect periods and prepare scouting evidence.'};
+      next:refreshing?'Fresh VOD analysis is running. The current published report stays live until the new reviewed evidence is ready.':published?'Published scouting reports are current. Re-publish only after reviewed evidence changes.':approved?'All required periods are approved. Publish / Refresh Scouting Reports when ready.':analysisComplete?'Saved analysis is complete. Review and approve the remaining periods.':evidence.length?'Saved period evidence is preserved. Finish the remaining periods before publishing.':rawFailure?'Analysis stopped before it finished (the cause is not always the recording: AI credits, an AI limit or a download). Saved parts are kept. Use Continue / Retry once the cause is fixed.':'Analyze the game to detect periods and prepare scouting evidence.'};
   }
   function periodErrors(review,segments,{approved=false}={}){
     const errors=[],periods=activeSegments(segments).filter(s=>['period','overtime'].includes(s.segment_type)).sort((a,b)=>a.start_seconds-b.start_seconds);
@@ -137,7 +212,8 @@
       row.evidence_timestamps=[...new Set([...row.evidence_timestamps,...p.evidence_timestamps])].sort((a,b)=>a-b);
       players.set(key,row);
     }
-    return {version:1,summary:text(review.full_game_summary),team_systems,tactical_report:text(review.tactical_report),result:'',process:'',game_rating:null,units:[],players:[...players.values()],player_report:text(review.player_report)};
+    const summary=text(review.full_game_summary).trim()||byPeriod(periods.map(s=>[s.label,s.analysis_summary]));
+    return {version:1,summary,team_systems,tactical_report:text(review.tactical_report),result:'',process:'',game_rating:null,units:[],players:[...players.values()],player_report:text(review.player_report)};
   }
   function mergeDocuments(primary={},supplemental={}){
     const p=primary&&typeof primary==='object'?primary:{},s=supplemental&&typeof supplemental==='object'?supplemental:{};
@@ -194,5 +270,5 @@
     const scores=[...unique.values()];
     return {games:scores.length,score:scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):null};
   }
-  return {systems,periodErrors,documentFor,documentFromPeriods,parsePlayerNote,mergeDocuments,rating,baseline,activeSegments,hasAnalysis,protectedEvidence,reconcile};
+  return {clock,periodLabel,planPeriods,workerPeriods,segmentForChunk,systems,periodErrors,documentFor,documentFromPeriods,parsePlayerNote,mergeDocuments,rating,baseline,activeSegments,hasAnalysis,protectedEvidence,reconcile};
 });

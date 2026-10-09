@@ -45,10 +45,37 @@ test('archived windows are excluded while active OT and required periods still g
  p[0].archived_at='2026-10-03';
  assert.match(model.periodErrors(review,p).join(' '),/Period 1/);
 });
-test('a reopened human-edited period remains protected from automatic import',()=>{
- assert.equal(model.protectedEvidence({status:'needs_review',analyzed_by:'manager'}),true);
+test('only an approved period is protected from a new import (an opened or rejected one is not)',()=>{
+ assert.equal(model.protectedEvidence({status:'needs_review',analyzed_by:'manager'}),false);
+ assert.equal(model.protectedEvidence({status:'rejected',analyzed_by:'manager'}),false);
  assert.equal(model.protectedEvidence({status:'complete',analyzed_by:null}),true);
  assert.equal(model.protectedEvidence({status:'needs_review',analyzed_by:null}),false);
+});
+test('hand-entered period times become period rows, the game window and lag-out skips',()=>{
+ const plan=model.planPeriods({p1:'1:29:00',p2:'1:37:00',p3:'1:44:30',overtimes:'2:02:39',end:'2:07:54',skips:'1:49:38-1:56:10'});
+ assert.deepEqual(plan.errors,[]);
+ assert.deepEqual(plan.window,{start:5340,end:7674});
+ assert.deepEqual(plan.segments.map(s=>[s.segment_type,s.segment_index,s.label,s.start_seconds,s.end_seconds]),
+  [['period',1,'Period 1',5340,5820],['period',2,'Period 2',5820,6270],['period',3,'Period 3',6270,7359],['overtime',1,'Overtime 1',7359,7674]]);
+ assert.deepEqual(plan.skips,[{start:6578,end:6970}]);
+ const review={source_start_seconds:5340,source_end_seconds:7674,skip_ranges:plan.skips};
+ assert.deepEqual(model.workerPeriods(review,plan.segments),[
+  {label:'Period 1',start:0,end:480},{label:'Period 2',start:480,end:930},
+  {label:'Period 3',start:930,end:1238},{label:'Period 3',start:1630,end:2019},{label:'Overtime 1',start:2019,end:2334}]);
+});
+test('bad period times are explained instead of saved',()=>{
+ assert.match(model.planPeriods({p1:'10:00',p2:'5:00',p3:'20:00',end:'30:00'}).errors.join(' '),/in order/);
+ assert.match(model.planPeriods({p1:'0:00',p2:'10:00',p3:'20:00'}).errors.join(' '),/game ends/);
+ assert.match(model.planPeriods({p1:'0:00',p2:'10:00',p3:'20:00',end:'30:00',skips:'9:00-11:00'}).errors.join(' '),/inside one period/);
+ assert.match(model.planPeriods({p1:'0:00',p2:'10:xx',p3:'20:00',end:'30:00'}).errors.join(' '),/Period 2/);
+ assert.equal(model.planPeriods({p1:'0:00',p2:'10:00',p3:'20:00',end:'30:00'}).segments.length,3);
+});
+test('analysis chunks land in the period they were filmed in, and OT labels line up',()=>{
+ const segs=[{segment_type:'period',label:'Period 3',start_seconds:6270,end_seconds:7359},{segment_type:'overtime',label:'Overtime 1',start_seconds:7359,end_seconds:7674}];
+ assert.equal(model.segmentForChunk({label:'Period 3',start:1700,end:1760},segs,5340).label,'Period 3');
+ assert.equal(model.segmentForChunk({label:'Period 3',start:2100,end:2160},segs,5340).label,'Overtime 1');
+ assert.equal(model.segmentForChunk({label:'Overtime'},segs,5340).label,'Overtime 1');
+ assert.equal(model.periodLabel('OT'),'Overtime 1');assert.equal(model.periodLabel('Overtime 2'),'Overtime 2');
 });
 test('saved structured period reports complete AI analysis without granting human approval',()=>{
  const p=periods().map(s=>({...s,status:'needs_review',analysis_summary:''}));
@@ -93,4 +120,18 @@ test('approved period notes fill blank report layers when the worker rollup is m
  assert.equal(merged.team_systems.forecheck,'Manager wording');assert.match(merged.team_systems.offensive_structure,/walls/);assert.equal(merged.players.length,2);
  const pending=periods();pending[0].status='needs_review';pending[0].offense_notes='Unapproved';
  assert.equal(model.documentFromPeriods({},pending).team_systems.offensive_structure,'');
+});
+
+test('approved periods give the report a summary when the game summary is blank (publishing requires one)',()=>{
+  const p=periods();
+  const doc=model.documentFromPeriods({full_game_summary:''},p);
+  assert.match(doc.summary,/^Period 1: /);
+  assert.equal(model.documentFromPeriods({full_game_summary:'Manager summary'},p).summary,'Manager summary');
+  assert.equal(model.documentFromPeriods({},[]).summary,'');
+});
+
+test('a failed run with no saved evidence does not blame the recording',()=>{
+ const state=model.reconcile({...review,id:'game',worker_status:'failed'},[]);
+ assert.equal(state.rawFailure,true);assert.doesNotMatch(state.next,/^Recording retrieval failed/);
+ assert.match(state.next,/Saved parts are kept/);
 });

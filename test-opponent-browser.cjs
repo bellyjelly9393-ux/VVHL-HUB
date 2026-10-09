@@ -5,6 +5,8 @@ const assert = require('node:assert/strict');
 const html = fs.readFileSync('hitmen-opponents.html','utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'');
 const mock = `
 window.calls=[];
+window.opened=[];
+window.open=(url,name)=>{window.opened.push({url,name});return {focus(){}};};
 const tables={
 hitmen_opponent_refresh_runs:{id:'run',requested_at:'2026-10-03T20:00:00Z',finished_at:'2026-10-03T20:05:00Z'},
 hitmen_opponent_refresh_tasks:[{opponent_name:'Test Team',source:'lg_chl',status:'partial',detail:{warnings:['Roster source unavailable; previous roster retained'],unmatched:['Unknown']}}],
@@ -37,9 +39,10 @@ document.getElementById('hoiDetail').hidden=false;
    assert.match(await page.locator('#hoiRefreshStatus').innerText(),/1 partial/);
    await page.locator('summary').filter({hasText:'Source status'}).click();assert.match(await page.locator('#hoiRefreshDetails').innerText(),/previous roster retained/);
    await page.locator('#hoiRefreshOpponents').click();assert.equal(await page.evaluate(()=>window.calls.length),1);
-   await page.locator('#hoiSyncLg').click();assert.equal(await page.evaluate(()=>window.calls.length),2);
-   assert.equal(await page.evaluate(()=>window.calls[1].name),'hitmen_request_opponent_refresh');
-   assert.match(await page.locator('#hoiRosterStatus').innerText(),/Server refresh queued/);
+   await page.locator('#hoiSyncLg').click();
+   assert.equal(await page.evaluate(()=>window.calls.length),1);
+   assert.deepEqual(await page.evaluate(()=>window.opened),[{url:'lg-capture.html?mode=authsync&source=roster&return=hitmen-opponents.html',name:'wildmanLgAuthSync'}]);
+   assert.match(await page.locator('#hoiRosterStatus').innerText(),/Authenticated LG Sync opened/);
    await page.evaluate(()=>{window.VVHLBackend.state.profile.role='player';window.dispatchEvent(new Event('vvhl-auth-change'));});
    assert.equal(await page.locator('#hoiRefreshOpponents').isDisabled(),true);assert.deepEqual(errors,[]);await page.close();
   }

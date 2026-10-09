@@ -8,6 +8,7 @@
   const T=(id,v)=>{const el=E(id);if(el)el.textContent=v??'—';};
   const H=(id,v)=>{const el=E(id);if(el)el.innerHTML=v??'';};
 
+  let lgSeason=null;
   let locker=null;
   let reports=[];
   let weekly=[];
@@ -79,10 +80,85 @@
     return null;
   }
 
+
+  function gameNightKey(r){
+    if(!r.game_date)return r.evidence?.night_key||'';
+    return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(r.game_date));
+  }
+
+  function hasGameStats(r){
+    const s=r.stats||{};
+    return ['goals','assists','shots','saves','goals_against'].some(k=>s[k]!=null);
+  }
+
+  // Collapse visible reports only; retain every source report and review in storage.
+  function mergeGameReports(input){
+    const groups=new Map();
+    input.forEach(r=>{
+      const key=r.schedule_game_id||r.stats?.lg_game_id||
+        (r.game_date&&r.opponent_name?gameNightKey(r)+'|'+r.opponent_name:r.id);
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(r);
+    });
+    return [...groups.values()].map(rows=>{
+      const statsRow=rows.find(r=>!r.ai_review_id&&hasGameStats(r))||
+        rows.find(hasGameStats)||rows[0];
+      const review=rows.find(r=>r.ai_review_id&&r.evidence?.verification==='approved')||statsRow;
+      const merged={...review,...statsRow,ai_review_id:review.ai_review_id,stats:statsRow.stats,
+        evidence:{...(statsRow.evidence||{}),...(review.evidence||{})}};
+      ['strengths','improvements','tactical_notes','coach_summary'].forEach(k=>{
+        const notes=[...new Set(rows.map(r=>r[k]).filter(v=>v&&v!=='Pending VOD review.'))];
+        merged[k]=notes.join('\n\n')||null;
+      });
+      merged.evidence.unit_reports=[...new Map(rows.flatMap(r=>r.evidence?.unit_reports||[])
+        .map(u=>[JSON.stringify([u.label,u.summary,u.strengths,u.concerns,u.adjustments]),u])).values()];
+      if(hasGameStats(merged))merged.evidence.stat_status='imported';
+      return merged;
+    });
+  }
+
+  function nightRecord(rows){
+    let wins=0,losses=0,otl=0;
+    for(const r of rows){
+      const result=String(r.result||'').toUpperCase().trim();
+      if(/^W\b/.test(result))wins++;
+      else if(/^OTL\b/.test(result)||(/^L\b/.test(result)&&/\bOT\b/.test(result)))otl++;
+      else if(/^L\b/.test(result))losses++;
+      else return null;
+    }
+    return wins+'-'+losses+'-'+otl;
+  }
+
   const add=(o,k)=>Number(o?.[k]||0);
+  const pimMinutes=v=>{
+    if(v==null||v==='')return 0;
+    const s=String(v);
+    if(s.includes(':')){const [m,sec]=s.split(':').map(Number);return (Number(m)||0)+((Number(sec)||0)/60);}
+    return Number(v)||0;
+  };
+
+  function officialAggregate(){
+    if(!lgSeason)return null;
+    const s=lgSeason.stats||{},games=Number(lgSeason.games_played||s.gp||s.ggp||0);
+    const goalie=String(locker?.position||lgSeason.position||'').toUpperCase()==='G';
+    const t={games,goals:0,assists:0,points:0,plus_minus:0,shots:0,hits:0,takeaways:0,giveaways:0,pim:0,blocks:0,faceoff_pct:0,passing_pct:0,foN:0,passN:0,saves:0,shots_faced:0,goals_against:0,save_pct:0};
+    if(goalie){
+      t.shots_faced=Number(s.sog||0);t.goals_against=Number(s.ga||0);t.saves=Math.max(0,t.shots_faced-t.goals_against);
+      t.save_pct=s.savep!=null?Number(s.savep)*100:(t.shots_faced?(t.saves/t.shots_faced)*100:0);
+      return t;
+    }
+    t.goals=Number(s.goals||0);t.assists=Number(s.assists||0);t.points=Number(s.points??(t.goals+t.assists));
+    t.plus_minus=Number(s.plusminus||0);t.shots=Number(s.shots||0);t.hits=Number(s.hits||0);
+    t.takeaways=Number(s.takeaway||0);t.giveaways=Number(s.giveaway||0);t.blocks=Number(s.bs||0);t.pim=pimMinutes(s.pim);
+    if(s.fop!=null){t.faceoff_pct=Number(s.fop);t.foN=1}
+    if(s.passp!=null){t.passing_pct=Number(s.passp);t.passN=1}
+    return t;
+  }
 
   function aggregate(){
-    const statReports=reports.filter(r=>!r.ai_review_id);
+    const official=officialAggregate();
+    if(official)return official;
+    const statReports=reports.filter(r=>hasGameStats(r));
     const t={games:statReports.length,goals:0,assists:0,points:0,plus_minus:0,shots:0,hits:0,takeaways:0,giveaways:0,pim:0,blocks:0,faceoff_pct:0,passing_pct:0,foN:0,passN:0,saves:0,shots_faced:0,goals_against:0,save_pct:0};
     statReports.forEach(r=>{
       const s=r.stats||{};
@@ -168,7 +244,7 @@
   function renderWeeklyPerformance(){
     const box=E('weeklyPerformanceChart');
     if(!box)return;
-    const games=reports.filter(r=>!r.ai_review_id).slice(0,5).reverse();
+    const games=reports.filter(r=>hasGameStats(r)).slice(0,5).reverse();
     if(!games.length){
       box.innerHTML='<div class="weekly-chart-empty">GAME DATA WILL POPULATE HERE</div>';
       return;
@@ -185,6 +261,9 @@
 
   function reportStatLine(r){
     const s=r.stats||{};
+    if(String(r.evidence?.stat_status||'')==='pending_box_score'&&!Object.keys(s).length){
+      return '<div class="player-report-statline player-report-pending"><span><small>OFFICIAL GAME STATS</small><b>PENDING</b></span><em>Result and participation are linked. The verified LG Public Log will fill this game automatically.</em></div>';
+    }
     const pos=String(r.position_played||locker?.position||'').toUpperCase();
     const goalie=pos==='G'||s.shots_faced!=null||s.saves!=null;
     const items=goalie
@@ -193,6 +272,34 @@
     if(!goalie&&s.passing_pct!=null)items.push(['PASS',Number(s.passing_pct).toFixed(1)+'%']);
     if(!goalie&&s.faceoff_pct!=null)items.push(['FO',Number(s.faceoff_pct).toFixed(1)+'%']);
     return '<div class="player-report-statline">'+items.map(([k,v])=>'<span><small>'+esc(k)+'</small><b>'+esc(v)+'</b></span>').join('')+'</div>';
+  }
+
+  function renderNightSummary(){
+    const box=E('playerNightSummary');if(!box)return;
+    const allRows=reports.filter(r=>r.game_date);
+    if(!allRows.length){box.innerHTML='';return}
+    const key=gameNightKey(allRows[0]);
+    const rows=allRows.filter(r=>gameNightKey(r)===key);
+    const complete=rows.every(hasGameStats);
+    const s={...(rows[0].evidence?.night_totals||{})};
+    s.record=nightRecord(rows)||s.record||'—';
+    if(complete){
+      s.games=rows.length;
+      ['goals','assists','points','plus_minus','shots','hits','takeaways','giveaways','blocked_shots','pim','saves','goals_against'].forEach(k=>{
+        s[k]=rows.reduce((n,r)=>n+Number(r.stats?.[k]||(k==='blocked_shots'?r.stats?.blocks:0)||0),0);
+      });
+      s.shots_faced=rows.reduce((n,r)=>n+Number(r.stats?.shots_faced??r.stats?.shots_against??0),0);
+      s.save_pct_derived=s.shots_faced?s.saves/s.shots_faced*100:null;
+    }
+    const status=complete?'Individual game stats are imported from the box scores. VOD scouting appears when approved.':
+      'Some individual game stats are still pending. VOD scouting appears when approved.';
+    const goalie=String(locker?.position||'').toUpperCase()==='G';
+    const items=goalie
+      ?[['REC',s.record||'—'],['GP',s.games??rows.length],['SV',s.saves??0],['SA',s.shots_faced??0],['GA',s.goals_against??0],['SV%',s.save_pct_derived!=null?Number(s.save_pct_derived).toFixed(1)+'%':'—']]
+      :[['REC',s.record||'—'],['GP',s.games??rows.length],['G',s.goals??0],['A',s.assists??0],['PTS',s.points??0],['+/-',s.plus_minus??0],['S',s.shots??0],['HIT',s.hits??0],['TA',s.takeaways??0],['GV',s.giveaways??0],['BLK',s.blocked_shots??0],['PIM',s.pim??0]];
+    const gameRows=rows.slice().sort((a,b)=>new Date(a.game_date)-new Date(b.game_date));
+    const label=new Date(key+'T12:00:00').toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'});
+    box.innerHTML='<article class="night-summary-card"><div class="night-summary-head"><div><small>'+esc(label.toUpperCase())+' · '+rows.length+'-GAME SET</small><h3>LAST NIGHT TOTALS</h3></div><b>'+esc(s.record||'—')+'</b></div><div class="night-summary-games">'+gameRows.map(r=>'<span>'+esc(r.result||'GAME')+' · '+esc(r.opponent_name||'Opponent')+'</span>').join('')+'</div><div class="player-report-statline">'+items.map(([k,v])=>'<span><small>'+esc(k)+'</small><b>'+esc(v)+'</b></span>').join('')+'</div><p>'+esc(status)+'</p></article>';
   }
 
   function renderReports(){
@@ -310,12 +417,16 @@
 
     H('profileScoutingTab',scoutingSummaryHtml());
     const vodReviewed=reports.filter(r=>r.coach_summary||r.tactical_notes||r.strengths||r.improvements||String(r.evidence?.vod_status||'').toLowerCase()==='complete').length;
-    T('profileVodSummary',vodReviewed
+    const pendingBoxes=reports.filter(r=>!hasGameStats(r)&&String(r.evidence?.stat_status||'')==='pending_box_score').length;
+    let vodText=vodReviewed
       ?vodReviewed+' VOD-reviewed game'+(vodReviewed===1?'':'s')+' currently feed this player profile.'
-      :reports.length?reports.length+' game stat line'+(reports.length===1?' is':'s are')+' loaded. VOD scouting is pending.':'Game review evidence will populate here as VOD reports are attached.');
+      :reports.length?'Game results and stat history are loaded. VOD scouting is pending.':'Game review evidence will populate here as VOD reports are attached.';
+    if(pendingBoxes)vodText+=' '+pendingBoxes+' recent game box'+(pendingBoxes===1?' is':'es are')+' linked and waiting on the official LG Public Logs.';
+    T('profileVodSummary',vodText);
 
     renderDashboardScouting();
     renderWeeklyPerformance();
+    renderNightSummary();
     renderReports();
     renderWeekly();
     renderLineReports();
@@ -342,17 +453,22 @@
         H('stallScoutingNotes','<div class="locker-empty">Your Discord login worked, but this account is not mapped to a Season 55 locker yet. Management can fix the Discord-to-roster link without creating a new account.</div>');
         return;
       }
-      const [gr,wr,lr]=await Promise.all([
+      let seasonStatQuery=DB().from('lg_player_season_stats').select('games_played,stats,fetched_at,position,lg_user_id,gamertag').eq('season',SEASON).eq('league_code','LGCHL');
+      seasonStatQuery=locker.lg_user_id?seasonStatQuery.eq('lg_user_id',locker.lg_user_id):seasonStatQuery.ilike('gamertag',locker.gamertag);
+      const [gr,wr,lr,sr]=await Promise.all([
         DB().from('team_player_game_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('locker_id',locker.id).order('game_date',{ascending:false}),
         DB().from('team_player_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).eq('locker_id',locker.id).order('week',{ascending:false}),
-        DB().from('team_line_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).order('week',{ascending:false})
+        DB().from('team_line_weekly_reports').select('*').eq('team_id',TEAM).eq('season',SEASON).order('week',{ascending:false}),
+        seasonStatQuery.order('fetched_at',{ascending:false}).limit(1).maybeSingle()
       ]);
       if(gr.error)throw gr.error;
       if(wr.error)throw wr.error;
       if(lr.error)throw lr.error;
-      reports=(gr.data||[]).filter(r=>!r.ai_review_id||r.evidence?.verification==='approved');
+      if(sr.error)console.warn('LG season stat snapshot unavailable',sr.error);
+      reports=mergeGameReports((gr.data||[]).filter(r=>!r.ai_review_id||r.evidence?.verification==='approved'));
       weekly=wr.data||[];
       lineReports=(lr.data||[]).filter(r=>(r.player_locker_ids||[]).includes(locker.id));
+      lgSeason=sr.data||null;
       await render();
     }catch(e){
       console.error(e);

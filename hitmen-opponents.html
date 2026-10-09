@@ -3,46 +3,49 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
 <title>Opponent Intelligence | Calgary Hitmen</title>
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="management.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-war-tools.css"><link rel="stylesheet" href="shot-location-analysis.css?v=20261009"><link rel="stylesheet" href="hitmen-opponents.css?v=20261005-zone-map">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="management.css"><link rel="stylesheet" href="network-v2.css"><link rel="stylesheet" href="hitmen-war-tools.css"><link rel="stylesheet" href="shot-location-analysis.css?v=20261009"><link rel="stylesheet" href="hitmen-opponents.css?v=20261009-cardmore">
+<meta name="theme-color" content="#101214">
+<link rel="stylesheet" href="hitmen-research.css?v=20261008" data-hn-last>
 </head>
-<body class="wildman-site management-protected hitmen-tool-page">
+<body class="wildman-site management-protected hitmen-tool-page hm-research">
 <header class="site-header hitmen-tool-header">
-<a class="brand" href="hitmen-workspace.html"><span class="wm-brand-mark">H</span><span class="brand-copy">CALGARY HITMEN<br><b>WAR ROOM</b></span></a>
+<a class="brand" href="hitmen-workspace.html"><img class="hr-crest" src="assets/lgchl/s55/team412.png?v=20261004-broadcast" width="52" height="52" alt="Calgary Hitmen crest"><span class="brand-copy">CALGARY HITMEN<br><b>WAR ROOM</b></span></a>
 <button class="menu-toggle" type="button" aria-label="Open navigation">☰</button>
-<nav class="main-nav"><a href="hitmen-workspace.html">War Room</a><a href="hitmen-team-locker.html">Locker Room</a><a href="hitmen-locker-room.html">Lineups</a><a class="active-nav" href="hitmen-opponents.html">Opponents</a><a href="hitmen-battle-plan.html">Battle Plan</a><a href="vod-lab.html?team=calgary-hitmen">VOD</a><a href="hitmen-gm-ai.html">GM AI</a></nav>
+<nav class="main-nav" aria-label="Calgary Hitmen"><a href="hitmen-workspace.html">War Room</a><a href="hitmen-team-locker.html">Locker Room</a><a href="hitmen-locker-room.html">Lineups</a><a class="active-nav" aria-current="page" href="hitmen-opponents.html">Scouting</a><a href="hitmen-battle-plan.html">Battle Plan</a><a href="vod-lab.html?team=calgary-hitmen">Film Room</a><a href="hitmen-media.html">Media</a><a href="hitmen-gm-ai.html">GM AI</a></nav>
 </header>
 <main>
-<section class="section-shell section-block management-login-shell"><div class="section-heading"><div><div class="eyebrow">PRIVATE · CALGARY HITMEN</div><h2>OPPONENT INTELLIGENCE ACCESS</h2></div><div id="managementAccessStatus" class="status-pill">PRIVATE</div></div><section id="accountPanel" class="panel account-panel"></section><div id="managementLockedMessage" class="wm-card"><b>Management sign-in required.</b></div></section>
+<section class="section-shell section-block management-login-shell"><div class="section-heading"><div><div class="eyebrow">PRIVATE · CALGARY HITMEN</div><h2>Team access</h2></div><div id="managementAccessStatus" class="status-pill">PRIVATE</div></div><section id="accountPanel" class="panel account-panel"></section><div id="managementLockedMessage" class="wm-card"><b>Management sign-in required.</b></div></section>
 
 <div data-management-content hidden>
 <section class="section-shell hm-tool-hero">
-<div class="eyebrow">LGCHL SEASON 55 · FULL-SEASON SCOUTING</div><h1>OPPONENT<br><span>INTELLIGENCE.</span></h1>
-<p>One memory for the entire season. Track every scheduled opponent, repeated meetings, results, statistical trends and VOD evidence so each rematch starts with what Calgary already learned.</p>
-<div class="hm-tool-tabs"><a href="hitmen-workspace.html">← War Room</a><a href="hitmen-locker-room.html">Lineup Room</a><a href="vod-lab.html?team=calgary-hitmen">VOD</a><a href="hitmen-battle-plan.html">Battle Plan</a></div>
+<div class="eyebrow">LGCHL SEASON 55 · FULL-SEASON SCOUTING</div><h1>Opponent <span>Intelligence</span></h1>
+<p>Your scouting desk. Research the roster, study the matchup, and bring the evidence into game night.</p>
+<div class="hm-tool-tabs" aria-label="Research shortcuts"><a href="hitmen-workspace.html">← War Room</a><a href="hitmen-locker-room.html">Lineup Room</a><a href="vod-lab.html?team=calgary-hitmen">VOD</a><a href="hitmen-battle-plan.html">Battle Plan</a></div>
 <div class="hoi-kpis"><div><small>Season Games</small><strong id="hoiGameCount">0</strong></div><div><small>Opponents</small><strong id="hoiOpponentCount">0</strong></div><div><small>Repeat Opponents</small><strong id="hoiRepeatCount">0</strong></div><div><small>Completed</small><strong id="hoiFinalCount">0</strong></div><div><small>VOD Evidence</small><strong id="hoiVodCount">0</strong></div></div>
 </section>
 
-<section class="section-shell section-block hoi-panel" aria-label="Opponent refresh schedule">
+<section class="section-shell section-block hoi-panel" aria-label="Opponent refresh schedule" id="hrRefresh">
 <div class="hoi-panel-head"><div><h2>Opponent Stats Refresh</h2><p class="hoi-muted">Tuesday and Saturday at 11:30 p.m. Eastern time. Upcoming opponents first, then the remaining season.</p></div><button id="hoiRefreshOpponents" class="hm-save" data-write-only type="button">Refresh Opponent Stats</button></div>
 <p id="hoiRefreshStatus" role="status" aria-live="polite">Loading refresh status…</p>
 <details><summary>Source status</summary><div id="hoiRefreshDetails"></div></details>
 </section>
 <section class="section-shell section-block hoi-layout">
 <aside class="hoi-sidebar">
-<div class="hoi-panel"><div class="eyebrow">SEASON 55</div><h2>Opponent Board</h2><input id="hoiSearch" class="hoi-input" type="search" placeholder="Search opponent"><div class="hoi-filter-row"><button class="active" data-hoi-filter="all">All</button><button data-hoi-filter="repeat">Repeat</button><button data-hoi-filter="upcoming">Upcoming</button><button data-hoi-filter="played">Played</button></div><div id="hoiOpponents" class="hoi-opponents"></div></div>
+<div class="hoi-panel"><div class="eyebrow">SEASON 55</div><h2>Opponent Board</h2><label class="hr-search-label" for="hoiSearch">Find a team</label><input id="hoiSearch" class="hoi-input" type="search" placeholder="Search opponent"><div class="hoi-filter-row"><button class="active" data-hoi-filter="all">All</button><button data-hoi-filter="repeat">Repeat</button><button data-hoi-filter="upcoming">Upcoming</button><button data-hoi-filter="played">Played</button></div><div id="hoiOpponents" class="hoi-opponents"></div></div>
 </aside>
 
 <div class="hoi-main">
-<article class="hoi-panel">
-<div class="hoi-panel-head"><div><div class="eyebrow">FULL SCHEDULE</div><h2>66-Game Tracker</h2></div><span id="hoiScheduleStatus" class="hoi-muted">Season 55 loaded</span></div>
+<article class="hoi-panel hr-schedule" id="hrSchedule">
+<div class="hoi-panel-head"><div><div class="eyebrow">FULL SCHEDULE</div><h2>Season Game Tracker</h2></div><span id="hoiScheduleStatus" class="hoi-muted">Season 55 loaded</span></div>
 <div id="hoiSchedule" class="hoi-schedule"></div>
 </article>
 
 <article id="hoiDetail" class="hoi-panel" hidden>
 <div class="hoi-panel-head"><div><div class="eyebrow">OPPONENT FILE</div><h2 id="hoiOpponentName">Opponent</h2><p id="hoiOpponentMeta" class="hoi-muted"></p></div><div class="hoi-source-actions"><a id="hoiDeepScoutLink" class="hm-save" href="hitmen-opponent-scout.html">Deep Scout</a><a id="hoiBattleLink" class="hm-save" href="hitmen-battle-plan.html">Build Battle Plan</a></div></div>
 <div class="hoi-rollup" id="hoiRollup"></div>
+<nav class="hr-file-nav" aria-label="Opponent file sections"><a href="#hrRoster">Roster</a><a href="#hrMatchup">Shot map</a><a href="#hrHistory">Game history</a><a href="#hrReports">Reports</a><a href="#hrNotes">Scouting notes</a><a href="#hrFilm">Film room</a></nav>
 
-<section class="hoi-subsection hoi-roster-section">
+<section class="hoi-subsection hoi-roster-section" id="hrRoster">
   <div class="hoi-panel-head">
     <div><div class="eyebrow">CURRENT PERSONNEL</div><h3>Opponent Roster & Player Intelligence</h3><p id="hoiRosterStatus" class="hoi-muted">Roster sync pending.</p></div>
     <div class="hoi-source-actions">
@@ -55,14 +58,14 @@
   <div id="hoiRosterChanges" class="hoi-muted"></div><div id="hoiRoster" class="hoi-roster-grid"></div>
 </section>
 
-<section class="hoi-subsection hoi-zone-section">
+<section class="hoi-subsection hoi-zone-section" id="hrMatchup">
   <div class="hoi-panel-head">
     <div><div class="eyebrow">EA SHOOTING LOCATIONS</div><h3>Ice-Zone Heat Map</h3><p class="hoi-muted">Uses EA's 16 ice-location buckets, mapped to the same zone layout used by Chelstats. Current club totals are not LG-only; posted-line view narrows the map to the scheduled skaters when a lineup is available.</p></div>
   </div>
   <div id="hoiIceZoneHeat" class="hoi-ice-zone-wrap"><div class="hoi-empty">EA zone data loading…</div></div>
 </section>
 
-<section class="hoi-subsection hoi-season-games-section">
+<section class="hoi-subsection hoi-season-games-section" id="hrHistory">
   <div class="hoi-panel-head">
     <div><div class="eyebrow">VERIFIED GAME HISTORY</div><h3>Season Game File</h3><p class="hoi-muted">Every official LGCHL game for this opponent. EA match IDs, player shot attempts and raw game stats are attached whenever the public EA history can be reconciled to the LG result.</p></div>
   </div>
@@ -76,7 +79,7 @@
   <div id="hoiGameAnalysis"><div class="hoi-empty">Game analysis loading…</div></div>
 </section>
 
-<section class="hoi-subsection hoi-pregame-section">
+<section class="hoi-subsection hoi-pregame-section" id="hrReports">
   <div class="hoi-panel-head">
     <div><div class="eyebrow">WILDMAN HOCKEY OPS</div><h3>Pregame Scouting Report</h3><p class="hoi-muted">Built from current roster, public league stats, EA game logs, Calgary history and VOD evidence.</p></div>
     <button id="hoiGenerateReport" class="hm-save" data-write-only type="button">Generate Pregame Report</button>
@@ -84,7 +87,7 @@
   <div id="hoiPregameReport" class="hoi-pregame-report"><div class="hoi-empty">No generated pregame report yet.</div></div>
 </section>
 
-<div class="hoi-detail-grid">
+<div class="hoi-detail-grid" id="hrNotes">
 <section><h3>Season Scouting Report</h3><div class="hoi-form">
 <label class="wide">Scouting summary<textarea id="hoiSummary"></textarea></label>
 <label>Strengths<textarea id="hoiStrengths"></textarea></label><label>Weaknesses<textarea id="hoiWeaknesses"></textarea></label>
@@ -104,7 +107,7 @@
 </div>
 
 <section class="hoi-subsection"><div class="hoi-panel-head"><div><div class="eyebrow">HEAD-TO-HEAD</div><h3>Calgary Meetings</h3></div></div><div id="hoiMeetings"></div></section>
-<section class="hoi-subsection"><div class="hoi-panel-head"><div><div class="eyebrow">VIDEO EVIDENCE</div><h3>Opponent VODs</h3></div><a class="hm-save" href="vod-lab.html?team=calgary-hitmen">Open VOD Lab</a></div><div id="hoiVods"></div></section>
+<section class="hoi-subsection" id="hrFilm"><div class="hoi-panel-head"><div><div class="eyebrow">VIDEO EVIDENCE</div><h3>Opponent VODs</h3></div><a class="hm-save" href="vod-lab.html?team=calgary-hitmen">Open VOD Lab</a></div><div id="hoiVods"></div></section>
 </article>
 </div>
 </section>
@@ -112,4 +115,5 @@
 </main>
 <footer><div class="section-shell footer-inner"><div><b>CALGARY HITMEN OPPONENT INTELLIGENCE</b><span>Schedule · statistics · head-to-head · VOD evidence · rematch memory</span></div><p>Private management</p></div></footer>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="backend.js"></script><script src="management-guard.js"></script><script src="script.js"></script><script src="hitmen-opponents.js"></script><script src="shot-zone-map.js?v=20261009-heatcolors"></script><script src="hitmen-opponent-intel.js?v=20261009-cardmore"></script><script src="hitmen-opponent-refresh.js"></script>
+<script src="hitmen-neutral.js?v=20261004-neutral"></script>
 </body></html>
