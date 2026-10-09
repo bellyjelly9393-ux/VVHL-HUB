@@ -71,3 +71,22 @@
 .hoi-zone-leaders span{display:block;margin-top:3px;color:#988d90;font-size:7px}
 .hoi-zone-summary{display:flex;justify-content:space-between;gap:8px;margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.06);color:#c9bec0;font-size:8px;font-weight:800}
 @media(max-width:760px){.hoi-zone-grid{grid-template-columns:1fr}.hoi-zone-leaders{grid-template-columns:1fr 1fr}}
+
+/* EA game analysis */
+.hoi-ga-summary{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px}
+.hoi-ga-summary b{font-size:17px!important}
+.hoi-ga-h{margin:16px 0 6px;font:800 12px/1 "Barlow Condensed",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#98a0ab}
+.hoi-ga-table{overflow-x:auto;border:1px solid rgba(255,255,255,.07);margin-bottom:8px}
+.hoi-ga-table table{width:100%;border-collapse:collapse;font-size:11px;min-width:560px}
+.hoi-ga-table th,.hoi-ga-table td{padding:6px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap}
+.hoi-ga-table th{font:700 9px/1 "Barlow Condensed",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#98a0ab;background:rgba(255,255,255,.03)}
+.hoi-ga-table .n{text-align:right;font-variant-numeric:tabular-nums}
+.hoi-ga-game{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);margin-bottom:8px;padding:8px 10px}
+.hoi-ga-game>summary{cursor:pointer;font-size:13px}
+.hoi-ga-game>summary span{display:block;color:#98a0ab;font-size:10px;margin-top:2px}
+.hoi-ga-game h5{margin:10px 0 6px;font:800 12px/1 "Barlow Condensed",sans-serif;letter-spacing:.1em;text-transform:uppercase}
+.hoi-ga-box{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
+.hoi-ga-box>div{border:1px solid rgba(255,255,255,.07);padding:7px}
+.hoi-ga-box small{display:block;color:#98a0ab;font-size:9px;letter-spacing:.1em}
+.hoi-ga-box b{font:800 15px/1.2 "Barlow Condensed",sans-serif}
+@media(max-width:760px){.hoi-ga-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.hoi-ga-box{grid-template-columns:repeat(2,minmax(0,1fr))}}

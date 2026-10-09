@@ -43,6 +43,7 @@
       renderReports(q[4].data||[]);
       renderIceZoneHeat(q[1].data||[],q[2].data||[],q[4].data||[]);
       renderSeasonGames(q[5].data||[],q[6].data||[]);
+      renderGameAnalysis(q[6].data||[]);
       const lg=q[0].data?.lg_roster_updated_at;
       setStatus((q[1].data||[]).length+' active players'+(lg?' · LG synced '+new Date(lg).toLocaleString():' · LG roster not synced yet'));
     }catch(e){console.error(e);setStatus(e.message||'Opponent intelligence could not load.')}
@@ -179,6 +180,59 @@
     return rows.slice(0,3).map(p=>esc(p.name)+' · '+p.attempts+' ATT / '+p.shots+' SOG · '+p.g+'G '+p.a+'A').join('<br>');
   }
 
+
+  /* ---------- EA game analysis: every EA match that reconciles to an official LG game ---------- */
+  const POS={center:'C',leftWing:'LW',rightWing:'RW',defenseMen:'D',goalie:'G'};
+  const n0=v=>{const x=Number(v);return Number.isFinite(x)?x:0};
+  const mmss=sec=>{const t=Math.round(n0(sec));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
+  const pct=(a,b)=>b>0?(100*a/b).toFixed(1)+'%':'—';
+  const sidePlayers=(ea,side)=>Object.values(ea?.player_stats?.[side]||{}).filter(p=>p&&typeof p==='object');
+  const shortClub=n=>String(n||'').replace(/^LG(CHL)?\s+/i,'');
+  function playerLine(p){
+    const g=String(p.position)==='goalie';
+    return '<tr><td>'+esc(p.playername||'—')+'</td><td>'+esc(POS[p.position]||p.position||'')+'</td>'+
+      (g?'<td class="n" colspan="2">'+esc(n0(p.glsaves))+' saves / '+esc(n0(p.glshots))+' shots</td><td class="n" colspan="2">'+esc(pct(n0(p.glsaves),n0(p.glshots)))+'</td><td class="n" colspan="4"></td>'
+        :'<td class="n">'+n0(p.skgoals)+'</td><td class="n">'+n0(p.skassists)+'</td><td class="n">'+n0(p.skshots)+'</td><td class="n">'+n0(p.skshotattempts)+'</td><td class="n">'+n0(p.skplusmin)+'</td><td class="n">'+n0(p.skhits)+'</td><td class="n">'+n0(p.skgiveaways)+'/'+n0(p.sktakeaways)+'</td><td class="n">'+esc(String(p.skpasspct??'—'))+'</td>')+
+      '<td class="n">'+esc(mmss(p.toiseconds))+'</td></tr>';
+  }
+  function linesTable(list){
+    return '<div class="hoi-ga-table"><table><thead><tr><th>Player</th><th>Pos</th><th class="n">G</th><th class="n">A</th><th class="n">SOG</th><th class="n">ATT</th><th class="n">+/-</th><th class="n">HIT</th><th class="n">GV/TK</th><th class="n">PASS%</th><th class="n">TOI</th></tr></thead><tbody>'+
+      list.sort((a,b)=>(a.position==='goalie')-(b.position==='goalie')||n0(b.skshotattempts)-n0(a.skshotattempts)).map(playerLine).join('')+'</tbody></table></div>';
+  }
+  function renderGameAnalysis(eaRows){
+    const box=E('hoiGameAnalysis');if(!box)return;
+    const rows=(eaRows||[]).filter(r=>r.verified_official&&r.player_stats?.team).sort((a,b)=>Date.parse(b.played_at)-Date.parse(a.played_at));
+    if(!rows.length){box.innerHTML='<div class="hoi-empty">No EA games have been matched to official LG games for this team yet. Matching runs automatically every game night after the games.</div>';return}
+    const T={gp:rows.length,gf:0,ga:0,sf:0,sa:0,toa:0,toaOpp:0,pc:0,pa:0,pcO:0,paO:0,ppg:0,ppo:0,ppga:0,ppoa:0,att:0,hits:0},by=new Map();
+    rows.forEach(r=>{
+      const ts=r.team_stats||{},os=r.opponent_stats||{};
+      T.gf+=n0(r.goals_for);T.ga+=n0(r.goals_against);T.sf+=n0(ts.shots);T.sa+=n0(os.shots);T.toa+=n0(ts.toa);T.toaOpp+=n0(os.toa);
+      T.pc+=n0(ts.passc);T.pa+=n0(ts.passa);T.pcO+=n0(os.passc);T.paO+=n0(os.passa);T.ppg+=n0(ts.ppg);T.ppo+=n0(ts.ppo);T.ppga+=n0(os.ppg);T.ppoa+=n0(os.ppo);
+      sidePlayers(r,'team').filter(p=>p.position!=='goalie').forEach(p=>{
+        const k=norm(p.playername);if(!k)return;
+        const x=by.get(k)||{name:p.playername,pos:POS[p.position]||'',gp:0,g:0,a:0,sog:0,att:0,hit:0,gv:0,tk:0,toi:0,last:null};
+        x.gp++;x.g+=n0(p.skgoals);x.a+=n0(p.skassists);x.sog+=n0(p.skshots);x.att+=n0(p.skshotattempts);x.hit+=n0(p.skhits);x.gv+=n0(p.skgiveaways);x.tk+=n0(p.sktakeaways);x.toi+=n0(p.toiseconds);
+        if(!x.last||Date.parse(r.played_at)>x.last.t)x.last={t:Date.parse(r.played_at),sog:n0(p.skshots),att:n0(p.skshotattempts)};
+        T.att+=n0(p.skshotattempts);T.hits+=n0(p.skhits);by.set(k,x);
+      });
+    });
+    const per=v=>(v/T.gp).toFixed(1);
+    const summary='<div class="hoi-season-summary hoi-ga-summary">'+[
+      ['EA GAMES MATCHED',T.gp],['SHOTS FOR / AGAINST',per(T.sf)+' / '+per(T.sa)],['SHOT ATTEMPTS',per(T.att)],['TIME ON ATTACK',mmss(T.toa/T.gp)+' vs '+mmss(T.toaOpp/T.gp)],['PASSING',pct(T.pc,T.pa)+' vs '+pct(T.pcO,T.paO)],['POWER PLAY / KILL',T.ppg+'/'+T.ppo+' · allowed '+T.ppga+'/'+T.ppoa],['HITS',per(T.hits)],['GOALS FOR / AGAINST',per(T.gf)+' / '+per(T.ga)]
+    ].map(x=>'<div><small>'+x[0]+'</small><b>'+esc(x[1])+'</b></div>').join('')+'</div>';
+    const shooters=[...by.values()].sort((a,b)=>b.att-a.att||b.sog-a.sog);
+    const shotLog='<h4 class="hoi-ga-h">Shot log by player</h4><div class="hoi-ga-table"><table><thead><tr><th>Player</th><th>Pos</th><th class="n">GP</th><th class="n">G</th><th class="n">A</th><th class="n">SOG</th><th class="n">ATT</th><th class="n">SOG/G</th><th class="n">ATT/G</th><th class="n">SH%</th><th class="n">HIT</th><th class="n">GV/TK</th><th class="n">LAST GAME</th></tr></thead><tbody>'+
+      shooters.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.pos)+'</td><td class="n">'+x.gp+'</td><td class="n">'+x.g+'</td><td class="n">'+x.a+'</td><td class="n">'+x.sog+'</td><td class="n">'+x.att+'</td><td class="n">'+(x.sog/x.gp).toFixed(1)+'</td><td class="n">'+(x.att/x.gp).toFixed(1)+'</td><td class="n">'+pct(x.g,x.sog)+'</td><td class="n">'+x.hit+'</td><td class="n">'+x.gv+'/'+x.tk+'</td><td class="n">'+(x.last?x.last.sog+' SOG / '+x.last.att+' ATT':'—')+'</td></tr>').join('')+'</tbody></table></div>';
+    const games='<h4 class="hoi-ga-h">Game by game</h4>'+rows.map(r=>{
+      const ts=r.team_stats||{},os=r.opponent_stats||{},date=r.played_at?new Date(r.played_at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—';
+      const other=shortClub(os?.details?.name)||'Opponent';
+      const line=(a,b,c)=>'<div><small>'+a+'</small><b>'+esc(b)+'</b><em>'+esc(c)+'</em></div>';
+      return '<details class="hoi-ga-game"><summary><b>'+esc(r.result||'—')+' '+esc(r.goals_for??'—')+'-'+esc(r.goals_against??'—')+'</b> vs '+esc(other)+' <span>'+esc(date)+' · LG '+esc(r.lg_game_id)+' · EA '+esc(r.source_game_id)+'</span></summary>'+
+        '<div class="hoi-ga-box">'+line('SHOTS',n0(ts.shots)+' - '+n0(os.shots),'')+line('TIME ON ATTACK',mmss(ts.toa)+' - '+mmss(os.toa),'')+line('PASSING',pct(n0(ts.passc),n0(ts.passa))+' - '+pct(n0(os.passc),n0(os.passa)),'')+line('POWER PLAY',n0(ts.ppg)+'/'+n0(ts.ppo)+' - '+n0(os.ppg)+'/'+n0(os.ppo),'')+'</div>'+
+        '<h5>'+esc(selected?.name||'This team')+'</h5>'+linesTable(sidePlayers(r,'team'))+'<h5>'+esc(other)+'</h5>'+linesTable(sidePlayers(r,'opponent'))+'</details>';
+    }).join('');
+    box.innerHTML=summary+shotLog+games+'<p class="hoi-heat-note">Only EA matches that line up with an official LG game (same two clubs, same final score, nearest start time) are shown. EA keeps only the five most recent private matches per club, so the refresh runs after every game night to save each night before it ages out. Shot attempts include blocked and missed shots; SOG are shots on net.</p>';
+  }
   function renderSeasonGames(lgRows,eaRows){
     const box=E('hoiSeasonGames');if(!box)return;
     if(!lgRows.length){box.innerHTML='<div class="hoi-empty">No official LGCHL games have been indexed for this opponent yet.</div>';return}

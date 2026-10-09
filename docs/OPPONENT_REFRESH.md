@@ -22,3 +22,9 @@ The existing ChelScout pregame/GM context reads these source snapshots, player s
 - Local tests: `node --test test-opponent-refresh.mjs`. CI additionally checks Deno, existing VOD/ChelScout regressions and desktop/mobile dashboard behavior. SQL rollback checks exercise auth and incomplete-roster protection without committing test changes.
 
 No new AI provider keys, login flows or changes to the VOD worker are required.
+
+## EA games and official LG game IDs
+
+EA only returns each club's **five most recent** private matches, no matter how many are requested. A pull therefore has to run soon after each game night, which is why the scheduled refresh runs Sunday, Monday and Tuesday at 11:30 p.m. Eastern. Each private EA match is saved only when it lines up with an official LGCHL game: both exact EA club IDs, the exact final score, and the nearest start time within 24 hours. Matched games keep the official `lg_game_id`, the EA match ID, team stats and every player's line (shots, shot attempts, hits, time on ice and more). Games older than EA's five-match window cannot be recovered later, so a missed night is a permanent gap.
+
+Opponent Intelligence shows these under **EA Game Analysis**: team rollups, a shot log per player and the full player lines for both teams in each game. LG's authenticated Public Log only lists Calgary's own players, so opponent per-game shot numbers come from the matched EA games.
