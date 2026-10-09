@@ -38,7 +38,7 @@
         DB().from('hitmen_opponent_ea_games').select('source_game_id,lg_game_id,played_at,result,goals_for,goals_against,team_stats,opponent_stats,player_stats,verified_official,verification_confidence,verification_basis').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',selected.name).eq('verified_official',true).order('played_at',{ascending:true})
       ]);
       const er=q.find(x=>x.error);if(er)throw er.error;
-      renderRoster(q[1].data||[],q[2].data||[]);
+      renderRoster(q[1].data||[],q[2].data||[],q[6].data||[]);
       renderEa(q[0].data,q[3].data||[]);
       renderReports(q[4].data||[]);
       renderIceZoneHeat(q[1].data||[],q[2].data||[],q[4].data||[]);
@@ -58,16 +58,54 @@
     return m;
   }
 
-  function renderRoster(rows,statsRows){
+  /* Player cards: one tap opens that player's shot map and game-by-game log (replaces the old raw-stats dump). */
+  let cardData={eaStats:new Map(),eaGames:[]};
+  function playerGameRows(name,eaGames){
+    const k=norm(name),out=[];
+    (eaGames||[]).filter(g=>g.verified_official&&g.player_stats?.team).forEach(g=>{
+      const p=sidePlayers(g,'team').find(x=>norm(x.playername)===k);
+      if(p&&p.position!=='goalie')out.push({g,p});
+    });
+    return out.sort((a,b)=>Date.parse(b.g.played_at)-Date.parse(a.g.played_at));
+  }
+  function cardMoreBody(key,name){
+    const ea=cardData.eaStats.get(key),zr=ea?zoneRowsFromStats(ea):[],shots=zr.reduce((n,z)=>n+z.shots,0),games=playerGameRows(name,cardData.eaGames);
+    let h='';
+    if(shots>0)h+='<div class="hoi-card-map"></div>'; else h+='<p class="hoi-muted">No EA shot locations are saved for this player yet.</p>';
+    if(games.length){
+      const tot=games.reduce((t,{p})=>({g:t.g+n0(p.skgoals),a:t.a+n0(p.skassists),sog:t.sog+n0(p.skshots),att:t.att+n0(p.skshotattempts),hit:t.hit+n0(p.skhits)}),{g:0,a:0,sog:0,att:0,hit:0});
+      h+='<h5 class="hoi-card-h">Game log · '+games.length+' games matched to LG</h5><div class="hoi-ga-table"><table><thead><tr><th>Date</th><th>Vs</th><th class="n">G</th><th class="n">A</th><th class="n">SOG</th><th class="n">ATT</th><th class="n">HIT</th><th class="n">TOI</th></tr></thead><tbody>'+
+        games.map(({g,p})=>'<tr><td>'+esc(g.played_at?new Date(g.played_at).toLocaleDateString([],{month:'short',day:'numeric'}):'—')+'</td><td>'+esc(g.result||'')+' '+esc(g.goals_for??'')+'-'+esc(g.goals_against??'')+' '+esc(shortClub(g.opponent_stats?.details?.name)||'')+'</td><td class="n">'+n0(p.skgoals)+'</td><td class="n">'+n0(p.skassists)+'</td><td class="n">'+n0(p.skshots)+'</td><td class="n">'+n0(p.skshotattempts)+'</td><td class="n">'+n0(p.skhits)+'</td><td class="n">'+esc(mmss(p.toiseconds))+'</td></tr>').join('')+
+        '<tr><td colspan="2"><b>Total</b></td><td class="n">'+tot.g+'</td><td class="n">'+tot.a+'</td><td class="n">'+tot.sog+'</td><td class="n">'+tot.att+'</td><td class="n">'+tot.hit+'</td><td></td></tr></tbody></table></div>';
+    }
+    return h;
+  }
+  function bindCardMore(box){
+    if(box.__moreBound)return;box.__moreBound=true;
+    box.addEventListener('toggle',e=>{
+      const d=e.target;if(!d||!d.classList||!d.classList.contains('hoi-card-more')||!d.open||d.dataset.ready)return;
+      d.dataset.ready='1';
+      const key=d.dataset.player,body=d.querySelector('.hoi-card-more-body');
+      body.innerHTML=cardMoreBody(key,d.dataset.name);
+      const host=body.querySelector('.hoi-card-map'),ea=cardData.eaStats.get(key);
+      if(host&&ea&&window.WildmanShotZones)window.WildmanShotZones.mountAnalysis(host,{ice:zoneRowsFromStats(ea),net:netRowsFromStats(ea),gp:num(ea.games_played)||num(ea.raw_stats?.skgp)||null,state:zoneState});
+    },true);
+  }
+
+  function renderRoster(rows,statsRows,eaGames){
     const box=E('hoiRoster');if(!box)return;
     const stats=latestStatsByName(statsRows);
+    cardData={eaStats:latestEaStatsByName(statsRows),eaGames:eaGames||[]};
+    bindCardMore(box);
     if(!rows.length){box.innerHTML='<div class="hoi-empty" style="grid-column:1/-1">No current roster imported yet. Use Sync LG Rosters.</div>';return}
     const posOrder={LW:1,C:2,RW:3,LD:4,RD:5,G:6};
     rows.sort((a,b)=>(posOrder[a.position]||9)-(posOrder[b.position]||9)||String(a.gamertag).localeCompare(String(b.gamertag)));
     box.innerHTML=rows.map(r=>{
       const s=stats.get(String(r.gamertag||'').trim().toLowerCase())||{};
       const pts=s.points??((s.goals!=null||s.assists!=null)?Number(s.goals||0)+Number(s.assists||0):null);
-      const extra=s.raw_stats&&Object.keys(s.raw_stats).length?'<details><summary>Raw public stats</summary><pre>'+esc(JSON.stringify(s.raw_stats,null,2))+'</pre></details>':'';
+      const pk=norm(r.gamertag),eaS=cardData.eaStats.get(pk),hasMore=r.position!=='G'&&((eaS&&zoneRowsFromStats(eaS).some(z=>z.shots>0))||playerGameRows(r.gamertag,cardData.eaGames).length);
+      const more=hasMore?'<details class="hoi-card-more" data-player="'+esc(pk)+'" data-name="'+esc(r.gamertag)+'"><summary>Shot map and game log</summary><div class="hoi-card-more-body"></div></details>':'';
+      const extra=more+(s.raw_stats&&Object.keys(s.raw_stats).length?'<details><summary>Raw public stats</summary><pre>'+esc(JSON.stringify(s.raw_stats,null,2))+'</pre></details>':'');
       return '<article class="hoi-player-card"><div class="hoi-player-card-head"><div><strong>'+esc(r.gamertag)+'</strong><div class="hoi-player-sub">'+esc(r.management_role||r.roster_role||'Active')+(r.salary!=null?' · '+money(r.salary):'')+'</div></div><span class="hoi-player-pos">'+esc(r.position||'—')+'</span></div>'+
       '<p class="hoi-muted">'+esc(s.source==='lg_chl'?'LGCHL S55 season totals':s.source==='ea_nhl27'?'EA club totals · not league-only':'No matched stats')+(s.source_updated_at?' · '+esc(new Date(s.source_updated_at).toLocaleString()):'')+'</p><div class="hoi-player-stats">'+stat('GP',s.games_played)+stat('G',s.goals)+stat('A',s.assists)+stat('PTS',pts)+stat('+/-',s.plus_minus)+stat('FO%',s.faceoff_pct)+stat('HITS',s.hits)+stat('PIM',s.pim)+(r.position==='G'?stat('SV%',s.goalie_save_pct)+stat('GAA',s.goalie_gaa):stat('SHOTS',s.shots)+stat('TA',s.takeaways)+stat('GA',s.giveaways)+stat('PASS%',s.passing_pct))+'</div>'+extra+'</article>';
     }).join('');
