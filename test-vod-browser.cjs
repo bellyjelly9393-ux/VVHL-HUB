@@ -10,6 +10,7 @@ const fixture=()=>{
   function query(table){let filters=[],payload=null;const q={select(){return q},eq(k,v){filters.push(r=>r[k]===v);return q},neq(k,v){filters.push(r=>r[k]!==v);return q},is(k,v){filters.push(r=>r[k]==v);return q},in(k,v){filters.push(r=>v.includes(r[k]));return q},order(){return q},limit(){return q},update(v){payload=v;return q},then(resolve){let data=(rows[table]||[]).filter(r=>filters.every(f=>f(r)));if(payload)data.forEach(r=>Object.assign(r,payload));return Promise.resolve({data:JSON.parse(JSON.stringify(data)),error:null}).then(resolve)},maybeSingle(){return q.then(r=>({...r,data:r.data[0]||null}))}};return q;}
   window.VVHLBackend={db:{from:query,auth:{getSession:async()=>({data:{session:{access_token:'fixture'}}})},rpc:async(name,args)=>{
     const r=rows.vod_review_sessions[0];window.rpcCalls.push({name,args});
+    if(name==='vod_player_match_context')return {data:{candidates:[{id:'locker-one',gamertag:'TestGT',position:'C',lg_user_id:'123',played:true},{id:'locker-two',gamertag:'OtherGT',position:'G',played:false}],suggestions:[],matches:r.review_document?.player_matches||{}}};
     if(name==='set_vod_period_windows'){Object.assign(r,{source_start_seconds:args.window_start,source_end_seconds:args.window_end,skip_ranges:args.skip_ranges});return {data:{added:0,archived:0,kept:args.periods.length}};}
     if(name==='publish_vod_review'){
       window.published.push({name,args});r.review_document=args.report;r.status='complete';
@@ -43,6 +44,7 @@ const fixture=()=>{
     return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
    }
    if(u.hostname!=='wildman.test')return route.fulfill({status:200,contentType:'application/json',body:'{}'});
+   if(name==='api/chelstats-player')return route.fulfill({contentType:'application/json',body:JSON.stringify({profile:{chelName:'Synthetic CHEL'}})});
    if(name==='backend.js')return route.fulfill({contentType:'application/javascript',body:`(${fixture.toString()})();`});
    if(['management-guard.js','script.js'].includes(name))return route.fulfill({contentType:'application/javascript',body:''});
    const filename=path.join(root,name);
@@ -73,6 +75,30 @@ const fixture=()=>{
   await page.locator('#publishVodReport').click();
   await page.waitForFunction(()=>window.published.length===1);
   assert.equal(await page.evaluate(()=>window.published[0].name),'publish_vod_review');
+  // Game-scoped matching keeps aliases raw and sends stable locker IDs to the server.
+  await page.evaluate(()=>window.testRows.vod_review_sessions[0].review_document.players=[
+    {player:'TestGT',strengths:'Evidence',evidence_timestamps:[1900]},
+    {player:'Synthetic CHEL',strengths:'Same player evidence',evidence_timestamps:[1950]},
+    {player:'Opponent Name',strengths:'Opponent evidence',evidence_timestamps:[2000]}
+  ]);
+  await page.locator('#loadVodPlayerMatches').click();
+  await page.locator('[data-vod-player-name="synthetic chel"]').waitFor();
+  assert.equal(await page.locator('[data-vod-player-name="testgt"]').inputValue(),'locker-one');
+  assert.equal(await page.locator('[data-vod-player-name="synthetic chel"]').inputValue(),'');
+  await page.locator('#lookupVodChelNames').click();
+  await page.waitForFunction(()=>document.getElementById('vodPlayerMatchStatus').textContent.includes('CHEL names found'));
+  assert.match(await page.locator('#vodPlayerMatchRows').innerText(),/Suggested: TestGT/);
+  assert.equal(await page.locator('[data-vod-player-name="synthetic chel"]').inputValue(),'','External hints must not silently select an identity');
+  await page.locator('[data-vod-player-name="synthetic chel"]').selectOption('locker-one');
+  await page.locator('[data-vod-player-name="opponent name"]').selectOption('ignore');
+  await page.locator('#saveVodPlayerMatches').click();
+  await page.waitForFunction(()=>window.published.length===2);
+  assert.equal(await page.evaluate(()=>window.published[1].args.report.player_matches['synthetic chel']),'locker-one');
+  assert.equal(await page.evaluate(()=>window.published[1].args.report.player_matches['opponent name']),'ignore');
+  await page.locator('#loadVodPlayerMatches').click();
+  await page.waitForFunction(()=>document.getElementById('vodPlayerMatchStatus').textContent.includes('confirmed by'));
+  assert.equal(await page.locator('[data-vod-player-name="synthetic chel"]').inputValue(),'locker-one');
+  await page.evaluate(()=>window.published.splice(0,1));
   // Approved reports collapse, and view toggles never reopen or overwrite evidence.
   assert.equal(await page.locator('#gameReviewLayers details[open]').count(),0);
   await page.locator('[data-segment-id="p1"]').click();

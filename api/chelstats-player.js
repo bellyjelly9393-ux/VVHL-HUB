@@ -102,7 +102,11 @@ export default async function handler(req, res) {
 
     const profile = {
       username: firstDefined(node, ["Username", "username"]) || username,
-      platform: firstDefined(node, ["Platform", "platform"]),
+      // Return a name only when the upstream profile confirms the requested gamertag.
+      chelName: String(firstDefined(node, ["Username", "username"]) || "").trim().toLowerCase() === username.toLowerCase()
+        ? firstDefined(raw, ["skplayername"]) || raw.identity?.displayName || firstDefined(node, ["skplayername"]) || null
+        : null,
+      platform: firstDefined(node, ["Platform", "platform"]) || raw.identity?.platform || null,
       position: firstDefined(node, ["Position", "position"]),
       record: firstDefined(node, ["Record", "record"]),
       gamesPlayed: numberValue(firstDefined(node, ["Games Played", "GPs", "Games Played "])),

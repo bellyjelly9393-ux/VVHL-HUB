@@ -1,6 +1,8 @@
 (() => {
   const state = { initialized:false, loading:false, teamId:"", reviews:[], segments:[], markers:[], publications:[], selectedReviewId:"", selectedSegmentId:"" };
   const model = window.WildmanVODReview;
+  let playerMatching = null;
+  let publishing = false;
   let editingPeriod = false;
   let savingPeriod = false;
   let manualFieldsReviewId = "";
@@ -552,6 +554,7 @@
     $("gameReviewLayers").innerHTML=`<p class="analysis-note">${problems.length?esc(problems.join(" ")):"All periods approved. Review the three report layers before publishing."}</p><details data-layer="team"><summary>Team Systems Report</summary>${section("Game overall",scoreLabel(doc.game_rating))}${section("Result",doc.result)}${section("Process",doc.process||doc.summary)}<div class="period-review-content">${model.systems.map(k=>section(k.replaceAll("_"," "),doc.team_systems?.[k])).join("")}</div>${doc.tactical_report?section("Tactical evidence",doc.tactical_report):""}</details><details data-layer="units"><summary>Line / D-pair Reports</summary>${doc.units.length?doc.units.map(u=>section(`${u.label} · ${u.players.join(" / ")}`,[u.summary,u.strengths,u.concerns,u.adjustments,scoreLabel(u.rating)].filter(Boolean).join("\n"))).join(""):section("Unit evidence","No verified line or defense-pair report yet. Lineup names alone do not establish chemistry.")}</details><details data-layer="players"><summary>Individual Player Reports</summary>${doc.players.length?doc.players.map(p=>section(p.player,[p.strengths,p.concerns,p.habits,p.coach_note,scoreLabel(p.rating)].filter(Boolean).join("\n"))+`<p class="evidence-links">${(p.evidence_timestamps||[]).map(t=>timestampLink(t,fmtTime(t))).join(" · ")}</p>`).join(""):section("Player evidence",doc.player_report)}</details>`;
     $("gameReviewLayers").querySelectorAll("details").forEach(d=>{d.open=openLayers.has(d.dataset.layer);});
     $("publishVodReport").disabled=problems.length>0;
+    renderPlayerMatches();
     renderReviewCompletion();
     let editor=$("structuredReportFields");
     if(!editor){editor=document.createElement("div");editor.id="structuredReportFields";editor.className="rollup-grid";$("gameReportEdits").append(editor);}
@@ -566,18 +569,80 @@
     doc.summary=keep($("gameSummary"),doc.summary);
     doc.tactical_report=keep($("gameTactical"),doc.tactical_report);
     doc.player_report=keep($("gamePlayers"),doc.player_report);
+    doc.player_matches=playerMatching?.reviewId===state.selectedReviewId
+      ? {...playerMatching.matches} : {...(currentReview()?.review_document?.player_matches||{})};
     return doc;
   }
-  async function publishReport(){
+  const playerNameKey=name=>String(name||"").trim().toLowerCase();
+  function renderPlayerMatches(){
+    const box=$("vodPlayerMatchRows");if(!box)return;
+    const loaded=playerMatching?.reviewId===state.selectedReviewId;
+    $("lookupVodChelNames").disabled=!loaded||publishing;
+    $("saveVodPlayerMatches").disabled=!loaded||publishing||model.periodErrors(currentReview(),reviewSegments(),{approved:true}).length>0;
+    if(!loaded){box.innerHTML="";$("vodPlayerMatchStatus").textContent="Load the game’s players to match names or review saved matches.";return;}
+    const {candidates,matches,suggestions}=playerMatching;
+    const groups=[["Played this game · official box score",candidates.filter(p=>p.played)],
+      ["Listed in this game’s lineup",candidates.filter(p=>!p.played&&p.lineup)],
+      ["Other team players · confirm participation",candidates.filter(p=>!p.played&&!p.lineup)]];
+    const names=[...new Set(reportDocument().players.map(p=>p.player))];
+    box.innerHTML=names.map((name,i)=>{
+      const key=playerNameKey(name),exact=candidates.filter(p=>playerNameKey(p.gamertag)===key);
+      const value=matches[key]??(exact.length===1?exact[0].id:"");
+      const hints=suggestions.filter(s=>playerNameKey(s.name)===key).map(s=>s.gamertag);
+      const chel=candidates.filter(p=>p.chelName&&playerNameKey(p.chelName)===key).map(p=>p.gamertag);
+      const hint=[...new Set([...hints,...chel])];
+      return `<label class="vod-player-match-row" for="vodMatch${i}"><span><strong>${esc(name)}</strong><small>${hint.length?'Suggested: '+esc(hint.join(' / '))+' · confirm below':value==='ignore'?'Excluded from team stalls':value?'Linked to one player':'Needs a match'}</small></span><select id="vodMatch${i}" class="select-field" data-vod-player-name="${esc(key)}"><option value="">Leave unmatched</option><option value="ignore" ${value==='ignore'?'selected':''}>Opponent / exclude from team stalls</option>${groups.filter(([,players])=>players.length).map(([label,players])=>`<optgroup label="${esc(label)}">${players.map(p=>`<option value="${esc(p.id)}" ${value===p.id?'selected':''}>${esc(p.gamertag)} · ${esc(p.position||'?')}${p.chelName?' · CHEL: '+esc(p.chelName):''}${p.lg_user_id?' · LG '+esc(p.lg_user_id):''}</option>`).join('')}</optgroup>`).join('')}</select></label>`;
+    }).join('');
+    box.querySelectorAll('select').forEach(el=>el.addEventListener('change',()=>{
+      // Empty is retained explicitly: it clears a prior manual match on publish.
+      playerMatching.matches[el.dataset.vodPlayerName]=el.value;
+      $("vodPlayerMatchStatus").textContent="Unsaved matches. Save to update the existing reports.";
+    }));
+  }
+  async function loadPlayerMatches(){
     const r=currentReview();if(!r)return;
+    $("loadVodPlayerMatches").disabled=true;$("vodPlayerMatchStatus").textContent="Loading game participants…";
+    try{
+      const {data,error}=await db().rpc('vod_player_match_context',{target_review:r.id});if(error)throw error;
+      if(currentReview()?.id!==r.id)return;
+      playerMatching={reviewId:r.id,candidates:data.candidates||[],suggestions:data.suggestions||[],matches:data.matches||{}};
+      renderPlayerMatches();
+      const count=playerMatching.candidates.filter(p=>p.played).length;
+      $("vodPlayerMatchStatus").textContent=count?`${count} players confirmed by this game’s box score. Other roster players are listed separately.`:'No official box-score participants are linked yet. Verify participation before choosing a roster player.';
+    }catch(e){if(currentReview()?.id===r.id)$("vodPlayerMatchStatus").textContent=e.message||'Could not load players.';}
+    finally{$("loadVodPlayerMatches").disabled=false;}
+  }
+  async function lookupChelNames(){
+    const context=playerMatching;if(!context||context.reviewId!==state.selectedReviewId)return;
+    const played=context.candidates.filter(p=>p.played||p.lineup);
+    const candidates=played.length?played:context.candidates;
+    $("lookupVodChelNames").disabled=true;$("vodPlayerMatchStatus").textContent="Checking ChelStats player names…";
+    let found=0,failed=0;
+    // Bounded concurrency avoids sending a whole roster at once.
+    const queue=[...candidates];
+    await Promise.all([0,1,2].map(async()=>{while(queue.length){
+      const p=queue.shift();
+      try{const response=await fetch('/api/chelstats-player?username='+encodeURIComponent(p.gamertag),{signal:AbortSignal.timeout(20000)});
+        if(!response.ok)throw new Error('Lookup unavailable');const data=await response.json();
+        if(data.profile?.chelName){p.chelName=data.profile.chelName;found++;}
+      }catch{failed++;}
+    }}));
+    if(playerMatching!==context||state.selectedReviewId!==context.reviewId)return;
+    renderPlayerMatches();$("vodPlayerMatchStatus").textContent=`${found} CHEL names found${failed?` · ${failed} lookups unavailable`:''}. Current profile names are suggestions; confirm against this game’s footage.`;
+  }
+
+  async function publishReport(){
+    const r=currentReview();if(!r||publishing)return;
     const problems=model.periodErrors(r,reviewSegments(),{approved:true});if(problems.length)return setStatus(problems.join(" "),"error");
+    publishing=true;
     $("publishVodReport").disabled=true;
+    $("saveVodPlayerMatches").disabled=true;
     try{
       const {data,error}=await db().rpc("publish_vod_review",{target_review:r.id,expected_updated_at:r.updated_at,report:editedDocument()});
       if(error)throw error;
-      await loadData();$("publishVodStatus").textContent=`Published approved report · ${data?.player_reports||0} player reports updated.${data?.unmatched_players?.length?' Unmatched player names need correction: '+data.unmatched_players.join(', '):''}`;
+      await loadData();if(currentReview()?.id!==r.id)return;$("vodPlayerMatchStatus").textContent="Saved. Confirmed names update the existing player reports.";$("publishVodStatus").textContent=`Published approved report · ${data?.player_reports||0} player reports updated.${data?.unmatched_players?.length?' Unmatched player names need correction: '+data.unmatched_players.join(', '):''}`;
     }catch(error){$("publishVodStatus").textContent=error.message||"Publishing failed. Drafts remain private.";}
-    finally{$("publishVodReport").disabled=model.periodErrors(currentReview(),reviewSegments(),{approved:true}).length>0;}
+    finally{publishing=false;$("publishVodReport").disabled=model.periodErrors(currentReview(),reviewSegments(),{approved:true}).length>0;renderPlayerMatches();}
   }
 
   function renderReviewCompletion(){
@@ -620,6 +685,9 @@
     $("approveSegment")?.addEventListener("click",()=>saveSegment("complete"));
     $("rejectSegment")?.addEventListener("click",()=>saveSegment("rejected"));
     $("publishVodReport")?.addEventListener("click",publishReport);
+    $("loadVodPlayerMatches")?.addEventListener("click",loadPlayerMatches);
+    $("lookupVodChelNames")?.addEventListener("click",lookupChelNames);
+    $("saveVodPlayerMatches")?.addEventListener("click",publishReport);
     $("reviewDoneCheck")?.addEventListener("change",renderReviewCompletion);
     $("fileCompletedVod")?.addEventListener("click",fileCompletedReview);
     $("saveSegment")?.addEventListener("click",saveSegment); $("addMarker")?.addEventListener("click",addMarker); $("openSegment")?.addEventListener("click",()=>currentSegment()&&openSegmentById(currentSegment().id)); $("copySegmentPacket")?.addEventListener("click",copySegmentPacket);
