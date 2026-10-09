@@ -121,7 +121,7 @@
     const model=api.sumRows(rows);
     if(!model.totalShots)return '<article class="hoi-ice-zone-card"><div class="hoi-heat-head"><div><strong>'+esc(title)+'</strong><small>'+esc(subtitle)+'</small></div></div><div class="hoi-empty">No EA ice-zone totals are available for these skaters yet.</div></article>';
     return '<article class="hoi-ice-zone-card"><div class="hoi-heat-head"><div><strong>'+esc(title)+'</strong><small>'+esc(subtitle)+'</small></div><span>'+esc(model.totalShots)+' SHOTS</span></div>'+
-      '<div class="hoi-ice-zone-rink">'+api.renderSvg(rows,{metric:'shots',fill:'#d7192d'})+'</div>'+
+      '<div class="hoi-zone-body"><div class="hoi-ice-zone-rink">'+api.renderSvg(rows,{metric:'shots'})+'</div>'+api.legendHtml({metricLabel:'shots'})+'</div>'+
       '<div class="hoi-zone-leaders">'+zoneLeaders(rows)+'</div>'+
       '<div class="hoi-zone-summary"><span>'+esc(model.totalGoals)+' goals</span><span>'+esc((100*model.totalGoals/Math.max(1,model.totalShots)).toFixed(1))+'% zone conversion</span></div></article>';
   }
@@ -129,6 +129,7 @@
   function renderIceZoneHeat(roster,statsRows,reports){
     const box=E('hoiIceZoneHeat');if(!box)return;
     const stats=latestEaStatsByName(statsRows);
+    window.__hoiRosterForZones=roster;
     const skaters=roster.filter(r=>r.position!=='G').map(r=>r.gamertag).filter(Boolean);
     const latest=reports?.[0]?.evidence_summary||{},posted=latest?.lineups?.opponent||{};
     const postedNames=['LW','C','RW','LD','RD'].map(k=>posted[k]).filter(Boolean);
@@ -137,7 +138,35 @@
     box.innerHTML='<div class="hoi-zone-grid">'+
       renderZoneCard('Current roster shooting zones','EA current-club totals across the active skaters. Not restricted to LG games.',rosterRows)+
       (postedNames.length?renderZoneCard('Posted line shooting zones','Only the five posted skaters for the next scheduled matchup.',postedRows):'<article class="hoi-ice-zone-card"><div class="hoi-empty">No posted opponent line is attached to the latest report yet.</div></article>')+
-      '</div><p class="hoi-heat-note">Zone values come from EA fields ShotsLocationOnIce1–16 and GoalsLocationOnIce1–16. The rink layout uses the same 16-zone interpretation as Chelstats. '+(missing.length?'EA zone totals missing for: '+esc(missing.join(', '))+'. ':'')+'When Action Tracker X/Y events are available, those coordinates can be normalized into this exact same zone model.</p>';
+      '</div><p class="hoi-heat-note">Zone values come from EA fields ShotsLocationOnIce1–16 and GoalsLocationOnIce1–16. The rink layout uses the same 16-zone interpretation as Chelstats. '+(missing.length?'EA zone totals missing for: '+esc(missing.join(', '))+'. ':'')+'When Action Tracker X/Y events are available, those coordinates can be normalized into this exact same zone model.</p>'+playerZoneHtml(roster,stats);
+    bindPlayerZones(stats);
+  }
+
+  /* Every skater we have recorded EA shots for, one map each (Shots/Goals x Totals, Per game, Efficiency %, Total %). */
+  const zoneState={base:'shots',mode:'totals'};
+  function netRowsFromStats(stats){
+    const raw=stats?.raw_stats||{},out=[];
+    for(let id=1;id<=5;id++)out.push({id,shots:Number(raw['ShotsLocationOnNet'+id]||0),goals:Number(raw['GoalsLocationOnNet'+id]||0)});
+    return out.some(r=>r.shots||r.goals)?out:null;
+  }
+  function shooters(roster,stats){
+    const active=new Set(roster.map(r=>norm(r.gamertag)));
+    return [...stats.entries()].filter(([k,r])=>String(r.position||'')!=='G').map(([k,r])=>{
+      const zr=zoneRowsFromStats(r);return {key:k,name:r.gamertag,pos:r.position||'',active:active.has(k),rows:zr,net:netRowsFromStats(r),gp:num(r.games_played)||num(r.raw_stats?.skgp)||null,shots:zr.reduce((n,z)=>n+z.shots,0),goals:zr.reduce((n,z)=>n+z.goals,0)};
+    }).filter(p=>p.shots>0).sort((a,b)=>b.shots-a.shots);
+  }
+  function playerZoneHtml(roster,stats){
+    const list=shooters(roster,stats);
+    if(!list.length)return '';
+    return '<article class="hoi-ice-zone-card hoi-player-zone"><div class="hoi-heat-head"><div><strong>Player shot maps</strong><small>Every skater with recorded EA shots. Pick a player, then switch Shots or Goals and Totals, Per game, Efficiency % or Total %.</small></div><span>'+list.length+' PLAYERS</span></div>'+
+      '<label class="hoi-zone-pick">Player<select id="hoiPlayerZoneSel">'+list.map(p=>'<option value="'+esc(p.key)+'">'+esc(p.name)+(p.pos?' ('+esc(p.pos)+')':'')+(p.active?'':' · not on roster')+' · '+p.shots+' shots · '+p.goals+' goals</option>').join('')+'</select></label>'+
+      '<div id="hoiPlayerZoneMap"></div></article>';
+  }
+  function bindPlayerZones(stats){
+    const sel=E('hoiPlayerZoneSel'),host=E('hoiPlayerZoneMap');if(!sel||!host||!window.WildmanShotZones)return;
+    const roster=window.__hoiRosterForZones||[],list=shooters(roster,stats);
+    const draw=()=>{const p=list.find(x=>x.key===sel.value)||list[0];if(p)window.WildmanShotZones.mountAnalysis(host,{ice:p.rows,net:p.net,gp:p.gp,state:zoneState})};
+    sel.onchange=draw;draw();
   }
 
   function eaPlayerSummary(ea){
@@ -185,8 +214,8 @@
     }).join('');
     const ev=r.evidence_summary||{},heat=Array.isArray(ev.attack_source_heatmap)?ev.attack_source_heatmap:[];
     const heatHtml=heat.length?'<section class="hoi-heat"><div class="hoi-heat-head"><div><strong>Scoring-source heat map</strong><small>Season goal / assist / shot share by listed position. This is not a rink-location shot map.</small></div><span>'+esc(ev.data_mode==='stats_only_no_vod'?'STATS ONLY':'EVIDENCE')+'</span></div><div class="hoi-heat-grid">'+heat.map(z=>{
-      const g=Number(z.goal_share||0),a=Number(z.assist_share||0),s=Number(z.shot_share||0);
-      return '<article class="hoi-heat-cell"><b>'+esc(z.pos||'—')+'</b><div class="hoi-heat-meter"><i style="width:'+Math.max(2,Math.min(100,g))+'%"></i></div><strong>'+esc(g.toFixed(1))+'% goals</strong><small>'+esc(a.toFixed(1))+'% assists · '+esc(s.toFixed(1))+'% shots</small></article>'
+      const g=Number(z.goal_share||0),a=Number(z.assist_share||0),s=Number(z.shot_share||0),top=Math.max(1,...heat.map(h=>Number(h.goal_share||0))),hc=window.WildmanShotZones?.heatColor?window.WildmanShotZones.heatColor(g/top,1):'#d7192d';
+      return '<article class="hoi-heat-cell"><b>'+esc(z.pos||'—')+'</b><div class="hoi-heat-meter"><i style="width:'+Math.max(2,Math.min(100,g))+'%;background:'+hc+'"></i></div><strong>'+esc(g.toFixed(1))+'% goals</strong><small>'+esc(a.toFixed(1))+'% assists · '+esc(s.toFixed(1))+'% shots</small></article>'
     }).join('')+'</div>'+(ev.spatial_heatmap_note?'<p class="hoi-heat-note">'+esc(ev.spatial_heatmap_note)+'</p>':'')+'</section>':'';
     const scout=ev.line_scout||{};
     const scoutHtml=Object.keys(scout).length?'<section class="hoi-line-scout"><div class="hoi-heat-head"><div><strong>Posted-line deep scout</strong><small>Player roles and statistical tendencies for the posted six.</small></div></div>'+

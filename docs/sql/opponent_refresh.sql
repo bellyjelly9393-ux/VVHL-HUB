@@ -89,7 +89,7 @@ begin
   select id into v_id from public.hitmen_opponent_refresh_runs where finished_at is null order by requested_at desc limit 1;
   if v_id is not null then return v_id; end if;
   if p_reason='scheduled' then
-    if extract(isodow from v_local) not in (2,6) or v_local::time<'23:30' or v_local::time>='23:40' then return null; end if;
+    if extract(isodow from v_local) not in (1,2,6,7) or v_local::time<'23:30' or v_local::time>='23:40' then return null; end if;
     v_key:='season55:'||v_local::date;
   else v_key:='manual:'||gen_random_uuid(); end if;
   if not exists(select 1 from public.hitmen_schedule_games where team_id='b0bcbdda-da9d-419d-8f61-b34937966d49' and season=55 and scheduled_at>=now() and status in ('scheduled','postponed')) then return null; end if;
@@ -166,6 +166,6 @@ begin
 end $$;
 revoke all on function public.hitmen_kick_opponent_refresh() from public,anon,authenticated;
 grant execute on function public.hitmen_kick_opponent_refresh() to service_role;
--- Frequent lightweight tick; actual pulls only Tuesday/Saturday 23:30 America/New_York.
+-- Frequent lightweight tick; actual pulls only Sunday/Monday/Tuesday/Saturday 23:30 America/New_York.
 -- The timezone conversion handles DST. A dated unique run key prevents duplicate runs.
 select cron.schedule('hitmen-opponent-refresh','*/2 * * * *','select public.hitmen_kick_opponent_refresh()');

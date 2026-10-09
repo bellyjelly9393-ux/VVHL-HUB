@@ -65,6 +65,32 @@
     return `rgba(${c[0]},${c[1]},${c[2]},${alpha})`;
   }
   const HEAT_GRADIENT='linear-gradient(90deg,'+HEAT_STOPS.map(s=>heatColor(s[0],1)+' '+Math.round(s[0]*100)+'%').join(',')+')';
+  /* Color guide shown next to every map so nobody has to guess what blue, green or red mean. */
+  const LEGEND_KEYS=[[0,'Ice cold','No shots, or almost none'],[.22,'Cool','A few shots'],[.42,'Average','A normal share of shots'],[.62,'Warm','Busier than average'],[.8,'Hot','A lot of shots'],[1,'Hottest','The busiest zone on this map']];
+  function ensureLegendStyles(){
+    if(typeof document==='undefined'||document.getElementById('wm-legend-css'))return;
+    const st=document.createElement('style');st.id='wm-legend-css';
+    st.textContent='.wm-legend{--lg-fg:var(--wm-legend-fg,#c9ced6);--lg-mut:var(--wm-legend-muted,#98a0ab);--lg-line:var(--wm-legend-line,rgba(255,255,255,.14));border:1px solid var(--lg-line);padding:10px 12px;display:grid;gap:8px;font-size:12px;line-height:1.4;color:var(--lg-fg);min-width:0;align-content:start}'+
+    '.wm-legend h4{margin:0;font:800 12px/1 "Barlow Condensed",system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase}'+
+    '.wm-legend-bar{height:10px;border-radius:5px}'+
+    '.wm-legend-ends{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--lg-mut)}'+
+    '.wm-legend ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}'+
+    '.wm-legend.wide ul{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}'+
+    '.wm-legend li{display:grid;grid-template-columns:16px 1fr;gap:8px;align-items:center}'+
+    '.wm-legend li i{width:16px;height:16px;border-radius:3px;border:1px solid rgba(255,255,255,.25)}'+
+    '.wm-legend li b{font-weight:700}'+
+    '.wm-legend li span{display:block;font-size:11px;color:var(--lg-mut)}'+
+    '.wm-legend p{margin:0;font-size:11px;color:var(--lg-mut)}';
+    document.head.appendChild(st);
+  }
+  function legendHtml(opts={}){
+    ensureLegendStyles();
+    const what=opts.metricLabel||'shots';
+    return '<aside class="wm-legend'+(opts.wide?' wide':'')+'" aria-label="Heat map color guide"><h4>How to read the colors</h4>'+
+      '<div class="wm-legend-bar" style="background:'+HEAT_GRADIENT+'"></div><div class="wm-legend-ends"><span>Cold</span><span>Hot</span></div>'+
+      '<ul>'+LEGEND_KEYS.map(k=>'<li><i style="background:'+heatColor(k[0],1)+'"></i><div><b>'+k[1]+'</b><span>'+k[2]+'</span></div></li>').join('')+'</ul>'+
+      '<p>Each zone is colored by how it compares with the busiest zone on this map, so red always marks the top spot. The number in a zone is its count of '+what+' (or the % or rate you pick above the map).</p></aside>';
+  }
   function heatOpacity(value,max){return max>0?Math.max(.08,Math.min(.92,.1+.82*(value/max))):.05}
   function renderSvg(rows=[],options={}){
     const metric=options.metric==='goals'?'goals':options.metric==='efficiency'?'efficiency':'shots';
@@ -115,7 +141,7 @@
       netSvg=`<div class="sla-net-wrap"><span class="sla-cap">Net zones</span><svg class="sla-net" viewBox="0 0 100 68" role="img" aria-label="Net zone shot location map"><rect x="2" y="2" width="96" height="62" fill="#0d1624" stroke="#c62a2f" stroke-width="3"/>${cells}<g><circle cx="50" cy="58" r="8" fill="${slaShade(nv[4]||0,nm)}" stroke="rgba(255,255,255,.4)" stroke-width=".5"><title>Five-hole: ${net[4].shots} shots, ${net[4].goals} goals</title></circle><text x="50" y="58" text-anchor="middle" dominant-baseline="middle" font-size="6" font-weight="800" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width=".6" paint-order="stroke">${slaFmt(nv[4],st.mode)}</text></g></svg></div>`;
     }
     const tab=(attr,val,label,on)=>`<button type="button" data-sla-${attr}="${val}" aria-pressed="${on}">${label}</button>`;
-    return `<div class="sla"><div class="sla-tabs"><div role="group" aria-label="Shots or goals">${tab('base','shots','Shots',st.base==='shots')}${tab('base','goals','Goals',st.base==='goals')}</div><div role="group" aria-label="Display mode">${modes.map(m=>tab('mode',m[0],m[1],st.mode===m[0])).join('')}</div></div><div class="sla-maps"><div class="sla-ice-wrap"><span class="sla-cap">Ice zones</span>${iceSvg}</div>${netSvg}</div><div class="sla-legend"><span>Cold</span><i style="background:${HEAT_GRADIENT}"></i><span>Hot</span>${gp?`<em>${gp} GP</em>`:''}</div></div>`;
+    return `<div class="sla"><div class="sla-tabs"><div role="group" aria-label="Shots or goals">${tab('base','shots','Shots',st.base==='shots')}${tab('base','goals','Goals',st.base==='goals')}</div><div role="group" aria-label="Display mode">${modes.map(m=>tab('mode',m[0],m[1],st.mode===m[0])).join('')}</div></div><div class="sla-maps"><div class="sla-ice-wrap"><span class="sla-cap">Ice zones</span>${iceSvg}</div>${netSvg}</div>${legendHtml({wide:true,metricLabel:st.base})}${gp?`<p class="fine" style="margin:6px 0 0;font-size:11px">${gp} games played</p>`:''}</div>`;
   }
   function mountAnalysis(el,opts){
     if(!el)return;
@@ -125,5 +151,5 @@
       el.querySelectorAll('[data-sla-mode]').forEach(b=>b.onclick=()=>{opts.state.mode=b.dataset.slaMode;draw()})};
     draw();
   }
-  window.WildmanShotZones={zones,byId,classifyNormalizedPoint,normalizeXY,classifyXY,sumRows,renderSvg,heatColor,heatGradient:HEAT_GRADIENT,renderAnalysis:slaHtml,mountAnalysis};
+  window.WildmanShotZones={zones,byId,classifyNormalizedPoint,normalizeXY,classifyXY,sumRows,renderSvg,heatColor,heatGradient:HEAT_GRADIENT,legendHtml,renderAnalysis:slaHtml,mountAnalysis};
 })();

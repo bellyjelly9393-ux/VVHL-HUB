@@ -2,7 +2,7 @@
 
 The existing Season 55 schedule determines which opponents are pulled. Opponents with games in the next eight days are processed first, followed by all other remaining scheduled/postponed opponents. Refreshes stop when there are no future games.
 
-Automatic runs: **Tuesday and Saturday, 11:30 p.m. America/New_York**. The database converts local time on each lightweight two-minute tick, including daylight-saving changes. A unique local-date run key prevents duplicate scheduled runs. Management can also use **Refresh Opponent Stats** on `hitmen-opponents.html`; repeated clicks join an active run.
+Automatic runs: **Sunday, Monday, Tuesday and Saturday, 11:30 p.m. America/New_York**. Sunday to Tuesday are the game nights, so each night gets a fresh pull of LG player stats, rosters and EA shot-location totals right after the games (each pull also saves a shot-history snapshot, so changes between nights show up as new shots per player). The database converts local time on each lightweight two-minute tick, including daylight-saving changes. A unique local-date run key prevents duplicate scheduled runs. Management can also use **Refresh Opponent Stats** on `hitmen-opponents.html`; repeated clicks join an active run.
 
 The existing LG stats importer fetches current Season 55 regular-season skater and goalie data. The opponent worker links it to current rosters by LG user ID, with an exact gamertag fallback only when no ID is available. Historical gamertag changes, partial sources, source dates and unmatched players remain visible. Missing numbers are null, not invented zeros. Goalie save percentage is displayed on a 0–100 scale.
 

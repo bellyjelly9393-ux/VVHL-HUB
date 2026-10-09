@@ -26,7 +26,7 @@
 .hoi-heat-cell>strong{display:block;margin-top:6px;font-size:9px}
 .hoi-heat-cell>small{display:block;margin-top:3px;color:#918588;font-size:7px;line-height:1.35}
 .hoi-heat-meter{height:4px;margin-top:7px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
-.hoi-heat-meter i{display:block;height:100%;background:linear-gradient(90deg,rgba(215,25,45,.55),rgba(239,213,140,.9))}
+.hoi-heat-meter i{display:block;height:100%;background:linear-gradient(90deg,#286ee1,#26b868 40%,#f0d030 62%,#f5871e 80%,#d7192d)}
 .hoi-heat-note{margin:8px 0 0;color:#94878a;font-size:8px;line-height:1.45}
 .hoi-line-scout{display:grid;gap:6px}
 .hoi-line-scout-row{display:grid;grid-template-columns:72px 1fr;gap:8px;padding:8px;border:1px solid rgba(255,255,255,.055);border-radius:9px;background:rgba(255,255,255,.018)}
@@ -54,7 +54,12 @@
 .hoi-season-game pre{max-height:220px;overflow:auto;white-space:pre-wrap;font-size:7px}
 @media(max-width:760px){.hoi-season-list{grid-template-columns:1fr}.hoi-season-summary{grid-template-columns:repeat(3,1fr)}}
 .hoi-ice-zone-wrap{display:grid;gap:10px}
-.hoi-zone-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.hoi-zone-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.hoi-zone-body{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(210px,.8fr);gap:14px;align-items:start;margin:4px 0 10px}
+.hoi-zone-body .hoi-ice-zone-rink{margin:0 auto;width:100%}
+.hoi-zone-pick{display:grid;gap:4px;margin:10px 0;font:700 10px/1 "Barlow Condensed",sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#98a0ab}
+.hoi-zone-pick select{background:#141214;color:#f2f3f4;border:1px solid rgba(255,255,255,.18);padding:8px;font:inherit;letter-spacing:0;text-transform:none;font-size:13px;max-width:100%}
+@media(max-width:760px){.hoi-zone-body{grid-template-columns:1fr}}
 .hoi-ice-zone-card{border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.018);padding:12px}
 .hoi-ice-zone-rink{max-width:420px;margin:4px auto 10px}
 .wm-ice-zone-svg{display:block;width:100%;height:auto;filter:drop-shadow(0 12px 25px rgba(0,0,0,.22))}
