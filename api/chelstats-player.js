@@ -66,6 +66,20 @@ export default async function handler(req, res) {
 
     const raw = await upstream.json();
     const node = findShotNode(raw);
+    // Identity lookups do not require shot-location stats (many valid profiles omit them).
+    if (String(req.query.identity || "") === "1") {
+      const identityProfile = firstDefined(raw, ["Username", "username"]) ? raw : node;
+      const confirmedUsername = String(firstDefined(identityProfile, ["Username", "username"]) || "").trim();
+      if (confirmedUsername.toLowerCase() !== username.toLowerCase()) {
+        return res.status(404).json({ error: "No exact gamertag identity was returned by ChelStats" });
+      }
+      const chelName = firstDefined(identityProfile, ["skplayername"]) || raw.identity?.displayName || null;
+      res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=900");
+      return res.status(200).json({ source: "chelstats", profile: {
+        username: confirmedUsername, chelName,
+        platform: firstDefined(identityProfile, ["Platform", "platform"]) || raw.identity?.platform || null
+      }});
+    }
     if (!node) {
       return res.status(404).json({
         error: "No shot-location object was found in the Chelstats response",

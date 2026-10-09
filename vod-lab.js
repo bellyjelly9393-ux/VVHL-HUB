@@ -622,7 +622,7 @@
     const queue=[...candidates];
     await Promise.all([0,1,2].map(async()=>{while(queue.length){
       const p=queue.shift();
-      try{const response=await fetch('/api/chelstats-player?username='+encodeURIComponent(p.gamertag),{signal:AbortSignal.timeout(20000)});
+      try{const response=await fetch('/api/chelstats-player?identity=1&username='+encodeURIComponent(p.gamertag),{signal:AbortSignal.timeout(20000)});
         if(!response.ok)throw new Error('Lookup unavailable');const data=await response.json();
         if(data.profile?.chelName){p.chelName=data.profile.chelName;found++;}
       }catch{failed++;}

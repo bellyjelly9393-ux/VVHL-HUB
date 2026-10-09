@@ -11,5 +11,12 @@ try {
   await handler({method:'GET',query:{username:'examplegt'}},res);
   assert.equal(result.profile.chelName,expected);
  }
+ for(const [upstreamName,status] of [['ExampleGT',200],['UnrelatedGT',404]]){
+  globalThis.fetch=async()=>({ok:true,json:async()=>({Username:upstreamName,skplayername:'Jordan NHL'})});
+  let result;
+  const res={setHeader(){},status(code){assert.equal(code,status);return this;},json(value){result=value;}};
+  await handler({method:'GET',query:{username:'examplegt',identity:'1'}},res);
+  if(status===200)assert.equal(result.profile.chelName,'Jordan NHL');
+ }
  console.log('PASS: CHEL name belongs to the exact requested gamertag; unrelated profiles rejected');
 } finally {globalThis.fetch=originalFetch;}
