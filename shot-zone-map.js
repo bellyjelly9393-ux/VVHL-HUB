@@ -55,15 +55,24 @@
     return {zones:out,totalShots,totalGoals};
   }
   function polygonPoints(points){return points.map(p=>p.join(',')).join(' ')}
+  /* cold -> hot: deep ice blue, blue, green, yellow, orange, red */
+  const HEAT_STOPS=[[0,[18,44,120]],[.22,[40,110,225]],[.42,[38,184,104]],[.62,[240,208,48]],[.8,[245,135,30]],[1,[215,25,45]]];
+  function heatColor(t,alpha=.9){
+    t=Math.max(0,Math.min(1,Number(t)||0));
+    let i=1;while(i<HEAT_STOPS.length-1&&t>HEAT_STOPS[i][0])i++;
+    const a=HEAT_STOPS[i-1],b=HEAT_STOPS[i],k=(t-a[0])/((b[0]-a[0])||1);
+    const c=a[1].map((v,j)=>Math.round(v+(b[1][j]-v)*k));
+    return `rgba(${c[0]},${c[1]},${c[2]},${alpha})`;
+  }
+  const HEAT_GRADIENT='linear-gradient(90deg,'+HEAT_STOPS.map(s=>heatColor(s[0],1)+' '+Math.round(s[0]*100)+'%').join(',')+')';
   function heatOpacity(value,max){return max>0?Math.max(.08,Math.min(.92,.1+.82*(value/max))):.05}
   function renderSvg(rows=[],options={}){
     const metric=options.metric==='goals'?'goals':options.metric==='efficiency'?'efficiency':'shots';
     const data=sumRows(rows),max=Math.max(1,...data.zones.map(z=>Number(z[metric]||0)));
-    const fill=options.fill||'#d7192d';
     const paths=data.zones.map(z=>{
-      const meta=byId[z.id],value=Number(z[metric]||0),op=heatOpacity(value,max);
+      const meta=byId[z.id],value=Number(z[metric]||0),heat=heatColor(max>0?value/max:0);
       const label=`${meta.name}: ${z.shots} shots, ${z.goals} goals, ${z.efficiency.toFixed(1)}% conversion, ${z.shotShare.toFixed(1)}% shot share`;
-      return `<g class="wm-zone" data-zone="${z.id}"><polygon points="${polygonPoints(meta.points)}" fill="${fill}" fill-opacity="${op.toFixed(3)}" stroke="rgba(255,255,255,.18)" stroke-width=".6"><title>${label}</title></polygon><text x="${meta.points.reduce((n,p)=>n+p[0],0)/meta.points.length}" y="${meta.points.reduce((n,p)=>n+p[1],0)/meta.points.length}" text-anchor="middle" dominant-baseline="middle" font-size="3.3" font-weight="800" fill="white" opacity=".92">${value?Math.round(value):''}</text></g>`;
+      return `<g class="wm-zone" data-zone="${z.id}"><polygon points="${polygonPoints(meta.points)}" fill="${heat}" stroke="rgba(255,255,255,.3)" stroke-width=".6"><title>${label}</title></polygon><text x="${meta.points.reduce((n,p)=>n+p[0],0)/meta.points.length}" y="${meta.points.reduce((n,p)=>n+p[1],0)/meta.points.length}" text-anchor="middle" dominant-baseline="middle" font-size="3.3" font-weight="800" fill="white" stroke="rgba(0,0,0,.55)" stroke-width=".5" paint-order="stroke">${value?Math.round(value):''}</text></g>`;
     }).join('');
     return `<svg class="wm-ice-zone-svg" viewBox="0 0 90 92" role="img" aria-label="EA 16-zone shooting heat map"><rect x="0" y="0" width="90" height="92" rx="2" fill="rgba(255,255,255,.02)" stroke="rgba(255,255,255,.18)" stroke-width=".7"/><line x1="0" y1="12" x2="90" y2="12" stroke="rgba(80,150,255,.45)" stroke-width=".8"/><line x1="0" y1="78" x2="90" y2="78" stroke="rgba(80,150,255,.3)" stroke-width=".8"/><path d="M38 12 Q38 20 45 20 Q52 20 52 12" fill="none" stroke="rgba(80,150,255,.55)" stroke-width=".7"/>${paths}</svg>`;
   }
@@ -87,7 +96,7 @@
     if(mode==='efficiency'||mode==='share')return v.toFixed(1)+'%';
     return String(Math.round(v));
   }
-  function slaShade(v,max){const t=max>0&&v>0?Math.min(1,v/max):0;return `rgba(${Math.round(40+50*t)},${Math.round(90+90*t)},${Math.round(160+90*t)},${(.28+.67*t).toFixed(3)})`}
+  function slaShade(v,max){return heatColor(max>0?v/max:0,.92)}
   function slaHtml(opts){
     const st=opts.state||{base:'shots',mode:'totals'},gp=Number(opts.gp)||null;
     const modes=SLA_MODES.filter(m=>m[0]!=='pergame'||gp);
@@ -106,7 +115,7 @@
       netSvg=`<div class="sla-net-wrap"><span class="sla-cap">Net zones</span><svg class="sla-net" viewBox="0 0 100 68" role="img" aria-label="Net zone shot location map"><rect x="2" y="2" width="96" height="62" fill="#0d1624" stroke="#c62a2f" stroke-width="3"/>${cells}<g><circle cx="50" cy="58" r="8" fill="${slaShade(nv[4]||0,nm)}" stroke="rgba(255,255,255,.4)" stroke-width=".5"><title>Five-hole: ${net[4].shots} shots, ${net[4].goals} goals</title></circle><text x="50" y="58" text-anchor="middle" dominant-baseline="middle" font-size="6" font-weight="800" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width=".6" paint-order="stroke">${slaFmt(nv[4],st.mode)}</text></g></svg></div>`;
     }
     const tab=(attr,val,label,on)=>`<button type="button" data-sla-${attr}="${val}" aria-pressed="${on}">${label}</button>`;
-    return `<div class="sla"><div class="sla-tabs"><div role="group" aria-label="Shots or goals">${tab('base','shots','Shots',st.base==='shots')}${tab('base','goals','Goals',st.base==='goals')}</div><div role="group" aria-label="Display mode">${modes.map(m=>tab('mode',m[0],m[1],st.mode===m[0])).join('')}</div></div><div class="sla-maps"><div class="sla-ice-wrap"><span class="sla-cap">Ice zones</span>${iceSvg}</div>${netSvg}</div><div class="sla-legend"><span>Low</span><i></i><span>High</span>${gp?`<em>${gp} GP</em>`:''}</div></div>`;
+    return `<div class="sla"><div class="sla-tabs"><div role="group" aria-label="Shots or goals">${tab('base','shots','Shots',st.base==='shots')}${tab('base','goals','Goals',st.base==='goals')}</div><div role="group" aria-label="Display mode">${modes.map(m=>tab('mode',m[0],m[1],st.mode===m[0])).join('')}</div></div><div class="sla-maps"><div class="sla-ice-wrap"><span class="sla-cap">Ice zones</span>${iceSvg}</div>${netSvg}</div><div class="sla-legend"><span>Cold</span><i style="background:${HEAT_GRADIENT}"></i><span>Hot</span>${gp?`<em>${gp} GP</em>`:''}</div></div>`;
   }
   function mountAnalysis(el,opts){
     if(!el)return;
@@ -116,5 +125,5 @@
       el.querySelectorAll('[data-sla-mode]').forEach(b=>b.onclick=()=>{opts.state.mode=b.dataset.slaMode;draw()})};
     draw();
   }
-  window.WildmanShotZones={zones,byId,classifyNormalizedPoint,normalizeXY,classifyXY,sumRows,renderSvg,renderAnalysis:slaHtml,mountAnalysis};
+  window.WildmanShotZones={zones,byId,classifyNormalizedPoint,normalizeXY,classifyXY,sumRows,renderSvg,heatColor,heatGradient:HEAT_GRADIENT,renderAnalysis:slaHtml,mountAnalysis};
 })();

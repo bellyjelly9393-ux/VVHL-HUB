@@ -9,6 +9,6 @@
 .sla-cap{display:block;text-align:center;font:700 10px/1 "Barlow Condensed",system-ui,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#98a0ab;margin-bottom:6px}
 .sla-ice,.sla-net{display:block;width:100%;height:auto}
 .sla-legend{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:10px;font-size:10px;color:#98a0ab;text-transform:uppercase;letter-spacing:.1em}
-.sla-legend i{width:90px;height:6px;background:linear-gradient(90deg,rgba(40,90,160,.3),rgba(90,180,250,.95))}
+.sla-legend i{width:120px;height:8px;border-radius:4px}
 .sla-legend em{font-style:normal;margin-left:8px}
 @media(max-width:560px){.sla-maps{grid-template-columns:1fr}}
