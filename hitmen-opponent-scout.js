@@ -26,6 +26,16 @@
   function zoneRowsFromSnapshot(s){
     return Array.from({length:16},(_,i)=>({id:i+1,shots:Number(s?.zone_shots?.[String(i+1)]||0),goals:Number(s?.zone_goals?.[String(i+1)]||0)}));
   }
+  function netRows(raw={}){
+    return Array.from({length:5},(_,i)=>({id:i+1,shots:Number(raw['ShotsLocationOnNet'+(i+1)]||0),goals:Number(raw['GoalsLocationOnNet'+(i+1)]||0)}));
+  }
+  const eaGp=p=>num(p.ea?.games_played??p.ea?.raw_stats?.skgp??p.ea?.raw_stats?.gamesplayed)||null;
+  function sumNet(list){
+    const by=new Map();
+    list.forEach(p=>netRows(p.ea?.raw_stats||{}).forEach(z=>{const x=by.get(z.id)||{id:z.id,shots:0,goals:0};x.shots+=z.shots;x.goals+=z.goals;by.set(z.id,x)}));
+    return [...by.values()];
+  }
+  const slaState={base:'shots',mode:'totals'};
   function sumPlayers(list){
     const by=new Map();
     list.forEach(p=>zoneRows(p.ea?.raw_stats||{}).forEach(z=>{const x=by.get(z.id)||{id:z.id,shots:0,goals:0};x.shots+=z.shots;x.goals+=z.goals;by.set(z.id,x)}));
@@ -84,7 +94,7 @@
   }
   function renderTeam(){
     const current=players.filter(p=>p.current&&p.position!=='G'&&p.ea),rows=sumPlayers(current),pr=profile(rows);
-    E('hsTeamHeat').innerHTML=pr?.model.totalShots?window.WildmanShotZones.renderSvg(rows,{metric:'shots',fill:'#d7192d'}):'<div class="hs-empty">No current EA zone data yet.</div>';
+    if(pr?.model.totalShots)window.WildmanShotZones.mountAnalysis(E('hsTeamHeat'),{ice:rows,net:sumNet(current),gp:null,state:{base:'shots',mode:'totals'}});else E('hsTeamHeat').innerHTML='<div class="hs-empty">No current EA zone data yet.</div>';
     const topScorers=[...players].filter(p=>p.current&&p.lg).sort((a,b)=>Number(b.lg.points||0)-Number(a.lg.points||0)).slice(0,3);
     const items=[];
     if(pr?.ranked?.length){
@@ -107,7 +117,7 @@
     if(p.position==='G'){E('hsPlayerHeat').innerHTML='<div class="hs-empty">Goalies do not use the skater shooting-zone map.</div>';E('hsZoneBreakdown').innerHTML='';return}
     const rows=zoneRows(p.ea?.raw_stats||{}),pr=profile(rows);
     if(!pr?.model.totalShots){E('hsPlayerHeat').innerHTML='<div class="hs-empty">No EA shooting-location totals stored for this player yet.</div>';E('hsZoneBreakdown').innerHTML='';return}
-    E('hsPlayerHeat').innerHTML=window.WildmanShotZones.renderSvg(rows,{metric,fill:'#d7192d'});
+    window.WildmanShotZones.mountAnalysis(E('hsPlayerHeat'),{ice:rows,net:netRows(p.ea?.raw_stats||{}),gp:eaGp(p),state:slaState});
     const max=Math.max(1,...pr.ranked.map(z=>z.shots));
     E('hsZoneBreakdown').innerHTML=pr.ranked.slice(0,6).map(z=>'<div class="hs-zone-row"><b>'+esc(z.name)+'</b><span>'+z.shots+' shots · '+z.goals+' goals · '+z.efficiency.toFixed(1)+'% · '+z.shotShare.toFixed(1)+'% share</span><div class="hs-zone-bar"><i style="width:'+Math.max(2,100*z.shots/max)+'%"></i></div></div>').join('');
   }

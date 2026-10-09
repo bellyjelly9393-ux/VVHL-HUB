@@ -38,11 +38,14 @@
         DB().from('hitmen_opponent_ea_games').select('source_game_id,lg_game_id,played_at,result,goals_for,goals_against,team_stats,opponent_stats,player_stats,verified_official,verification_confidence,verification_basis').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',selected.name).eq('verified_official',true).order('played_at',{ascending:true})
       ]);
       const er=q.find(x=>x.error);if(er)throw er.error;
-      renderRoster(q[1].data||[],q[2].data||[]);
+      renderRoster(q[1].data||[],q[2].data||[],q[6].data||[]);
       renderEa(q[0].data,q[3].data||[]);
       renderReports(q[4].data||[]);
       renderIceZoneHeat(q[1].data||[],q[2].data||[],q[4].data||[]);
-      renderSeasonGames(q[5].data||[],q[6].data||[]);
+      let boxes=[];const gids=(q[5].data||[]).map(g=>g.lg_game_id).filter(x=>x!=null);
+      if(gids.length){const b=await DB().from('lg_game_box_scores').select('lg_game_id,home_team_name,away_team_name,team_stats,period_stats').in('lg_game_id',gids);if(!b.error)boxes=b.data||[];}
+      renderSeasonGames(q[5].data||[],q[6].data||[],boxes);
+      renderGameAnalysis(q[6].data||[],q[5].data||[],boxes);
       const lg=q[0].data?.lg_roster_updated_at;
       setStatus((q[1].data||[]).length+' active players'+(lg?' · LG synced '+new Date(lg).toLocaleString():' · LG roster not synced yet'));
     }catch(e){console.error(e);setStatus(e.message||'Opponent intelligence could not load.')}
@@ -55,16 +58,54 @@
     return m;
   }
 
-  function renderRoster(rows,statsRows){
+  /* Player cards: one tap opens that player's shot map and game-by-game log (replaces the old raw-stats dump). */
+  let cardData={eaStats:new Map(),eaGames:[]};
+  function playerGameRows(name,eaGames){
+    const k=norm(name),out=[];
+    (eaGames||[]).filter(g=>g.verified_official&&g.player_stats?.team).forEach(g=>{
+      const p=sidePlayers(g,'team').find(x=>norm(x.playername)===k);
+      if(p&&p.position!=='goalie')out.push({g,p});
+    });
+    return out.sort((a,b)=>Date.parse(b.g.played_at)-Date.parse(a.g.played_at));
+  }
+  function cardMoreBody(key,name){
+    const ea=cardData.eaStats.get(key),zr=ea?zoneRowsFromStats(ea):[],shots=zr.reduce((n,z)=>n+z.shots,0),games=playerGameRows(name,cardData.eaGames);
+    let h='';
+    if(shots>0)h+='<div class="hoi-card-map"></div>'; else h+='<p class="hoi-muted">No EA shot locations are saved for this player yet.</p>';
+    if(games.length){
+      const tot=games.reduce((t,{p})=>({g:t.g+n0(p.skgoals),a:t.a+n0(p.skassists),sog:t.sog+n0(p.skshots),att:t.att+n0(p.skshotattempts),hit:t.hit+n0(p.skhits)}),{g:0,a:0,sog:0,att:0,hit:0});
+      h+='<h5 class="hoi-card-h">Game log · '+games.length+' games matched to LG</h5><div class="hoi-ga-table"><table><thead><tr><th>Date</th><th>Vs</th><th class="n">G</th><th class="n">A</th><th class="n">SOG</th><th class="n">ATT</th><th class="n">HIT</th><th class="n">TOI</th></tr></thead><tbody>'+
+        games.map(({g,p})=>'<tr><td>'+esc(g.played_at?new Date(g.played_at).toLocaleDateString([],{month:'short',day:'numeric'}):'—')+'</td><td>'+esc(g.result||'')+' '+esc(g.goals_for??'')+'-'+esc(g.goals_against??'')+' '+esc(shortClub(g.opponent_stats?.details?.name)||'')+'</td><td class="n">'+n0(p.skgoals)+'</td><td class="n">'+n0(p.skassists)+'</td><td class="n">'+n0(p.skshots)+'</td><td class="n">'+n0(p.skshotattempts)+'</td><td class="n">'+n0(p.skhits)+'</td><td class="n">'+esc(mmss(p.toiseconds))+'</td></tr>').join('')+
+        '<tr><td colspan="2"><b>Total</b></td><td class="n">'+tot.g+'</td><td class="n">'+tot.a+'</td><td class="n">'+tot.sog+'</td><td class="n">'+tot.att+'</td><td class="n">'+tot.hit+'</td><td></td></tr></tbody></table></div>';
+    }
+    return h;
+  }
+  function bindCardMore(box){
+    if(box.__moreBound)return;box.__moreBound=true;
+    box.addEventListener('toggle',e=>{
+      const d=e.target;if(!d||!d.classList||!d.classList.contains('hoi-card-more')||!d.open||d.dataset.ready)return;
+      d.dataset.ready='1';
+      const key=d.dataset.player,body=d.querySelector('.hoi-card-more-body');
+      body.innerHTML=cardMoreBody(key,d.dataset.name);
+      const host=body.querySelector('.hoi-card-map'),ea=cardData.eaStats.get(key);
+      if(host&&ea&&window.WildmanShotZones)window.WildmanShotZones.mountAnalysis(host,{ice:zoneRowsFromStats(ea),net:netRowsFromStats(ea),gp:num(ea.games_played)||num(ea.raw_stats?.skgp)||null,state:zoneState});
+    },true);
+  }
+
+  function renderRoster(rows,statsRows,eaGames){
     const box=E('hoiRoster');if(!box)return;
     const stats=latestStatsByName(statsRows);
+    cardData={eaStats:latestEaStatsByName(statsRows),eaGames:eaGames||[]};
+    bindCardMore(box);
     if(!rows.length){box.innerHTML='<div class="hoi-empty" style="grid-column:1/-1">No current roster imported yet. Use Sync LG Rosters.</div>';return}
     const posOrder={LW:1,C:2,RW:3,LD:4,RD:5,G:6};
     rows.sort((a,b)=>(posOrder[a.position]||9)-(posOrder[b.position]||9)||String(a.gamertag).localeCompare(String(b.gamertag)));
     box.innerHTML=rows.map(r=>{
       const s=stats.get(String(r.gamertag||'').trim().toLowerCase())||{};
       const pts=s.points??((s.goals!=null||s.assists!=null)?Number(s.goals||0)+Number(s.assists||0):null);
-      const extra=s.raw_stats&&Object.keys(s.raw_stats).length?'<details><summary>Raw public stats</summary><pre>'+esc(JSON.stringify(s.raw_stats,null,2))+'</pre></details>':'';
+      const pk=norm(r.gamertag),eaS=cardData.eaStats.get(pk),hasMore=r.position!=='G'&&((eaS&&zoneRowsFromStats(eaS).some(z=>z.shots>0))||playerGameRows(r.gamertag,cardData.eaGames).length);
+      const more=hasMore?'<details class="hoi-card-more" data-player="'+esc(pk)+'" data-name="'+esc(r.gamertag)+'"><summary>Shot map and game log</summary><div class="hoi-card-more-body"></div></details>':'';
+      const extra=more+(s.raw_stats&&Object.keys(s.raw_stats).length?'<details><summary>Raw public stats</summary><pre>'+esc(JSON.stringify(s.raw_stats,null,2))+'</pre></details>':'');
       return '<article class="hoi-player-card"><div class="hoi-player-card-head"><div><strong>'+esc(r.gamertag)+'</strong><div class="hoi-player-sub">'+esc(r.management_role||r.roster_role||'Active')+(r.salary!=null?' · '+money(r.salary):'')+'</div></div><span class="hoi-player-pos">'+esc(r.position||'—')+'</span></div>'+
       '<p class="hoi-muted">'+esc(s.source==='lg_chl'?'LGCHL S55 season totals':s.source==='ea_nhl27'?'EA club totals · not league-only':'No matched stats')+(s.source_updated_at?' · '+esc(new Date(s.source_updated_at).toLocaleString()):'')+'</p><div class="hoi-player-stats">'+stat('GP',s.games_played)+stat('G',s.goals)+stat('A',s.assists)+stat('PTS',pts)+stat('+/-',s.plus_minus)+stat('FO%',s.faceoff_pct)+stat('HITS',s.hits)+stat('PIM',s.pim)+(r.position==='G'?stat('SV%',s.goalie_save_pct)+stat('GAA',s.goalie_gaa):stat('SHOTS',s.shots)+stat('TA',s.takeaways)+stat('GA',s.giveaways)+stat('PASS%',s.passing_pct))+'</div>'+extra+'</article>';
     }).join('');
@@ -121,7 +162,7 @@
     const model=api.sumRows(rows);
     if(!model.totalShots)return '<article class="hoi-ice-zone-card"><div class="hoi-heat-head"><div><strong>'+esc(title)+'</strong><small>'+esc(subtitle)+'</small></div></div><div class="hoi-empty">No EA ice-zone totals are available for these skaters yet.</div></article>';
     return '<article class="hoi-ice-zone-card"><div class="hoi-heat-head"><div><strong>'+esc(title)+'</strong><small>'+esc(subtitle)+'</small></div><span>'+esc(model.totalShots)+' SHOTS</span></div>'+
-      '<div class="hoi-ice-zone-rink">'+api.renderSvg(rows,{metric:'shots',fill:'#d7192d'})+'</div>'+
+      '<div class="hoi-zone-body"><div class="hoi-ice-zone-rink">'+api.renderSvg(rows,{metric:'shots'})+'</div>'+api.legendHtml({metricLabel:'shots'})+'</div>'+
       '<div class="hoi-zone-leaders">'+zoneLeaders(rows)+'</div>'+
       '<div class="hoi-zone-summary"><span>'+esc(model.totalGoals)+' goals</span><span>'+esc((100*model.totalGoals/Math.max(1,model.totalShots)).toFixed(1))+'% zone conversion</span></div></article>';
   }
@@ -129,6 +170,7 @@
   function renderIceZoneHeat(roster,statsRows,reports){
     const box=E('hoiIceZoneHeat');if(!box)return;
     const stats=latestEaStatsByName(statsRows);
+    window.__hoiRosterForZones=roster;
     const skaters=roster.filter(r=>r.position!=='G').map(r=>r.gamertag).filter(Boolean);
     const latest=reports?.[0]?.evidence_summary||{},posted=latest?.lineups?.opponent||{};
     const postedNames=['LW','C','RW','LD','RD'].map(k=>posted[k]).filter(Boolean);
@@ -137,7 +179,35 @@
     box.innerHTML='<div class="hoi-zone-grid">'+
       renderZoneCard('Current roster shooting zones','EA current-club totals across the active skaters. Not restricted to LG games.',rosterRows)+
       (postedNames.length?renderZoneCard('Posted line shooting zones','Only the five posted skaters for the next scheduled matchup.',postedRows):'<article class="hoi-ice-zone-card"><div class="hoi-empty">No posted opponent line is attached to the latest report yet.</div></article>')+
-      '</div><p class="hoi-heat-note">Zone values come from EA fields ShotsLocationOnIce1–16 and GoalsLocationOnIce1–16. The rink layout uses the same 16-zone interpretation as Chelstats. '+(missing.length?'EA zone totals missing for: '+esc(missing.join(', '))+'. ':'')+'When Action Tracker X/Y events are available, those coordinates can be normalized into this exact same zone model.</p>';
+      '</div><p class="hoi-heat-note">Zone values come from EA fields ShotsLocationOnIce1–16 and GoalsLocationOnIce1–16. The rink layout uses the same 16-zone interpretation as Chelstats. '+(missing.length?'EA zone totals missing for: '+esc(missing.join(', '))+'. ':'')+'When Action Tracker X/Y events are available, those coordinates can be normalized into this exact same zone model.</p>'+playerZoneHtml(roster,stats);
+    bindPlayerZones(stats);
+  }
+
+  /* Every skater we have recorded EA shots for, one map each (Shots/Goals x Totals, Per game, Efficiency %, Total %). */
+  const zoneState={base:'shots',mode:'totals'};
+  function netRowsFromStats(stats){
+    const raw=stats?.raw_stats||{},out=[];
+    for(let id=1;id<=5;id++)out.push({id,shots:Number(raw['ShotsLocationOnNet'+id]||0),goals:Number(raw['GoalsLocationOnNet'+id]||0)});
+    return out.some(r=>r.shots||r.goals)?out:null;
+  }
+  function shooters(roster,stats){
+    const active=new Set(roster.map(r=>norm(r.gamertag)));
+    return [...stats.entries()].filter(([k,r])=>String(r.position||'')!=='G').map(([k,r])=>{
+      const zr=zoneRowsFromStats(r);return {key:k,name:r.gamertag,pos:r.position||'',active:active.has(k),rows:zr,net:netRowsFromStats(r),gp:num(r.games_played)||num(r.raw_stats?.skgp)||null,shots:zr.reduce((n,z)=>n+z.shots,0),goals:zr.reduce((n,z)=>n+z.goals,0)};
+    }).filter(p=>p.shots>0).sort((a,b)=>b.shots-a.shots);
+  }
+  function playerZoneHtml(roster,stats){
+    const list=shooters(roster,stats);
+    if(!list.length)return '';
+    return '<article class="hoi-ice-zone-card hoi-player-zone"><div class="hoi-heat-head"><div><strong>Player shot maps</strong><small>Every skater with recorded EA shots. Pick a player, then switch Shots or Goals and Totals, Per game, Efficiency % or Total %.</small></div><span>'+list.length+' PLAYERS</span></div>'+
+      '<label class="hoi-zone-pick">Player<select id="hoiPlayerZoneSel">'+list.map(p=>'<option value="'+esc(p.key)+'">'+esc(p.name)+(p.pos?' ('+esc(p.pos)+')':'')+(p.active?'':' · not on roster')+' · '+p.shots+' shots · '+p.goals+' goals</option>').join('')+'</select></label>'+
+      '<div id="hoiPlayerZoneMap"></div></article>';
+  }
+  function bindPlayerZones(stats){
+    const sel=E('hoiPlayerZoneSel'),host=E('hoiPlayerZoneMap');if(!sel||!host||!window.WildmanShotZones)return;
+    const roster=window.__hoiRosterForZones||[],list=shooters(roster,stats);
+    const draw=()=>{const p=list.find(x=>x.key===sel.value)||list[0];if(p)window.WildmanShotZones.mountAnalysis(host,{ice:p.rows,net:p.net,gp:p.gp,state:zoneState})};
+    sel.onchange=draw;draw();
   }
 
   function eaPlayerSummary(ea){
@@ -150,10 +220,126 @@
     return rows.slice(0,3).map(p=>esc(p.name)+' · '+p.attempts+' ATT / '+p.shots+' SOG · '+p.g+'G '+p.a+'A').join('<br>');
   }
 
-  function renderSeasonGames(lgRows,eaRows){
+
+  /* ---------- EA game analysis: every EA match that reconciles to an official LG game ---------- */
+  const POS={center:'C',leftWing:'LW',rightWing:'RW',defenseMen:'D',goalie:'G'};
+  const n0=v=>{const x=Number(v);return Number.isFinite(x)?x:0};
+  const mmss=sec=>{const t=Math.round(n0(sec));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
+  const pct=(a,b)=>b>0?(100*a/b).toFixed(1)+'%':'—';
+  const sidePlayers=(ea,side)=>Object.values(ea?.player_stats?.[side]||{}).filter(p=>p&&typeof p==='object');
+  const shortClub=n=>String(n||'').replace(/^LG(CHL)?\s+/i,'');
+  function playerLine(p){
+    const g=String(p.position)==='goalie';
+    return '<tr><td>'+esc(p.playername||'—')+'</td><td>'+esc(POS[p.position]||p.position||'')+'</td>'+
+      (g?'<td class="n" colspan="2">'+esc(n0(p.glsaves))+' saves / '+esc(n0(p.glshots))+' shots</td><td class="n" colspan="2">'+esc(pct(n0(p.glsaves),n0(p.glshots)))+'</td><td class="n" colspan="4"></td>'
+        :'<td class="n">'+n0(p.skgoals)+'</td><td class="n">'+n0(p.skassists)+'</td><td class="n">'+n0(p.skshots)+'</td><td class="n">'+n0(p.skshotattempts)+'</td><td class="n">'+n0(p.skplusmin)+'</td><td class="n">'+n0(p.skhits)+'</td><td class="n">'+n0(p.skgiveaways)+'/'+n0(p.sktakeaways)+'</td><td class="n">'+esc(String(p.skpasspct??'—'))+'</td>')+
+      '<td class="n">'+esc(mmss(p.toiseconds))+'</td></tr>';
+  }
+  function linesTable(list){
+    return '<div class="hoi-ga-table"><table><thead><tr><th>Player</th><th>Pos</th><th class="n">G</th><th class="n">A</th><th class="n">SOG</th><th class="n">ATT</th><th class="n">+/-</th><th class="n">HIT</th><th class="n">GV/TK</th><th class="n">PASS%</th><th class="n">TOI</th></tr></thead><tbody>'+
+      list.sort((a,b)=>(a.position==='goalie')-(b.position==='goalie')||n0(b.skshotattempts)-n0(a.skshotattempts)).map(playerLine).join('')+'</tbody></table></div>';
+  }
+  function renderGameAnalysis(eaRows,lgRows,boxRows){
+    const box=E('hoiGameAnalysis');if(!box)return;
+    const rows=(eaRows||[]).filter(r=>r.verified_official&&r.player_stats?.team).sort((a,b)=>Date.parse(b.played_at)-Date.parse(a.played_at));
+    if(!rows.length){box.innerHTML='<div class="hoi-empty">No EA games have been matched to official LG games for this team yet. Matching runs automatically every game night after the games.</div>';return}
+    const T={gp:rows.length,gf:0,ga:0,sf:0,sa:0,toa:0,toaOpp:0,pc:0,pa:0,pcO:0,paO:0,ppg:0,ppo:0,ppga:0,ppoa:0,att:0,hits:0},by=new Map();
+    rows.forEach(r=>{
+      const ts=r.team_stats||{},os=r.opponent_stats||{};
+      T.gf+=n0(r.goals_for);T.ga+=n0(r.goals_against);T.sf+=n0(ts.shots);T.sa+=n0(os.shots);T.toa+=n0(ts.toa);T.toaOpp+=n0(os.toa);
+      T.pc+=n0(ts.passc);T.pa+=n0(ts.passa);T.pcO+=n0(os.passc);T.paO+=n0(os.passa);T.ppg+=n0(ts.ppg);T.ppo+=n0(ts.ppo);T.ppga+=n0(os.ppg);T.ppoa+=n0(os.ppo);
+      sidePlayers(r,'team').filter(p=>p.position!=='goalie').forEach(p=>{
+        const k=norm(p.playername);if(!k)return;
+        const x=by.get(k)||{name:p.playername,pos:POS[p.position]||'',gp:0,g:0,a:0,sog:0,att:0,hit:0,gv:0,tk:0,toi:0,last:null};
+        x.gp++;x.g+=n0(p.skgoals);x.a+=n0(p.skassists);x.sog+=n0(p.skshots);x.att+=n0(p.skshotattempts);x.hit+=n0(p.skhits);x.gv+=n0(p.skgiveaways);x.tk+=n0(p.sktakeaways);x.toi+=n0(p.toiseconds);
+        if(!x.last||Date.parse(r.played_at)>x.last.t)x.last={t:Date.parse(r.played_at),sog:n0(p.skshots),att:n0(p.skshotattempts)};
+        T.att+=n0(p.skshotattempts);T.hits+=n0(p.skhits);by.set(k,x);
+      });
+    });
+    const per=v=>(v/T.gp).toFixed(1);
+    const summary='<div class="hoi-season-summary hoi-ga-summary">'+[
+      ['EA GAMES MATCHED',T.gp],['SHOTS FOR / AGAINST',per(T.sf)+' / '+per(T.sa)],['SHOT ATTEMPTS',per(T.att)],['TIME ON ATTACK',mmss(T.toa/T.gp)+' vs '+mmss(T.toaOpp/T.gp)],['PASSING',pct(T.pc,T.pa)+' vs '+pct(T.pcO,T.paO)],['POWER PLAY / KILL',T.ppg+'/'+T.ppo+' · allowed '+T.ppga+'/'+T.ppoa],['HITS',per(T.hits)],['GOALS FOR / AGAINST',per(T.gf)+' / '+per(T.ga)]
+    ].map(x=>'<div><small>'+x[0]+'</small><b>'+esc(x[1])+'</b></div>').join('')+'</div>';
+    const shooters=[...by.values()].sort((a,b)=>b.att-a.att||b.sog-a.sog);
+    const shotLog='<h4 class="hoi-ga-h">Shot log by player</h4><div class="hoi-ga-table"><table><thead><tr><th>Player</th><th>Pos</th><th class="n">GP</th><th class="n">G</th><th class="n">A</th><th class="n">SOG</th><th class="n">ATT</th><th class="n">SOG/G</th><th class="n">ATT/G</th><th class="n">SH%</th><th class="n">HIT</th><th class="n">GV/TK</th><th class="n">LAST GAME</th></tr></thead><tbody>'+
+      shooters.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+esc(x.pos)+'</td><td class="n">'+x.gp+'</td><td class="n">'+x.g+'</td><td class="n">'+x.a+'</td><td class="n">'+x.sog+'</td><td class="n">'+x.att+'</td><td class="n">'+(x.sog/x.gp).toFixed(1)+'</td><td class="n">'+(x.att/x.gp).toFixed(1)+'</td><td class="n">'+pct(x.g,x.sog)+'</td><td class="n">'+x.hit+'</td><td class="n">'+x.gv+'/'+x.tk+'</td><td class="n">'+(x.last?x.last.sog+' SOG / '+x.last.att+' ATT':'—')+'</td></tr>').join('')+'</tbody></table></div>';
+    const games='<h4 class="hoi-ga-h">Game by game</h4>'+rows.map(r=>{
+      const ts=r.team_stats||{},os=r.opponent_stats||{},date=r.played_at?new Date(r.played_at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'—';
+      const other=shortClub(os?.details?.name)||'Opponent';
+      const line=(a,b,c)=>'<div><small>'+a+'</small><b>'+esc(b)+'</b><em>'+esc(c)+'</em></div>';
+      const lgRow=(lgRows||[]).find(x=>String(x.lg_game_id)===String(r.lg_game_id)),boxRow=(boxRows||[]).find(x=>String(x.lg_game_id)===String(r.lg_game_id));
+      return '<details class="hoi-ga-game"><summary><b>'+esc(r.result||'—')+' '+esc(r.goals_for??'—')+'-'+esc(r.goals_against??'—')+'</b> vs '+esc(other)+' <span>'+esc(date)+' · LG '+esc(r.lg_game_id)+' · EA '+esc(r.source_game_id)+'</span></summary>'+
+        '<p class="hoi-game-summary"><small>GAME SUMMARY</small>'+esc(gameSummary(r,lgRow,boxRow,selected?.name))+'</p><div class="hoi-ga-box">'+line('SHOTS',n0(ts.shots)+' - '+n0(os.shots),'')+line('TIME ON ATTACK',mmss(ts.toa)+' - '+mmss(os.toa),'')+line('PASSING',pct(n0(ts.passc),n0(ts.passa))+' - '+pct(n0(os.passc),n0(os.passa)),'')+line('POWER PLAY',n0(ts.ppg)+'/'+n0(ts.ppo)+' - '+n0(os.ppg)+'/'+n0(os.ppo),'')+'</div>'+
+        '<h5>'+esc(selected?.name||'This team')+'</h5>'+linesTable(sidePlayers(r,'team'))+'<h5>'+esc(other)+'</h5>'+linesTable(sidePlayers(r,'opponent'))+'</details>';
+    }).join('');
+    box.innerHTML=summary+shotLog+games+'<p class="hoi-heat-note">Only EA matches that line up with an official LG game (same two clubs, same final score, nearest start time) are shown. EA keeps only the five most recent private matches per club, so the refresh runs after every game night to save each night before it ages out. Shot attempts include blocked and missed shots; SOG are shots on net.</p>';
+  }
+
+  /* ---------- plain-English game summaries (EA match stats, plus the LG box score when we have one) ---------- */
+  const parseTop=str=>String(str||'').split(';').map(x=>x.trim()).filter(Boolean);
+  function periodSummary(box,teamName,gf,ga){
+    const per=Array.isArray(box?.period_stats)?box.period_stats:[];
+    const mine=per.find(x=>norm(x.team_name)===norm(teamName)),theirs=per.find(x=>norm(x.team_name)!==norm(teamName));
+    if(!mine||!theirs||!Array.isArray(mine.goals_by_period)||!Array.isArray(theirs.goals_by_period))return '';
+    const a=mine.goals_by_period.map(n0),b=theirs.goals_by_period.map(n0);
+    const after2=[a.slice(0,2).reduce((x,y)=>x+y,0),b.slice(0,2).reduce((x,y)=>x+y,0)];
+    let out='By period it was '+a.join('-')+' to '+b.join('-')+'.';
+    if(after2[0]>after2[1]&&gf<ga)out+=' They led '+after2[0]+'-'+after2[1]+' after two periods and lost.';
+    else if(after2[0]<after2[1]&&gf>ga)out+=' They trailed '+after2[0]+'-'+after2[1]+' after two periods and came back to win.';
+    if(a.length>3)out+=' It went to overtime.';
+    return out;
+  }
+  function gameSummary(ea,lg,box,teamName){
+    const gf=n0(ea?.goals_for??lg?.goals_for),ga=n0(ea?.goals_against??lg?.goals_against);
+    const other=shortClub(ea?.opponent_stats?.details?.name)||lg?.other_team_name||ea?.team_stats?.vs||'their opponent';
+    const won=gf>ga,diff=Math.abs(gf-ga);
+    const team=shortClub(teamName)||'This team',parts=[team+(won?' won ':' lost ')+gf+'-'+ga+' against '+other+(diff===1?', a one-goal game':diff>=4?', a lopsided game':'')+'.'];
+    if(ea){
+      const ts=ea.team_stats||{},os=ea.opponent_stats||{},legacy=ts.kind==='lg';
+      const sf=n0(ts.shots),sa=n0(os.shots);
+      const mine=sidePlayers(ea,'team'),theirs=sidePlayers(ea,'opponent');
+      const sk=mine.filter(p=>p.position!=='goalie'),sk2=theirs.filter(p=>p.position!=='goalie');
+      const attF=sk.reduce((n,p)=>n+n0(p.skshotattempts),0),attA=sk2.reduce((n,p)=>n+n0(p.skshotattempts),0);
+      if(sf||sa){
+        let t=sf>sa?'They out-shot '+other+' '+sf+'-'+sa:sf<sa?'They were out-shot '+sf+'-'+sa:'Shots were even at '+sf;
+        if(attF||attA)t+=' ('+attF+'-'+attA+' counting shot attempts)';
+        if(sf>sa+3&&!won)t+=', but could not turn the edge into a win';
+        else if(sf<sa-3&&won)t+=', yet won on efficiency, not volume';
+        parts.push(t+'.');
+      }
+      const toaF=legacy?n0(ts.toa_sec):n0(ts.toa),toaA=n0(os.toa);
+      const pf=legacy?(()=>{const m=String(ts.pass||'').match(/(\d+)\/(\d+)/);return m?[+m[1],+m[2]]:null})():[n0(ts.passc),n0(ts.passa)];
+      const pa=[n0(os.passc),n0(os.passa)];
+      let t2='';
+      if(toaF&&toaA)t2='They held the puck '+mmss(toaF)+' to '+mmss(toaA);
+      else if(toaF)t2='They had '+mmss(toaF)+' of attack time';
+      if(pf&&pf[1]>0){t2+=(t2?' and passed at ':'Passing was ')+pct(pf[0],pf[1]);if(pa[1]>0)t2+=' against '+pct(pa[0],pa[1]);}
+      if(t2)parts.push(t2+'.');
+      const ppo=legacy?String(ts.pp||'').split('/').map(Number)[1]:n0(ts.ppo),ppg=legacy?String(ts.pp||'').split('/').map(Number)[0]:n0(ts.ppg);
+      const ppoa=n0(os.ppo),ppga=n0(os.ppg);
+      if(n0(ppo)||ppoa)parts.push('Power play went '+n0(ppg)+' for '+n0(ppo)+(ppoa?', and they allowed '+ppga+' on '+ppoa+(ppoa===1?' chance':' chances'):'')+'.');
+      if(sk.length){
+        const scorers=sk.map(p=>({n:p.playername,g:n0(p.skgoals),a:n0(p.skassists)})).filter(x=>x.g+x.a>0).sort((x,y)=>(y.g+y.a)-(x.g+x.a)||y.g-x.g).slice(0,3);
+        if(scorers.length)parts.push('Points came from '+scorers.map(x=>x.n+' ('+x.g+'G '+x.a+'A)').join(', ')+'.');
+        const topShot=[...sk].sort((x,y)=>n0(y.skshotattempts)-n0(x.skshotattempts))[0];
+        if(topShot&&n0(topShot.skshotattempts)>=5)parts.push(topShot.playername+' drove the shooting with '+n0(topShot.skshots)+' on net from '+n0(topShot.skshotattempts)+' attempts.');
+        const hf=sk.reduce((n,p)=>n+n0(p.skhits),0),ha=sk2.reduce((n,p)=>n+n0(p.skhits),0);
+        if(Math.abs(hf-ha)>=6)parts.push('Physical edge to '+(hf>ha?'this team':other)+', hits '+hf+'-'+ha+'.');
+        const fw=sk.reduce((n,p)=>n+n0(p.skfow),0),fl=sk.reduce((n,p)=>n+n0(p.skfol),0);
+        if(fw+fl>=12)parts.push('Faceoffs: '+pct(fw,fw+fl)+' won.');
+      } else if(legacy&&ts.top_skaters)parts.push('Top skaters: '+parseTop(ts.top_skaters).join(', ')+'.');
+      const g=mine.find(p=>p.position==='goalie'&&n0(p.glshots)>0);
+      if(g)parts.push(g.playername+' stopped '+n0(g.glsaves)+' of '+n0(g.glshots)+' ('+pct(n0(g.glsaves),n0(g.glshots))+').');
+      else if(legacy&&ts.goalie){const m=String(ts.goalie).match(/^(.+?)\s+(\d+)\/(\d+)$/);parts.push(m?m[1]+' stopped '+m[2]+' of '+m[3]+' ('+pct(+m[2],+m[3])+').':'Goalie: '+ts.goalie+'.')}
+    } else parts.push('No EA match is saved for this game yet, so shots and player lines are not available. It is added automatically if EA still shows it.');
+    const per=box?periodSummary(box,teamName,gf,ga):'';
+    if(per)parts.push(per);
+    return parts.join(' ');
+  }
+  function renderSeasonGames(lgRows,eaRows,boxRows){
     const box=E('hoiSeasonGames');if(!box)return;
     if(!lgRows.length){box.innerHTML='<div class="hoi-empty">No official LGCHL games have been indexed for this opponent yet.</div>';return}
-    const eaByLg=new Map(eaRows.filter(x=>x.lg_game_id!=null).map(x=>[String(x.lg_game_id),x]));
+    const eaByLg=new Map(eaRows.filter(x=>x.lg_game_id!=null).map(x=>[String(x.lg_game_id),x])),boxByLg=new Map((boxRows||[]).map(x=>[String(x.lg_game_id),x]));
     const matched=lgRows.filter(g=>eaByLg.has(String(g.lg_game_id))).length;
     const totalW=lgRows.filter(g=>g.result==='W').length,totalL=lgRows.filter(g=>g.result==='L').length;
     box.innerHTML='<div class="hoi-season-summary"><div><small>OFFICIAL GAMES</small><b>'+lgRows.length+'</b></div><div><small>RECORD</small><b>'+totalW+'-'+totalL+'</b></div><div><small>EA MATCHED</small><b>'+matched+'/'+lgRows.length+'</b></div></div>'+
@@ -165,7 +351,7 @@
         return '<article class="hoi-season-game '+(ea?'verified':'')+'"><div class="hoi-season-game-head"><div><strong>'+esc(g.result||'—')+' '+esc(g.goals_for??'—')+'-'+esc(g.goals_against??'—')+' vs '+esc(g.other_team_name||'Opponent')+'</strong><small>'+esc(date)+' · LG '+esc(g.lg_game_id)+'</small></div><span>'+(ea?'EA VERIFIED':'LG VERIFIED')+'</span></div>'+
           '<div class="hoi-season-game-meta">'+(ea?'<b>EA '+esc(ea.source_game_id)+'</b> · ':'')+(shots!=null?'Shots '+esc(shots)+(oppShots!=null?'–'+esc(oppShots):'')+' · ':'')+'Source: official LG result'+(ea?' + reconciled EA match':'')+'</div>'+
           (leaders?'<div class="hoi-season-game-leaders"><small>EA shot-attempt leaders</small>'+leaders+'</div>':'')+
-          (ea?'<details><summary>Verified EA game details</summary><pre>'+esc(JSON.stringify({matchId:ea.source_game_id,confidence:ea.verification_confidence,basis:ea.verification_basis,team_stats:ea.team_stats,opponent_stats:ea.opponent_stats},null,2))+'</pre></details>':'')+
+          '<p class="hoi-game-summary"><small>GAME SUMMARY</small>'+esc(gameSummary(ea,g,boxByLg.get(String(g.lg_game_id)),selected?.name))+'</p>'+
           '</article>';
       }).join('')+'</div>';
   }
@@ -185,8 +371,8 @@
     }).join('');
     const ev=r.evidence_summary||{},heat=Array.isArray(ev.attack_source_heatmap)?ev.attack_source_heatmap:[];
     const heatHtml=heat.length?'<section class="hoi-heat"><div class="hoi-heat-head"><div><strong>Scoring-source heat map</strong><small>Season goal / assist / shot share by listed position. This is not a rink-location shot map.</small></div><span>'+esc(ev.data_mode==='stats_only_no_vod'?'STATS ONLY':'EVIDENCE')+'</span></div><div class="hoi-heat-grid">'+heat.map(z=>{
-      const g=Number(z.goal_share||0),a=Number(z.assist_share||0),s=Number(z.shot_share||0);
-      return '<article class="hoi-heat-cell"><b>'+esc(z.pos||'—')+'</b><div class="hoi-heat-meter"><i style="width:'+Math.max(2,Math.min(100,g))+'%"></i></div><strong>'+esc(g.toFixed(1))+'% goals</strong><small>'+esc(a.toFixed(1))+'% assists · '+esc(s.toFixed(1))+'% shots</small></article>'
+      const g=Number(z.goal_share||0),a=Number(z.assist_share||0),s=Number(z.shot_share||0),top=Math.max(1,...heat.map(h=>Number(h.goal_share||0))),hc=window.WildmanShotZones?.heatColor?window.WildmanShotZones.heatColor(g/top,1):'#d7192d';
+      return '<article class="hoi-heat-cell"><b>'+esc(z.pos||'—')+'</b><div class="hoi-heat-meter"><i style="width:'+Math.max(2,Math.min(100,g))+'%;background:'+hc+'"></i></div><strong>'+esc(g.toFixed(1))+'% goals</strong><small>'+esc(a.toFixed(1))+'% assists · '+esc(s.toFixed(1))+'% shots</small></article>'
     }).join('')+'</div>'+(ev.spatial_heatmap_note?'<p class="hoi-heat-note">'+esc(ev.spatial_heatmap_note)+'</p>':'')+'</section>':'';
     const scout=ev.line_scout||{};
     const scoutHtml=Object.keys(scout).length?'<section class="hoi-line-scout"><div class="hoi-heat-head"><div><strong>Posted-line deep scout</strong><small>Player roles and statistical tendencies for the posted six.</small></div></div>'+

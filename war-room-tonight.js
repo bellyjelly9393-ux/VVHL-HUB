@@ -184,7 +184,7 @@ function mountWarRoom(host,D){
     <section class="wr-panel wr-across" id="wrAcross" aria-live="polite"></section>
     ${raceHTML(D)}
    </aside></div>`;
-  mountSix(D,'wr',g=>{$('wrAcross').innerHTML=acrossHTML(D,g)});
+  mountSix(D,'wr',g=>{$('wrAcross').innerHTML=acrossHTML(D,g);hydrateRinkHeat($('wrAcross'),D,g)});
 }
 /* Tonight's Six panel (rink tabs, kits, roll, jobs). Shared by the War Room and the Lineup Lab; p = id prefix. */
 function sixPanelHTML(D,p,o){
@@ -252,8 +252,42 @@ function acrossHTML(D,g){
    (r.threats.length?`<span class="wr-k wr-sub">Key threats</span><ul class="wr-threats">${r.threats.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:'')+
    (r.plan.length?`<span class="wr-k wr-sub">Game plan</span><ol class="wr-plan">${r.plan.map(t=>`<li>${esc(t)}</li>`).join('')}</ol>`:'')+
    (r.attackSource.length?`<span class="wr-k wr-sub">Scoring-source heat · LG</span><div class="wr-heat">${r.attackSource.map(z=>`<div><b>${esc(z.pos||'—')}</b><i><em style="width:${Math.max(2,Math.min(100,Number(z.goal_share||0)))}%"></em></i><small>${esc(Number(z.goal_share||0).toFixed(1))}% goals</small></div>`).join('')}</div>`:'')+
-   (r.deepHeat.length?`<span class="wr-k wr-sub">Rink heat preview · EA profile</span><div class="wr-heat">${r.deepHeat.map(z=>`<div><b>Z${esc(z.zone||'—')}</b><i><em style="width:${Math.max(2,Math.min(100,100*Number(z.shots||0)/deepMax))}%"></em></i><small>${esc(z.name||'Zone')} · ${esc(z.shots||0)} shots</small></div>`).join('')}</div>`:'')+
+   (r.deepHeat.length?`<span class="wr-k wr-sub">Top shot zones · EA profile</span><div class="wr-heat">${r.deepHeat.map(z=>`<div><b>Z${esc(z.zone||'—')}</b><i><em style="width:${Math.max(2,Math.min(100,100*Number(z.shots||0)/deepMax))}%"></em></i><small>${esc(z.name||'Zone')} · ${esc(z.shots||0)} shots</small></div>`).join('')}</div>`:'')+
+   `<div class="wr-rink" id="wrRink"></div>`+
    `<p class="wr-note">${r.approved?'Approved':'Draft · not approved'}. LG heat shows scoring share by listed position. Rink-zone preview uses the saved EA club profile and is supporting tendency evidence, not LG-only shot coordinates.</p>`+acrossLinks(D,g,true);
+}
+/* ---------- real rink heat maps: where each opposing skater shoots from / scores from (EA 16-zone totals) ---------- */
+const heatCache=new Map();
+async function loadHeat(name){
+  const k=norm(name); if(heatCache.has(k)) return heatCache.get(k);
+  const db=DB(); if(!db) return [];
+  const rr=await db.from('hitmen_opponent_player_stats').select('gamertag,position,games_played,raw_stats,source,source_updated_at').eq('team_id',TEAM).eq('season',SEASON).eq('opponent_name',name).eq('source','ea_nhl27');
+  const best=new Map();
+  (rr.data||[]).forEach(r=>{const g=norm(r.gamertag),p=best.get(g);if(g&&(!p||Date.parse(r.source_updated_at||0)>=Date.parse(p.source_updated_at||0)))best.set(g,r)});
+  const rows=[...best.values()].filter(r=>r.position!=='G').map(r=>({name:r.gamertag,pos:r.position||'',gp:Number(r.games_played??r.raw_stats?.skgp)||null,net:Array.from({length:5},(_,i)=>({id:i+1,shots:Number(r.raw_stats?.['ShotsLocationOnNet'+(i+1)]||0),goals:Number(r.raw_stats?.['GoalsLocationOnNet'+(i+1)]||0)})),zones:Array.from({length:16},(_,i)=>({id:i+1,shots:Number(r.raw_stats?.['ShotsLocationOnIce'+(i+1)]||0),goals:Number(r.raw_stats?.['GoalsLocationOnIce'+(i+1)]||0)}))})).filter(r=>r.zones.some(z=>z.shots>0));
+  if(!rr.error) heatCache.set(k,rows);
+  return rows;
+}
+async function hydrateRinkHeat(root,D,g){
+  const host=root&&root.querySelector('#wrRink'),Z=window.WildmanShotZones;
+  if(!host||!Z||!g.report) return;
+  let rows; try{rows=await loadHeat(g.name)}catch(e){console.error('[war-room-tonight] rink heat',e);return}
+  if(!rows.length||!host.isConnected) return;
+  const order=g.report.opp.map(o=>norm(o.name)),projected=rows.filter(r=>order.includes(norm(r.name))).sort((a,b)=>order.indexOf(norm(a.name))-order.indexOf(norm(b.name)));
+  const all=[...new Map(rows.map(r=>[norm(r.name),r])).values()].sort((a,b)=>a.name.localeCompare(b.name));
+  const sum=list=>{const by=new Map();list.forEach(p=>p.zones.forEach(z=>{const x=by.get(z.id)||{id:z.id,shots:0,goals:0};x.shots+=z.shots;x.goals+=z.goals;by.set(z.id,x)}));return [...by.values()]};
+  const sumNet=list=>sum(list.map(p=>({zones:p.net})));
+  const one=p=>({key:norm(p.name),label:p.name,sub:p.pos,rows:p.zones,net:p.net,gp:p.gp});
+  const views=[{key:'team',label:'Team',sub:'All skaters',rows:sum(all),net:sumNet(all),gp:null},...projected.map(one),...all.filter(p=>!projected.includes(p)).map(one)];
+  let cur=views[projected.length?1:0];const st={base:'shots',mode:'totals'};
+  const draw=()=>{
+    host.innerHTML=`<span class="wr-k wr-sub">Shot location analysis · ${esc(cur.label)}${cur.sub?' · '+esc(cur.sub):''}</span>
+     <div class="wr-rink-ctl"><label>Player<select aria-label="Opposing player">${views.map(v=>`<option value="${esc(v.key)}"${v===cur?' selected':''}>${esc(v.label)}${v.key!=='team'&&v.sub?' ('+esc(v.sub)+')':''}</option>`).join('')}</select></label></div>
+     <div class="wr-rink-map"></div>`;
+    Z.mountAnalysis(host.querySelector('.wr-rink-map'),{ice:cur.rows,net:cur.net,gp:cur.gp,state:st});
+    host.querySelector('select').onchange=e=>{cur=views.find(v=>v.key===e.target.value)||cur;draw()};
+  };
+  draw();
 }
 function raceHTML(D){
   const div=D.cgy?.division; const rows=div?D.standings.filter(t=>t.division===div).sort((a,b)=>(a.division_rank||99)-(b.division_rank||99)):[];

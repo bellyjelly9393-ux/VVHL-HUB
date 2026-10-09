@@ -2,7 +2,7 @@
 
 The existing Season 55 schedule determines which opponents are pulled. Opponents with games in the next eight days are processed first, followed by all other remaining scheduled/postponed opponents. Refreshes stop when there are no future games.
 
-Automatic runs: **Tuesday and Saturday, 11:30 p.m. America/New_York**. The database converts local time on each lightweight two-minute tick, including daylight-saving changes. A unique local-date run key prevents duplicate scheduled runs. Management can also use **Refresh Opponent Stats** on `hitmen-opponents.html`; repeated clicks join an active run.
+Automatic runs: **Sunday, Monday, Tuesday and Saturday, 11:30 p.m. America/New_York**. Sunday to Tuesday are the game nights, so each night gets a fresh pull of LG player stats, rosters and EA shot-location totals right after the games (each pull also saves a shot-history snapshot, so changes between nights show up as new shots per player). The database converts local time on each lightweight two-minute tick, including daylight-saving changes. A unique local-date run key prevents duplicate scheduled runs. Management can also use **Refresh Opponent Stats** on `hitmen-opponents.html`; repeated clicks join an active run.
 
 The existing LG stats importer fetches current Season 55 regular-season skater and goalie data. The opponent worker links it to current rosters by LG user ID, with an exact gamertag fallback only when no ID is available. Historical gamertag changes, partial sources, source dates and unmatched players remain visible. Missing numbers are null, not invented zeros. Goalie save percentage is displayed on a 0–100 scale.
 
@@ -22,3 +22,9 @@ The existing ChelScout pregame/GM context reads these source snapshots, player s
 - Local tests: `node --test test-opponent-refresh.mjs`. CI additionally checks Deno, existing VOD/ChelScout regressions and desktop/mobile dashboard behavior. SQL rollback checks exercise auth and incomplete-roster protection without committing test changes.
 
 No new AI provider keys, login flows or changes to the VOD worker are required.
+
+## EA games and official LG game IDs
+
+EA only returns each club's **five most recent** private matches, no matter how many are requested. A pull therefore has to run soon after each game night, which is why the scheduled refresh runs Sunday, Monday and Tuesday at 11:30 p.m. Eastern. Each private EA match is saved only when it lines up with an official LGCHL game: both exact EA club IDs, the exact final score, and the nearest start time within 24 hours. Matched games keep the official `lg_game_id`, the EA match ID, team stats and every player's line (shots, shot attempts, hits, time on ice and more). Games older than EA's five-match window cannot be recovered later, so a missed night is a permanent gap.
+
+Opponent Intelligence shows these under **EA Game Analysis**: team rollups, a shot log per player and the full player lines for both teams in each game. LG's authenticated Public Log only lists Calgary's own players, so opponent per-game shot numbers come from the matched EA games.
