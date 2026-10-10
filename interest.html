@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#09070c"><meta name="description" content="Register interest in Wildman Hockey connected franchise mode or the proposed Wildman Hockey HUT tournament.">
+<title>Join Wildman Competition | Wildman Hockey</title>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="hub.css"><link rel="stylesheet" href="wildman.css"><link rel="stylesheet" href="operations.css"><link rel="stylesheet" href="wildman-interest.css"></head>
+<body class="wildman-site"><header class="site-header"><a class="brand" href="index.html"><span class="wm-brand-mark">W</span><span class="brand-copy">WILDMAN HOCKEY<br><b>ESPORTS NETWORK</b></span></a><button class="menu-toggle" type="button" aria-label="Open navigation">☰</button><nav class="main-nav"><a href="index.html">Home</a><a href="game-center.html">Live</a><a href="multiview.html">Multiview</a><a href="hitmen-media.html">Hitmen Media</a><a href="interest.html" class="active-nav">Join</a></nav></header>
+<main class="section-shell">
+<section class="section-block interest-hero"><div class="eyebrow">WILDMAN HOCKEY · COMPETITION OPPORTUNITIES</div><h1>YOUR NEXT HOCKEY<br><span class="wm-green">CHALLENGE.</span></h1><p>Help shape the next chapter of Wildman competition. Add your name to the interest list and the organizers can contact you about the next steps.</p></section>
+<section class="interest-grid section-block">
+<article class="interest-panel" id="franchise"><div class="eyebrow">RECRUITING INTEREST · CONNECTED FRANCHISE</div><h2>BUILD A FRANCHISE. COMPETE FOR IT.</h2><p>Wildman Hockey is recruiting players interested in an upcoming connected franchise mode. Take over a club, compete with other managers and help establish a competitive community season.</p><div class="interest-price">$25 <small>PROPOSED BUY-IN · CURRENCY / TERMS TO BE CONFIRMED</small></div><p class="interest-fine">This form does not collect payment or reserve a paid place. Start date, format, franchise assignments, eligibility and payment details will be confirmed by organizers before any commitment.</p><a class="small-btn" href="#apply" data-interest-program="franchise">Register Franchise Interest →</a></article>
+<article class="interest-panel" id="hut"><div class="eyebrow">EXPLORING INTEREST · INAUGURAL EVENT</div><h2>WILDMAN HOCKEY HUT TOURNAMENT.</h2><p>Interested in entering the first Wildman Hockey HUT tournament? We're gauging demand for divisions that give different skill levels a competitive matchup.</p><p>Suggested divisions: Casual, Intermediate, Competitive and Elite. Players can self-report a division, with final placement and rules decided by the organizers.</p><p class="interest-fine">This is an interest survey, not a confirmed tournament registration. Date, format, entry terms and prizes are not announced.</p><a class="small-btn" href="#apply" data-interest-program="hut">Register HUT Interest →</a></article>
+</section>
+<section id="apply" class="section-block interest-form-wrap"><div class="section-heading"><div><div class="eyebrow">JOIN THE INTEREST LIST</div><h2>TELL US WHERE YOU WANT TO PLAY</h2></div></div>
+<form id="interestForm" class="interest-form">
+<label>Competition <select id="interestProgram" required><option value="franchise">Connected franchise mode · $25 proposed buy-in</option><option value="hut">Wildman HUT tournament · interest only</option></select></label>
+<label>Gamertag <input name="gamertag" minlength="2" maxlength="50" required autocomplete="nickname" placeholder="Your in-game name"></label>
+<label>Contact email <input name="email" type="email" maxlength="150" required autocomplete="email" placeholder="you@example.com"></label>
+<label>Discord handle <input name="discord_handle" minlength="2" maxlength="80" required placeholder="Your Discord username"></label>
+<label>Platform <select name="platform" required><option value="">Choose platform</option><option value="xbox">Xbox</option><option value="playstation">PlayStation</option><option value="either">Either / flexible</option></select></label>
+<label>HUT skill division / interest <select name="division" id="interestDivision"><option value="unsure">Not sure yet</option><option value="casual">Casual</option><option value="intermediate">Intermediate</option><option value="competitive">Competitive</option><option value="elite">Elite</option></select></label>
+<label class="wide">Experience / availability (optional) <textarea name="notes" maxlength="600" rows="3" placeholder="Competitive level, game nights available, or what you'd like organizers to know"></textarea></label>
+<label class="wide interest-check"><input name="contact_consent" type="checkbox" required> I agree to Wildman Hockey organizers using this information to contact me about the competition I selected. This is an expression of interest, not payment or guaranteed entry.</label>
+<div class="interest-honeypot" aria-hidden="true"><label>Do not fill <input name="website" tabindex="-1" autocomplete="off"></label></div>
+<button id="interestSubmit" class="small-btn" type="submit">Submit Interest</button><p id="interestMessage" class="wide" aria-live="polite" role="status"></p>
+</form></section></main>
+<footer><div class="section-shell footer-inner"><div><b>WILDMAN HOCKEY ESPORTS NETWORK</b><span>Competition · Fair divisions · Community</span></div></div></footer>
+<script src="network-shell.js"></script><script src="script.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script><script src="wildman-interest.js"></script>
+</body></html>
