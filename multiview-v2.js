@@ -104,7 +104,7 @@
     const mute=S.muted[key]!==false;
     if(v.provider==='twitch'){
       const params=new URLSearchParams();
-      if(v.id.startsWith('v'))params.set('video',v.id);else params.set('channel',v.id);
+      if(/^v[0-9]{5,15}$/.test(v.id))params.set('video',v.id);else params.set('channel',v.id);
       params.set('parent',location.hostname);params.set('autoplay','false');params.set('muted',mute?'true':'false');
       return 'https://player.twitch.tv/?'+params.toString();
     }
