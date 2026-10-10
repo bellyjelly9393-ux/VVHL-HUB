@@ -6,16 +6,11 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const reviewId=()=>document.querySelector('.vod-row.active')?.dataset?.vodId||'';
 
-  async function fetchReview(){
+  async function fetchReview(force=false){
     const id=reviewId(); if(!id||!db()) return null;
-    const [{data:r,error:e1},{data:s,error:e2},{data:m,error:e3},{data:publication,error:e4}]=await Promise.all([
-      db().from('vod_review_sessions').select('*').eq('id',id).maybeSingle(),
-      db().from('vod_review_segments').select('*').eq('review_id',id).order('start_seconds'),
-      db().from('vod_review_markers').select('*').eq('review_id',id).order('timestamp_seconds'),
-      db().from('vod_game_publications').select('active,report,published_at').eq('review_id',id).maybeSingle()
-    ]);
-    if(e1)throw e1;if(e2)throw e2;if(e3)throw e3;if(e4)throw e4;
-    return {review:r,segments:window.WildmanVODReview.activeSegments(s),markers:m||[],publication};
+    const b=await window.WildmanVODCache.bundle(id,{force});
+    if(!b)return null;
+    return {review:b.review,segments:window.WildmanVODReview.activeSegments(b.segments),markers:b.markers,publication:b.publication};
   }
 
   async function health(){
@@ -63,7 +58,7 @@
   function fmt(sec){sec=Math.max(0,Math.floor(Number(sec)||0));const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return h?`${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`:`${m}:${String(s).padStart(2,'0')}`;}
   async function copyPacket(){
     try{
-      const d=await fetchReview(); if(!d?.review)throw new Error('Select a VOD review first.');
+      const d=await fetchReview(true); if(!d?.review)throw new Error('Select a VOD review first.');
       const r=d.review;
       const lines=[
         `WILDMAN WRITE-UP PACKET`,
@@ -88,6 +83,6 @@
   window.addEventListener('vvhl-vod-rendered',event=>{if(event.detail?.review?.id===reviewId())drawSteps(event.detail);});
   let lastReview='';
   const observer=new MutationObserver(()=>{install();const id=reviewId();if(id!==lastReview){lastReview=id;clearTimeout(timer);timer=setTimeout(refresh,180);}});
-  const start=()=>{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});setInterval(()=>{if(!document.hidden)refresh();},15000);};
+  const start=()=>{install();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});setInterval(()=>{if(!document.hidden)refresh();},30000);};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

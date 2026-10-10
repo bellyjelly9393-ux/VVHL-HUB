@@ -96,7 +96,7 @@ if (menuButton && nav) {
     load('vod-pipeline.js?v=20261003-durable');
     load('vod-pipeline-polish.js?v=20261003-durable');
     load('vod-local-marker.js?v=20260916');
-    load('vod-postgame-link.js?v=20260916');
+    load('vod-postgame-link.js?v=20261009-egress');
   }
   if(page==='postgame-desk.html'||page==='postgame-desk') {
     load('postgame-vod-bridge.js?v=20260916');

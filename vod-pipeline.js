@@ -8,13 +8,9 @@
   let checking=false;
   let savedState=null;
   async function durableState(reviewId,job=null){
-    const [r,s,p]=await Promise.all([
-      db().from('vod_review_sessions').select('*').eq('id',reviewId).maybeSingle(),
-      db().from('vod_review_segments').select('*').eq('review_id',reviewId),
-      db().from('vod_game_publications').select('active,report').eq('review_id',reviewId).maybeSingle()
-    ]);
-    if(r.error)throw r.error;if(s.error)throw s.error;if(p.error)throw p.error;
-    return r.data?window.WildmanVODReview.reconcile(r.data,s.data,p.data,job):null;
+    // Fingerprint-checked: only re-downloads the ~500 KB review when it actually changed.
+    const b=await window.WildmanVODCache.bundle(reviewId);
+    return b?.review?window.WildmanVODReview.reconcile(b.review,b.segments,b.publication,job):null;
   }
   function showDurable(state){
     if(!state?.usableEvidence)return false;
@@ -86,8 +82,7 @@
 
   async function currentReview(){
     const id=selectedReviewId(); if(!id)return null;
-    const {data,error}=await db().from('vod_review_sessions').select('*').eq('id',id).maybeSingle();
-    if(error)throw error; return data;
+    return window.WildmanVODCache.review(id);
   }
 
   function ensureScoutMode(review){

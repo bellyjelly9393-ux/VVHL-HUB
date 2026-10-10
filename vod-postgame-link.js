@@ -21,7 +21,7 @@
   async function refresh(){
     install();const id=reviewId();if(!id||!db())return;
     try{
-      const {data:r,error}=await db().from('vod_review_sessions').select('*').eq('id',id).maybeSingle();if(error)throw error;if(!r)return;
+      const r=await window.WildmanVODCache?window.WildmanVODCache.review(id):(await db().from('vod_review_sessions').select('id,esports_game_id,full_game_summary,recurring_patterns,strengths,corrections').eq('id',id).maybeSingle()).data;if(!r)return;
       const title=document.getElementById('vodHandoffTitle'),text=document.getElementById('vodHandoffText'),btn=document.getElementById('vodHandoffBtn');
       if(!r.esports_game_id){
         title.textContent='Internal team review';text.textContent='This review stays inside the team workspace. Use Copy Write-Up Packet for scouting/coaching notes.';btn.style.display='none';return;
@@ -46,7 +46,11 @@
     }
   }
 
-  const observer=new MutationObserver(()=>{install();chooseQueryReview();clearTimeout(timer);timer=setTimeout(refresh,180);});
-  const start=()=>{install();chooseQueryReview();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});setInterval(()=>{if(!document.hidden)refresh();},15000);};
+  // Refresh only when the selected review changes. Refreshing on every DOM mutation looped
+  // forever (refresh rewrites this card's text, which is itself a mutation) and re-downloaded
+  // the full review several times a second while the VOD Lab was open.
+  let lastReview='';
+  const observer=new MutationObserver(()=>{install();chooseQueryReview();const id=reviewId();if(id!==lastReview){lastReview=id;clearTimeout(timer);timer=setTimeout(refresh,180);}});
+  const start=()=>{install();chooseQueryReview();observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class','hidden']});setInterval(()=>{if(!document.hidden)refresh();},60000);};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
