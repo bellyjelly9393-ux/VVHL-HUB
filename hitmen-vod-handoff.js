@@ -41,6 +41,6 @@
   }
   document.addEventListener('click',e=>{if(e.target.closest('[data-final-game]'))setTimeout(sync,1000);});
   window.addEventListener('vvhl-auth-change',()=>setTimeout(sync,500));
-  const start=()=>{setTimeout(sync,900);setInterval(()=>{if(!document.hidden)sync();},12000);};
+  const start=()=>{setTimeout(sync,900);setInterval(()=>{if(!document.hidden)sync();},60000);};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

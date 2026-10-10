@@ -39,14 +39,11 @@
   async function load(){
     if(busy||!db())return;const gameId=selectedGameId();if(!gameId)return;busy=true;
     try{
-      const {data:r,error}=await db().from('vod_review_sessions').select('*').eq('esports_game_id',gameId).order('updated_at',{ascending:false}).limit(1).maybeSingle();
-      if(error)throw error;current=r||null;segments=[];markers=[];
-      if(current){
-        const [s,m]=await Promise.all([
-          db().from('vod_review_segments').select('*').eq('review_id',current.id).order('start_seconds'),
-          db().from('vod_review_markers').select('*').eq('review_id',current.id).order('timestamp_seconds')
-        ]);
-        if(s.error)throw s.error;if(m.error)throw m.error;segments=s.data||[];markers=m.data||[];
+      const {data:hit,error}=await db().from('vod_review_sessions').select('id').eq('esports_game_id',gameId).order('updated_at',{ascending:false}).limit(1).maybeSingle();
+      if(error)throw error;current=null;segments=[];markers=[];
+      if(hit){
+        const b=await window.WildmanVODCache.bundle(hit.id);
+        current=b?.review||null;segments=b?.segments||[];markers=b?.markers||[];
       }
       render();
     }catch(e){
@@ -100,6 +97,6 @@
   }
 
   const observer=new MutationObserver(()=>install());
-  const start=()=>{install();observer.observe(document.body,{childList:true,subtree:true});setInterval(()=>{if(!document.hidden&&selectedGameId())load();},15000);};
+  const start=()=>{install();observer.observe(document.body,{childList:true,subtree:true});setInterval(()=>{if(!document.hidden&&selectedGameId())load();},60000);};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

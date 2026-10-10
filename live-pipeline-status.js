@@ -112,7 +112,7 @@
     });
   }
 
-  function start(){host();load();timer=setInterval(()=>{if(!document.hidden)load();},5000);}
+  function start(){host();load();timer=setInterval(()=>{if(!document.hidden)load();},20000);}
   window.addEventListener('vvhl-auth-change',()=>setTimeout(load,200));
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
