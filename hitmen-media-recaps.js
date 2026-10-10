@@ -43,7 +43,9 @@
     const stats = STATS.filter(([k]) => m.key_stats && m.key_stats[k])
       .map(([k, label]) => `<div><small>${label}</small><strong>${esc(m.key_stats[k])}</strong></div>`).join('');
     const rest = paras.filter((_, i) => i !== ledeAt).map(block).join('');
-    const source = m.source_label || 'EA NHL 27 match data';
+    const source = m.source_label || 'LeagueGaming imported data';
+    const gameId = Number(m.lg_game_id);
+    const officialLink = Number.isSafeInteger(gameId) && gameId > 0 ? '<a class="hm-official-game-link" target="_blank" rel="noopener noreferrer" href="https://www.leaguegaming.com/forums/index.php?leaguegaming/league&action=league&page=game&gameid=' + gameId + '">Official LeagueGaming box score →</a>' : '';
     return `<article class="hm-recap">
   <header class="hm-recap-head">
     <div class="hm-recap-meta"><span>${esc(dateLabel(m))}</span>${m.game_no ? `<span>GAME ${esc(m.game_no)}</span>` : ''}${m.record ? `<span>RECORD ${esc(m.record)}</span>` : `<span>LGCHL S${esc(m.season || 55)}</span>`}</div>
@@ -53,6 +55,7 @@
   <h3>${esc(p.title)}</h3>
   ${m.dek ? `<p class="hm-recap-dek">${esc(m.dek)}</p>` : ''}
   <p class="hm-recap-lede">${esc(lede)}</p>
+  ${officialLink ? '<p class="hm-recap-source">' + officialLink + '</p>' : ''}
   ${stars ? `<div class="hm-recap-stars"><small>THREE STARS</small><ol>${stars}</ol></div>` : ''}
   ${rest || stats ? `<details class="hm-recap-more"><summary>Read full recap</summary>${rest}${stats ? `<div class="hm-recap-stats">${stats}</div><p class="hm-recap-note">Calgary listed first. Source: ${esc(source)}.</p>` : ''}</details>` : ''}
 </article>`;
