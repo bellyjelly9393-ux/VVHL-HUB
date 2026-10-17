@@ -81,12 +81,14 @@
     renderHero(ranked, week);
     renderScores(lastNight, lastFinal);
     renderPower(ranked, week, standings);
+    const SEG = window.LGCHLSegments;
+    if (SEG) { SEG.renderRaces(standings); SEG.renderStreaks(standings); SEG.renderUpsets(games, ranked); SEG.renderGrinders(); SEG.renderSnipers(); }
     renderBreakout(hist, teams);
     renderMovers(hist, teams);
     // Matchup player spotlights use the same public season leaders as the board.
     const matchupPlayers = await read('wm_lgchl_s55_player_leaders', { select: SKATER_COLS, player_kind: 'eq.skater', order: 'points.desc.nullslast', points: 'not.is.null', limit: '250' }).catch(() => []);
     renderMatchups(games, now, teams, matchupPlayers);
-    await window.LGCHLPublicDesk.renderRecent(teams);
+    if (SEG) await SEG.renderForm(teams, games).catch(() => {});
     const leaders = await loadLeaders('points');
     renderNews(ranked, week, leaders);
     loadGoalies();
