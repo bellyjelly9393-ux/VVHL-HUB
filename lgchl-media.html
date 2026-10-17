@@ -10,7 +10,7 @@
 <link rel="preload" href="assets/fonts/Teko.woff" as="font" type="font/woff" crossorigin>
 <link rel="stylesheet" href="wildman-home.css?v=20261011-4">
 <link rel="stylesheet" href="wildman-media-desk.css?v=20261011-2">
-<link rel="stylesheet" href="lgchl-media.css?v=20261017-power1">
+<link rel="stylesheet" href="lgchl-media.css?v=20261017-seg1">
 </head>
 <body>
 <header class="top band">
@@ -49,9 +49,10 @@
     <a href="lgchl-media.html" aria-current="page">LGCHL Home</a>
     <a href="#lgRadioSec">Hitman Radio</a>
     <a href="lgchl-power.html">Power rankings</a>
+    <a href="#lgRaceSec">The races</a>
     <a href="#lgStatsSec">Leaders</a>
     <a href="#lgBreakoutSec">Breakout watch</a>
-    <a href="#lgMoveSec">Movement</a>
+    <a href="#lgPlayersWeekSec">Players of the week</a>
     <a href="#lgMatchSec">Matchups</a>
     <a href="lgchl-leaders.html">Full LGCHL stats</a>
   </div>
@@ -143,6 +144,39 @@
     </div>
   </section>
 
+  <section class="lg-sec band" id="lgRaceSec" aria-labelledby="lgRaceTitle">
+    <div class="lg-in">
+      <div class="lg-head">
+        <div><span class="sec-rule" aria-hidden="true"></span><p class="eyebrow">Six conferences · top four</p><h2 class="sec-title" id="lgRaceTitle">The <em>races</em></h2></div>
+        <p class="lg-note">Every conference at a glance: who's on top and how close the chase is.</p>
+      </div>
+      <div class="lg-race-grid" id="lgRaces"><p class="empty">Loading standings…</p></div>
+    </div>
+  </section>
+
+  <section class="lg-sec band" id="lgStreakSec" aria-labelledby="lgStreakTitle">
+    <div class="lg-in">
+      <div class="lg-head">
+        <div><span class="sec-rule" aria-hidden="true"></span><p class="eyebrow">Active streaks</p><h2 class="sec-title" id="lgStreakTitle">Heaters <em>&amp; skids</em></h2></div>
+        <p class="lg-note">The teams that can't lose right now, and the ones that can't buy a win.</p>
+      </div>
+      <div class="lg-streak-cols">
+        <div><p class="lg-streak-head hot">On fire</p><div class="lg-streak-grid" id="lgHeaters"></div></div>
+        <div><p class="lg-streak-head cold">Ice cold</p><div class="lg-streak-grid" id="lgSkids"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lg-sec band" id="lgUpsetSec" aria-labelledby="lgUpsetTitle">
+    <div class="lg-in">
+      <div class="lg-head">
+        <div><span class="sec-rule" aria-hidden="true"></span><p class="eyebrow" id="lgUpsetEyebrow">Last game week</p><h2 class="sec-title" id="lgUpsetTitle">Upset <em>alert</em></h2></div>
+        <p class="lg-note">Lower-ranked teams taking down clubs 15 or more spots above them in the power index.</p>
+      </div>
+      <div class="lg-card-grid" id="lgUpsets"><p class="empty">Loading results…</p></div>
+    </div>
+  </section>
+
   <section class="lg-sec band" id="lgBreakoutSec" aria-labelledby="lgBoTitle">
     <div class="lg-in">
       <div class="lg-head">
@@ -167,8 +201,8 @@
   <section class="lg-sec band" id="lgTrendSec" aria-labelledby="lgTrendTitle">
     <div class="lg-in">
       <div class="lg-head">
-        <div><span class="sec-rule" aria-hidden="true"></span><p class="eyebrow">Players · last 5 games</p><h2 class="sec-title" id="lgTrendTitle">Trending <em>now</em></h2></div>
-        <p class="lg-note">Points across each player's last five games.</p>
+        <div><span class="sec-rule" aria-hidden="true"></span><p class="eyebrow">Players · last two game nights</p><h2 class="sec-title" id="lgTrendTitle">Trending <em>now</em></h2></div>
+        <p class="lg-note" id="lgTrendNote">The hottest sticks over the last two game nights.</p>
       </div>
       <div class="lg-card-grid" id="lgTrendingRecords"><p class="empty">Loading…</p></div>
       <p class="lg-fine" id="lgBoxCoverage"></p>
@@ -177,8 +211,28 @@
   <section class="lg-sec band" id="lgPlayersWeekSec" aria-labelledby="lgPlayersWeekTitle">
     <div class="lg-in">
       <div class="lg-head"><div><span class="sec-rule" aria-hidden="true"></span><p class="eyebrow">Game-week scoring</p><h2 class="sec-title" id="lgPlayersWeekTitle">Players of <em>the Week</em></h2></div>
-      <p class="lg-note" id="lgWeekPlayersNote">Highest points in the latest recorded game week.</p></div>
+      <p class="lg-note" id="lgWeekPlayersNote">Three stars and a goalie of the week, every week.</p></div>
       <div class="lg-card-grid" id="lgWeekPlayers"><p class="empty">Loading…</p></div>
+    </div>
+  </section>
+
+  <section class="lg-sec band" id="lgGrindSec" aria-labelledby="lgGrindTitle">
+    <div class="lg-in">
+      <div class="lg-head">
+        <div><span class="sec-rule" aria-hidden="true"></span><p class="eyebrow">Season 55 · the dirty work</p><h2 class="sec-title" id="lgGrindTitle">The <em>grinders</em></h2></div>
+        <p class="lg-note">Not every star shows up on the scoresheet. The league leaders in hits, blocks and takeaways.</p>
+      </div>
+      <div class="lg-grind-grid" id="lgGrinders"><p class="empty">Loading…</p></div>
+    </div>
+  </section>
+
+  <section class="lg-sec band" id="lgSniperSec" aria-labelledby="lgSniperTitle">
+    <div class="lg-in">
+      <div class="lg-head">
+        <div><span class="sec-rule" aria-hidden="true"></span><p class="eyebrow">Season 55 · 25+ shots</p><h2 class="sec-title" id="lgSniperTitle">Sniper <em>watch</em></h2></div>
+        <p class="lg-note">The most lethal finishers in the league, by shooting percentage.</p>
+      </div>
+      <div class="lg-snipe-grid" id="lgSnipers"><p class="empty">Loading…</p></div>
     </div>
   </section>
 
@@ -231,6 +285,7 @@
 <script src="media-desk.js?v=20261011-1"></script>
 <script src="lgchl-media-config.js?v=20261016-2"></script>
 <script src="lgchl-media-public.js?v=20261017-clean1"></script>
-<script src="lgchl-media.js?v=20261017-power1"></script>
+<script src="lgchl-media-segments.js?v=20261017-1"></script>
+<script src="lgchl-media.js?v=20261017-seg1"></script>
 </body>
 </html>
