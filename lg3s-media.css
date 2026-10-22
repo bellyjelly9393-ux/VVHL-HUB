@@ -343,3 +343,13 @@
   .lg3s{--lg3-cut:10px}
   .lg3s .th-schedule-section{--th-art-pos:center 80px;--th-art-size:140% auto}
 }
+
+/* LG3s live verified results (20261022) */
+.th-live-score{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.5rem;margin:.5rem 0;padding:.55rem .75rem;border:1px solid rgba(212,175,55,.45);background:rgba(0,0,0,.55);font-family:Teko,Anton,sans-serif;letter-spacing:.04em}
+.th-live-score b{font-size:1.35rem;font-weight:600;color:#cfd6dd}.th-live-score b:last-of-type{text-align:right}.th-live-score b.is-win{color:#fff}
+.th-live-score span{font-size:.9rem;color:#d4af37}.th-live-score small{grid-column:1/-1;font-size:.72rem;color:#9aa4ad;letter-spacing:.08em}
+.th-live-score.is-pending{grid-template-columns:1fr;border-style:dashed}.th-live-score.is-pending span{color:#cfd6dd}
+.th-detail{max-width:min(760px,94vw);width:100%;max-height:88vh;overflow:auto;background:#0b0d10;color:#e8ecef;border:1px solid rgba(212,175,55,.5);padding:1.25rem 1.25rem 1.5rem}
+.th-detail::backdrop{background:rgba(0,0,0,.72)}.th-detail h3{font-family:Anton,sans-serif;font-size:2rem;margin:.1rem 0}.th-detail h4{font-family:Teko,sans-serif;letter-spacing:.08em;color:#d4af37;margin:1.1rem 0 .4rem}
+.th-detail-head{display:flex;gap:1rem;align-items:center}.th-detail-close{position:sticky;top:0;float:right;background:none;border:1px solid #555;color:#fff;font-size:1.4rem;width:2.2rem;height:2.2rem;cursor:pointer}
+@media (max-width:600px){.th-live-score b{font-size:1.1rem}.th-detail{padding:1rem}.th-detail h3{font-size:1.5rem}}
