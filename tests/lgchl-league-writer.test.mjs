@@ -9,7 +9,7 @@ const DIR = new URL('../supabase/functions/lgchl-league-writer/', import.meta.ur
 // Real private tables in the hub database that must never feed a league write-up.
 const PRIVATE_TABLES = ['hitmen_opponent_ea_games', 'hitmen_opponent_pregame_reports', 'hitmen_opponent_player_scout_reports', 'hitmen_opponent_zone_stats',
   'hitmen_opponent_player_shot_history', 'hitmen_opponent_lg_games', 'hitmen_opponent_lg_player_games', 'hitmen_battle_plans', 'hitmen_unit_plans', 'hitmen_ai_analysis_runs',
-  'hitmen_player_reports', 'hitmen_roster_snapshot', 'lgchl_hitmen_box_scores', 'lgchl_hitmen_player_lines', 'lgchl_hitmen_tonight_six', 'player_chemistry_scores', 'player_intelligence_profiles',
+  'hitmen_player_reports', 'hitmen_roster_snapshot', 'lgchl_hitmen_box_scores', 'lgchl_hitmen_player_lines', 'lgchl_hitmen_roster', 'lgchl_hitmen_tonight_six', 'player_chemistry_scores', 'player_intelligence_profiles',
   'player_valuation_snapshots', 'scouting_notes', 'scouting_auto_reports', 'scouting_manual_reports', 'scouting_players', 'scouting_shot_events', 'team_scouting_reports',
   'team_pre_scout_reports', 'team_chelscout_intel', 'team_external_scouting_reports', 'team_line_weekly_reports', 'team_player_game_reports', 'vod_review_sessions',
   'vod_observations', 'vod_review_markers', 'vod_evidence_history', 'vods', 'lineups', 'lineup_slots', 'wm_game_lineup', 'media_posts', 'postgame_media_jobs', 'lg_auth_snapshots',
